@@ -1,0 +1,93 @@
+# Device & Deployment Notes for Kindle v8.159.0.100 EPUB Mod
+# Prepared for Antigravity Session Handoff
+
+## 1. ADB Connection Confirmation
+- **Status:** Connected and fully functional (`device` state).
+- **Serial:** `32001776e8e82623`
+- **Device Model:** TrebleDroid GSI (Samsung Galaxy M32 / `tdgsi_arm64_ab`)
+- **Android Version:** Android 13 (API 33)
+- **Root Status:** Fully rooted (`su -c` available without prompt).
+
+Verified with:
+```bash
+adb devices -l
+# 32001776e8e82623 device usb:1-5 product:treble_arm64_bgS model:TrebleDroid_with_GApps device:tdgsi_arm64_ab transport_id:2
+```
+
+---
+
+## 2. CorePatch / Signature Verification Bypass Status
+- **Status:** **INACTIVE / NOT INSTALLED**
+- **Evidence:**
+  - LSPosed framework is active on the device (`/data/adb/lspd/`).
+  - Active modules in `/data/adb/lspd/config/modules_config.db`:
+    - `com.noobexon.xposedfakelocation`
+    - `org.lsposed.afterlifefix`
+  - Neither `CorePatch` (`com.canyie.corepatch`) nor any other signature spoofing/bypass module is installed in `pm list packages` or enabled in LSPosed.
+- **Consequence:**
+  - Standard `adb install -r <modded.apk>` signed with `debug.keystore` over the official Amazon APK will fail with `INSTALL_FAILED_UPDATE_INCOMPATIBLE` because the stock APK is signed with Amazon's release key (`e627f73a`).
+
+---
+
+## 3. Recommended Deployment Strategies
+
+### Option A: Direct Root Replacement (Fastest & Zero Data Loss - Recommended)
+Since the device has full `su` access, the modded `base.apk` can be swapped directly into the existing app directory without triggering package signature validation:
+```bash
+# 1. Locate current app directory
+APK_PATH=$(adb shell "su -c 'pm path com.amazon.kindle'" | head -n 1 | tr -d '\r' | sed 's/package://')
+APK_DIR=$(dirname "$APK_PATH")
+
+# 2. Push modded apk to staging
+adb push <modded_base.apk> /data/local/tmp/base_mod.apk
+
+# 3. Swap base.apk in place, fix permissions, and force-stop
+adb shell "su -c '
+  cp /data/local/tmp/base_mod.apk $APK_DIR/base.apk && \
+  chmod 644 $APK_DIR/base.apk && \
+  chown system:system $APK_DIR/base.apk && \
+  rm /data/local/tmp/base_mod.apk && \
+  am force-stop com.amazon.kindle
+'"
+```
+
+### Option B: Keep-Data Uninstall + Debug-Signed APK Install
+If testing standard APK installation:
+```bash
+# 1. Sign modded APK with bundled debug.keystore:
+apksigner sign --ks debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android <modded_base.apk>
+
+# 2. Uninstall while preserving app data and databases (/data/data/com.amazon.kindle):
+adb shell "cmd package uninstall -k com.amazon.kindle"
+
+# 3. Install debug-signed APK:
+adb install -r -d <modded_base_signed.apk>
+```
+
+---
+
+## 4. Current Installed App Metadata
+- **Package Name:** `com.amazon.kindle`
+- **Version Name:** `8.159.0.100(2.0.115180.0)`
+- **Version Code:** `1286541811`
+- **Target SDK:** `36`, **Min SDK:** `30`
+- **Install Path:** `/data/app/~~9iOBGmZzWJG8kWDshVWsEQ==/com.amazon.kindle-_UswMejwLkmSwfKZB0sDPA==/base.apk`
+- **Official Signer Fingerprint:** `e627f73a`
+
+---
+
+## 5. Handoff Assets Inventory in `handoff_assets/`
+1. `com.amazon.kindle_v8.159.0.100_base_original.apk` (135,279,828 bytes):
+   Clean original release APK pulled directly from the phone.
+   SHA-256: `d0c1f890e325ec3696342248a37219e68f3e41c27f39bfdf21de05c6bacba1fd`
+2. `debug.keystore` (13,102 bytes):
+   Standard Android SDK PKCS12 keystore.
+   - Keystore / Key Password: `android`
+   - Alias: `androiddebugkey`
+3. `master_probe_v1.epub` (71,475 bytes):
+   Full 22-chapter master test EPUB covering headings, drop caps, margin collapse, ragged breaking, and tables.
+4. `test_epubs/`:
+   - `kindle_exam_v1.epub`
+   - `kindle_exam_v2.epub`
+   - `kindle_exam_v3.epub`
+   - `kindle_tables_images_exam.epub`
