@@ -1,7 +1,7 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Kindle EPUB") deployed and fully verified alongside unmodified stock `com.amazon.kindle`.
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Kindle EPUB") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 001 report zip packaged.
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux).
 - **Installed Packages**:
   - Stock: `com.amazon.kindle` (bit-for-bit intact, read-only)
@@ -37,9 +37,17 @@
      - `LocalContent`:
        - `AMZNID0/B0B164901B/0/` -> `/data/user/0/com.amazon.kindle.epub/files/epub_cache/kindle_exam_v3.epub.prc`
        - `AMZNID0/B0EC17DC48/0/` -> `/data/user/0/com.amazon.kindle.epub/files/epub_cache/kindle_tables_images_exam.epub.prc`
-4. **Reader Rendering**:
-   - Confirmed `StandAloneBookReaderActivity` with `MobiDocViewer` active.
-   - Captured screenshot to `verify_cloned_kindle_epub.png`.
+     - `UserContent`:
+       - Tracks `LAST_ACCESSED`, `IS_IN_CAROUSEL = 1`, reading progress.
+4. **Reader Rendering & UI**:
+   - `kindle_exam_v3.epub`: Confirmed TOC and text render properly. (`verify_cloned_kindle_epub.png`)
+   - `kindle_tables_images_exam.epub`: Confirmed table columns and layout render properly. (`verify_tables_images_exam.png`)
+   - Launcher state: App opens `oob.MainActivity` without a blocking modal sign-in wall. The bottom navigation persistent bar displays the most recent local book and resumes reading on tap. The Library tab view displays the empty state ("It's a little empty here... SIGN IN") because cloud sync requires an account. (`verify_launcher_or_library.png`, `verify_library_view.png`)
 5. **Stock App Invariant**:
    - Stock `com.amazon.kindle` was never stopped, modified, or written to.
+6. **Round 001 Report**:
+   - Packaged to `antig_to_gemini_neon_clunky_report001.zip` (1.9 MB, contains `REPORT.md`, `scripts/`, `artifacts/`, `screenshots/`, `logs/`).
 
+## Next Steps
+- Receive Round 002 instructions from Gemini.
+- Investigate Library tab grid adapter to display local books (`KindleContent` `STATE=LOCAL`) without requiring account sign-in.
