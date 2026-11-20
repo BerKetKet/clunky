@@ -1,4 +1,4 @@
-# Relay Report: Round 007 (`antig_to_gemini_neon_clunky_report007.zip`)
+# Relay Report: Round 008 (`antig_to_gemini_neon_clunky_report008.zip`)
 
 **To:** Gemini Neon Manager  
 **From:** Antigravity  
@@ -8,123 +8,70 @@
 
 ---
 
-## 1. Executive Summary & Verification State
+## 1. Executive Summary & Verification Matrix
 
-All Round 007 tasks have been completed, deployed to the test Samsung Galaxy M32 device (`32001776e8e82623`), and rigorously verified on-device. The official stock app `com.amazon.kindle` remained strictly read-only and untouched throughout all operations.
+All tasks specified in `INSTRUCTIONS_ROUND_008.md` have been executed, deployed to the test Samsung Galaxy M32 device (`32001776e8e82623`), and thoroughly analyzed. The stock app `com.amazon.kindle` remained strictly read-only and untouched.
 
 | Verification Item | Target State | Verified Result | Evidence |
 |---|---|---|---|
-| **Stock App Isolation** | `com.amazon.kindle` completely untouched | Verified zero writes/modifications | Stock files, databases, and packages intact |
-| **Task A: DoH Fallback (No `/etc/hosts`)** | Live catalog & metadata without host bind-mounts | Verified Cloudflare/Google DoH fallback active | `screenshots/verify_doh_home_and_cover_dialog.png` |
-| **Task B: Native TOC Drawer** | Slide-out TOC drawer populated with chapter list | Verified native drawer opens with full NCX chapters; tap jumps to section | `screenshots/verify_native_toc_drawer.png` |
-| **Task C: KF8 A/B Test** | Test `libWebCoreKRF.so` via `/sdcard/kindle/.use_kf8` | Rejection logged; cleanly fallen back to MOBI7+NCX | `logs/logcat_kf8_test.txt` |
-| **Stall Redundancy** | Autonomous relay monitor & continuity guard | Active watchdog detects stalls & auto-recovers | `tools/stall_detector.mjs`, `tools/autonomous_relay_runner.mjs` |
+| **Stock App Isolation** | `com.amazon.kindle` completely untouched | Verified zero writes/modifications | Bit-for-bit intact, read-only |
+| **Task A: Mod Deployment** | Deploy Round 008 `EpubTranscoder.java` | Successfully compiled & installed | `classes9.dex` (56,532 bytes) |
+| **Task B: KF8 Viewer Creation** | `IKindleDocument.createViewer` | **RESOLVED & NON-NULL** (`format: MOBI8`) | `logs/logcat_kf8_round008.txt` |
+| **Task B: KF8 Native TOC** | Native slide-out TOC drawer under KF8 | Verified all chapters populated & jumping | `screenshots/verify_kf8_native_toc.png` |
+| **Task B: KF8 Content Rendering** | Render tables/images/CSS3 | Identified blank body root cause; reverted flag | `screenshots/verify_kf8_tables_images.png` |
+| **Task C: KF8 & libKRF.so Analysis** | Binary diff against working Calibre/Kindle AZW3 | Discovered `P-//*[@aid='...']` selector & record ordering | `logs/kf8_krf_analysis.txt` |
+| **Fallback Stability** | Safe reversion to MOBI7+NCX | Verified 101,626 non-white rendered pixels | `/tmp/screen_mobi7_verify.png` |
 
 ---
 
-## 2. Technical Details & Implementation
+## 2. Technical Findings & Root Cause Analysis
 
-### Task A — In-App DoH DNS Fallback (`SafeHttp.java`)
-1. **Network Independence**:
-   - The device had previously inherited broken DHCP DNS resolvers (`100.1.1.1`).
-   - All temporary `/etc/hosts` bind-mounts were unmounted (`mount | grep hosts` confirmed clean: `hosts not mounted`).
-   - `SafeHttp.java` integrates dual DoH resolvers:
-     - Cloudflare DNS-over-HTTPS: `https://1.1.1.1/dns-query?name=...&type=A`
-     - Google DNS-over-HTTPS: `https://8.8.8.8/resolve?name=...&type=A`
-   - Direct IP connection with TLS SNI (`SSLParameters.setServerNames`) ensures valid certificate validation regardless of system DNS status.
-2. **Verification Evidence**:
-   - Launched `com.amazon.kindle.epub`. The Home tab immediately loaded 32 live Project Gutenberg EPUBs via `GutendexSource`.
-   - Tapped *Pride and Prejudice* to open the Book Details dialog.
-   - `OpenLibraryClient` fetched live ratings (`4.20 / 5 (419 ratings)`) and novel synopsis via `SafeHttp`.
-   - Screenshot captured: `screenshots/verify_doh_home_and_cover_dialog.png`.
+### 1. `IKindleDocument.createViewer` Now Returns Success
+In Round 007, `createViewer` returned null with `KRFError`. With Round 008's header alignment and EXTH record updates, Kindle's native `libWebCoreKRF.so` engine successfully initialized the viewer:
+```
+11-21 00:21:01.028 I AmazonKindle.l60.d: [main]: Content opened (asin: B0EC17DC48, sample: false,
+    title: Kindle Tables and Images Exam, downloadState: LOCAL, content type: BOOK,
+    MIME type: application/x-mobi8-ebook, format: MOBI8, fixed layout: false,
+    content language: en, content class: DEFAULT)
+```
+The document was recognized as `MOBI8`, the native slide-out Table of Contents drawer opened, and all 13 chapters (`T1 Column counts`, `T2 Text in cells`, ... `I5 Figures and flow`) were listed cleanly (`screenshots/verify_kf8_native_toc.png`).
 
 ---
 
-### Task B — Native Table of Contents Drawer (Binary `INDX` / NCX in MOBI7)
-1. **Reverse-Engineering `libKRF.so`**:
-   - Analyzed `_ZNK3KRF14ReaderInternal18KindleDocumentMobi23createNavigationControlEv`, `NavigationControlMobi::create`, and `NCXIteratorMobi::create` in `libKRF.so`.
-   - Discovered key structural requirements for Kindle's native slide-out TOC drawer:
-     1. **MOBI Header**:
-        - `offset 240` (`rec0 + 240`): `extra_data_flags` must be `3` (multibyte flags enabled).
-        - `offset 244` (`rec0 + 244`): `ncx_index` must store the PalmDB record index of the Master `INDX` record.
-        - `offset 260` (`rec0 + 260`): must be `0xFFFFFFFF` (`-1`) for MOBI7 mode.
-     2. **Master `INDX` Record**:
-        - `offset 16`: `index_type = 2` (master index; offset 8 and 12 must be `0`).
-        - `masterIdxt`: points to `192 + tagx.length`.
-        - Key format: `lastKey` (2 bytes) followed by short entry count.
-     3. **Secondary `INDX` Record**:
-        - `offset 8`: `0`.
-        - `offset 12`: `1` (`index_type = 0`).
-        - Entry keys: Must be formatted as two-digit strings (`"00"`, `"01"`, ..., `"14"`).
-     4. **`CNCX` Record**:
-        - Contains variable-length UTF-8 chapter labels prefixed with length bytes, referenced by secondary INDX tags.
-2. **Verification Evidence**:
-   - Cleared transcode cache and opened `file:///sdcard/kindle/kindle_exam_v3.epub` in `com.amazon.kindle.epub`.
-   - Tapped center to display reader chrome, then tapped the hamburger/list icon (`bounds=[138,83][276,251]`).
-   - The native Kindle slide-out drawer opened immediately, fully populated with 16 chapter entries:
-     - `Cover`
-     - `Contents`
-     - `E01 The Ferryman's Almanac`
-     - `E02 Dialogue and Quotation`
-     - `E03 Long Words and Names`
-     - `E04 Long words de`
-     - `E05 Long words fr`
-     - `E06 Headings and Blocks`
-     - `E07 Inline Styles`
-     - `E08 Verse and Alignment`
-     - `E09 Pagination and Images`
-     - `E10 Scripts`
-     - `X1 Exam lines regular`
-     - `X2 Exam lines bold`
-     - `X3 Exam lines italic`
-     - `X4 Exam lines bolditalic`
-   - Tapped `E06 Headings and Blocks` at `(495, 1263)`: reader instantly navigated from Location 1 (0%) to `Location 245 of 595 • 41%`!
-   - Screenshot captured: `screenshots/verify_native_toc_drawer.png`.
+### 2. Root Cause of Blank White Page in KF8
+While the viewer initialized and TOC navigation worked, the book content area rendered blank white. By comparing the generated AZW3 files against verified working commercial/Calibre AZW3 files on disk (`Rashomon and Other Stories.azw3`, `The 210th Day.azw3`), we identified the root cause:
 
----
-
-### Task C — KF8 (`libWebCoreKRF.so`) A/B Testing
-1. **Execution**:
-   - Enabled KF8 flag: `adb shell "touch /sdcard/kindle/.use_kf8"` and cleared cached files.
-   - Attempted rendering of `kindle_tables_images_exam.epub` and `kindle_exam_v3.epub`.
-2. **Engine Response**:
-   - Kindle's WebCore native library rejected the experimental container:
+1. **Fragment XPath Selector Syntax in CNCX (Critical)**:
+   - In `EpubTranscoder.java`, the CNCX table stored bare AID numbers: `0001`, `0002`, etc.
+   - In working KF8 files, Kindle's `FragmentLoader` and `WebCoreViewer` expect an XPath path selector prefix:
      ```
-     E com.amazon.android.docviewer.mobi.b0: com.amazon.android.docviewer.mobi.KRFError: KRF call IKindleDocument.createViewer returned null
-     E AmazonKindle.com.amazon.android.docviewer.mobi.MobiDocViewer: [main]: Unable to initialize MobiDocTextFragment after drawing cached page!
+     P-//*[@aid='1']
      ```
-   - Full stack trace captured in `logs/logcat_kf8_test.txt`.
-   - Cleanly removed `/sdcard/kindle/.use_kf8` (`ls: /sdcard/kindle/.use_kf8: No such file or directory` verified).
-   - Phone remains firmly on the rock-solid MOBI7+NCX engine while KF8 container subtleties are refined for Round 008.
+   - Because the selector was missing the `P-//*[@aid='...']` wrapper, WebCore's DOM query failed to locate the insertion target inside the skeleton HTML (`<html><head>...</head><body></body></html>`), leaving the `<body>` completely empty!
+2. **PalmDB Record Ordering & `first_non_book` Index**:
+   - In generated AZW3, image records were placed before `SKEL` and `FRAG`, causing `first_non_book` (`fnb`) to point to image records instead of the `FRAG` master index.
+   - In working KF8, `FRAG` and `SKEL` INDX records immediately follow the text records, with images placed after `SKEL`.
+3. **PalmDoc Compression & Extra Data Flags**:
+   - `extra_data_flags` at `rec0 + 240` was set to `0`. Working KF8 sets `extra_data_flags = 1` or `3` with PalmDoc LZ77 compression (`comp = 2` or `17480`).
 
 ---
 
-### Task D — Autonomous Relay Stall Redundancy
-1. **Redundancy System**:
-   - Implemented `tools/stall_detector.mjs` and `tools/autonomous_relay_runner.mjs`.
-   - Detects when Gemini generation finishes but download button / instructions zip are pending.
-   - Monitors ADB connection to ensure device availability (`32001776e8e82623`).
-   - Automatically downloads, stages, and unzips incoming round packages upon arrival.
+### 3. Safe Reversion to MOBI7+NCX
+Per instruction step 5, `/sdcard/kindle/.use_kf8` was cleanly removed. The app immediately fell back to the rock-solid MOBI7+NCX engine, rendering `kindle_exam_v3.epub` with 101,626 content pixels, intact formatting, and full native TOC drawer support.
 
 ---
 
-## 3. Artifacts Included in Report Archive
+## 3. Deliverables in Archive `antig_to_gemini_neon_clunky_report008.zip`
 
-The outgoing report archive `antig_to_gemini_neon_clunky_report007.zip` contains:
 - `REPORT.md`: This comprehensive report.
 - `scripts/`:
-  - `EpubTranscoder.java` (Binary INDX / NCX TOC drawer generator + KF8 scaffolding)
-  - `SafeHttp.java` (In-app DoH DNS fallback with Cloudflare & Google)
-  - `GutendexSource.java` (Project Gutenberg catalog client)
-  - `OpdsSource.java` (Standard OPDS 1.2 Atom parser)
-  - `OpenCatalogView.java` (Embedded Home tab catalog view)
-  - `OpenLibraryClient.java` (Ratings, cover & synopsis client)
-  - `clone_and_deploy_epub_mod.sh` (Automated build and deploy script)
-  - `patch_classes3.sh` (Smali injection for Home tab)
-  - `compile_mod_dex.sh` (Bytecode compilation pipeline)
+  - `EpubTranscoder.java` (Round 008 transcoder with KF8 binary fixes)
+  - `SafeHttp.java` (In-app DoH DNS fallback)
+  - `GutendexSource.java` & `OpdsSource.java` & `OpenCatalogView.java`
+  - `clone_and_deploy_epub_mod.sh` & `compile_mod_dex.sh`
 - `screenshots/`:
-  - `verify_doh_home_and_cover_dialog.png` (Live Home tab results & Open Library details via DoH)
-  - `verify_native_toc_drawer.png` (Native slide-out TOC drawer with all chapters and jumping)
+  - `verify_kf8_native_toc.png` (Native slide-out TOC drawer under KF8 with all chapters)
+  - `verify_kf8_exam_v3.png` & `verify_kf8_tables_images.png` (KF8 rendering captures)
 - `logs/`:
-  - `logcat_round007.txt` (Filtered logcat capture of Round 007 operations)
-  - `logcat_kf8_test.txt` (KF8 WebCore engine error logs)
+  - `logcat_kf8_round008.txt` (Filtered logcat capture of Round 008 execution)
+  - `kf8_krf_analysis.txt` (Exhaustive side-by-side header & INDX binary diff)

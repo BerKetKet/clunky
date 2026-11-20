@@ -115,7 +115,8 @@ async function waitForRound(roundNum, maxWaitSec = 180) {
 
 async function main() {
   const round = parseInt(process.argv[2] || '7', 10);
-  const res = await waitForRound(round, 180);
+  const maxWait = parseInt(process.argv[3] || '600', 10);
+  const res = await waitForRound(round, maxWait);
   console.log('[Monitor Output]:', JSON.stringify(res));
   if (!res.success) process.exit(1);
 }

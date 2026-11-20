@@ -51,6 +51,26 @@ public final class EpubTranscoder {
         }
     }
 
+    private static final class Kf8Section {
+        final int fileNum;
+        final int skelStart;
+        final int skelLen;
+        final int insertPos;
+        final int fragStart;
+        final int fragLen;
+        final String aid;
+
+        Kf8Section(int fileNum, int skelStart, int skelLen, int insertPos, int fragStart, int fragLen, String aid) {
+            this.fileNum = fileNum;
+            this.skelStart = skelStart;
+            this.skelLen = skelLen;
+            this.insertPos = insertPos;
+            this.fragStart = fragStart;
+            this.fragLen = fragLen;
+            this.aid = aid;
+        }
+    }
+
     public static boolean isKf8Enabled() {
         try {
             return new File("/sdcard/kindle/.use_kf8").exists();
@@ -311,38 +331,67 @@ public final class EpubTranscoder {
             }
         }
 
-        // 5. Assemble spine HTML and record exact UTF-8 byte offsets for NCX INDX
+        // 5. Assemble spine HTML and record exact UTF-8 byte offsets for NCX INDX (and SKEL/FRAG in KF8)
         ByteArrayOutputStream htmlBaos = new ByteArrayOutputStream(65536);
-        String htmlOpen = kf8Mode
-                ? "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"kindle:flow:0001?mime=text/css\"/></head><body>"
-                : "<html><head></head><body>";
-        htmlBaos.write(htmlOpen.getBytes(UTF8));
-
         List<ChapterToc> chapters = new ArrayList<ChapterToc>();
-        for (int i = 0; i < spinePaths.size(); i++) {
-            String hp = spinePaths.get(i);
-            String rawHtml = new String(zipEntries.get(hp), UTF8);
-            if (i > 0) {
-                htmlBaos.write((kf8Mode ? "<div style=\"page-break-before:always;\"></div>" : "<mbp:pagebreak/>").getBytes(UTF8));
-            }
-            int chapStart = htmlBaos.size();
-            String chapLabel = fileToTocLabel.get(hp);
-            if (chapLabel == null || chapLabel.isEmpty()) {
-                chapLabel = extractHeadingOrTitle(rawHtml, "Section " + (i + 1));
-            }
-            ChapterToc ct = new ChapterToc(chapLabel, chapStart);
-            chapters.add(ct);
+        List<Kf8Section> kf8Sections = new ArrayList<Kf8Section>();
 
-            String body = extractAndNormalizeBody(rawHtml, getDirName(hp), imgRecMap, kf8Mode);
-            htmlBaos.write(body.getBytes(UTF8));
-            ct.length = Math.max(1, htmlBaos.size() - chapStart);
+        if (kf8Mode) {
+            String skelTemplate = "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"kindle:flow:0001?mime=text/css\"/></head><body></body></html>";
+            byte[] skelBytes = skelTemplate.getBytes(UTF8);
+            int bodyCloseRel = skelTemplate.indexOf("</body>");
+            for (int i = 0; i < spinePaths.size(); i++) {
+                String hp = spinePaths.get(i);
+                String rawHtml = new String(zipEntries.get(hp), UTF8);
+                String chapLabel = fileToTocLabel.get(hp);
+                if (chapLabel == null || chapLabel.isEmpty()) {
+                    chapLabel = extractHeadingOrTitle(rawHtml, "Section " + (i + 1));
+                }
+                int skelStart = htmlBaos.size();
+                int insertPos = skelStart + bodyCloseRel;
+                htmlBaos.write(skelBytes);
+                int skelLen = skelBytes.length;
+
+                String aid = String.format(Locale.US, "%04X", i + 1);
+                String body = extractAndNormalizeBody(rawHtml, getDirName(hp), imgRecMap, true);
+                String fragHtml = "<div aid=\"" + aid + "\">" + body + "</div>";
+                byte[] fragBytes = fragHtml.getBytes(UTF8);
+                int fragStart = htmlBaos.size();
+                htmlBaos.write(fragBytes);
+                int fragLen = fragBytes.length;
+
+                kf8Sections.add(new Kf8Section(i, skelStart, skelLen, insertPos, fragStart, fragLen, aid));
+                ChapterToc ct = new ChapterToc(chapLabel, fragStart);
+                ct.length = Math.max(1, fragLen);
+                chapters.add(ct);
+            }
+        } else {
+            htmlBaos.write("<html><head></head><body>".getBytes(UTF8));
+            for (int i = 0; i < spinePaths.size(); i++) {
+                String hp = spinePaths.get(i);
+                String rawHtml = new String(zipEntries.get(hp), UTF8);
+                if (i > 0) {
+                    htmlBaos.write("<mbp:pagebreak/>".getBytes(UTF8));
+                }
+                int chapStart = htmlBaos.size();
+                String chapLabel = fileToTocLabel.get(hp);
+                if (chapLabel == null || chapLabel.isEmpty()) {
+                    chapLabel = extractHeadingOrTitle(rawHtml, "Section " + (i + 1));
+                }
+                ChapterToc ct = new ChapterToc(chapLabel, chapStart);
+                chapters.add(ct);
+
+                String body = extractAndNormalizeBody(rawHtml, getDirName(hp), imgRecMap, false);
+                htmlBaos.write(body.getBytes(UTF8));
+                ct.length = Math.max(1, htmlBaos.size() - chapStart);
+            }
+            htmlBaos.write("</body></html>".getBytes(UTF8));
         }
-        htmlBaos.write("</body></html>".getBytes(UTF8));
         byte[] htmlBytes = htmlBaos.toByteArray();
 
         String asin = String.format(Locale.US, "B0%08X", Integer.valueOf(inFile.getName().hashCode()));
         byte[] containerBytesOut = kf8Mode
-                ? buildPalmDbKf8(title, author, publisher, lang, pubDate, asin, htmlBytes, cssBytes, imageRecords, chapters, hasCover)
+                ? buildPalmDbKf8(title, author, publisher, lang, pubDate, asin, htmlBytes, cssBytes, imageRecords, chapters, kf8Sections, hasCover)
                 : buildPalmDbMobi7(title, author, publisher, lang, pubDate, asin, htmlBytes, imageRecords, chapters, hasCover);
 
         File tmpOut = new File(outFile.getParentFile(), outFile.getName() + ".tmp");
@@ -555,11 +604,12 @@ public final class EpubTranscoder {
     }
 
     // ==========================================================================
-    // KF8 (MOBI8 / libWebCoreKRF.so) Builder (header_length = 264, FDST + SKEL + FRAG + NCX)
+    // KF8 (MOBI8 / libWebCoreKRF.so) Builder (Round 008: fixed rec0 offsets, INDX headers & per-chapter SKEL/FRAG)
     // ==========================================================================
     private static byte[] buildPalmDbKf8(
             String title, String author, String publisher, String lang, String pubDate, String asin,
-            byte[] htmlBytes, byte[] cssBytes, List<byte[]> imageRecords, List<ChapterToc> chapters, boolean hasCover
+            byte[] htmlBytes, byte[] cssBytes, List<byte[]> imageRecords,
+            List<ChapterToc> chapters, List<Kf8Section> kf8Sections, boolean hasCover
     ) throws Exception {
         byte[] combinedText = new byte[htmlBytes.length + cssBytes.length];
         System.arraycopy(htmlBytes, 0, combinedText, 0, htmlBytes.length);
@@ -567,8 +617,8 @@ public final class EpubTranscoder {
 
         List<byte[]> textRecords = sliceUtf8Records(combinedText);
         List<byte[]> ncxRecords = buildNcxIndxRecords(chapters);
-        List<byte[]> skelRecords = buildSimpleKf8Skel(htmlBytes.length);
-        List<byte[]> fragRecords = buildSimpleKf8Frag(htmlBytes.length);
+        List<byte[]> skelRecords = buildKf8SkelIndx(kf8Sections);
+        List<byte[]> fragRecords = buildKf8FragIndx(kf8Sections);
         byte[] fdstRec = buildFdstRecord(htmlBytes.length, cssBytes.length);
 
         int numText = textRecords.size();
@@ -584,11 +634,10 @@ public final class EpubTranscoder {
         curIdx += ncxRecords.size();
         int flisIdx = curIdx++;
         int fcisIdx = curIdx++;
-        int lastContentRec = fdstIdx - 1;
 
         byte[] exthBytes = buildExth(title, author, publisher, lang, pubDate, asin, numImgs, true, hasCover);
         byte[] titleBytes = title.getBytes(UTF8);
-        int mobiHdrLen = 264;
+        int mobiHdrLen = 248; // 16 + 248 = 264 bytes total (rec0 + 0 .. rec0 + 263)
         int fullNameOff = 16 + mobiHdrLen + exthBytes.length;
         int rec0Len = fullNameOff + titleBytes.length + 2;
         while (rec0Len % 4 != 0) rec0Len++;
@@ -604,7 +653,7 @@ public final class EpubTranscoder {
         putIntBE(rec0, 24, 2);
         putIntBE(rec0, 28, 65001);
         putIntBE(rec0, 32, 0x12345678);
-        putIntBE(rec0, 36, 8); // KF8!
+        putIntBE(rec0, 36, 8); // file_version = 8 (KF8)
         for (int off = 40; off < 80; off += 4) putIntBE(rec0, off, -1);
         putIntBE(rec0, 80, firstNonBookIdx);
         putIntBE(rec0, 84, fullNameOff);
@@ -614,20 +663,22 @@ public final class EpubTranscoder {
         putIntBE(rec0, 108, firstImgIdx);
         putIntBE(rec0, 128, 0x50);
         for (int off = 164; off < 192; off += 4) putIntBE(rec0, off, -1);
-        putIntBE(rec0, 192 + 16, fdstIdx); // MOBI+192 (Rec0+208) = fdst_record in KF8? Wait: MOBI+176 = Rec0+192!
-        // MOBI+176 (Rec0+192): in KF8, offset 192 (MOBI+176) is fdst_record (4B), offset 196 (MOBI+180) is fdst_count (4B)!
-        putIntBE(rec0, 192, fdstIdx);
-        putIntBE(rec0, 196, 2); // 2 flows (HTML + CSS)
+        putIntBE(rec0, 192, fdstIdx); // MOBI+176 (rec0+192): fdst_record
+        putIntBE(rec0, 196, 2);       // MOBI+180 (rec0+196): fdst_flow_count (HTML + CSS)
         putIntBE(rec0, 200, fcisIdx);
         putIntBE(rec0, 204, 1);
         putIntBE(rec0, 208, flisIdx);
         putIntBE(rec0, 212, 1);
-        putIntBE(rec0, 256, 0);       // extra_data_flags (MOBI+240)
-        putIntBE(rec0, 260, ncxIdx);  // ncx_index (MOBI+244)
-        putIntBE(rec0, 264, fragIdx); // frag_index (MOBI+248)
-        putIntBE(rec0, 268, skelIdx); // skel_index (MOBI+252)
-        putIntBE(rec0, 272, -1);      // datp_index (MOBI+256)
-        putIntBE(rec0, 276, -1);      // guide_index (MOBI+260)
+        putIntBE(rec0, 224, -1);
+        putIntBE(rec0, 228, 0);
+        putIntBE(rec0, 232, -1);
+        putIntBE(rec0, 236, -1);
+        putIntBE(rec0, 240, 0);       // MOBI+224 (rec0+240): extra_data_flags = 0 (no trailing bytes)
+        putIntBE(rec0, 244, ncxIdx);  // MOBI+228 (rec0+244): ncx_index
+        putIntBE(rec0, 248, fragIdx); // MOBI+232 (rec0+248): frag_index
+        putIntBE(rec0, 252, skelIdx); // MOBI+236 (rec0+252): skel_index
+        putIntBE(rec0, 256, -1);      // MOBI+240 (rec0+256): datp_index
+        putIntBE(rec0, 260, -1);      // MOBI+244 (rec0+260): guide_index
 
         System.arraycopy(exthBytes, 0, rec0, 16 + mobiHdrLen, exthBytes.length);
         System.arraycopy(titleBytes, 0, rec0, fullNameOff, titleBytes.length);
@@ -658,30 +709,41 @@ public final class EpubTranscoder {
         return fdst;
     }
 
-    private static List<byte[]> buildSimpleKf8Skel(int htmlLen) throws Exception {
+    private static List<byte[]> buildKf8SkelIndx(List<Kf8Section> sections) throws Exception {
         List<byte[]> out = new ArrayList<byte[]>();
-        // Secondary SKEL INDX: 1 entry "SKEL0000000000" -> chunk_count=1, start=0, len=htmlLen
+        int count = sections.size();
         ByteArrayOutputStream secE = new ByteArrayOutputStream();
-        byte[] kb = "SKEL0000000000".getBytes(UTF8);
-        secE.write(kb.length);
-        secE.write(kb);
-        secE.write(0x03); // tags 1 (chunk_count=1) and 6 (start=0, len=htmlLen)
-        writeVwiForward(secE, 1);
-        writeVwiForward(secE, 0);
-        writeVwiForward(secE, htmlLen);
+        int[] secOffs = new int[count];
+        String lastKey = "SKEL0000000000";
+        for (int i = 0; i < count; i++) {
+            Kf8Section sec = sections.get(i);
+            secOffs[i] = 192 + secE.size();
+            String key = String.format(Locale.US, "SKEL%010d", i);
+            lastKey = key;
+            byte[] kb = key.getBytes(UTF8);
+            secE.write(kb.length);
+            secE.write(kb);
+            secE.write(0x03); // Tag 1 (chunk_count=1) + Tag 6 (start, len)
+            writeVwiForward(secE, 1);
+            writeVwiForward(secE, sec.skelStart);
+            writeVwiForward(secE, sec.skelLen);
+        }
         while (secE.size() % 4 != 0) secE.write(0);
         int secIdxtOff = 192 + secE.size();
 
         ByteArrayOutputStream secIdxt = new ByteArrayOutputStream();
         secIdxt.write("IDXT".getBytes(UTF8));
-        writeShortBE(secIdxt, 192);
+        for (int off : secOffs) writeShortBE(secIdxt, off);
         while (secIdxt.size() % 4 != 0) secIdxt.write(0);
 
         byte[] secHdr = new byte[192];
         System.arraycopy("INDX".getBytes(UTF8), 0, secHdr, 0, 4);
         putIntBE(secHdr, 4, 192);
+        putIntBE(secHdr, 8, 0);
+        putIntBE(secHdr, 12, 1); // Secondary INDX (verified in libKRF.so)
+        putIntBE(secHdr, 16, 0);
         putIntBE(secHdr, 20, secIdxtOff);
-        putIntBE(secHdr, 24, 1);
+        putIntBE(secHdr, 24, count);
         putIntBE(secHdr, 28, -1);
         putIntBE(secHdr, 32, -1);
         ByteArrayOutputStream secRec = new ByteArrayOutputStream();
@@ -689,7 +751,6 @@ public final class EpubTranscoder {
         secRec.write(secE.toByteArray());
         secRec.write(secIdxt.toByteArray());
 
-        // Master SKEL INDX
         byte[] tagx = new byte[]{
             'T','A','G','X', 0,0,0,24, 0,0,0,1,
             1, 1, 0x01, 0, // Tag 1: chunk_count
@@ -698,27 +759,30 @@ public final class EpubTranscoder {
         };
         int mOff = 192 + tagx.length;
         ByteArrayOutputStream mE = new ByteArrayOutputStream();
-        mE.write(kb.length);
-        mE.write(kb);
-        writeShortBE(mE, 1);
-        while (mE.size() % 4 != 0) mE.write(0);
+        byte[] lkb = lastKey.getBytes(UTF8);
+        mE.write(lkb.length);
+        mE.write(lkb);
+        writeShortBE(mE, count);
+        while ((mOff + mE.size()) % 4 != 0) mE.write(0);
         int mIdxtOff = mOff + mE.size();
 
         ByteArrayOutputStream mIdxt = new ByteArrayOutputStream();
         mIdxt.write("IDXT".getBytes(UTF8));
         writeShortBE(mIdxt, mOff);
-        while (mIdxt.size() % 4 != 0) mIdxt.write(0);
+        while ((tagx.length + mE.size() + mIdxt.size()) % 4 != 0) mIdxt.write(0);
 
         byte[] mHdr = new byte[192];
         System.arraycopy("INDX".getBytes(UTF8), 0, mHdr, 0, 4);
         putIntBE(mHdr, 4, 192);
-        putIntBE(mHdr, 8, 2);
-        putIntBE(mHdr, 12, 1);
+        putIntBE(mHdr, 8, 0);
+        putIntBE(mHdr, 12, 0);
+        putIntBE(mHdr, 16, 2); // Master INDX (verified in libKRF.so)
         putIntBE(mHdr, 20, mIdxtOff);
         putIntBE(mHdr, 24, 1);
         putIntBE(mHdr, 28, 65001);
         putIntBE(mHdr, 32, -1);
-        putIntBE(mHdr, 36, 1);
+        putIntBE(mHdr, 36, count);
+        putIntBE(mHdr, 52, 0);
         putIntBE(mHdr, 180, 192);
 
         ByteArrayOutputStream mRec = new ByteArrayOutputStream();
@@ -732,37 +796,54 @@ public final class EpubTranscoder {
         return out;
     }
 
-    private static List<byte[]> buildSimpleKf8Frag(int htmlLen) throws Exception {
+    private static List<byte[]> buildKf8FragIndx(List<Kf8Section> sections) throws Exception {
         List<byte[]> out = new ArrayList<byte[]>();
+        int count = sections.size();
+
         ByteArrayOutputStream cncx = new ByteArrayOutputStream();
-        byte[] aid = "0000000000".getBytes(UTF8);
-        writeVwiForward(cncx, aid.length);
-        cncx.write(aid);
+        int[] cncxOffs = new int[count];
+        for (int i = 0; i < count; i++) {
+            cncxOffs[i] = cncx.size();
+            byte[] aidBytes = sections.get(i).aid.getBytes(UTF8);
+            writeVwiForward(cncx, aidBytes.length);
+            cncx.write(aidBytes);
+        }
         while (cncx.size() % 4 != 0) cncx.write(0);
 
         ByteArrayOutputStream secE = new ByteArrayOutputStream();
-        byte[] kb = "0000000000".getBytes(UTF8);
-        secE.write(kb.length);
-        secE.write(kb);
-        secE.write(0x1F); // tags 2, 3, 4, 6 (2 vals)
-        writeVwiForward(secE, 0); // cncx offset
-        writeVwiForward(secE, 0); // file_num
-        writeVwiForward(secE, 0); // seq_num
-        writeVwiForward(secE, 0); // start
-        writeVwiForward(secE, htmlLen); // length
+        int[] secOffs = new int[count];
+        String lastKey = "0000000000";
+        for (int i = 0; i < count; i++) {
+            Kf8Section sec = sections.get(i);
+            secOffs[i] = 192 + secE.size();
+            String key = String.format(Locale.US, "%010d", sec.insertPos);
+            lastKey = key;
+            byte[] kb = key.getBytes(UTF8);
+            secE.write(kb.length);
+            secE.write(kb);
+            secE.write(0x0F); // Tags 2 (0x01), 3 (0x02), 4 (0x04), 6 (0x08) -> 0x0F!
+            writeVwiForward(secE, cncxOffs[i]);  // Tag 2: cncx offset
+            writeVwiForward(secE, sec.fileNum);  // Tag 3: file_num
+            writeVwiForward(secE, 0);            // Tag 4: seq_num
+            writeVwiForward(secE, sec.fragStart);// Tag 6a: start
+            writeVwiForward(secE, sec.fragLen);  // Tag 6b: length
+        }
         while (secE.size() % 4 != 0) secE.write(0);
         int secIdxtOff = 192 + secE.size();
 
         ByteArrayOutputStream secIdxt = new ByteArrayOutputStream();
         secIdxt.write("IDXT".getBytes(UTF8));
-        writeShortBE(secIdxt, 192);
+        for (int off : secOffs) writeShortBE(secIdxt, off);
         while (secIdxt.size() % 4 != 0) secIdxt.write(0);
 
         byte[] secHdr = new byte[192];
         System.arraycopy("INDX".getBytes(UTF8), 0, secHdr, 0, 4);
         putIntBE(secHdr, 4, 192);
+        putIntBE(secHdr, 8, 0);
+        putIntBE(secHdr, 12, 1); // Secondary INDX (verified in libKRF.so)
+        putIntBE(secHdr, 16, 0);
         putIntBE(secHdr, 20, secIdxtOff);
-        putIntBE(secHdr, 24, 1);
+        putIntBE(secHdr, 24, count);
         putIntBE(secHdr, 28, -1);
         putIntBE(secHdr, 32, -1);
         ByteArrayOutputStream secRec = new ByteArrayOutputStream();
@@ -780,27 +861,29 @@ public final class EpubTranscoder {
         };
         int mOff = 192 + tagx.length;
         ByteArrayOutputStream mE = new ByteArrayOutputStream();
-        mE.write(kb.length);
-        mE.write(kb);
-        writeShortBE(mE, 1);
-        while (mE.size() % 4 != 0) mE.write(0);
+        byte[] lkb = lastKey.getBytes(UTF8);
+        mE.write(lkb.length);
+        mE.write(lkb);
+        writeShortBE(mE, count);
+        while ((mOff + mE.size()) % 4 != 0) mE.write(0);
         int mIdxtOff = mOff + mE.size();
 
         ByteArrayOutputStream mIdxt = new ByteArrayOutputStream();
         mIdxt.write("IDXT".getBytes(UTF8));
         writeShortBE(mIdxt, mOff);
-        while (mIdxt.size() % 4 != 0) mIdxt.write(0);
+        while ((tagx.length + mE.size() + mIdxt.size()) % 4 != 0) mIdxt.write(0);
 
         byte[] mHdr = new byte[192];
         System.arraycopy("INDX".getBytes(UTF8), 0, mHdr, 0, 4);
         putIntBE(mHdr, 4, 192);
-        putIntBE(mHdr, 8, 2);
-        putIntBE(mHdr, 12, 1);
+        putIntBE(mHdr, 8, 0);
+        putIntBE(mHdr, 12, 0);
+        putIntBE(mHdr, 16, 2); // Master INDX (verified in libKRF.so)
         putIntBE(mHdr, 20, mIdxtOff);
         putIntBE(mHdr, 24, 1);
         putIntBE(mHdr, 28, 65001);
         putIntBE(mHdr, 32, -1);
-        putIntBE(mHdr, 36, 1);
+        putIntBE(mHdr, 36, count);
         putIntBE(mHdr, 52, 1);
         putIntBE(mHdr, 180, 192);
 
@@ -832,6 +915,7 @@ public final class EpubTranscoder {
             if (hasCover && numImgs > 0) {
                 addExth(types, payloads, 129, "kindle:embed:0001?mime=image/jpeg".getBytes(UTF8));
             }
+            addExth(types, payloads, 131, new byte[]{0, 0, 0, 0});
         }
         addExth(types, payloads, 501, "EBOK".getBytes(UTF8));
         addExth(types, payloads, 503, title.getBytes(UTF8));
@@ -925,6 +1009,17 @@ public final class EpubTranscoder {
         return out.toByteArray();
     }
 
+    private static String toBase32Four(int val) {
+        final String alpha = "0123456789ABCDEFGHIJKLMNOPQRSTUV";
+        char[] c = new char[4];
+        int v = Math.max(0, val);
+        for (int i = 3; i >= 0; i--) {
+            c[i] = alpha.charAt(v & 31);
+            v >>>= 5;
+        }
+        return new String(c);
+    }
+
     private static void writeVwiForward(ByteArrayOutputStream out, int val) {
         byte[] tmp = new byte[5];
         int n = 0;
@@ -997,7 +1092,7 @@ public final class EpubTranscoder {
                 if (ridx == null) ridx = imgRecMap.get(getBaseName(src).toLowerCase(Locale.US));
                 if (ridx != null) {
                     String replacement = kf8Mode
-                            ? String.format(Locale.US, "<img src=\"kindle:embed:%04X?mime=image/jpeg\"/>", ridx)
+                            ? "<img src=\"kindle:embed:" + toBase32Four(ridx.intValue()) + "?mime=image/jpeg\"/>"
                             : String.format(Locale.US, "<img recindex=\"%05d\"/>", ridx);
                     imgM.appendReplacement(sb, Matcher.quoteReplacement(replacement));
                     continue;

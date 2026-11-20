@@ -1,11 +1,14 @@
 {
-  "workflow_version": "1.1",
-  "project": "clunky_kindle_epub_mod",
-  "round": 7,
-  "incoming_zip": "to_antig_clunky_round_007.zip",
-  "expected_outgoing_zip": "antig_to_gemini_neon_clunky_report007.zip",
-  "max_zip_mb": 100,
+  "round": 8,
+  "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
-  "read_only_package": "com.amazon.kindle",
-  "autonomous_chrome_dev_bridge": true
+  "stock_package_read_only": "com.amazon.kindle",
+  "autonomous_chrome_dev_bridge": true,
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report008.zip",
+  "max_report_size_mb": 100,
+  "tasks": [
+    "Deploy fixed KF8 binary layout in EpubTranscoder.java (rec0 offsets 240..260, mobiHdrLen=248, INDX 16=2/12=1, FRAG 0x0F, per-chapter SKEL/FRAG, Base32 kindle:embed)",
+    "Verify KF8 rendering on kindle_tables_images_exam.epub and kindle_exam_v3.epub + native TOC drawer under /sdcard/kindle/.use_kf8",
+    "If KF8 still rejected by libKRF.so, disassemble createViewer and/or fix & verify directly"
+  ]
 }

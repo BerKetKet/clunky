@@ -1,0 +1,66 @@
+================================================================================
+KF8 (libWebCoreKRF.so / libKRF.so) Binary Header & INDX Deep Analysis
+================================================================================
+
+1. Summary of Findings & Root Cause for Blank Page:
+--------------------------------------------------
+Although IKindleDocument.createViewer returned NON-NULL (Viewer successfully created,
+format recognized as MOBI8, and native Table of Contents drawer fully populated with all chapters),
+the reader rendered a blank white page. Our reverse-engineering and comparison against
+the verified working KF8 reference (Rashomon and Other Stories.azw3) revealed the root causes:
+
+a) Fragment Selector Syntax in CNCX (Primary Cause of Blank Rendering):
+   - In generated AZW3, CNCX aid string was written as bare '0001'.
+   - In verified working KF8 (Rashomon), CNCX aid string is formatted as an XPath selector:
+     "P-//*[@aid='1']"
+   - Kindle's FragmentLoader / WebCoreViewer uses this selector to find the DOM insertion
+     anchor in the skeleton. When given bare '0001', the DOM query fails to find the target node,
+     leaving the skeleton with an empty <body></body>, which renders blank white!
+
+b) PalmDB Record Ordering & first_non_book:
+   - Generated AZW3 placed image records before SKEL and FRAG (fnb=24 pointing to images).
+   - Working KF8 places FRAG, SKEL directly after text records (fnb=39 pointing to FRAG Master INDX),
+     and images are placed after SKEL.
+
+c) extra_data_flags (rec0 + 240 / mobi + 224):
+   - Generated AZW3 had extra_data_flags = 0.
+   - Working KF8 uses extra_data_flags = 1 (or 3) with PalmDoc compression.
+
+
+2. Side-by-Side Record 0 Header Comparison (offsets 0 .. 280):
+-------------------------------------------------------------
+Offset       | Field Name                   | Generated AZW3     | Working KF8 (Rashomon)
+----------------------------------------------------------------------------------------
+rec0 + 0    | compression (H)              | 1                  | 2                     
+rec0 + 4    | text_len (I)                 | 91675              | 147757                
+rec0 + 8    | num_text_records (H)         | 23                 | 37                    
+rec0 + 10   | record_size (H)              | 4096               | 4096                  
+rec0 + 16   | mobi_magic (4s)              | b'MOBI'            | b'MOBI'               
+rec0 + 20   | mobi_header_len (I)          | 248                | 248                   
+rec0 + 24   | mobi_type (I)                | 2                  | 2                     
+rec0 + 28   | text_encoding (I)            | 65001              | 65001                 
+rec0 + 32   | unique_id (I)                | 305419896          | 3154799872            
+rec0 + 36   | file_version (I)             | 8                  | 8                     
+rec0 + 80   | first_non_book_index (I)     | 24                 | 39                    
+rec0 + 84   | full_name_offset (I)         | 516                | 3332                  
+rec0 + 88   | full_name_length (I)         | 21                 | 26                    
+rec0 + 92   | locale_language (I)          | 9                  | 9                     
+rec0 + 104  | min_version (I)              | 8                  | 8                     
+rec0 + 108  | first_image_index (I)        | 24                 | 44                    
+rec0 + 128  | exth_flags (I)               | 80                 | 80                    
+rec0 + 192  | fdst_record (I)              | 28                 | 46                    
+rec0 + 196  | fdst_flow_count (I)          | 2                  | 3                     
+rec0 + 200  | fcis_record (I)              | 38                 | 48                    
+rec0 + 208  | flis_record (I)              | 37                 | 47                    
+rec0 + 240  | extra_data_flags (I)         | 0                  | 1                     
+rec0 + 244  | ncx_index (I)                | 34                 | 4294967295            
+rec0 + 248  | frag_index (I)               | 31                 | 39                    
+rec0 + 252  | skel_index (I)               | 29                 | 42                    
+rec0 + 256  | datp_index (I)               | 4294967295         | 4294967295            
+rec0 + 260  | guide_index (I)              | 4294967295         | 4294967295            
+rec0 + 264  | exth_magic / padding         | b'EXTH'            | b'EXTH'               
+
+3. FRAG CNCX Inspection:
+------------------------
+Generated FRAG CNCX (Rec 33): b'\x840001\x840002\x840003\x840004\x840005\x840006\x840007\x840008'
+Working FRAG CNCX (Rec 41):   b"\x8fP-//*[@aid='1']"
