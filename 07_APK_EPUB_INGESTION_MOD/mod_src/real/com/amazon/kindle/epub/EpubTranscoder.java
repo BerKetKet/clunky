@@ -37,7 +37,7 @@ import java.util.zip.ZipInputStream;
  */
 public final class EpubTranscoder {
     private static final Charset UTF8 = Charset.forName("UTF-8");
-    private static final String CACHE_PREFIX = "v3_";
+    private static final String CACHE_PREFIX = "v4_";
 
     public static File getCacheDir() {
         try {
@@ -270,7 +270,7 @@ public final class EpubTranscoder {
         for (int i = 0; i < imagePaths.size(); i++) {
             String ip = imagePaths.get(i);
             byte[] rawImg = zipEntries.get(ip);
-            byte[] mobiImg = ensureMobiCompatibleImage(ip, rawImg);
+            byte[] mobiImg = ensureMobiCompatibleImage(ip, rawImg, i == 0);
             imageRecords.add(mobiImg);
             int recIndex1Based = i + 1;
             imgRecMap.put(ip, recIndex1Based);
@@ -314,24 +314,35 @@ public final class EpubTranscoder {
         tmpOut.renameTo(outFile);
     }
 
-    private static byte[] ensureMobiCompatibleImage(String path, byte[] raw) {
+    private static byte[] ensureMobiCompatibleImage(String path, byte[] raw, boolean isCover) {
         if (raw == null || raw.length < 4) return raw;
-        // Already JPEG (FF D8) -> pass through untouched
-        if ((raw[0] & 0xFF) == 0xFF && (raw[1] & 0xFF) == 0xD8) {
+        boolean isJpeg = ((raw[0] & 0xFF) == 0xFF && (raw[1] & 0xFF) == 0xD8);
+        if (isJpeg && (!isCover || raw.length <= 58000)) {
             return raw;
         }
-        // Convert PNG/GIF/WebP to RGB JPEG via Android BitmapFactory for maximum MOBI7 libKRF.so compatibility
         try {
             Bitmap bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length);
             if (bmp != null) {
                 int w = bmp.getWidth();
                 int h = bmp.getHeight();
+                if (isCover && (w > 450 || h > 600)) {
+                    float scale = Math.min(450f / w, 600f / h);
+                    int nw = Math.max(1, (int) (w * scale));
+                    int nh = Math.max(1, (int) (h * scale));
+                    Bitmap scaled = Bitmap.createScaledBitmap(bmp, nw, nh, true);
+                    if (scaled != bmp) {
+                        bmp.recycle();
+                        bmp = scaled;
+                    }
+                    w = nw;
+                    h = nh;
+                }
                 Bitmap rgb = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
                 Canvas canvas = new Canvas(rgb);
                 canvas.drawColor(0xFFFFFFFF);
                 canvas.drawBitmap(bmp, 0f, 0f, null);
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                rgb.compress(Bitmap.CompressFormat.JPEG, 90, baos);
+                rgb.compress(Bitmap.CompressFormat.JPEG, isCover ? 80 : 88, baos);
                 rgb.recycle();
                 bmp.recycle();
                 byte[] jpg = baos.toByteArray();
@@ -611,6 +622,7 @@ public final class EpubTranscoder {
     }
 
     private static String resolveRelPath(String baseDir, String rel) {
+        rel = rel.replace("%20", " ");
         String combined = (baseDir == null || baseDir.isEmpty()) ? rel : (baseDir + "/" + rel);
         String[] parts = combined.replace('\\', '/').split("/");
         List<String> stack = new ArrayList<String>();
@@ -636,14 +648,13 @@ public final class EpubTranscoder {
     }
 
     private static String extractXmlTag(String xml, String openPrefix, String closeTag, String defaultVal) {
-        int o = indexOfIgnoreCase(xml, openPrefix);
-        if (o < 0) return defaultVal;
-        int gt = xml.indexOf('>', o);
-        if (gt < 0) return defaultVal;
-        int c = indexOfIgnoreCase(xml, closeTag, gt + 1);
-        if (c < 0) return defaultVal;
-        String val = xml.substring(gt + 1, c).trim();
-        return val.isEmpty() ? defaultVal : val;
+        String localName = openPrefix.replace("<dc:", "").replace("<", "").trim();
+        Matcher m = Pattern.compile("<(?:[a-zA-Z0-9_-]+:)?" + localName + "\\b[^>]*>(.*?)</(?:[a-zA-Z0-9_-]+:)?" + localName + ">", Pattern.DOTALL | Pattern.CASE_INSENSITIVE).matcher(xml);
+        if (m.find()) {
+            String val = m.group(1).replaceAll("<[^>]+>", "").trim();
+            if (!val.isEmpty()) return val;
+        }
+        return defaultVal;
     }
 
     private static String unescapeXml(String s) {

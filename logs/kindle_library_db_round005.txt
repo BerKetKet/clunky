@@ -1,0 +1,871 @@
+'=== KindleContent ===' = === KindleContent ===
+    ID = AMZNID0/B0B164901B/0/
+ TITLE = Kindle Render Exam v3           
+AUTHOR = Exam                            
+ STATE = LOCAL
+
+    ID = AMZNID0/B0EC17DC48/0/
+ TITLE = Kindle Tables and Images Exam   
+AUTHOR = Local EPUB Author               
+ STATE = LOCAL
+
+    ID = AMZNID0/B0C49FFDFF/0/
+ TITLE = Sum                             
+AUTHOR = David Eagleman                  
+ STATE = LOCAL
+
+    ID = AMZNID0/B0751B00C5/0/
+ TITLE = Stephen King Stories Omnibus    
+AUTHOR = Stephen King                    
+ STATE = LOCAL
+
+    ID = AMZNID0/B099C8AD4F/0/
+ TITLE = The Dark Tower Boxed Set        
+AUTHOR = Stephen King                    
+ STATE = LOCAL
+
+    ID = AMZNID0/B083D5D118/0/
+ TITLE = Skeleton Crew                   
+AUTHOR = Stephen King                    
+ STATE = LOCAL
+
+    ID = AMZNID0/B0B90747EB/0/
+ TITLE = The Dark Tower Boxed Set        
+AUTHOR = Stephen King                    
+ STATE = LOCAL
+
+    ID = AMZNID0/B053B77ADA/0/
+ TITLE = How to Stay Alive               
+AUTHOR = Bear Grylls                     
+ STATE = LOCAL
+
+    ID = AMZNID0/B043CB07EE/0/
+ TITLE = Mythology                       
+AUTHOR = Edith Hamilton                  
+ STATE = LOCAL
+
+    ID = AMZNID0/B0093059D4/0/
+ TITLE = American Medical Association Fam
+AUTHOR = Local EPUB Author               
+ STATE = LOCAL
+
+    ID = AMZNID0/B02ED82E6A/0/
+ TITLE = Breverton's Phantasmagoria: A Co
+AUTHOR = Breverton, Terry                
+ STATE = LOCAL
+
+    ID = AMZNID0/B0C4818DC7/0/
+ TITLE = The Green Beret Survival Guide  
+AUTHOR = Brian M. Morris                 
+ STATE = LOCAL
+
+    ID = AMZNID0/B0EF0CE90C/0/
+ TITLE = Experimenting with Babies       
+AUTHOR = Shaun Gallagher                 
+ STATE = LOCAL
+
+    ID = AMZNID0/B03A23F62F/0/
+ TITLE = Beastie Boys Book               
+AUTHOR = Michael Diamond                 
+ STATE = LOCAL
+
+    ID = AMZNID0/B0195D9FD5/0/
+ TITLE = The Disaster Survival Guide     
+AUTHOR = Marie D. Jones                  
+ STATE = LOCAL
+
+    ID = AMZNID0/B0393AB7FA/0/
+ TITLE = American Prison                 
+AUTHOR = Shane Bauer                     
+ STATE = LOCAL
+
+    ID = AMZNID0/B00CC4044D/0/
+ TITLE = Paperbacks from Hell            
+AUTHOR = Grady Hendrix                   
+ STATE = LOCAL
+
+    ID = AMZNID0/B06AA45E7A/0/
+ TITLE = The Chronicles of Narnia Complet
+AUTHOR = C.S. Lewis                      
+ STATE = LOCAL
+
+    ID = AMZNID0/B02B6541EE/0/
+ TITLE = The Complete Sherlock Holmes (Il
+AUTHOR = Doyle, Arthur Conan             
+ STATE = LOCAL
+
+    ID = AMZNID0/B05F000D0E/0/
+ TITLE = The Rugged Life                 
+AUTHOR = Clint Emerson                   
+ STATE = LOCAL
+
+    ID = AMZNID0/B04E157386/0/
+ TITLE = Creepshow                       
+AUTHOR = Stephen King                    
+ STATE = LOCAL
+
+    ID = AMZNID0/B09CDA38DC/0/
+ TITLE = A Series of Unfortunate Events C
+AUTHOR = Lemony Snicket                  
+ STATE = LOCAL
+
+    ID = AMZNID0/B02B020543/0/
+ TITLE = Kingdom Hearts Birth by Sleep: T
+AUTHOR = Tomoco Kanemaki, Tetsuya Nomura,
+ STATE = LOCAL
+
+    ID = AMZNID0/B0B7EA5D57/0/
+ TITLE = The Disaster Artist             
+AUTHOR = Greg Sestero and Tom Bissell    
+ STATE = LOCAL
+
+    ID = AMZNID0/B0E1A267ED/0/
+ TITLE = The Chronicles of Narnia Complet
+AUTHOR = C. S. Lewis                     
+ STATE = LOCAL
+
+    ID = AMZNID0/B077BD9D70/0/
+ TITLE = A Clash of Kings (Illustrated)  
+AUTHOR = George R. R. Martin             
+ STATE = LOCAL
+
+    ID = AMZNID0/B0610F90FF/0/
+ TITLE = Sicilian Feasts, Illustrated edi
+AUTHOR = Giovanna Bellia La Marca        
+ STATE = LOCAL
+
+    ID = AMZNID0/B08A0EB778/0/
+ TITLE = The Madman's Library            
+AUTHOR = Brooke-Hitching, Edward         
+ STATE = LOCAL
+
+    ID = AMZNID0/B0181EF019/0/
+ TITLE = Xanathar's Guide to Everything  
+AUTHOR = Jeremy Crawford                 
+ STATE = LOCAL
+
+    ID = AMZNID0/B07DA0DCA1/0/
+ TITLE = Experimenting With Kids         
+AUTHOR = Shaun Gallagher                 
+ STATE = LOCAL
+
+    ID = AMZNID0/B07D71657E/0/
+ TITLE = CompTIA A+ Certification Study G
+AUTHOR = Faithe Wempen                   
+ STATE = LOCAL
+
+    ID = AMZNID0/B0B6254850/0/
+ TITLE = Law School for Everyone         
+AUTHOR = Molly Bishop Shadel             
+ STATE = LOCAL
+
+    ID = AMZNID0/B06DF5CD4B/0/
+ TITLE = The Dark Tower Boxed Set        
+AUTHOR = Stephen King                    
+ STATE = LOCAL
+
+    ID = AMZNID0/B0552F5FC4/0/
+ TITLE = The Complete U.S. Army Survival 
+AUTHOR = Army                            
+ STATE = LOCAL
+
+    ID = AMZNID0/B03FF5830E/0/
+ TITLE = The Way of Kings                
+AUTHOR = Brandon Sanderson               
+ STATE = LOCAL
+
+    ID = AMZNID0/B0C281219D/0/
+ TITLE = Kindle Tables and Images Exam
+AUTHOR = Local EPUB Author
+ STATE = LOCAL
+
+    ID = AMZNID0/B0CE4CE1E9/0/
+ TITLE = Every Tool's a Hammer           
+AUTHOR = Adam Savage                     
+ STATE = LOCAL
+
+    ID = AMZNID0/B0F3A4F1A4/0/
+ TITLE = A Knight of the Seven Kingdoms  
+AUTHOR = George R.R. Martin              
+ STATE = LOCAL
+
+    ID = AMZNID0/B0FD65C3A0/0/
+ TITLE = American Medical Association Fam
+AUTHOR = American Medical Association    
+ STATE = LOCAL
+
+    ID = AMZNID0/B0756163EE/0/
+ TITLE = Betty Crocker                   
+AUTHOR = Betty Crocker                   
+ STATE = LOCAL
+
+    ID = AMZNID0/B0306CEDD3/0/
+ TITLE = The Icepick Surgeon             
+AUTHOR = Sam Kean;                       
+ STATE = LOCAL
+
+    ID = AMZNID0/B08BAEDD27/0/
+ TITLE = The Food of Italy               
+AUTHOR = Claudia Roden                   
+ STATE = LOCAL
+
+    ID = AMZNID0/B06A6E77E0/0/
+ TITLE = A Brief History of China        
+AUTHOR = Jonathan Clements               
+ STATE = LOCAL
+
+    ID = AMZNID0/B0249B6C1F/0/
+ TITLE = Sum                             
+AUTHOR = David Eagleman                  
+ STATE = LOCAL
+
+    ID = AMZNID0/B0E6E4A6A2/0/
+ TITLE = Howard Stern Comes Again        
+AUTHOR = Howard Stern                    
+ STATE = LOCAL
+
+    ID = AMZNID0/B0B577AEB5/0/
+ TITLE = Alice's Adventures in Wonderland
+AUTHOR = Lewis Carroll                   
+ STATE = LOCAL
+
+    ID = AMZNID0/B051EA5BD2/0/
+ TITLE = The Twenty-Ninth Day            
+AUTHOR = Local EPUB Author               
+ STATE = LOCAL
+
+    ID = AMZNID0/B0D9F0FA6F/0/
+ TITLE = The Twenty-Ninth Day            
+AUTHOR = Local EPUB Author               
+ STATE = LOCAL
+
+    ID = AMZNID0/B07F2BF403/0/
+ TITLE = The Situation Room              
+AUTHOR = George Stephanopoulos           
+ STATE = LOCAL
+
+    ID = AMZNID0/B00DBE5C97/0/
+ TITLE = How to Sell a Haunted House     
+AUTHOR = Grady Hendrix                   
+ STATE = LOCAL
+
+    ID = AMZNID0/B080AF055B/0/
+ TITLE = Making of the Atomic Bomb       
+AUTHOR = Richard Rhodes                  
+ STATE = LOCAL
+
+    ID = AMZNID0/B0794629F0/0/
+ TITLE = The Conspiracy Book             
+AUTHOR = John Michael Greer              
+ STATE = LOCAL
+
+    ID = AMZNID0/B012D80ADE/0/
+ TITLE = The Art Thief                   
+AUTHOR = Michael Finkel                  
+ STATE = LOCAL
+
+    ID = AMZNID0/B0BA283340/0/
+ TITLE = Law School for Everyone         
+AUTHOR = Edward K. Cheng, Joseph L. Hoffm
+ STATE = LOCAL
+
+    ID = AMZNID0/B09481E46D/0/
+ TITLE = Storm of the Century            
+AUTHOR = Stephen King                    
+ STATE = LOCAL
+
+    ID = AMZNID0/B085221A49/0/
+ TITLE = Subpar Parks                    
+AUTHOR = Amber Share                     
+ STATE = LOCAL
+
+    ID = AMZNID0/B08AF8E563/0/
+ TITLE = The Gulag Archipelago 1918–195
+AUTHOR = Aleksandr Solzhenitsyn          
+ STATE = LOCAL
+
+    ID = AMZNID0/B0A1DC69FE/0/
+ TITLE = A History of Magic, Witchcraft a
+AUTHOR = Suzannah Lipscomb               
+ STATE = LOCAL
+
+    ID = AMZNID0/B0C9F06131/0/
+ TITLE = Sum: Forty Tales from the Afterl
+AUTHOR = David Eagleman                  
+ STATE = LOCAL
+
+    ID = AMZNID0/B0901BE37A/0/
+ TITLE = Strange Pictures                
+AUTHOR = Uketsu                          
+ STATE = LOCAL
+
+    ID = AMZNID0/B0A8BDC24B/0/
+ TITLE = A Brief History of Intelligence 
+AUTHOR = Max Bennett                     
+ STATE = LOCAL
+
+    ID = AMZNID0/B00552A400/0/
+ TITLE = History of Ancient Egypt, Volume
+AUTHOR = John Romer                      
+ STATE = LOCAL
+
+    ID = AMZNID0/B096AEC6AC/0/
+ TITLE = Arcanum Unbounded               
+AUTHOR = Brandon Sanderson               
+ STATE = LOCAL
+
+    ID = AMZNID0/B05551C7DE/0/
+ TITLE = Complete Works of Charles Dicken
+AUTHOR = Charles Dickens                 
+ STATE = LOCAL
+
+    ID = AMZNID0/B0E8BD8959/0/
+ TITLE = Blindsight                      
+AUTHOR = Peter Watts                     
+ STATE = LOCAL
+
+    ID = AMZNID0/B0BA4A032A/0/
+ TITLE = Pirate Hunters                  
+AUTHOR = Robert Kurson                   
+ STATE = LOCAL
+
+    ID = AMZNID0/B0F4308A3A/0/
+ TITLE = Martin, George R.R - A Song of I
+AUTHOR = Martin, George R.R              
+ STATE = LOCAL
+
+    ID = AMZNID0/B09E20736C/0/
+ TITLE = 101 Things I Learned&#174; i
+AUTHOR = Louis Eguaras                   
+ STATE = LOCAL
+
+    ID = AMZNID0/B0AF7A5B0C/0/
+ TITLE = Raven Rock                      
+AUTHOR = Garrett M. Graff                
+ STATE = LOCAL
+
+    ID = AMZNID0/B0DFC02E1D/0/
+ TITLE = Wanna Bet?                      
+AUTHOR = Artie Lange                     
+ STATE = LOCAL
+
+    ID = AMZNID0/B097F2B25B/0/
+ TITLE = Sum                             
+AUTHOR = David Eagleman                  
+ STATE = LOCAL
+
+    ID = AMZNID0/B0D8FE083D/0/
+ TITLE = Death and the Afterlife: A Chron
+AUTHOR = Clifford A. Pickover            
+ STATE = LOCAL
+
+    ID = AMZNID0/B0744284C9/0/
+ TITLE = Red Rising 3-Book Bundle        
+AUTHOR = Pierce Brown                    
+ STATE = LOCAL
+
+    ID = AMZNID0/B095FCA4E9/0/
+ TITLE = A Walk Around the Block         
+AUTHOR = Spike Carlsen                   
+ STATE = LOCAL
+
+    ID = AMZNID0/B002164D44/0/
+ TITLE = Follow Me to Hell               
+AUTHOR = Tom Clavin                      
+ STATE = LOCAL
+
+    ID = AMZNID0/B0B5EB627C/0/
+ TITLE = The Encyclopedia of Country Livi
+AUTHOR = Carla Emery                     
+ STATE = LOCAL
+
+    ID = AMZNID0/B0C8D77906/0/
+ TITLE = Tasting History: Explore the Pas
+AUTHOR = Max Miller                      
+ STATE = LOCAL
+
+    ID = AMZNID0/B0D89640E7/0/
+ TITLE = The PARA Method                 
+AUTHOR = Tiago Forte                     
+ STATE = LOCAL
+
+    ID = AMZNID0/B0E0E1CBBE/0/
+ TITLE = The Atlas of Middle-earth       
+AUTHOR = Karen Wynn Fonstad              
+ STATE = LOCAL
+
+    ID = AMZNID0/B099464052/0/
+ TITLE = A Brief History of China: Dynast
+AUTHOR = Jonathan Clements               
+ STATE = LOCAL
+
+    ID = SDLDID0>/storage/emulated/0/Books/David Eagleman Collection 3 Books Bundle Set (Sum_ Tales from the Afterlives, Incognito_ The Secret Lives of The Brain, The Brain_ The Story of You).pdf>1786314732000
+ TITLE = David Eagleman Collection 3 Books Bundle Set (Sum_ Tales from the Afterlives, Incognito_ The Secret Lives of The Brain, The Brain_ The Story of You).pdf
+AUTHOR = 
+ STATE = LOCAL
+
+    ID = AMZNID0/B003ODIZL6/0/
+ TITLE = The New Oxford American Dictionary
+AUTHOR = McKean, Erin
+ STATE = LOCAL
+
+    ID = AMZNID0/B0881CA51D/0/
+ TITLE = Pride and Prejudice
+AUTHOR = Jane Austen
+ STATE = LOCAL
+'=== LocalContent ===' = === LocalContent ===
+      KEY = AMZNID0/B0C49FFDFF/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/1795131825637.prc.prc
+
+      KEY = AMZNID0/B053B77ADA/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/How To Stay Alive - The ultimate survival guide for any -- Bear Grylls -- 2017 -- Penguin Random House, Bantam Press -- 9780593071083 -- b257e73481fd97f0ca887678f33571ae.epub.prc
+
+      KEY = AMZNID0/B043CB07EE/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Hamilton, Edith _ Tierney, Jim - Mythology_ Timeless Tales of Gods and Heroes (75 th Anniversary Illustrated ed) (2017, Black Dog & Leventhal Publishers).epub.prc
+
+      KEY = AMZNID0/B0093059D4/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/American Medical Association Family Medical Guide -- American Medical Association -- 2011 -- John Wiley & Sons, Ltd_ -- 9781118039748 -- 403e4d1eaf61bf139115552fdc3250c8.epub.prc
+
+      KEY = AMZNID0/B02ED82E6A/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Terry Breverton - Breverton's Phantasmagoria_ A Compendium of Monsters, Myths and Legends (2011, Lyons Press).epub.prc
+
+      KEY = AMZNID0/B0C4818DC7/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/The Green Beret Survival Guide_ Advice on Situational -- Brian M_ Morris -- 2019 -- Skyhorse Publishing Company -- 9781510740754 -- 01131554a42c230d562b065361cea3c4.epub.prc
+
+      KEY = AMZNID0/B0EF0CE90C/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Experimenting with Babies _ 50 Amazing Science Projects You Can Perform on Your Kid.epub.prc
+
+      KEY = AMZNID0/B03A23F62F/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Beastie Boys Book -- Michael Diamond, Adam Horovitz -- 2018 -- Spiegel & Grau;Random House Publishing Group -- 0812995546 -- fbb952006a9a65fdfd99759fe2b2ebd4.epub.prc
+
+      KEY = AMZNID0/B0195D9FD5/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/The disaster survival guide_ how to prepare for and survive -- Jones, Marie D -- 2018 -- Visible Ink Press -- 9781578596850 -- d198dfff60563d7fa68305113d515b4a.epub.prc
+
+      KEY = AMZNID0/B0393AB7FA/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Shane Bauer - American Prison_ A Reporter’s Undercover Journey into the Business of Punishment (2018, Penguin Press).epub.prc
+
+      KEY = AMZNID0/B00CC4044D/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Paperbacks from Hell - Grady Hendrix.epub.prc
+
+      KEY = AMZNID0/B06AA45E7A/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/The Chronicles of Narnia Comple - C.S. Lewis.epub.prc
+
+      KEY = AMZNID0/B02B6541EE/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Arthur Conan Doyle - The Complete Sherlock Holmes (Illustrated)_ All 4 Novels and 56 Stories with More Than 480 Illustrations (2014, Top Five Books).epub.prc
+
+      KEY = AMZNID0/B05F000D0E/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Clint Emerson - The Rugged Life _ The Modern Guide to Self-Reliance (2022, Harmony_Rodale).epub.prc
+
+      KEY = AMZNID0/B04E157386/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/[Stand-Alone _1] King, Stephen - Creepshow (2017, Gallery 13).epub.prc
+
+      KEY = AMZNID0/B09CDA38DC/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Lemony Snicket, - A Series of Unfortunate Events Collection_ Books 1-13 with Bonus Material (2016, HarperCollins).epub.prc
+
+      KEY = AMZNID0/B02B020543/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Kingdom Hearts Birth by Sleep_ The Novel -- Tomoco Kanemaki, Tetsuya Nomura, Masaru Oka and Shiro Amano -- 2019 -- Yen On -- 469f8c04135d25e48529f7e91f404f38 -- Anna’s Archive.epub.prc
+
+      KEY = AMZNID0/B0B7EA5D57/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/The Disaster Artist _ My Life Inside The Room, the Greatest -- Sestero, Greg; Bissell, Tom -- Simon & Schuster, [N_p_], 2013 -- Simon & Schuster, -- 9781451661194 -- 79224b060c04a7cd45d04aa0f75e97e1 -- Anna’s Arch.epub.prc
+
+      KEY = AMZNID0/B0E1A267ED/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/C.S. Lewis - The Chronicles of Narnia Books 1–7-HarperCollins (2013).epub.prc
+
+      KEY = AMZNID0/B077BD9D70/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/A Clash of Kings (Illustrated) -- George R_ R_ Martin, -- A Song of Ice and Fire 2, 2019 -- Random House Publishing Group -- 9781984821157 -- 2aac6dab159bd2098673d0618d955dad.epub.prc
+
+      KEY = AMZNID0/B0610F90FF/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Giovanna Bellia La Marca - Sicilian Feasts, Illustrated edition_ Authentic Home Cooking from Sicily.epub.prc
+
+      KEY = AMZNID0/B08A0EB778/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/The Madman's Library_ The Greatest Curiosities of Literature -- Edward Brooke-Hitching -- 2020 -- Simon & Schuster UK -- 1471166910 -- 11c07fff6cd23d2f86677e6cc52e46d0.epub.prc
+
+      KEY = AMZNID0/B0181EF019/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Xanathar's Guide to Everything -- Jeremy Crawford & Mike Mearls -- 2023 -- D&D 5E -- f179e1697d0094d9bac1618a3d52c80b -- Anna’s Archive.epub.prc
+
+      KEY = AMZNID0/B07DA0DCA1/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Experimenting With Kids _ 50 Amazing Science Projects You Can Perform on Your Child Ages 2-5.epub.prc
+
+      KEY = AMZNID0/B07D71657E/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Faithe Wempen - CompTIA A+ Certification Study Guide, Eleventh Edition (Exams 220-1101 & 220-1102), 11th Edition (2022, McGraw-Hill Companies).epub.prc
+
+      KEY = AMZNID0/B0B6254850/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Law School for Everyone - Molly Bishop Shadel.epub.prc
+
+      KEY = AMZNID0/B06DF5CD4B/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Stephen King - The Dark Tower Boxed Set.epub.prc
+
+      KEY = AMZNID0/B0552F5FC4/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/The Complete U_S_ Army Survival Guide to Firecraft, Tools, -- McCullough, Jay ; Jay McCullough -- U_S_ Army survival series, 2016 -- Skyhorse -- 9781510707443 -- 7772ecd09840573801d0af458c43d199.epub.prc
+
+      KEY = AMZNID0/B03FF5830E/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Brandon Sanderson - The Way of Kings (2015, Tom Doherty Associates).epub.prc
+
+      KEY = AMZNID0/B0CE4CE1E9/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Savage, Adam - Every Tool's a Hammer_ Lessons from a Lifetime of Making (t) (2019, Atria Books_Touchstone).epub.prc
+
+      KEY = AMZNID0/B0F3A4F1A4/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/A Knight of the Seven Kingdoms -- George R_ R_ Martin, Gary Gianni -- 2017 -- HarperCollins Publishers Ltd -- 9780007500413 -- e655faff27d697abd381d4ed8d358c25 -- Anna’s Archive.epub.prc
+
+      KEY = AMZNID0/B0FD65C3A0/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/American Medical Association Family Medical Guide - American Medical Association.epub.prc
+
+      KEY = AMZNID0/B0756163EE/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Betty Crocker The Big Book of Bread -- Betty Crocker -- 2013 -- Houghton Mifflin Harcourt -- 1118453476 -- 27bccf4c756571ac8715d205f91ecaa5.epub.prc
+
+      KEY = AMZNID0/B0306CEDD3/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Sam Kean - The Icepick Surgeon_ Murder, Fraud, Sabotage, Piracy, and Other Dastardly Deeds Perpetrated in the Name of Science (2021, Little, Brown and Company).epub.prc
+
+      KEY = AMZNID0/B08BAEDD27/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/The food of Italy _ region by region -- Roden, Claudia -- [New ed_], 1998 -- Random House;Vintage -- 9780099273257 -- 2f42f1c6792292fc6306ab06eac56853.epub.prc
+
+      KEY = AMZNID0/B06A6E77E0/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Jonathan Clements - A Brief History of China_ Dynasty, Revolution and Transformation_ The Incredible Story of the World’s Oldest and Most Populous N (2019, Tuttle Publishing).epub.prc
+
+      KEY = AMZNID0/B0249B6C1F/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Sum _ tales from the afterlives.epub.prc
+
+      KEY = AMZNID0/B0E6E4A6A2/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Stern, Howard - Howard Stern Comes Again (2019, Simon Schuster).epub.prc
+
+      KEY = AMZNID0/B0B577AEB5/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/[Alice's Adventures in Wonderland 1-2 Penguin Classics ] Carroll, Lewis - Alice's Adventures in Wonderland & Through the Looking-Glass and What Alice Found There (2015, Penguin Publishing Group).epub.prc
+
+      KEY = AMZNID0/B051EA5BD2/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Messenger, Alex - The twenty-ninth day_ surviving a grizzly attack in the Canadian tundra-Blackstone Publishing (2019).epub.prc
+
+      KEY = AMZNID0/B0D9F0FA6F/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/The Twenty-Ninth Day _ Surviving a Grizzly Attack in the -- Messenger Alex (author) -- First edition, Ashland, OR, 2019 -- Blackstone Publishing -- 9781094091242 -- 49da58f127bc008f979c23e681e0c16c .epub.prc
+
+      KEY = AMZNID0/B07F2BF403/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/George Stephanopoulos - The Situation Room (2024).epub.prc
+
+      KEY = AMZNID0/B00DBE5C97/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/How to Sell a Haunted House - Grady Hendrix.epub.prc
+
+      KEY = AMZNID0/B080AF055B/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Richard Rhodes - The Making of the Atomic Bomb (2012, Simon & Schuster).epub.prc
+
+      KEY = AMZNID0/B0794629F0/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/The Conspiracy Book_ A Chronological Journey through Secret -- John Michael Greer -- Hardcover, 2018;2019 -- Sterling -- 1454930047 -- 39d49dd33e56aa8834a2b98e705e645c.epub.prc
+
+      KEY = AMZNID0/B012D80ADE/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Michael Finkel - The Art Thief_ A True Story of Love, Crime, and a Dangerous Obsession.epub.prc
+
+      KEY = AMZNID0/B0BA283340/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Edward K. Cheng, Joseph L. Hoffmann, Molly Bishop Shadel, and Pe - Law School for Everyone (2017) (1).epub.prc
+
+      KEY = AMZNID0/B09481E46D/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Stephen King - Storm of the Century _ The Labor Day Hurricane of 1935 (2024, Scribner).epub.prc
+
+      KEY = AMZNID0/B085221A49/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Subpar Parks_ America's Most Extraordinary National Parks -- Amber Share -- 2021 -- Plume -- 0593185544 -- 491a5eb7d72803f57a62103205034014.epub.prc
+
+      KEY = AMZNID0/B08AF8E563/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/[The Gulag Archipelago 1918-1956 _1] Solzhenitsyn, Aleksandr - The Gulag Archipelago 1918–1956 (1973, HarperCollins).epub.prc
+
+      KEY = AMZNID0/B0A1DC69FE/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/DK - A History of Magic, Witchcraft, and the Occult (2020, DK).epub.prc
+
+      KEY = AMZNID0/B0C9F06131/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Sum _ Forty Tales From the Afterlives.epub.prc
+
+      KEY = AMZNID0/B0901BE37A/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Uketsu - Strange Pictures (2024, HarperCollins).epub.prc
+
+      KEY = AMZNID0/B0A8BDC24B/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/!A Brief History of Intelligence 2023 [Max Bennett].epub.prc
+
+      KEY = AMZNID0/B00552A400/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/(A History of Ancient Egypt  2) John Romer - A History of Ancient Egypt Volume 2-Thomas Dunne Books (2017).epub.prc
+
+      KEY = AMZNID0/B096AEC6AC/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Arcanum Unbounded_ The Cosmere Collection (Edgedancer; The -- Sanderson, Brandon -- Cosmere, 2016 -- Tom Doherty Associates -- 0765391163 -- 948fcc8eaf5c963d38696eabba31b6b8.epub.prc
+
+      KEY = AMZNID0/B05551C7DE/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/[Delphi Classics ] Dickens, Charles - Complete Works of Charles Dickens (2011, Delphi Classics).epub.prc
+
+      KEY = AMZNID0/B0E8BD8959/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Blindsight (Peter Watts) (z-library.sk, 1lib.sk, z-lib.sk).epub.prc
+
+      KEY = AMZNID0/B0BA4A032A/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Chatterton, John_Kurson, Robert_Mattera, John - Pirate hunters_ the search for the lost treasure ship of a great buccaneer-Random House Publishing Group (2015).epub.prc
+
+      KEY = AMZNID0/B0F4308A3A/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/A Game of Thrones_ The Illustrated Edition -- George R_ R_ Martin -- A Song of Ice and Fire, 1 of 3, 1st, 2016 -- Bantam Books -- 9781101965870 -- 9771786f6a209cf05af3ed4d6a61b2db.epub.prc
+
+      KEY = AMZNID0/B09E20736C/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/(101 Things I Learned) Louis Eguaras, Matthew Frederick - 101 Things I Learned in Culinary School, 2nd Edition-Crown Publishing Group (2020).epub.prc
+
+      KEY = AMZNID0/B0AF7A5B0C/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Garrett M. Graff - Raven Rock_ the story of the U.S. Government’s secret plan to save itself-while the rest of us die (2017, Simon & Schuster).epub.prc
+
+      KEY = AMZNID0/B0DFC02E1D/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Artie Lange_ Anthony Bozza - Wanna Bet__ A Degenerate Gambler's Guide to Living on the Edge (2018, St. Martin's Publishing Group).epub.prc
+
+      KEY = AMZNID0/B097F2B25B/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Sum.epub.prc
+
+      KEY = AMZNID0/B0D8FE083D/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Clifford A. Pickover - Death and the Afterlife_ A Chronological Journey, from Cremation to Quantum Resurrection.epub.prc
+
+      KEY = AMZNID0/B0744284C9/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Red Rising 3-Book Bundle - Pierce Brown.epub.prc
+
+      KEY = AMZNID0/B095FCA4E9/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/A Walk Around the Block_ Stoplight Secrets, Mischievous -- Spike Carlsen -- 2020 -- HarperOne -- 0062954768 -- 0fcbe981d4aaa03f8d3f07c051459d7d.epub.prc
+
+      KEY = AMZNID0/B002164D44/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Tom Clavin - Follow Me to Hell_ McNelly's Texas Rangers and the Rise of Frontier Justice (2023, St. Martin's Press).epub.prc
+
+      KEY = AMZNID0/B0B5EB627C/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Carla Emery - The Encyclopedia of Country Living, 50th Anniversary Edition_ The Original Manual for Living off the Land & Doing It Yourself (3 Dec 2019, Sasquatch Books).epub.prc
+
+      KEY = AMZNID0/B0C8D77906/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Max Miller, Ann Volkwein - Tasting History_ Explore the Past through 4,000 Years of Recipes (A Cookbook) (2023, S&S_Simon Element).epub.prc
+
+      KEY = AMZNID0/B0D89640E7/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Tiago Forte - The PARA Method_ The Simple System for Organizing Your Digital Life in Seconds (2023, Atria Books).epub.prc
+
+      KEY = AMZNID0/B0E0E1CBBE/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/[The Atlas of Middle-Earth ] Tolkien, J R R - Karen Wynn Fonstad (Houghton Mifflin Harcourt).epub.prc
+
+      KEY = AMZNID0/B099464052/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/Brief History of China_ Dynasty, Revolution and Transformation_ Middle Kingdom to the People's Republic, A - Jonathan Clements.epub.prc
+
+      KEY = SDLDID0>/storage/emulated/0/Books/David Eagleman Collection 3 Books Bundle Set (Sum_ Tales from the Afterlives, Incognito_ The Secret Lives of The Brain, The Brain_ The Story of You).pdf>1786314732000
+FILE_PATH = /storage/emulated/0/Books/David Eagleman Collection 3 Books Bundle Set (Sum_ Tales from the Afterlives, Incognito_ The Secret Lives of The Brain, The Brain_ The Story of You).pdf
+
+      KEY = AMZNID0/B0C281219D/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/kindle_tables_images_exam.epub.prc
+
+      KEY = AMZNID0/B003ODIZL6/0/
+FILE_PATH = /data/data/com.amazon.kindle.epub/files/dictionaries/B003ODIZL6_EBOK.prc
+
+      KEY = AMZNID0/B0751B00C5/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/v4_Stephen King Stories Omnibu_ (z-library.sk, 1lib.sk, z-lib.sk).epub.prc
+
+      KEY = AMZNID0/B0EC17DC48/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/v4_kindle_tables_images_exam.epub.prc
+
+      KEY = AMZNID0/B099C8AD4F/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/v4_The Dark Tower Boxed Set (S_ (z-library.sk, 1lib.sk, z-lib.sk).epub.prc
+
+      KEY = AMZNID0/B083D5D118/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/v4_Story Collections Collectio_ (z-library.sk, 1lib.sk, z-lib.sk).epub.prc
+
+      KEY = AMZNID0/B0B90747EB/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/v4_The Dark Tower Boxed Set (S_ (z-library.sk, 1lib.sk, z-lib.sk)-1.epub.prc
+
+      KEY = AMZNID0/B0881CA51D/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/v4_Pride_and_Prejudice_1342.epub.prc
+
+      KEY = AMZNID0/B0B164901B/0/
+FILE_PATH = /data/user/0/com.amazon.kindle.epub/files/epub_cache/v4_kindle_exam_v3.epub.prc
+'=== DictionaryInfo ===' = === DictionaryInfo ===
+         ID = AMZNID0/B003YL4LVQ/0/
+SHORT_TITLE = Deutsch
+
+         ID = AMZNID0/B003WUYRGI/0/
+SHORT_TITLE = English (UK)
+
+         ID = AMZNID0/B005F12G7O/0/
+SHORT_TITLE = Español
+
+         ID = AMZNID0/B005F12G6U/0/
+SHORT_TITLE = Français
+
+         ID = AMZNID0/B005F3XOMI/0/
+SHORT_TITLE = Italiana
+
+         ID = AMZNID0/B005EOCESI/0/
+SHORT_TITLE = Português
+
+         ID = AMZNID0/B00A8QWA8Q/0/
+SHORT_TITLE = Português-Inglês
+
+         ID = AMZNID0/B00A8QWA7W/0/
+SHORT_TITLE = Inglês-Português
+
+         ID = AMZNID0/B005FNK020/0/
+SHORT_TITLE = 日本語
+
+         ID = AMZNID0/B005FNK002/0/
+SHORT_TITLE = 英語 - 日本語
+
+         ID = AMZNID0/B00DQB1G3K/0/
+SHORT_TITLE = 日本語 - 英語
+
+         ID = AMZNID0/B00AZOHEFU/0/
+SHORT_TITLE = 中文
+
+         ID = AMZNID0/B007Z8VKSQ/0/
+SHORT_TITLE = 英语 - 中文
+
+         ID = AMZNID0/B00AZOHEGE/0/
+SHORT_TITLE = 中文 - 英语
+
+         ID = AMZNID0/B00KAJJRMI/0/
+SHORT_TITLE = Engels-Nederlands
+
+         ID = AMZNID0/B00KAJJRI2/0/
+SHORT_TITLE = Nederlands-Engels
+
+         ID = AMZNID0/B00KAJJRIW/0/
+SHORT_TITLE = Nederlands
+
+         ID = AMZNID0/B06X1B7X4V/0/
+SHORT_TITLE = Hindi
+
+         ID = AMZNID0/B06W9KK63F/0/
+SHORT_TITLE = Hindi-English
+
+         ID = AMZNID0/B06WGQZXQK/0/
+SHORT_TITLE = English-Hindi
+
+         ID = AMZNID0/B06WD4ZVPS/0/
+SHORT_TITLE = Tamil
+
+         ID = AMZNID0/B06X3WWDDP/0/
+SHORT_TITLE = Tamil-English
+
+         ID = AMZNID0/B06VWDXNGN/0/
+SHORT_TITLE = English-Tamil
+
+         ID = AMZNID0/B06X3WX1GR/0/
+SHORT_TITLE = Gujarati
+
+         ID = AMZNID0/B06WLMBNTG/0/
+SHORT_TITLE = Gujarati-English
+
+         ID = AMZNID0/B06X6HVXF9/0/
+SHORT_TITLE = English-Gujarati
+
+         ID = AMZNID0/B06X3WWDDS/0/
+SHORT_TITLE = Marathi
+
+         ID = AMZNID0/B06WP6LM97/0/
+SHORT_TITLE = Marathi-English
+
+         ID = AMZNID0/B06WRSQK1W/0/
+SHORT_TITLE = English-Marathi
+
+         ID = AMZNID0/B06VVXNLGY/0/
+SHORT_TITLE = Malayalam
+
+         ID = AMZNID0/B076VBJ9FG/0/
+SHORT_TITLE = العربية
+
+         ID = AMZNID0/B076V21W3S/0/
+SHORT_TITLE = Arabic-English
+
+         ID = AMZNID0/B076J26GW2/0/
+SHORT_TITLE = English-Arabic
+
+         ID = AMZNID0/B003ODIZL6/0/
+SHORT_TITLE = English (US)
+'=== DictionaryLocale ===' = === DictionaryLocale ===
+               ID = AMZNID0/B003YL4LVQ/0/
+DICTIONARY_LOCALE = DE
+
+               ID = AMZNID0/B003WUYRGI/0/
+DICTIONARY_LOCALE = UK
+
+               ID = AMZNID0/B005F12G7O/0/
+DICTIONARY_LOCALE = ES
+
+               ID = AMZNID0/B005F12G6U/0/
+DICTIONARY_LOCALE = FR
+
+               ID = AMZNID0/B005F3XOMI/0/
+DICTIONARY_LOCALE = IT
+
+               ID = AMZNID0/B005EOCESI/0/
+DICTIONARY_LOCALE = BR
+
+               ID = AMZNID0/B00A8QWA8Q/0/
+DICTIONARY_LOCALE = BR
+
+               ID = AMZNID0/B00A8QWA7W/0/
+DICTIONARY_LOCALE = BR
+
+               ID = AMZNID0/B005FNK020/0/
+DICTIONARY_LOCALE = JP
+
+               ID = AMZNID0/B005FNK002/0/
+DICTIONARY_LOCALE = JP
+
+               ID = AMZNID0/B00DQB1G3K/0/
+DICTIONARY_LOCALE = JP
+
+               ID = AMZNID0/B00AZOHEFU/0/
+DICTIONARY_LOCALE = CN
+
+               ID = AMZNID0/B007Z8VKSQ/0/
+DICTIONARY_LOCALE = CN
+
+               ID = AMZNID0/B00AZOHEGE/0/
+DICTIONARY_LOCALE = CN
+
+               ID = AMZNID0/B00KAJJRMI/0/
+DICTIONARY_LOCALE = NL
+
+               ID = AMZNID0/B00KAJJRI2/0/
+DICTIONARY_LOCALE = NL
+
+               ID = AMZNID0/B00KAJJRIW/0/
+DICTIONARY_LOCALE = NL
+
+               ID = AMZNID0/B06X1B7X4V/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B06W9KK63F/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B06WGQZXQK/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B06WD4ZVPS/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B06X3WWDDP/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B06VWDXNGN/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B06X3WX1GR/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B06WLMBNTG/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B06X6HVXF9/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B06X3WWDDS/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B06WP6LM97/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B06WRSQK1W/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B06VVXNLGY/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B076VBJ9FG/0/
+DICTIONARY_LOCALE = AR
+
+               ID = AMZNID0/B076V21W3S/0/
+DICTIONARY_LOCALE = IN
+
+               ID = AMZNID0/B076J26GW2/0/
+DICTIONARY_LOCALE = EN
+
+               ID = AMZNID0/B003ODIZL6/0/
+DICTIONARY_LOCALE = EN_US
+
+               ID = AMZNID0/B003ODIZL6/0/
+DICTIONARY_LOCALE = US

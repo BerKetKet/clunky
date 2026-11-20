@@ -70,14 +70,9 @@ if 'android.permission.MANAGE_EXTERNAL_STORAGE' not in xml:
 if 'android:usesCleartextTraffic' not in xml:
     xml = re.sub(r'(<application\b)', r'\1 android:usesCleartextTraffic="true"', xml, count=1)
 
-# 8. Register OpenCatalogActivity inside <application>
+# 8. Register OpenCatalogActivity inside <application> (no LAUNCHER filter, embedded via Home tab)
 catalog_activity = '''
-        <activity android:name="com.amazon.kindle.epub.catalog.OpenCatalogActivity" android:label="EPUB Catalog" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity>
+        <activity android:name="com.amazon.kindle.epub.catalog.OpenCatalogActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar"/>
     </application>'''
 if 'com.amazon.kindle.epub.catalog.OpenCatalogActivity' not in xml:
     xml = xml.replace('</application>', catalog_activity)
@@ -87,10 +82,11 @@ with open(manifest_path, "w", encoding="utf-8") as f:
 print(f"Patched AndroidManifest.xml: registered OpenCatalogActivity, {len(custom_perms)} custom permissions & all authorities renamed for {new_pkg}")
 PYEOF
 
-echo "[3.5/6] Compiling mod DEX (EpubTranscoder, EpubBookBuilder, dp.g) with javac + d8..."
+echo "[3.5/6] Compiling mod DEX (EpubTranscoder, EpubBookBuilder, dp.g, OpenCatalogView) with javac + d8..."
 bash "${MOD_ROOT}/tools/compile_mod_dex.sh" "${MOD_ROOT}/dex/classes9.dex"
 
-echo "[4/6] Shifting DEX files, patching classes4 -> classes5, injecting enhanced classes4.dex, and rebuilding..."
+echo "[4/6] Patching classes3 (RubyHomeFragment), shifting DEX files, patching classes4 -> classes5, classes5 -> classes6, injecting enhanced classes4.dex, and rebuilding..."
+bash "${MOD_ROOT}/tools/patch_classes3.sh" "${WORK_DIR}/base_dec/classes3.dex"
 mv "${WORK_DIR}/base_dec/classes8.dex" "${WORK_DIR}/base_dec/classes9.dex"
 mv "${WORK_DIR}/base_dec/classes7.dex" "${WORK_DIR}/base_dec/classes8.dex"
 mv "${WORK_DIR}/base_dec/classes6.dex" "${WORK_DIR}/base_dec/classes7.dex"
