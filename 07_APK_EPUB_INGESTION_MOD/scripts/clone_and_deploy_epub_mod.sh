@@ -14,11 +14,16 @@ WORK_DIR="/tmp/kindle_clone_build"
 rm -rf "${WORK_DIR}"
 mkdir -p "${WORK_DIR}/orig_splits" "${WORK_DIR}/signed_splits"
 
-echo "[1/6] Pulling all split APKs for com.amazon.kindle from device..."
-for p in $(adb shell pm path com.amazon.kindle | sed 's/^package://;s/\r$//'); do
-    bn="$(basename "$p")"
-    adb pull "$p" "${WORK_DIR}/orig_splits/${bn}"
-done
+if [[ -f "${MOD_ROOT}/../handoff_assets/com.amazon.kindle_v8.159.0.100_base_original.apk" ]]; then
+    echo "[1/6] Using verified v8.159.0.100 base APK from handoff_assets..."
+    cp "${MOD_ROOT}/../handoff_assets/com.amazon.kindle_v8.159.0.100_base_original.apk" "${WORK_DIR}/orig_splits/base.apk"
+else
+    echo "[1/6] Pulling all split APKs for com.amazon.kindle from device..."
+    for p in $(adb shell pm path com.amazon.kindle | sed 's/^package://;s/\r$//'); do
+        bn="$(basename "$p")"
+        adb pull "$p" "${WORK_DIR}/orig_splits/${bn}"
+    done
+fi
 
 echo "[2/6] Decoding base.apk manifest with apktool (no-src)..."
 apktool d -s -f "${WORK_DIR}/orig_splits/base.apk" -o "${WORK_DIR}/base_dec"
@@ -70,7 +75,8 @@ echo "[4/6] Shifting DEX files, patching classes4 -> classes5, injecting enhance
 mv "${WORK_DIR}/base_dec/classes8.dex" "${WORK_DIR}/base_dec/classes9.dex"
 mv "${WORK_DIR}/base_dec/classes7.dex" "${WORK_DIR}/base_dec/classes8.dex"
 mv "${WORK_DIR}/base_dec/classes6.dex" "${WORK_DIR}/base_dec/classes7.dex"
-mv "${WORK_DIR}/base_dec/classes5.dex" "${WORK_DIR}/base_dec/classes6.dex"
+python3 "${MOD_ROOT}/tools/patch_classes5.py" "${WORK_DIR}/base_dec/classes5.dex" "${WORK_DIR}/base_dec/classes6.dex"
+rm -f "${WORK_DIR}/base_dec/classes5.dex"
 
 python3 "${MOD_ROOT}/tools/patch_classes4.py" "${WORK_DIR}/base_dec/classes4.dex" "${WORK_DIR}/base_dec/classes5.dex"
 cp "${MOD_ROOT}/dex/classes9.dex" "${WORK_DIR}/base_dec/classes4.dex"

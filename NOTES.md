@@ -1,11 +1,11 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Kindle EPUB") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 001 report zip packaged.
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Kindle EPUB") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 002 report zip packaged.
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux).
 - **Installed Packages**:
   - Stock: `com.amazon.kindle` (bit-for-bit intact, read-only)
-  - Clone: `com.amazon.kindle.epub` (cloned with EPUB ingestion mod)
+  - Clone: `com.amazon.kindle.epub` (cloned with EPUB ingestion mod + offline Library grid unlock)
 
 ## Cloned Package Architecture & Modifications
 1. **Manifest Isolation**:
@@ -14,40 +14,32 @@
    - Namespaced all 19 `android:authorities` and 16 custom `<permission>` declarations to avoid installation collisions (`INSTALL_FAILED_DUPLICATE_PERMISSION`).
    - Added `<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>` and enabled via `appops` to allow Android 13 Scoped Storage file access to `/sdcard/kindle/`.
 2. **DEX Layout & Shifting**:
-   - Preserved `class_defs` integrity in `classes4.dex` (avoiding ART verifier rejection from orphaned `class_data_item`s).
-   - Shifted `classes5..8.dex` to `classes6..9.dex`, placed patched `classes4.dex` as `classes5.dex`, and injected the enhanced mod DEX as `classes4.dex` so ART resolves enhanced `dp.g` first.
+   - Shifted `classes7..8.dex` to `classes8..9.dex`.
+   - Shifted `classes6.dex` to `classes7.dex`.
+   - Patched `classes5.dex` via `patch_classes5.py` (`Lly/c;->j(I)V` NOP at `0x47ab9a`) and placed as `classes6.dex`.
+   - Shifted patched `classes4.dex` (`ThirdPartyUpgradePage` bypass) to `classes5.dex`.
+   - Injected enhanced mod DEX as `classes4.dex` so ART resolves enhanced `dp.g` first.
 3. **Bytecode Fixes in `classes9.dex` (`build_classes9.py`)**:
    - Corrected `putIntBE` and `putShortBE` opcodes from `0x4c` (`aput-wide`) to `0x4f` (`aput-byte`).
    - Fixed `outs_size` to 5 in `toFixed32Bytes` for `System.arraycopy`.
    - Enhanced `registerInLibrary`: calls `ILibraryService.addContentMetadata(singletonList(metadata))` to guarantee entries are written to `KindleContent` and `LocalContent` in `kindle_library.db` even without an Amazon account signed in, plus conditional `ILibraryService.W(userId, ...)` when `userId != null`.
    - Wired `registerInLibrary` into both `dp.g.a(str, file)` and `dp.g.e(str, file, state, id)`.
+4. **Offline Library Grid Unlock (`patch_classes5.py`)**:
+   - NOPed unit `0x15` (`0x0312` -> `0x0000`) in `Lly/c;->j(I)V` (`TrialEmptyLibraryController.updateLibraryCount`).
+   - Prevents `v3` from being zeroed when signed out (`!isAuthenticated() && !isDefaultContentSupported()`).
+   - Real local item count from `kindle_library.db` passes to `super.j(count)` (`d7.j`), completely removing `EmptyLibraryView` and unlocking the full Library grid offline.
 
 ## Verification Evidence
 1. **Package Coexistence**:
    - `pm list packages | grep kindle` confirms both `com.amazon.kindle` and `com.amazon.kindle.epub` installed simultaneously.
-2. **Dynamic Transcoding**:
-   - Verified in `/data/data/com.amazon.kindle.epub/files/epub_cache/`:
-     - `kindle_exam_v3.epub.prc` (89,867 bytes)
-     - `kindle_tables_images_exam.epub.prc` (36,303 bytes)
-3. **Database Library Tracking**:
-   - Queried `/data/data/com.amazon.kindle.epub/databases/kindle_library.db`:
-     - `KindleContent`:
-       - `AMZNID0/B0B164901B/0/` | `Kindle Render Exam v3` | `Exam` | `LOCAL`
-       - `AMZNID0/B0EC17DC48/0/` | `Kindle Tables and Images Exam` | `Local EPUB Author` | `LOCAL`
-     - `LocalContent`:
-       - `AMZNID0/B0B164901B/0/` -> `/data/user/0/com.amazon.kindle.epub/files/epub_cache/kindle_exam_v3.epub.prc`
-       - `AMZNID0/B0EC17DC48/0/` -> `/data/user/0/com.amazon.kindle.epub/files/epub_cache/kindle_tables_images_exam.epub.prc`
-     - `UserContent`:
-       - Tracks `LAST_ACCESSED`, `IS_IN_CAROUSEL = 1`, reading progress.
-4. **Reader Rendering & UI**:
-   - `kindle_exam_v3.epub`: Confirmed TOC and text render properly. (`verify_cloned_kindle_epub.png`)
-   - `kindle_tables_images_exam.epub`: Confirmed table columns and layout render properly. (`verify_tables_images_exam.png`)
-   - Launcher state: App opens `oob.MainActivity` without a blocking modal sign-in wall. The bottom navigation persistent bar displays the most recent local book and resumes reading on tap. The Library tab view displays the empty state ("It's a little empty here... SIGN IN") because cloud sync requires an account. (`verify_launcher_or_library.png`, `verify_library_view.png`)
-5. **Stock App Invariant**:
-   - Stock `com.amazon.kindle` was never stopped, modified, or written to.
-6. **Round 001 Report**:
-   - Packaged to `antig_to_gemini_neon_clunky_report001.zip` (1.9 MB, contains `REPORT.md`, `scripts/`, `artifacts/`, `screenshots/`, `logs/`).
+   - Stock `com.amazon.kindle` remains untouched.
+2. **Round 002 Tasks Verified**:
+   - **Task A (Library Grid Unlocked)**: Verified `verify_library_grid_unlocked.png`. All local EPUBs and samples appear directly in the Library tab grid. Tapping a book opens `StandAloneBookReaderActivity` and preserves reading position (`LPR`/`MRPR`).
+   - **Task B (Local Files UI & Folder Scan)**: Verified `verify_more_settings.png` and `verify_local_files_activity.png`. "Local file access" is visible offline under More -> Settings. Toggling `kindle` initiates SAF document tree permission; once granted, `ScanLocalContentUtils` scans all EPUBs in `/sdcard/kindle/` and imports them into `kindle_library.db`.
+   - **Task C (Rich Images & Tables)**: Verified `verify_rich_images_tables.png`. `rich_tables_images.prc` generated via `epub2prc.py` (9 text records, 15 image records, 412 KB). Inline image inside table cell (`OEBPS/t5_flow.xhtml`) renders cleanly in `MobiDocViewer` with 7,500 matching color pixels verified on screen.
+3. **Round 002 Deliverable**:
+   - Packaged to `antig_to_gemini_neon_clunky_report002.zip` (753 KB, contains `REPORT.md`, `scripts/`, `screenshots/`, `logs/`).
 
 ## Next Steps
-- Receive Round 002 instructions from Gemini.
-- Investigate Library tab grid adapter to display local books (`KindleContent` `STATE=LOCAL`) without requiring account sign-in.
+- Receive Round 003 instructions from Gemini.
+- Port embedded image parsing and `<img recindex="..."/>` rewriting from `epub2prc.py` directly into on-device `EpubTranscoder` (`classes4.dex`).
