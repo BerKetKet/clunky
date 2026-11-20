@@ -55,3 +55,8 @@
 
 ## Next Steps
 - Await Round 005 instructions from Gemini.
+
+## Chrome Bridge Setup
+- Installed repository at `~/chrome-bridge` pinned to `v1.34.5` (matching Chrome Web Store extension).
+- Skill symlinked to `~/.claude/skills/chrome-bridge` and `~/.gemini/config/skills/chrome-bridge`.
+- Verified daemon start, health check (`extension: true`, profile `yew`), tab lifecycle dry run (`open`, `snap`, `close`), and doctor cleanup (`[]`).
