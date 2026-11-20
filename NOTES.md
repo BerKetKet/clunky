@@ -1,7 +1,7 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Kindle EPUB") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 003 complete and report zip packaged.
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Kindle EPUB") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 004 complete and report zip packaged.
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux).
 - **Installed Packages**:
   - Stock: `com.amazon.kindle` (bit-for-bit intact, read-only)
@@ -36,17 +36,22 @@
    - Fixed embedded image display by setting `last_content_record = num_text + num_imgs` in PalmDB Record 0 and rewriting `<img src="...">` to `<img recindex="...">`. Transcodes PNG/GIF to JPEG on-device using Android's `BitmapFactory` and `Canvas`.
    - Full OPF parsing (`<dc:title>`, `<dc:creator>`, `<dc:publisher>`, cover meta) eliminates truncated title artifacts (e.g. `Skeleton Crew`).
 
+5. **Round 004 Offline Dictionaries & Open Catalog**:
+   - Copied stock dictionary `B003ODIZL6_EBOK.prc` (The New Oxford American Dictionary, 42.7 MB) into `/data/data/com.amazon.kindle.epub/files/dictionaries/` and populated `DictionaryInfo`/`DictionaryLocale` metadata via `copy_dictionaries_from_stock.sh` (read-only on stock app).
+   - Integrated pluggable open book catalog (`com.amazon.kindle.epub.catalog.*`) including `GutendexSource` (Project Gutenberg popular books and search), `OpenLibraryClient` (metadata, ratings, synopsis), and `OpenCatalogActivity` (dark-mode UI with launcher alias).
+   - One-tap "Download & Read" fetches EPUBs into `/sdcard/kindle/`, transcodes them via `EpubTranscoder` into `epub_cache/v3_*.prc`, and opens them directly in `MobiDocViewer`.
+
 ## Verification Evidence
 1. **Package Coexistence**:
    - `pm list packages | grep kindle` confirms both `com.amazon.kindle` and `com.amazon.kindle.epub` installed simultaneously.
    - Stock `com.amazon.kindle` remains untouched.
-2. **Round 003 Tasks Verified**:
-   - **TOC `<ol>` Bug Fix**: Verified `verify_v3_toc_fixed.png`. `kindle_exam_v3.epub` displays clean sequential TOC items (`1. E01 ...`, `2. E02 ...`, `14. X4 ...`) without any `65535.` bugs.
-   - **Table & Standalone Images Parity**: Verified `verify_tables_images_v3.png`. `kindle_tables_images_exam.epub` displays 120x80 table cell image in `OEBPS/t5_flow.xhtml` (2,837 distinct colored pixels matching `#BEBED2`) and 600x400 standalone image (34,330 colored pixels).
-   - **Multi-Chapter Embedded Images**: Verified `verify_v3_images.png`. `kindle_exam_v3.epub` chapter `E09 Pagination and Images` displays `pic12.png` with exact dimensions 320x180 px rendered inline.
-   - **Library Tab Titles & Covers**: Verified `verify_library_covers_v3.png`. Displays clean titles (`The Atlas of Middle-earth`, `The PARA Method`, `Follow Me to Hell`, `Skeleton Crew`) and cover thumbnails.
-3. **Round 003 Deliverable**:
-   - Packaged to `antig_to_gemini_neon_clunky_report003.zip` (1.2 MB, contains `REPORT.md`, `scripts/`, `screenshots/`, `logs/`).
+2. **Round 004 Tasks Verified**:
+   - **Task A (Offline Dictionary)**: Verified `verify_offline_dictionary.png`. Long-pressing a word in reader (`kindle_exam_v3.epub`) pops up selection handles, action bar, and bottom sheet with `Dictionary: English (US)`.
+   - **Task B (Open Catalog List & Details)**: Verified `verify_open_catalog_list.png` (loaded 32 popular Project Gutenberg ebooks) and `verify_open_catalog_details.png` (Open Library ratings 4.20/5 and synopsis for Pride and Prejudice).
+   - **Task B (Download & Read)**: Verified `verify_downloaded_gutenberg_book.png`. Pride and Prejudice downloaded, transcoded to `v3_Pride_and_Prejudice_1342.epub.prc` (690,174 bytes), registered in `kindle_library.db`, and opened directly in `MobiDocViewer`.
+   - **Task C (LibraryThing Probe)**: Probed token `fb426ff52551f01a51b93022056d4b99` on ISBN `0141439513`. REST API returns HTTP 403 (Cloudflare High traffic challenge); `workinfo.js` responds cleanly with HTTP 200 OK.
+3. **Round 004 Deliverable**:
+   - Packaged to `antig_to_gemini_neon_clunky_report004.zip` (888 KB, contains `REPORT.md`, `scripts/`, `screenshots/`, `logs/`).
 
 ## Next Steps
-- Await Round 004 instructions from Gemini.
+- Await Round 005 instructions from Gemini.

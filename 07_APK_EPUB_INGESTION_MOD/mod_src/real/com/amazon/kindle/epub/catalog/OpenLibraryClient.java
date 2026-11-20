@@ -1,0 +1,87 @@
+package com.amazon.kindle.epub.catalog;
+
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+/**
+ * Queries Open Library API for book ratings, ISBN, description, and similar books by subject.
+ */
+public final class OpenLibraryClient {
+    public static final class BookMeta {
+        public String workKey = "";
+        public String isbn = "";
+        public double avgRating = 0.0;
+        public int ratingsCount = 0;
+        public String description = "";
+        public List<String> similarTitles = new ArrayList<String>();
+    }
+
+    public static BookMeta fetchMeta(String title, String author) {
+        BookMeta meta = new BookMeta();
+        try {
+            String q = URLEncoder.encode(title + " " + author, "UTF-8");
+            String searchJson = GutendexSource.httpGet("https://openlibrary.org/search.json?q=" + q + "&limit=1");
+            JSONObject root = new JSONObject(searchJson);
+            JSONArray docs = root.optJSONArray("docs");
+            if (docs == null || docs.length() == 0) return meta;
+            JSONObject doc = docs.optJSONObject(0);
+            if (doc == null) return meta;
+            meta.workKey = doc.optString("key", "");
+            JSONArray isbns = doc.optJSONArray("isbn");
+            if (isbns != null && isbns.length() > 0) {
+                meta.isbn = isbns.optString(0, "");
+            }
+
+            if (!meta.workKey.isEmpty()) {
+                try {
+                    String rJson = GutendexSource.httpGet("https://openlibrary.org" + meta.workKey + "/ratings.json");
+                    JSONObject rRoot = new JSONObject(rJson);
+                    JSONObject summary = rRoot.optJSONObject("summary");
+                    if (summary != null) {
+                        meta.avgRating = summary.optDouble("average", 0.0);
+                        meta.ratingsCount = summary.optInt("count", 0);
+                    }
+                } catch (Throwable ignored) {}
+
+                try {
+                    String wJson = GutendexSource.httpGet("https://openlibrary.org" + meta.workKey + ".json");
+                    JSONObject wRoot = new JSONObject(wJson);
+                    Object descObj = wRoot.opt("description");
+                    if (descObj instanceof String) {
+                        meta.description = (String) descObj;
+                    } else if (descObj instanceof JSONObject) {
+                        meta.description = ((JSONObject) descObj).optString("value", "");
+                    }
+                } catch (Throwable ignored) {}
+            }
+
+            // Similar books via first subject
+            JSONArray subjects = doc.optJSONArray("subject");
+            if (subjects != null && subjects.length() > 0) {
+                String subj = subjects.optString(0, "").toLowerCase().replace(" ", "_").replaceAll("[^a-z0-9_]", "");
+                if (!subj.isEmpty()) {
+                    try {
+                        String sJson = GutendexSource.httpGet("https://openlibrary.org/subjects/" + subj + ".json?limit=6");
+                        JSONObject sRoot = new JSONObject(sJson);
+                        JSONArray works = sRoot.optJSONArray("works");
+                        if (works != null) {
+                            for (int i = 0; i < works.length(); i++) {
+                                JSONObject w = works.optJSONObject(i);
+                                if (w == null) continue;
+                                String wt = w.optString("title", "");
+                                if (!wt.isEmpty() && !wt.equalsIgnoreCase(title)) {
+                                    meta.similarTitles.add(wt);
+                                }
+                            }
+                        }
+                    } catch (Throwable ignored) {}
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return meta;
+    }
+}

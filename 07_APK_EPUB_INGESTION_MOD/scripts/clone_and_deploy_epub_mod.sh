@@ -66,9 +66,25 @@ xml = re.sub(r'android:label="[^"]*"', 'android:label="Kindle EPUB"', xml, count
 if 'android.permission.MANAGE_EXTERNAL_STORAGE' not in xml:
     xml = re.sub(r'(<application\b)', r'<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>\n    \1', xml, count=1)
 
+# 7. Ensure android:usesCleartextTraffic="true" on <application>
+if 'android:usesCleartextTraffic' not in xml:
+    xml = re.sub(r'(<application\b)', r'\1 android:usesCleartextTraffic="true"', xml, count=1)
+
+# 8. Register OpenCatalogActivity inside <application>
+catalog_activity = '''
+        <activity android:name="com.amazon.kindle.epub.catalog.OpenCatalogActivity" android:label="EPUB Catalog" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>'''
+if 'com.amazon.kindle.epub.catalog.OpenCatalogActivity' not in xml:
+    xml = xml.replace('</application>', catalog_activity)
+
 with open(manifest_path, "w", encoding="utf-8") as f:
     f.write(xml)
-print(f"Patched AndroidManifest.xml: {len(custom_perms)} custom permissions & all authorities renamed for {new_pkg}")
+print(f"Patched AndroidManifest.xml: registered OpenCatalogActivity, {len(custom_perms)} custom permissions & all authorities renamed for {new_pkg}")
 PYEOF
 
 echo "[3.5/6] Compiling mod DEX (EpubTranscoder, EpubBookBuilder, dp.g) with javac + d8..."
