@@ -1,9 +1,9 @@
 {
   "workflow_version": "1.0",
   "project": "clunky_kindle_epub_mod",
-  "round": 2,
-  "incoming_zip": "to_antig_clunky_round_002.zip",
-  "expected_outgoing_zip": "antig_to_gemini_neon_clunky_report002.zip",
+  "round": 3,
+  "incoming_zip": "to_antig_clunky_round_003.zip",
+  "expected_outgoing_zip": "antig_to_gemini_neon_clunky_report003.zip",
   "max_zip_mb": 100,
   "target_package": "com.amazon.kindle.epub",
   "read_only_package": "com.amazon.kindle"
