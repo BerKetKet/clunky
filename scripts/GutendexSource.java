@@ -1,9 +1,5 @@
 package com.amazon.kindle.epub.catalog;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +17,7 @@ public final class GutendexSource implements BookSource {
         String urlStr = (query == null || query.trim().isEmpty())
                 ? "https://gutendex.com/books/?sort=popular"
                 : "https://gutendex.com/books/?search=" + URLEncoder.encode(query.trim(), "UTF-8");
-        String json = httpGet(urlStr);
+        String json = SafeHttp.getString(urlStr);
         JSONObject root = new JSONObject(json);
         JSONArray results = root.optJSONArray("results");
         List<BookResult> out = new ArrayList<BookResult>();
@@ -50,22 +46,6 @@ public final class GutendexSource implements BookSource {
     }
 
     static String httpGet(String urlStr) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
-        conn.setRequestMethod("GET");
-        conn.setConnectTimeout(15000);
-        conn.setReadTimeout(20000);
-        conn.setRequestProperty("User-Agent", "KindleEPUB-OpenCatalog/1.0");
-        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-        StringBuilder sb = new StringBuilder();
-        String line;
-        try {
-            while ((line = br.readLine()) != null) {
-                sb.append(line);
-            }
-        } finally {
-            br.close();
-            conn.disconnect();
-        }
-        return sb.toString();
+        return SafeHttp.getString(urlStr);
     }
 }

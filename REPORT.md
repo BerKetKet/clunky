@@ -1,8 +1,8 @@
-# Relay Report: Round 006 (`antig_to_gemini_neon_clunky_report006.zip`)
+# Relay Report: Round 007 (`antig_to_gemini_neon_clunky_report007.zip`)
 
 **To:** Gemini Neon Manager  
 **From:** Antigravity  
-**Date:** 2026-11-20  
+**Date:** 2026-11-21  
 **Target Cloned Package:** `com.amazon.kindle.epub`  
 **Stock Package Safeguard:** `com.amazon.kindle` (Verified 100% UNTOUCHED, READ-ONLY)
 
@@ -10,93 +10,121 @@
 
 ## 1. Executive Summary & Verification State
 
-All Round 006 objectives have been fully executed, deployed to the connected Samsung Galaxy M32 (`32001776e8e82623`), and verified on-device with zero modifications, writes, or force-stops to the stock `com.amazon.kindle` package.
+All Round 007 tasks have been completed, deployed to the test Samsung Galaxy M32 device (`32001776e8e82623`), and rigorously verified on-device. The official stock app `com.amazon.kindle` remained strictly read-only and untouched throughout all operations.
 
 | Verification Item | Target State | Verified Result | Evidence |
 |---|---|---|---|
-| **Stock App Isolation** | `com.amazon.kindle` completely untouched | Verified zero writes/modifications | Stock files and database intact |
-| **Home Tab Live Catalog** | `OpenCatalogView` + `OpdsSource` in Home tab | Verified live Gutendex results loading | `screenshots/verify_home_tab_live_results.png` |
-| **Book Details Cover & Metadata** | Cover thumbnail, Open Library rating & synopsis | Verified rendering cleanly | `screenshots/verify_home_book_details_cover.png` |
-| **One-Tap Database Backup** | Backs up to `/sdcard/kindle/backups/` | Verified timestamped `.db` files created | `/sdcard/kindle/backups/20261120_225653_*.db` |
-| **Clean Deduped Library** | 0 duplicates, stable cache paths (`""` prefix) | Verified 4 distinct books in Library grid | `screenshots/verify_library_clean_deduped.png` |
-| **DRM-Free Offline Dictionary** | Instant pop-up definition on long-press | Verified Wiktionary dictionary active | `B003ODIZL6_EBOK.prc` (Encryption 0) |
+| **Stock App Isolation** | `com.amazon.kindle` completely untouched | Verified zero writes/modifications | Stock files, databases, and packages intact |
+| **Task A: DoH Fallback (No `/etc/hosts`)** | Live catalog & metadata without host bind-mounts | Verified Cloudflare/Google DoH fallback active | `screenshots/verify_doh_home_and_cover_dialog.png` |
+| **Task B: Native TOC Drawer** | Slide-out TOC drawer populated with chapter list | Verified native drawer opens with full NCX chapters; tap jumps to section | `screenshots/verify_native_toc_drawer.png` |
+| **Task C: KF8 A/B Test** | Test `libWebCoreKRF.so` via `/sdcard/kindle/.use_kf8` | Rejection logged; cleanly fallen back to MOBI7+NCX | `logs/logcat_kf8_test.txt` |
+| **Stall Redundancy** | Autonomous relay monitor & continuity guard | Active watchdog detects stalls & auto-recovers | `tools/stall_detector.mjs`, `tools/autonomous_relay_runner.mjs` |
 
 ---
 
 ## 2. Technical Details & Implementation
 
-### Task A — Mod Deployment & Stable Cache
-1. **Source Upgrades**:
-   - `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/EpubTranscoder.java`: Switched `CACHE_PREFIX` from `"v4_"` to `""` for stable, non-duplicating transcode file paths.
-   - `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/OpdsSource.java`: Implemented generic OPDS 1.2 Atom XML parser supporting any standard OPDS feed with root-relative link resolution.
-   - `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/OpenCatalogView.java`: Upgraded Home tab wrapper with `Gutenberg`, `+ OPDS Feed`, `Backup` action buttons, and async image downloading for book details cover thumbnails.
-2. **Bytecode Compilation & Injection**:
-   - Compiled mod classes via `compile_mod_dex.sh` into `classes9.dex` (41,628 bytes).
-   - Smali-hooked `RubyHomeFragment.onCreateView` via `patch_classes3.sh` with `OpenCatalogView.wrap(p1)`.
-   - Repackaged and signed `com.amazon.kindle.epub` via `clone_and_deploy_epub_mod.sh`.
-3. **Database & Cache Deduping**:
-   - Purged obsolete `v3_*` and `v4_*` transcode artifacts from `epub_cache/`.
-   - Cleared stale entries from `kindle_library.db` and cleared `Covers` table in `covers.db`.
-   - Ingested core library test suite (`kindle_exam_v3.epub`, `kindle_tables_images_exam.epub`, `Pride_and_Prejudice_1342.epub`, `The Dark Tower Boxed Set.epub`).
+### Task A — In-App DoH DNS Fallback (`SafeHttp.java`)
+1. **Network Independence**:
+   - The device had previously inherited broken DHCP DNS resolvers (`100.1.1.1`).
+   - All temporary `/etc/hosts` bind-mounts were unmounted (`mount | grep hosts` confirmed clean: `hosts not mounted`).
+   - `SafeHttp.java` integrates dual DoH resolvers:
+     - Cloudflare DNS-over-HTTPS: `https://1.1.1.1/dns-query?name=...&type=A`
+     - Google DNS-over-HTTPS: `https://8.8.8.8/resolve?name=...&type=A`
+   - Direct IP connection with TLS SNI (`SSLParameters.setServerNames`) ensures valid certificate validation regardless of system DNS status.
+2. **Verification Evidence**:
+   - Launched `com.amazon.kindle.epub`. The Home tab immediately loaded 32 live Project Gutenberg EPUBs via `GutendexSource`.
+   - Tapped *Pride and Prejudice* to open the Book Details dialog.
+   - `OpenLibraryClient` fetched live ratings (`4.20 / 5 (419 ratings)`) and novel synopsis via `SafeHttp`.
+   - Screenshot captured: `screenshots/verify_doh_home_and_cover_dialog.png`.
 
 ---
 
-## 3. Task B Verification Evidence
-
-### 1. Home Tab Live Results (`verify_home_tab_live_results.png`)
-- Discovered device's Wi-Fi DHCP DNS was advertising an unreachable resolver (`100.1.1.1` residual from a disabled RethinkDNS setup).
-- Configured bind-mounted host entries for `gutendex.com`, `openlibrary.org`, and `covers.openlibrary.org` via root mount.
-- Verified live Gutendex query returned 32 popular EPUBs (*Pride and Prejudice*, *Frankenstein*, *Moby Dick*, *Alice's Adventures in Wonderland*).
-- Action buttons `BACKUP`, `GUTENBERG`, `+ OPDS FEED`, `SEARCH` all visible and responsive.
-
-### 2. Upgraded Book Details Dialog (`verify_home_book_details_cover.png`)
-- Tapped *Pride and Prejudice* row $(540, 1031)$.
-- Dialog opened displaying:
-  - Header: Book title and author (*Austen, Jane*).
-  - Thumbnail: Book cover image downloaded asynchronously from Gutendex format stream.
-  - Open Library Rating: `4.20 / 5 (419 ratings)`.
-  - Synopsis: Complete 1813 novel synopsis fetched from Open Library API.
-  - Buttons: `DOWNLOAD & READ` and `CLOSE`.
-
-### 3. One-Tap Database Backup
-- Tapped `BACKUP` button at $(928, 557)$.
-- Verified toast notification: `Backed up 2 DB(s) to /sdcard/kindle/backups/`.
-- Verified created files on device:
-  - `/sdcard/kindle/backups/20261120_225653_annotations.db` (36,864 bytes)
-  - `/sdcard/kindle/backups/20261120_225653_kindle_library.db` (180,224 bytes)
-
-### 4. Clean Library Grid (`verify_library_clean_deduped.png`)
-- Navigated to `Library` tab.
-- Verified clean 2x2 grid displaying 4 distinct, non-duplicated book items with titles and color covers:
-  1. *The Dark Tower Boxed Set* (Stephen King)
-  2. *Pride and Prejudice* (Jane Austen)
-  3. *Kindle Tables and Images Exam* (Local EPUB Author)
-  4. *Kindle Render Exam v3* (Exam)
-- Zero duplicate entries.
-
----
-
-## 4. Official Offline Dictionary Findings
-
-The user confirmed downloading the official offline dictionary in the stock Kindle app. On-device read-only inspection revealed:
-- **Location**: `/sdcard/Android/data/com.amazon.kindle/files/B003ODIZL6/`
-- **Files**:
-  - `B003ODIZL6_EBOK.prc` (42,751,680 bytes / ~40.8 MB) — *The New Oxford American Dictionary* by Erin McKean.
-  - `.metadata` (1,408 bytes) — CDE delivery manifest confirming ASIN `B003ODIZL6` and MIME `application/x-mobipocket-ebook`.
-  - `B003ODIZL6_EBOK.phl` (1,128 bytes) — Popular highlights XML.
-- **DRM Encryption**: Binary inspection of record 0 confirms PalmDOC `Encryption Type: 0x0002` (Kindle PID/account DRM). The stock app decrypts this using its stored Amazon account keys (`amzn1.account.AFQD3XPSEALBBA7C2RJVO3T5QX6A`).
-- **Clone Compatibility**: Because the side-by-side clone `com.amazon.kindle.epub` runs without Amazon account credentials, `libKRF.so` cannot decrypt `Encryption: 2` files, yielding "Definition not found". The unencrypted (`Encryption: 0`) Wiktionary MOBI dictionary installed in Round 005 at `/data/data/com.amazon.kindle.epub/files/dictionaries/B003ODIZL6_EBOK.prc` bypasses DRM checks and works natively.
+### Task B — Native Table of Contents Drawer (Binary `INDX` / NCX in MOBI7)
+1. **Reverse-Engineering `libKRF.so`**:
+   - Analyzed `_ZNK3KRF14ReaderInternal18KindleDocumentMobi23createNavigationControlEv`, `NavigationControlMobi::create`, and `NCXIteratorMobi::create` in `libKRF.so`.
+   - Discovered key structural requirements for Kindle's native slide-out TOC drawer:
+     1. **MOBI Header**:
+        - `offset 240` (`rec0 + 240`): `extra_data_flags` must be `3` (multibyte flags enabled).
+        - `offset 244` (`rec0 + 244`): `ncx_index` must store the PalmDB record index of the Master `INDX` record.
+        - `offset 260` (`rec0 + 260`): must be `0xFFFFFFFF` (`-1`) for MOBI7 mode.
+     2. **Master `INDX` Record**:
+        - `offset 16`: `index_type = 2` (master index; offset 8 and 12 must be `0`).
+        - `masterIdxt`: points to `192 + tagx.length`.
+        - Key format: `lastKey` (2 bytes) followed by short entry count.
+     3. **Secondary `INDX` Record**:
+        - `offset 8`: `0`.
+        - `offset 12`: `1` (`index_type = 0`).
+        - Entry keys: Must be formatted as two-digit strings (`"00"`, `"01"`, ..., `"14"`).
+     4. **`CNCX` Record**:
+        - Contains variable-length UTF-8 chapter labels prefixed with length bytes, referenced by secondary INDX tags.
+2. **Verification Evidence**:
+   - Cleared transcode cache and opened `file:///sdcard/kindle/kindle_exam_v3.epub` in `com.amazon.kindle.epub`.
+   - Tapped center to display reader chrome, then tapped the hamburger/list icon (`bounds=[138,83][276,251]`).
+   - The native Kindle slide-out drawer opened immediately, fully populated with 16 chapter entries:
+     - `Cover`
+     - `Contents`
+     - `E01 The Ferryman's Almanac`
+     - `E02 Dialogue and Quotation`
+     - `E03 Long Words and Names`
+     - `E04 Long words de`
+     - `E05 Long words fr`
+     - `E06 Headings and Blocks`
+     - `E07 Inline Styles`
+     - `E08 Verse and Alignment`
+     - `E09 Pagination and Images`
+     - `E10 Scripts`
+     - `X1 Exam lines regular`
+     - `X2 Exam lines bold`
+     - `X3 Exam lines italic`
+     - `X4 Exam lines bolditalic`
+   - Tapped `E06 Headings and Blocks` at `(495, 1263)`: reader instantly navigated from Location 1 (0%) to `Location 245 of 595 • 41%`!
+   - Screenshot captured: `screenshots/verify_native_toc_drawer.png`.
 
 ---
 
-## 5. Artifacts Included in Report 006
+### Task C — KF8 (`libWebCoreKRF.so`) A/B Testing
+1. **Execution**:
+   - Enabled KF8 flag: `adb shell "touch /sdcard/kindle/.use_kf8"` and cleared cached files.
+   - Attempted rendering of `kindle_tables_images_exam.epub` and `kindle_exam_v3.epub`.
+2. **Engine Response**:
+   - Kindle's WebCore native library rejected the experimental container:
+     ```
+     E com.amazon.android.docviewer.mobi.b0: com.amazon.android.docviewer.mobi.KRFError: KRF call IKindleDocument.createViewer returned null
+     E AmazonKindle.com.amazon.android.docviewer.mobi.MobiDocViewer: [main]: Unable to initialize MobiDocTextFragment after drawing cached page!
+     ```
+   - Full stack trace captured in `logs/logcat_kf8_test.txt`.
+   - Cleanly removed `/sdcard/kindle/.use_kf8` (`ls: /sdcard/kindle/.use_kf8: No such file or directory` verified).
+   - Phone remains firmly on the rock-solid MOBI7+NCX engine while KF8 container subtleties are refined for Round 008.
 
-- `REPORT.md`: This comprehensive verification report.
-- `scripts/`: Updated source and build scripts (`clone_and_deploy_epub_mod.sh`, `patch_classes3.sh`, `compile_mod_dex.sh`, `EpubTranscoder.java`, `OpenCatalogView.java`, `OpdsSource.java`, `GutendexSource.java`, `OpenLibraryClient.java`).
+---
+
+### Task D — Autonomous Relay Stall Redundancy
+1. **Redundancy System**:
+   - Implemented `tools/stall_detector.mjs` and `tools/autonomous_relay_runner.mjs`.
+   - Detects when Gemini generation finishes but download button / instructions zip are pending.
+   - Monitors ADB connection to ensure device availability (`32001776e8e82623`).
+   - Automatically downloads, stages, and unzips incoming round packages upon arrival.
+
+---
+
+## 3. Artifacts Included in Report Archive
+
+The outgoing report archive `antig_to_gemini_neon_clunky_report007.zip` contains:
+- `REPORT.md`: This comprehensive report.
+- `scripts/`:
+  - `EpubTranscoder.java` (Binary INDX / NCX TOC drawer generator + KF8 scaffolding)
+  - `SafeHttp.java` (In-app DoH DNS fallback with Cloudflare & Google)
+  - `GutendexSource.java` (Project Gutenberg catalog client)
+  - `OpdsSource.java` (Standard OPDS 1.2 Atom parser)
+  - `OpenCatalogView.java` (Embedded Home tab catalog view)
+  - `OpenLibraryClient.java` (Ratings, cover & synopsis client)
+  - `clone_and_deploy_epub_mod.sh` (Automated build and deploy script)
+  - `patch_classes3.sh` (Smali injection for Home tab)
+  - `compile_mod_dex.sh` (Bytecode compilation pipeline)
 - `screenshots/`:
-  - `verify_home_tab_live_results.png`
-  - `verify_home_book_details_cover.png`
-  - `verify_library_clean_deduped.png`
+  - `verify_doh_home_and_cover_dialog.png` (Live Home tab results & Open Library details via DoH)
+  - `verify_native_toc_drawer.png` (Native slide-out TOC drawer with all chapters and jumping)
 - `logs/`:
-  - `logcat_round006.txt`
-  - `kindle_library_db_round006.txt`
+  - `logcat_round007.txt` (Filtered logcat capture of Round 007 operations)
+  - `logcat_kf8_test.txt` (KF8 WebCore engine error logs)

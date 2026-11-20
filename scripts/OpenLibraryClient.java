@@ -17,6 +17,7 @@ public final class OpenLibraryClient {
         public int ratingsCount = 0;
         public String description = "";
         public List<String> similarTitles = new ArrayList<String>();
+        public String coverUrl = "";
     }
 
     public static BookMeta fetchMeta(String title, String author) {
@@ -30,6 +31,10 @@ public final class OpenLibraryClient {
             JSONObject doc = docs.optJSONObject(0);
             if (doc == null) return meta;
             meta.workKey = doc.optString("key", "");
+            int coverI = doc.optInt("cover_i", 0);
+            if (coverI > 0) {
+                meta.coverUrl = "https://covers.openlibrary.org/b/id/" + coverI + "-M.jpg";
+            }
             JSONArray isbns = doc.optJSONArray("isbn");
             if (isbns != null && isbns.length() > 0) {
                 meta.isbn = isbns.optString(0, "");
@@ -44,7 +49,7 @@ public final class OpenLibraryClient {
                         meta.avgRating = summary.optDouble("average", 0.0);
                         meta.ratingsCount = summary.optInt("count", 0);
                     }
-                } catch (Throwable ignored) {}
+                } catch (Throwable t) { android.util.Log.e("OpenLibraryClient", "Error", t); }
 
                 try {
                     String wJson = GutendexSource.httpGet("https://openlibrary.org" + meta.workKey + ".json");
@@ -55,7 +60,7 @@ public final class OpenLibraryClient {
                     } else if (descObj instanceof JSONObject) {
                         meta.description = ((JSONObject) descObj).optString("value", "");
                     }
-                } catch (Throwable ignored) {}
+                } catch (Throwable t) { android.util.Log.e("OpenLibraryClient", "Error", t); }
             }
 
             // Similar books via first subject
@@ -77,10 +82,10 @@ public final class OpenLibraryClient {
                                 }
                             }
                         }
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable t) { android.util.Log.e("OpenLibraryClient", "Error", t); }
                 }
             }
-        } catch (Throwable ignored) {
+        } catch (Throwable t) { android.util.Log.e("OpenLibraryClient", "Outer error", t);
         }
         return meta;
     }

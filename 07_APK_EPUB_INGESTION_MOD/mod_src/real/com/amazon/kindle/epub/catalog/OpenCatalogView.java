@@ -325,31 +325,36 @@ public final class OpenCatalogView {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                // Fetch cover bitmap if available
+                final OpenLibraryClient.BookMeta meta = OpenLibraryClient.fetchMeta(book.title, book.author);
+
+                // Fetch cover bitmap: try book.coverUrl first, fallback to Open Library if Gutenberg is 503
+                Bitmap bmp = null;
                 if (book.coverUrl != null && !book.coverUrl.isEmpty()) {
                     try {
-                        HttpURLConnection conn = (HttpURLConnection) new URL(book.coverUrl).openConnection();
-                        conn.setConnectTimeout(10000);
-                        conn.setReadTimeout(10000);
-                        InputStream is = conn.getInputStream();
-                        final Bitmap bmp = BitmapFactory.decodeStream(is);
+                        InputStream is = SafeHttp.openStream(book.coverUrl);
+                        bmp = BitmapFactory.decodeStream(is);
                         is.close();
-                        conn.disconnect();
-                        if (bmp != null) {
-                            mainHandler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    if (dialog.isShowing()) {
-                                        coverView.setImageBitmap(bmp);
-                                        coverView.setVisibility(View.VISIBLE);
-                                    }
-                                }
-                            });
-                        }
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable t) { android.util.Log.e("OpenCatalogView", "Primary cover error", t); }
                 }
-
-                final OpenLibraryClient.BookMeta meta = OpenLibraryClient.fetchMeta(book.title, book.author);
+                if (bmp == null && meta.coverUrl != null && !meta.coverUrl.isEmpty()) {
+                    try {
+                        InputStream is = SafeHttp.openStream(meta.coverUrl);
+                        bmp = BitmapFactory.decodeStream(is);
+                        is.close();
+                    } catch (Throwable t) { android.util.Log.e("OpenCatalogView", "Fallback cover error", t); }
+                }
+                if (bmp != null) {
+                    final Bitmap finalBmp = bmp;
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (dialog.isShowing()) {
+                                coverView.setImageBitmap(finalBmp);
+                                coverView.setVisibility(View.VISIBLE);
+                            }
+                        }
+                    });
+                }
                 final StringBuilder msg = new StringBuilder();
                 msg.append("Author: ").append(book.author).append("\n");
                 msg.append("Source: ").append(book.sourceName).append("\n");
@@ -425,11 +430,7 @@ public final class OpenCatalogView {
                     if (safeName.length() > 50) safeName = safeName.substring(0, 50);
                     final File epubFile = new File(outDir, safeName + "_" + book.id + ".epub");
 
-                    HttpURLConnection conn = (HttpURLConnection) new URL(book.epubUrl).openConnection();
-                    conn.setInstanceFollowRedirects(true);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(30000);
-                    InputStream is = conn.getInputStream();
+                    InputStream is = SafeHttp.openStream(book.epubUrl);
                     FileOutputStream fos = new FileOutputStream(epubFile);
                     try {
                         byte[] buf = new byte[8192];
@@ -440,7 +441,6 @@ public final class OpenCatalogView {
                     } finally {
                         fos.close();
                         is.close();
-                        conn.disconnect();
                     }
 
                     mainHandler.post(new Runnable() {
