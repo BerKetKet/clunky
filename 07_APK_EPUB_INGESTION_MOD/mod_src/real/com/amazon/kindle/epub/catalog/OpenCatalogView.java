@@ -4,11 +4,15 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -16,25 +20,34 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * Embedded Open Book Catalog View that replaces the Amazon Store / Kindle+ upsell feed
- * inside RubyHomeFragment (the Home tab of com.amazon.kindle.epub).
- * Preserves the bottom navigation bar (Home | Library | More) and mini-cover resume bar.
+ * Embedded Open Book Catalog View replacing Amazon Store / Kindle+ upsells
+ * inside RubyHomeFragment (Home tab of com.amazon.kindle.epub).
+ * Supports pluggable sources (Project Gutenberg via Gutendex + Custom OPDS feeds),
+ * Open Library ratings/descriptions/similar books, cover thumbnails, and local DB backups.
  */
 public final class OpenCatalogView {
+    private static final String PREFS = "OpenCatalogPrefs";
+    private static final String KEY_CUSTOM_OPDS = "custom_opds_url";
+
     public static View wrap(View originalHomeView) {
         if (originalHomeView == null) return null;
         try {
@@ -60,6 +73,13 @@ public final class OpenCatalogView {
     public static View buildCatalogView(final Context ctx) {
         final List<BookSource> sources = new ArrayList<BookSource>();
         sources.add(new GutendexSource());
+        final SharedPreferences prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        String savedOpds = prefs.getString(KEY_CUSTOM_OPDS, "");
+        if (!savedOpds.isEmpty()) {
+            sources.add(new OpdsSource("Custom OPDS", savedOpds, ""));
+        }
+
+        final int[] activeSourceIdx = new int[]{0};
         final List<BookResult> currentResults = new ArrayList<BookResult>();
         final List<String> displayItems = new ArrayList<String>();
         final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -69,19 +89,53 @@ public final class OpenCatalogView {
         root.setBackgroundColor(Color.parseColor("#121212"));
         root.setPadding(36, 96, 36, 160);
 
+        // Header row: Title + Backup button
+        LinearLayout headerRow = new LinearLayout(ctx);
+        headerRow.setOrientation(LinearLayout.HORIZONTAL);
+        headerRow.setGravity(Gravity.CENTER_VERTICAL);
+
         TextView header = new TextView(ctx);
         header.setText("Discover Free EPUBs");
         header.setTextColor(Color.WHITE);
-        header.setTextSize(22f);
+        header.setTextSize(21f);
         header.setTypeface(Typeface.SERIF, Typeface.BOLD);
-        header.setPadding(0, 0, 0, 16);
-        root.addView(header);
+        headerRow.addView(header, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
+        Button backupBtn = new Button(ctx);
+        backupBtn.setText("Backup");
+        backupBtn.setTextSize(12f);
+        backupBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                backupLocalDatabases(ctx);
+            }
+        });
+        headerRow.addView(backupBtn);
+        root.addView(headerRow);
+
+        // Source Switcher row
+        LinearLayout sourceRow = new LinearLayout(ctx);
+        sourceRow.setOrientation(LinearLayout.HORIZONTAL);
+        sourceRow.setPadding(0, 8, 0, 8);
+
+        final Button gutenBtn = new Button(ctx);
+        gutenBtn.setText("Gutenberg");
+        gutenBtn.setTextSize(12f);
+        sourceRow.addView(gutenBtn);
+
+        final Button opdsBtn = new Button(ctx);
+        opdsBtn.setText(savedOpds.isEmpty() ? "+ OPDS Feed" : "Custom OPDS");
+        opdsBtn.setTextSize(12f);
+        sourceRow.addView(opdsBtn);
+
+        root.addView(sourceRow);
+
+        // Search row
         LinearLayout searchRow = new LinearLayout(ctx);
         searchRow.setOrientation(LinearLayout.HORIZONTAL);
 
         final EditText searchInput = new EditText(ctx);
-        searchInput.setHint("Search Project Gutenberg...");
+        searchInput.setHint("Search title or author...");
         searchInput.setHintTextColor(Color.parseColor("#999999"));
         searchInput.setTextColor(Color.WHITE);
         searchInput.setSingleLine(true);
@@ -115,13 +169,14 @@ public final class OpenCatalogView {
         final Runnable doSearch = new Runnable() {
             @Override
             public void run() {
+                final BookSource src = sources.get(activeSourceIdx[0]);
                 final String q = searchInput.getText().toString();
-                statusView.setText(q.trim().isEmpty() ? "Loading popular Project Gutenberg books..." : "Searching for \"" + q + "\"...");
+                statusView.setText(q.trim().isEmpty() ? "Loading " + src.getName() + "..." : "Searching " + src.getName() + " for \"" + q + "\"...");
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
                         try {
-                            final List<BookResult> found = sources.get(0).search(q);
+                            final List<BookResult> found = src.search(q);
                             mainHandler.post(new Runnable() {
                                 @Override
                                 public void run() {
@@ -129,17 +184,20 @@ public final class OpenCatalogView {
                                     displayItems.clear();
                                     currentResults.addAll(found);
                                     for (BookResult b : found) {
-                                        displayItems.add(b.title + "\n" + b.author + "  •  " + b.downloadCount + " downloads");
+                                        String sub = (b.downloadCount > 0)
+                                                ? (b.author + "  •  " + b.downloadCount + " downloads")
+                                                : b.author;
+                                        displayItems.add(b.title + "\n" + sub);
                                     }
                                     adapter.notifyDataSetChanged();
-                                    statusView.setText("Found " + found.size() + " EPUBs via " + sources.get(0).getName());
+                                    statusView.setText("Found " + found.size() + " EPUBs via " + src.getName());
                                 }
                             });
                         } catch (final Throwable t) {
                             mainHandler.post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    statusView.setText("Search error: " + t.getMessage());
+                                    statusView.setText("Network error (" + t.getMessage() + "). Tap Search to retry.");
                                 }
                             });
                         }
@@ -147,6 +205,34 @@ public final class OpenCatalogView {
                 }).start();
             }
         };
+
+        gutenBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                activeSourceIdx[0] = 0;
+                doSearch.run();
+            }
+        });
+
+        opdsBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (sources.size() > 1) {
+                    activeSourceIdx[0] = 1;
+                    doSearch.run();
+                } else {
+                    promptCustomOpds(ctx, prefs, sources, activeSourceIdx, opdsBtn, doSearch);
+                }
+            }
+        });
+
+        opdsBtn.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                promptCustomOpds(ctx, prefs, sources, activeSourceIdx, opdsBtn, doSearch);
+                return true;
+            }
+        });
 
         searchBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -168,10 +254,64 @@ public final class OpenCatalogView {
         return root;
     }
 
+    private static void promptCustomOpds(
+            final Context ctx,
+            final SharedPreferences prefs,
+            final List<BookSource> sources,
+            final int[] activeIdx,
+            final Button opdsBtn,
+            final Runnable doSearch
+    ) {
+        final EditText input = new EditText(ctx);
+        input.setHint("https://example.org/opds.xml");
+        input.setText(prefs.getString(KEY_CUSTOM_OPDS, ""));
+        new AlertDialog.Builder(ctx)
+                .setTitle("Add OPDS Feed URL")
+                .setView(input)
+                .setPositiveButton("Save & Browse", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int which) {
+                        String url = input.getText().toString().trim();
+                        if (!url.isEmpty()) {
+                            prefs.edit().putString(KEY_CUSTOM_OPDS, url).apply();
+                            OpdsSource opds = new OpdsSource("Custom OPDS", url, "");
+                            if (sources.size() > 1) {
+                                sources.set(1, opds);
+                            } else {
+                                sources.add(opds);
+                            }
+                            opdsBtn.setText("Custom OPDS");
+                            activeIdx[0] = 1;
+                            doSearch.run();
+                        }
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
     private static void showBookDetails(final Context ctx, final Handler mainHandler, final BookResult book) {
+        ScrollView scroll = new ScrollView(ctx);
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(48, 32, 48, 16);
+
+        final ImageView coverView = new ImageView(ctx);
+        coverView.setVisibility(View.GONE);
+        LinearLayout.LayoutParams covLp = new LinearLayout.LayoutParams(260, 390);
+        covLp.gravity = Gravity.CENTER_HORIZONTAL;
+        covLp.bottomMargin = 24;
+        box.addView(coverView, covLp);
+
+        final TextView msgView = new TextView(ctx);
+        msgView.setText("Author: " + book.author + "\nSource: " + book.sourceName + "\n\nFetching Open Library ratings, synopsis & similar books...");
+        msgView.setTextSize(15f);
+        box.addView(msgView);
+        scroll.addView(box);
+
         final AlertDialog dialog = new AlertDialog.Builder(ctx)
                 .setTitle(book.title)
-                .setMessage("Author: " + book.author + "\nSource: " + book.sourceName + "\n\nFetching Open Library ratings, description & similar books...")
+                .setView(scroll)
                 .setPositiveButton("Download & Read", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int which) {
@@ -185,6 +325,30 @@ public final class OpenCatalogView {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                // Fetch cover bitmap if available
+                if (book.coverUrl != null && !book.coverUrl.isEmpty()) {
+                    try {
+                        HttpURLConnection conn = (HttpURLConnection) new URL(book.coverUrl).openConnection();
+                        conn.setConnectTimeout(10000);
+                        conn.setReadTimeout(10000);
+                        InputStream is = conn.getInputStream();
+                        final Bitmap bmp = BitmapFactory.decodeStream(is);
+                        is.close();
+                        conn.disconnect();
+                        if (bmp != null) {
+                            mainHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (dialog.isShowing()) {
+                                        coverView.setImageBitmap(bmp);
+                                        coverView.setVisibility(View.VISIBLE);
+                                    }
+                                }
+                            });
+                        }
+                    } catch (Throwable ignored) {}
+                }
+
                 final OpenLibraryClient.BookMeta meta = OpenLibraryClient.fetchMeta(book.title, book.author);
                 final StringBuilder msg = new StringBuilder();
                 msg.append("Author: ").append(book.author).append("\n");
@@ -193,7 +357,7 @@ public final class OpenCatalogView {
                     msg.append(String.format(Locale.US, "Open Library Rating: %.2f / 5 (%d ratings)\n", meta.avgRating, meta.ratingsCount));
                 }
                 if (!meta.description.isEmpty()) {
-                    String desc = meta.description.length() > 350 ? meta.description.substring(0, 350) + "..." : meta.description;
+                    String desc = meta.description.length() > 380 ? meta.description.substring(0, 380) + "..." : meta.description;
                     msg.append("\n").append(desc).append("\n");
                 }
                 if (!meta.similarTitles.isEmpty()) {
@@ -206,12 +370,47 @@ public final class OpenCatalogView {
                     @Override
                     public void run() {
                         if (dialog.isShowing()) {
-                            dialog.setMessage(msg.toString());
+                            msgView.setText(msg.toString());
                         }
                     }
                 });
             }
         }).start();
+    }
+
+    private static void backupLocalDatabases(Context ctx) {
+        try {
+            File backupDir = new File("/sdcard/kindle/backups");
+            backupDir.mkdirs();
+            String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
+            File dbDir = new File(ctx.getApplicationInfo().dataDir, "databases");
+            int copied = 0;
+            for (String dbName : new String[]{"kindle_library.db", "annotations.db"}) {
+                File src = new File(dbDir, dbName);
+                if (src.exists()) {
+                    copyFile(src, new File(backupDir, stamp + "_" + dbName));
+                    copied++;
+                }
+            }
+            Toast.makeText(ctx, "Backed up " + copied + " DB(s) to /sdcard/kindle/backups/", Toast.LENGTH_LONG).show();
+        } catch (Throwable t) {
+            Toast.makeText(ctx, "Backup error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private static void copyFile(File src, File dst) throws Exception {
+        FileInputStream fis = new FileInputStream(src);
+        FileOutputStream fos = new FileOutputStream(dst);
+        try {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = fis.read(buf)) > 0) {
+                fos.write(buf, 0, n);
+            }
+        } finally {
+            fos.close();
+            fis.close();
+        }
     }
 
     private static void downloadAndOpen(final Context ctx, final Handler mainHandler, final BookResult book) {

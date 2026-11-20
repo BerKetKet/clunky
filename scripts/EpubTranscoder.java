@@ -37,7 +37,7 @@ import java.util.zip.ZipInputStream;
  */
 public final class EpubTranscoder {
     private static final Charset UTF8 = Charset.forName("UTF-8");
-    private static final String CACHE_PREFIX = "v4_";
+    private static final String CACHE_PREFIX = "";
 
     public static File getCacheDir() {
         try {
