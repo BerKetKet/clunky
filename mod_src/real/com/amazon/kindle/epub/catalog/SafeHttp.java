@@ -113,8 +113,8 @@ public final class SafeHttp {
     private static HttpURLConnection openDirect(URL url) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setInstanceFollowRedirects(false);
-        conn.setConnectTimeout(15000);
-        conn.setReadTimeout(25000);
+        conn.setConnectTimeout(3500);
+        conn.setReadTimeout(5000);
         conn.setRequestProperty("User-Agent", USER_AGENT);
         return conn;
     }
@@ -126,8 +126,8 @@ public final class SafeHttp {
         URL ipUrl = (port > 0) ? new URL(protocol, ip, port, file) : new URL(protocol, ip, file);
         HttpURLConnection conn = (HttpURLConnection) ipUrl.openConnection();
         conn.setInstanceFollowRedirects(false);
-        conn.setConnectTimeout(15000);
-        conn.setReadTimeout(25000);
+        conn.setConnectTimeout(3500);
+        conn.setReadTimeout(5000);
         conn.setRequestProperty("Host", origHost);
         conn.setRequestProperty("User-Agent", USER_AGENT);
         if (conn instanceof HttpsURLConnection) {

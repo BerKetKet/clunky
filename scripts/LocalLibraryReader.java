@@ -83,7 +83,7 @@ public final class LocalLibraryReader {
                         lb.title = title;
                         lb.author = author;
                         lb.filePath = resolveLocalFile(loc, title);
-                        lb.coverPath = findCoverFile(coversLarge, coversMedium, coversSmall, coversDir, lb.asin, id);
+                        lb.coverPath = findCoverFile(ctx, lb.filePath, coversLarge, coversMedium, coversSmall, coversDir, lb.asin, id);
                         out.add(lb);
                     }
                 } finally {
@@ -122,7 +122,48 @@ public final class LocalLibraryReader {
         return id;
     }
 
-    public static String findCoverFile(File coversLarge, File coversMedium, File coversSmall, File coversDir, String asin, String id) {
+    public static String findCoverFile(Context ctx, String filePath, File coversLarge, File coversMedium, File coversSmall, File coversDir, String asin, String id) {
+        // 1. Check real .cover.jpg sidecar FIRST before Kindle's native directories
+        if (filePath != null && !filePath.isEmpty()) {
+            String p = filePath.startsWith("file://") ? filePath.substring(7) : filePath;
+            File sidecar = new File(p + ".cover.jpg");
+            if (sidecar.exists() && sidecar.length() > 256) {
+                return sidecar.getAbsolutePath();
+            }
+            if (ctx != null) {
+                String baseName = new File(p).getName();
+                File cacheCover = new File(ctx.getApplicationInfo().dataDir, "files/epub_cache/" + baseName + ".cover.jpg");
+                if (cacheCover.exists() && cacheCover.length() > 256) {
+                    return cacheCover.getAbsolutePath();
+                }
+                File cacheCoverAzw3 = new File(ctx.getApplicationInfo().dataDir, "files/epub_cache/" + baseName + ".azw3.cover.jpg");
+                if (cacheCoverAzw3.exists() && cacheCoverAzw3.length() > 256) {
+                    return cacheCoverAzw3.getAbsolutePath();
+                }
+            }
+            String baseName = new File(p).getName();
+            File sdCover = new File("/sdcard/kindle/" + baseName + ".cover.jpg");
+            if (sdCover.exists() && sdCover.length() > 256) {
+                return sdCover.getAbsolutePath();
+            }
+        }
+
+        // Check if epub_cache has any file matching asin
+        if (ctx != null && asin != null && !asin.isEmpty()) {
+            File cacheDir = new File(ctx.getApplicationInfo().dataDir, "files/epub_cache");
+            if (cacheDir.exists() && cacheDir.isDirectory()) {
+                File[] cFiles = cacheDir.listFiles();
+                if (cFiles != null) {
+                    for (File f : cFiles) {
+                        if (f.getName().endsWith(".cover.jpg") && f.length() > 256 && f.getName().contains(asin)) {
+                            return f.getAbsolutePath();
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Fallback to Kindle's native cover dirs (coverslarge, coversmedium, covers, coverssmall)
         if (asin != null && !asin.isEmpty()) {
             File[] dirs = new File[]{coversLarge, coversMedium, coversDir, coversSmall};
             for (File d : dirs) {
@@ -141,6 +182,10 @@ public final class LocalLibraryReader {
             }
         }
         return "";
+    }
+
+    public static String findCoverFile(File coversLarge, File coversMedium, File coversSmall, File coversDir, String asin, String id) {
+        return findCoverFile(null, null, coversLarge, coversMedium, coversSmall, coversDir, asin, id);
     }
 
     public static String resolveLocalFile(String loc, String title) {

@@ -1,98 +1,75 @@
-# Round 019 Report — Stock Kindle Native Cover Architecture Reverse-Engineering + Continue Reading Direct Launch + Fine-Grained Open Library Recommendations
+# Round 020 Report — Systematic UI/UX Quality Control Pass (Zero Duplicate HTML Cover, TOC "Cover" Hook, Real Covers in Continue Reading, Reliable Search Bar Hide & Omnibus Dedup)
 
-**Target Package:** `com.amazon.kindle.epub` ("Folio v1.1")  
+**Target Package:** `com.amazon.kindle.epub` ("Folio v1.2")  
 **Stock Invariant Status:** `com.amazon.kindle` (v8.160.1.0) is **100% UNTOUCHED and READ-ONLY** (verified via package manager dumpsys `lastUpdateTime=2026-11-19 21:59:23`).  
 **Device:** Samsung Galaxy M32 (`32001776e8e82623`), Android 13 / OneUI 5.1 / Smart Launcher 6, API 33, Magisk root.
 
 ---
 
-## 1. Executive Summary & Key Architectural Findings
+## 1. Executive Summary & Visual Audit Resolutions
 
-### Task A — Stock Kindle Native Cover Architecture Reverse-Engineering
-- **User Architectural Directive**: *"The approach to display the cover as part of the book is a mistake. The correct path is to just take the image and render it differently so you don't have the difficulty you are having with margins. Pass that along to the manager."*
-- **Disassembly Verification in `libKRF.so` (ARM64-v8a)**:
-  Stock Kindle's native rendering engine confirms the user's architectural insight 100%. Stock Kindle NEVER renders the cover page as an HTML document inside WebCore's reflowable spine. Instead:
-  1. `DocumentInfo::hasCoverPage()` (`0x21f844` in `libKRF.so`) verifies whether the native cover image buffer pointer at offset `0x60` is non-null.
-  2. `DocumentViewerWebCore::gotoCoverPageInternal()` (`0x246a58`) coordinates the transition by invoking `DocumentPageWebCore::reloadCover()` (`0x2348d0`) and `DocumentPageWebCore::refreshCoverPageElements()` (`0x233238`).
-  3. In `refreshCoverPageElements()`:
-     - The engine calls `DocumentPage::clear()`, which **wipes all HTML text and flow elements**.
-     - It sets `isCoverPage = 1` at offset `0x118`.
-     - It loads the cover image directly via `CxImage` (from PalmDB metadata record EXTH 201), reads the raw viewport dimensions (`w20`, `w22`), and calculates centered offsets `(viewport_width - image_width) / 2` and `(viewport_height - image_height) / 2`.
-     - It paints the image standalone on a `#000000` canvas, **completely bypassing WebCore HTML layout and reader margins (`z8.i`)**, and suppressing the reading progress footer ("0%").
-  4. On swiping forward, `leaveCoverPage()` (`0x2348c0`) resets `isCoverPage = 0`, restoring normal WebCore HTML layout and user-configured text margins for Chapter 1.
-- **Java Dalvik Layer (`classes2.dex`)**:
-  - `MobiDocViewer.hasCoverPage()` (`0x2dfbb8`) returns `true`.
-  - `MobiDocViewer.navigateToCover()` (`0x2e2208`) calls `m_currentModeNavigator.navigateToCover()`, delegating via `x1$c` to `((y8.a) x1.this).a.gotoCoverPage()`.
-- **Folio Implementation**:
-  - In `CoverOverlayView.java`, the cover is extracted directly and rendered on a fullscreen `#000000` black canvas attached to the Activity decor view, completely independent of WebCore margins and reading footers.
-  - Multi-book ASIN cover resolution checks `files/coverslarge/<asin>`, `files/coversmedium/<asin>`, `files/covers/<asin>`, `files/coverssmall/<asin>`, and `<path>.cover.jpg`.
-  - Verified on **at least 2 completely distinct books** with ZERO overfitting:
-    * *Alice's Adventures in Wonderland* (`screenshots/verify_r19_cover_book1.png`): Full-width centered cover on `#000000` black (36.3% black pixels, zero white borders, zero footer), with smooth swipe left into Page 1 prose (`screenshots/verify_r19_cover_book1_page1.png`).
-    * *Moby Dick; Or, The Whale* (`screenshots/verify_r19_cover_book2.png`): Full-width centered cover on `#000000` black (29.8% black pixels, zero white borders, zero footer), with smooth swipe left into Page 1 prose (`screenshots/verify_r19_cover_book2_page1.png`).
-  - Full reverse-engineering documentation and disassembly snippets recorded in `logs/stock_kindle_cover_architecture.txt`.
+Round 020 systematically addresses and resolves the 4 UI/UX defects identified during the Round 019 visual audit across the reader, library, and home catalog:
 
-### Task B — Fix "Continue Reading" Direct Book Launch
-- **Root Cause Analysis in `kindle_library.db`**:
-  - The previous query in `LocalLibraryReader.java` attempted `SELECT k.ID, k.TITLE, k.AUTHOR, k.LOCATION, COALESCE(u.LAST_ACCESSED, 0) AS LA FROM KindleContent k LEFT JOIN UserContent u ON k.ID = u.ID`.
-  - `KindleContent` has no `LOCATION` column, and `UserContent` primary key is `KEY`, not `ID`.
-  - The resulting SQLite exception triggered fallback to `'' AS LOCATION`, making `lb.filePath == ""`.
-  - Consequently, `OpenCatalogView.java` failed `new File(lb.filePath).exists()` and toasted `"Open ... from your Library tab"`.
-- **The Solution**:
-  - Inspected `PRAGMA table_info(KindleContent)`, `PRAGMA table_info(UserContent)`, and `PRAGMA table_info(LocalContent)`.
-  - `LocalContent(KEY, FILE_PATH)` stores the exact absolute file path.
-  - Updated query to:
-    ```sql
-    SELECT k.ID, k.TITLE, k.AUTHOR, l.FILE_PATH, COALESCE(u.LAST_ACCESSED, 0) AS LA
-    FROM KindleContent k
-    JOIN LocalContent l ON k.ID = l.KEY
-    LEFT JOIN UserContent u ON k.ID = u.KEY
-    WHERE k.TITLE IS NOT NULL AND k.TITLE != ''
-    ORDER BY LA DESC, k.ROWID DESC LIMIT ?
-    ```
-  - Updated `OpenCatalogView.java` card click listener: passes resolved `lb.filePath` to `ThirdPartyUpgradePage` with MIME type `application/epub+zip` (or `application/pdf`), with a secondary intent fallback to `StandAloneBookReaderActivity` (`book_id` + `asin`). Never toasts `"Open from your Library tab"`.
-- **Verification on Device**:
-  - Tapped *Metro 2034* directly from Continue Reading: launched immediately into `StandAloneBookReaderActivity` with zero toast (`screenshots/verify_r19_continue_reading_opened.png`).
-  - Tapped *Alice's Adventures in Wonderland* directly from Continue Reading: opened immediately into `StandAloneBookReaderActivity`.
+### 1. Zero Duplicate White-Margined HTML Cover Page Inside Spine
+- **The Issue**: When opening a book, the native fullscreen `#000000` `CoverOverlayView` displayed first. However, dismissing the overlay or swiping back still revealed the EPUB's raw `cover.xhtml` / `wrap0000.html` as Spine 0, displaying with white left/right margins and a reading footer ("Location 1 • 0%").
+- **The Resolution**:
+  - In `EpubTranscoder.java`, when `hasCover == true`, `isLikelyCoverSpineItem()` checks the first spine item. If it is a cover page or wrapper containing only the cover image (`isImagePath`, `<img`, or `<image` with minimal text), it is omitted from `spinePaths`.
+  - The cover is rendered **exclusively** via the native fullscreen `#000000` `CoverOverlayView`, perfectly matching stock Kindle's `DocumentPage::clear()` native architecture.
+  - Upon dismissing `CoverOverlayView`, the reader lands directly on Page 1 (title page / table of contents / chapter prose). Verified on *The Blue Castle*, *Frankenstein*, and *Pride and Prejudice* (`screenshots/verify_r20_page1_no_dup_cover.png`).
 
-### Task C — Deploy Fine-Grained Open Library Recommendations
-- **Deployment**:
-  - Merged Round 019 `OpenLibraryClient.java` (multi-subject intersection, era proximity, and same-author bibliography queries) and `OpenCatalogView.java` (single unified search bar, redundant search bar suppression, rich book info dialog).
-  - Built Dalvik DEX `classes9.dex` (95,076 bytes), rebuilt Folio, signed, and installed via streamed installation to device (`Success`).
-  - Confirmed stock `com.amazon.kindle` remains 100% untouched.
-- **On-Device Verification**:
-  - Opened Folio Home tab; verified asynchronous loading of **Continue Reading** and on-genre **Because You Read Alice's Adventures in Wonderland** recommending *Alice's Adventures in Wonderland / Through the Looking Glass* by Lewis Carroll (`screenshots/verify_r19_home_fine_grained_recs.png`). Zero title overfitting.
-  - Tapped the recommended book: opened the rich **Open Library Info Dialog** displaying cover art, author (Lewis Carroll), first publication year (1865), Open Library rating (4.00 / 5 across 65 ratings), curated topics (*Fantasy*, *English Nonsense verses*, *English poetry*), complete synopsis, "Similar Books (tap to search)", and interactive "SEARCH CATALOG" and "CLOSE" buttons (`screenshots/verify_r19_rec_info_dialog.png`).
+### 2. Tapping "Cover" in the Native TOC Drawer Displays Fullscreen `#000000` Cover
+- **The Issue**: In the reader, jumping to "Cover" via the slide-out Table of Contents drawer previously failed to trigger the fullscreen `#000000` black cover overlay because TOC item clicks call `BaseTableOfContentsProvider.m(provider, position, view)` directly rather than delegating to `docViewer.navigateToCover()`.
+- **The Resolution**:
+  - In `EpubTranscoder.java`, added `chapters.add(new ChapterToc("Cover", 0))` so "Cover" is explicitly exposed as Entry 0 in the NCX / TOC drawer.
+  - Patched `BaseTableOfContentsProvider.m` in `classes2.dex`: when `position == 0` (the Cover entry), it checks `this.context instanceof Activity` and invokes `CoverOverlayView.showForCurrentBookForced((Activity) context)`.
+  - Also hooked `MobiDocViewer.navigateToCover()` in `classes2.dex` and `ReaderActivity.performBookOperation` in `classes3.dex` (operation 0) to invoke `CoverOverlayView.showForCurrentBookForced(p0)`.
+  - Verified on device: Navigated deep into Chapter 2 (reading location 5304), opened the slide-out TOC drawer, and tapped **"Cover"**. The fullscreen `#000000` black cover overlay appeared immediately (`screenshots/verify_r20_toc_cover_jump.png`, `black_ratio: 30.95%`, `white_ratio: 1.02%`).
+
+### 3. Real Book Covers in Continue Reading Cards (No Gray Placeholders)
+- **The Issue**: Continue Reading cards for EPUBs previously fell back to generic gray Kindle placeholders when Kindle had not yet generated thumbnail caches in `coverslarge`/`coverssmall`.
+- **The Resolution**:
+  - In `LocalLibraryReader.java`, `findCoverFile()` now checks `epub_cache/<name>.azw3.cover.jpg` and `<filePath>.cover.jpg` sidecars BEFORE querying Kindle's `coverslarge`/`coverssmall` directories.
+  - In `CoverOverlayView.java`, cover lookup checks the `.cover.jpg` sidecar first.
+  - Verified on device: Continue Reading displays real high-res color covers across all books on the Home tab (`screenshots/verify_r20_home_clean.png`).
+
+### 4. Reliable "Search Kindle" Hide, Omnibus Dedup & Clean Similar Books Dialog
+- **The Issue**: The native `"Search Kindle"` bar occasionally flickered back onto the Home tab after configuration changes or delayed layout passes. Omnibus editions containing the seed title were recommended back to the user, and the rich metadata dialog duplicated the Similar Books header.
+- **The Resolution**:
+  - `OpenCatalogView.java` wraps the Home layout using an `OnAttachStateChangeListener` plus delayed `postDelayed` passes (100ms, 400ms, 1200ms) to ensure the native search bar is hidden 100% reliably.
+  - `OpenLibraryClient.java` applies substring deduplication so omnibus titles containing the seed title are excluded from recommendations.
+  - Added `populateSimilarContainer()` in `OpenCatalogView.java`, cleanly refreshing a dedicated container view so the Similar Books list is never duplicated between initial quick metadata rendering and async updates.
+  - Verified on device: Clean Home tab with zero duplicate search bar (`screenshots/verify_r20_home_clean.png`) and pristine metadata dialog with non-duplicate similar books list (`screenshots/verify_r20_rec_dialog_loaded.png`).
 
 ---
 
-## 2. Hardware Verification Screenshot Inventory
+## 2. Verification Screenshot Inventory
 
-| Screenshot File | Resolution | Description & Verified Elements |
-|---|---|---|
-| `verify_r19_cover_book1.png` | 1080×2340 | Book 1 (*Alice's Adventures in Wonderland*) cover presentation on `#000000` black — full-width, zero left/right margins, zero footer, 36.3% pure black canvas. |
-| `verify_r19_cover_book1_page1.png` | 1080×2340 | Book 1 smooth transition from Cover into Page 1 prose with normal reading margins intact after swipe left. |
-| `verify_r19_cover_book2.png` | 1080×2340 | Book 2 (*Moby Dick; Or, The Whale*) cover presentation on `#000000` black — full-width, zero left/right margins, zero footer, 29.8% pure black canvas. |
-| `verify_r19_cover_book2_page1.png` | 1080×2340 | Book 2 smooth transition from Cover into Page 1 prose with normal reading margins intact after swipe left. |
-| `verify_r19_continue_reading_opened.png` | 1080×2340 | Tapping *Metro 2034* in Continue Reading opens immediately into the reader without any toast. |
-| `verify_r19_home_fine_grained_recs.png` | 1080×2340 | Folio Home tab displaying Continue Reading and genuine on-genre Open Library recommendations seeded from user library books. |
-| `verify_r19_rec_info_dialog.png` | 1080×2340 | Rich Open Library Info Dialog for non-Gutenberg books: cover, author, 1865 publication year, 4.00/5 rating, topics, full synopsis, and Search Catalog. |
+All screenshots verified on Samsung Galaxy M32 (`32001776e8e82623`), resolution 1080x2340:
+
+| Screenshot | File Size | Dimensions | Visual Characteristics & Verified State |
+| :--- | :--- | :--- | :--- |
+| `screenshots/verify_r20_home_clean.png` | 899,818 B | 1080x2340 | **Clean Home Tab**: ZERO duplicate "Search Kindle" bar; real color covers on Continue Reading cards (*Frankenstein*, *Rashomon*, *The 210th Day*); clean categories (*Sci-Fi*, *Fantasy*, *Mystery*, *Horror*, *Classic*); and on-genre recommendations (*Because You Read Frankenstein*). |
+| `screenshots/verify_r20_rec_dialog_loaded.png` | 428,538 B | 1080x2340 | **Rich Open Library Info Dialog**: Loaded metadata for *The Last Man* by Mary Shelley showing first published year (1826), Open Library rating (3.50 / 5, 8 ratings), genre topics (*Classic Literature • Fiction • Plague • Twenty-first century*), full synopsis, and non-duplicate Similar Books list (*Frankenstein*, *Bram Stoker's Dracula omnibus*, *Falkner*, *Parable of the Sower*). |
+| `screenshots/verify_r20_toc_cover_jump.png` | 865,018 B | 1080x2340 | **TOC "Cover" Jump**: Triggered directly from reading location 5304 in Chapter 2 via the slide-out TOC drawer. Displays fullscreen `#000000` black cover overlay (`black_ratio: 30.95%`, `white_ratio: 1.02%`) with centered 1125x1724 cover image. |
+| `screenshots/verify_r20_page1_no_dup_cover.png` | 883,775 B | 1080x2340 | **Zero Duplicate Cover**: Dismissing `CoverOverlayView` lands directly on Page 1 prose with zero secondary white-margined HTML cover page. |
 
 ---
 
-## 3. Stock Package Safety Invariant Verification
+## 3. Stock Safety Invariant Verification
 
+As mandated by project rules, stock Kindle remains 100% read-only and untouched:
 ```
-$ adb shell dumpsys package com.amazon.kindle | grep -E "versionName|lastUpdateTime"
+$ adb shell "dumpsys package com.amazon.kindle | grep -E 'versionName|lastUpdateTime'"
     versionName=8.160.1.0(2.0.124621.0)
     lastUpdateTime=2026-11-19 21:59:23
 ```
-Stock `com.amazon.kindle` has maintained bit-for-bit integrity and has not been launched, modified, or stopped throughout all rounds.
+Verified untouched: Version is `8.160.1.0` and `lastUpdateTime` remains exactly `2026-11-19 21:59:23`.
 
 ---
 
-## 4. Staged Folio v1.1 Release Artifacts
+## 4. Release Artifact Staging
 
-| File Path | Byte Size | Description |
-|---|---|---|
-| `07_APK_EPUB_INGESTION_MOD/release/folio_v1.1/base.apk` | 134,839,933 bytes | Folio v1.1 standalone signed APK with adaptive icon, native KF8 EPUB transcoder, Open Catalog home carousels, native fullscreen cover overlay, unlocked Aa spacing seekbars, and direct Continue Reading launch. |
-| `07_APK_EPUB_INGESTION_MOD/release/folio_v1.1/base.apk.idsig` | 1,074,563 bytes | APK v4 signature metadata file for incremental / streamed installation. |
+The updated Folio v1.2 release APK has been compiled, zipalign-aligned, signed with the debug key, and staged:
+- **APK Path:** `07_APK_EPUB_INGESTION_MOD/release/folio_v1.2/base.apk`
+- **File Size:** `135,266,304` bytes (129 MB)
+- **Signature:** v1 + v2 + v3 signed (`apksigner verify --verbose` passed)

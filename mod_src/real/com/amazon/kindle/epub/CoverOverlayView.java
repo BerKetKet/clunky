@@ -137,7 +137,16 @@ public final class CoverOverlayView {
     /**
      * Shows cover overlay for the active book if user is at position 0 / Cover.
      */
+    public static boolean showForCurrentBookForced(final Activity activity) {
+        sDismissedThisSession = false;
+        return showForCurrentBookInternal(activity, true);
+    }
+
     public static boolean showForCurrentBook(final Activity activity) {
+        return showForCurrentBookInternal(activity, false);
+    }
+
+    private static boolean showForCurrentBookInternal(final Activity activity, final boolean force) {
         android.util.Log.i("CoverOverlayView", "showForCurrentBook called: activity=" + activity + " sDismissedThisSession=" + sDismissedThisSession);
         if (activity == null) {
             return false;
@@ -181,12 +190,116 @@ public final class CoverOverlayView {
         // Only auto-show cover overlay when at the beginning of the book (pos <= 500)
         // Note: In Kindle DocViewer, getPageStartPosition() returns raw text byte offset,
         // which starts at ~100-200 bytes (header/fragment 0) on the very first page of the book.
-        if (pos > 500) {
+        if (!force && pos > 500) {
             android.util.Log.i("CoverOverlayView", "Skipping auto-cover overlay at mid-book pos=" + pos);
             return false;
         }
 
-        // 1. If ASIN is known, check Kindle's native cover directories (coverslarge, coversmedium, covers, coverssmall)
+        // 1. Check real high-res .cover.jpg sidecars FIRST (preventing gray placeholders from overriding!)
+        // 1a. Try matching the exact book opened via Activity intent URI -> <path>.cover.jpg / epub_cache/<name>.azw3.cover.jpg
+        try {
+            android.content.Intent intent = activity.getIntent();
+            if (intent != null && intent.getData() != null) {
+                String dataPath = intent.getData().getPath();
+                if (dataPath != null && !dataPath.isEmpty()) {
+                    if (dataPath.startsWith("file://")) dataPath = dataPath.substring(7);
+                    if (new File(dataPath + ".cover.jpg").exists() && new File(dataPath + ".cover.jpg").length() > 256) {
+                        return showIfAvailable(activity, dataPath + ".cover.jpg");
+                    }
+                    String baseName = new File(dataPath).getName();
+                    File cacheCover = new File(activity.getFilesDir(), "epub_cache/" + baseName + ".azw3.cover.jpg");
+                    if (cacheCover.exists() && cacheCover.length() > 256) {
+                        return showIfAvailable(activity, cacheCover.getAbsolutePath());
+                    }
+                    File cacheCoverDirect = new File(activity.getFilesDir(), "epub_cache/" + baseName + ".cover.jpg");
+                    if (cacheCoverDirect.exists() && cacheCoverDirect.length() > 256) {
+                        return showIfAvailable(activity, cacheCoverDirect.getAbsolutePath());
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        // 1b. If ASIN is known, check kindle_library.db LocalContent for real file path -> <path>.cover.jpg
+        if (asin != null && !asin.isEmpty()) {
+            try {
+                File dbFile = new File(activity.getFilesDir().getParentFile(), "databases/kindle_library.db");
+                if (dbFile.exists()) {
+                    android.database.sqlite.SQLiteDatabase db = android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
+                    try {
+                        android.database.Cursor c = db.rawQuery("SELECT FILE_PATH FROM LocalContent WHERE KEY LIKE ? LIMIT 1", new String[]{"%" + asin + "%"});
+                        if (c != null) {
+                            try {
+                                if (c.moveToFirst()) {
+                                    String fp = c.getString(0);
+                                    if (fp != null && !fp.isEmpty()) {
+                                        if (fp.startsWith("file://")) fp = fp.substring(7);
+                                        File sc = new File(fp + ".cover.jpg");
+                                        if (sc.exists() && sc.length() > 256) {
+                                            return showIfAvailable(activity, sc.getAbsolutePath());
+                                        }
+                                        String base = new File(fp).getName();
+                                        File cc = new File(activity.getFilesDir(), "epub_cache/" + base + ".cover.jpg");
+                                        if (cc.exists() && cc.length() > 256) {
+                                            return showIfAvailable(activity, cc.getAbsolutePath());
+                                        }
+                                        File ccAzw = new File(activity.getFilesDir(), "epub_cache/" + base + ".azw3.cover.jpg");
+                                        if (ccAzw.exists() && ccAzw.length() > 256) {
+                                            return showIfAvailable(activity, ccAzw.getAbsolutePath());
+                                        }
+                                    }
+                                }
+                            } finally {
+                                c.close();
+                            }
+                        }
+                    } finally {
+                        db.close();
+                    }
+                }
+            } catch (Throwable ignored) {}
+
+            // 1c. Check epub_cache/ directly for any .cover.jpg matching ASIN
+            File cacheDir = new File(activity.getFilesDir(), "epub_cache");
+            if (cacheDir.exists() && cacheDir.isDirectory()) {
+                File[] cfs = cacheDir.listFiles();
+                if (cfs != null) {
+                    for (File f : cfs) {
+                        if (f.getName().endsWith(".cover.jpg") && f.length() > 256 && f.getName().contains(asin)) {
+                            return showIfAvailable(activity, f.getAbsolutePath());
+                        }
+                    }
+                }
+            }
+        }
+
+        // 1d. Fallback to last transcoded cover path
+        String cp = EpubTranscoder.lastCoverPath;
+        android.util.Log.i("CoverOverlayView", "lastCoverPath=" + cp);
+        if (cp != null && new File(cp).exists() && new File(cp).length() > 256) {
+            return showIfAvailable(activity, cp);
+        }
+
+        // 1e. Fallback search /sdcard/kindle/ for newest .cover.jpg
+        File dir = new File("/sdcard/kindle");
+        if (dir.exists() && dir.isDirectory()) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                File newest = null;
+                for (File f : files) {
+                    if (f.getName().endsWith(".cover.jpg") && f.length() > 256) {
+                        if (newest == null || f.lastModified() > newest.lastModified()) {
+                            newest = f;
+                        }
+                    }
+                }
+                if (newest != null) {
+                    android.util.Log.i("CoverOverlayView", "Found fallback cover in /sdcard/kindle: " + newest.getAbsolutePath());
+                    return showIfAvailable(activity, newest.getAbsolutePath());
+                }
+            }
+        }
+
+        // 2. Only if NO .cover.jpg exists anywhere, fallback to Kindle's native cover directories
         if (asin != null && !asin.isEmpty()) {
             File[] coverDirs = new File[]{
                     new File(activity.getFilesDir(), "coverslarge"),
@@ -205,50 +318,6 @@ public final class CoverOverlayView {
             }
         }
 
-        // 2. Try matching the exact book opened via Activity intent URI -> <path>.cover.jpg / epub_cache/<name>.azw3.cover.jpg
-        try {
-            android.content.Intent intent = activity.getIntent();
-            if (intent != null && intent.getData() != null) {
-                String dataPath = intent.getData().getPath();
-                if (dataPath != null && !dataPath.isEmpty()) {
-                    if (new File(dataPath + ".cover.jpg").exists()) {
-                        return showIfAvailable(activity, dataPath + ".cover.jpg");
-                    }
-                    String baseName = new File(dataPath).getName();
-                    File cacheCover = new File(activity.getFilesDir(), "epub_cache/" + baseName + ".azw3.cover.jpg");
-                    if (cacheCover.exists()) {
-                        return showIfAvailable(activity, cacheCover.getAbsolutePath());
-                    }
-                }
-            }
-        } catch (Throwable ignored) {}
-
-        // 3. Fallback to last transcoded cover path
-        String cp = EpubTranscoder.lastCoverPath;
-        android.util.Log.i("CoverOverlayView", "lastCoverPath=" + cp);
-        if (cp != null && new File(cp).exists()) {
-            return showIfAvailable(activity, cp);
-        }
-
-        // 4. Fallback search /sdcard/kindle/ for newest .cover.jpg
-        File dir = new File("/sdcard/kindle");
-        if (dir.exists() && dir.isDirectory()) {
-            File[] files = dir.listFiles();
-            if (files != null) {
-                File newest = null;
-                for (File f : files) {
-                    if (f.getName().endsWith(".cover.jpg")) {
-                        if (newest == null || f.lastModified() > newest.lastModified()) {
-                            newest = f;
-                        }
-                    }
-                }
-                if (newest != null) {
-                    android.util.Log.i("CoverOverlayView", "Found fallback cover in /sdcard/kindle: " + newest.getAbsolutePath());
-                    return showIfAvailable(activity, newest.getAbsolutePath());
-                }
-            }
-        }
         android.util.Log.w("CoverOverlayView", "No cover image found to display");
         return false;
     }

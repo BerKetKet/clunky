@@ -42,14 +42,16 @@ replacement = """    :cond_9a
 
     return-object p1"""
 
-if target not in content:
+if target in content:
+    new_content = content.replace(target, replacement, 1)
+    with open(smali_path, "w", encoding="utf-8") as f:
+        f.write(new_content)
+    print("Successfully patched RubyHomeFragment.smali with OpenCatalogView.wrap(p1)")
+elif "OpenCatalogView;->wrap" in content:
+    print("RubyHomeFragment.smali already patched with OpenCatalogView.wrap(p1)")
+else:
     print("ERROR: Target smali snippet not found in RubyHomeFragment.smali", file=sys.stderr)
     sys.exit(1)
-
-new_content = content.replace(target, replacement, 1)
-with open(smali_path, "w", encoding="utf-8") as f:
-    f.write(new_content)
-print("Successfully patched RubyHomeFragment.smali with OpenCatalogView.wrap(p1)")
 
 reader_smali = "${TMP_DIR}/com/amazon/kcp/reader/StandAloneBookReaderActivity.smali"
 with open(reader_smali, "r", encoding="utf-8") as f:
@@ -60,14 +62,38 @@ rreplace = """    invoke-super {p0}, Lcom/amazon/kcp/reader/BookReaderActivity;-
 
     invoke-static {p0}, Lcom/amazon/kindle/epub/CoverOverlayView;->showForCurrentBook(Landroid/app/Activity;)Z"""
 
-if rtarget not in rcontent:
+if rtarget in rcontent:
+    rnew_content = rcontent.replace(rtarget, rreplace, 1)
+    with open(reader_smali, "w", encoding="utf-8") as f:
+        f.write(rnew_content)
+    print("Successfully patched StandAloneBookReaderActivity.smali with CoverOverlayView.showForCurrentBook(p0)")
+elif "CoverOverlayView;->showForCurrentBook" in rcontent:
+    print("StandAloneBookReaderActivity.smali already patched with CoverOverlayView.showForCurrentBook(p0)")
+else:
     print("ERROR: Target onResume smali snippet not found in StandAloneBookReaderActivity.smali", file=sys.stderr)
     sys.exit(1)
 
-rnew_content = rcontent.replace(rtarget, rreplace, 1)
-with open(reader_smali, "w", encoding="utf-8") as f:
-    f.write(rnew_content)
-print("Successfully patched StandAloneBookReaderActivity.smali with CoverOverlayView.showForCurrentBook(p0)")
+reader_act_smali = "${TMP_DIR}/com/amazon/kcp/reader/ReaderActivity.smali"
+with open(reader_act_smali, "r", encoding="utf-8") as f:
+    racontent = f.read()
+
+ratarget = """    :cond_56
+    invoke-interface {v0}, Lcom/amazon/android/docviewer/q0;->navigateToCover()V
+
+    return-void"""
+
+rareplace = """    :cond_56
+    invoke-interface {v0}, Lcom/amazon/android/docviewer/q0;->navigateToCover()V
+
+    invoke-static {p0}, Lcom/amazon/kindle/epub/CoverOverlayView;->showForCurrentBookForced(Landroid/app/Activity;)Z
+
+    return-void"""
+
+if ratarget in racontent:
+    racontent = racontent.replace(ratarget, rareplace, 1)
+    with open(reader_act_smali, "w", encoding="utf-8") as f:
+        f.write(racontent)
+    print("Successfully patched ReaderActivity.smali with CoverOverlayView.showForCurrentBookForced(p0)")
 PYEOF
 
 echo "Reassembling patched classes3.dex..."

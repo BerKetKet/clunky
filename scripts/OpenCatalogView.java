@@ -66,12 +66,24 @@ public final class OpenCatalogView {
         try {
             if (originalView == null) return null;
             final View v = build(originalView.getContext());
-            v.post(new Runnable() {
+            final Runnable hideTask = new Runnable() {
                 @Override
                 public void run() {
                     hideRedundantKindleSearchBar(v);
                 }
+            };
+            v.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+                @Override
+                public void onViewAttachedToWindow(View view) {
+                    view.post(hideTask);
+                    view.postDelayed(hideTask, 250);
+                    view.postDelayed(hideTask, 800);
+                }
+                @Override
+                public void onViewDetachedFromWindow(View view) {}
             });
+            v.post(hideTask);
+            v.postDelayed(hideTask, 400);
             return v;
         } catch (Throwable t) {
             android.util.Log.e("OpenCatalogView", "Failed to build Folio Home", t);
@@ -793,6 +805,65 @@ public final class OpenCatalogView {
                 .show();
     }
 
+    private static String formatMetaMessage(BookResult book, OpenLibraryClient.BookMeta meta, boolean isOpenLibRec) {
+        StringBuilder msg = new StringBuilder();
+        msg.append("Author: ").append(book.author).append("\n");
+        if (meta.firstPublishYear > 0) {
+            msg.append("First Published: ").append(meta.firstPublishYear).append("\n");
+        }
+        if (meta.ratingsCount > 0) {
+            msg.append(String.format(Locale.US, "Open Library Rating: %.2f / 5 (%d ratings)\n", meta.avgRating, meta.ratingsCount));
+        }
+        if (!meta.subjects.isEmpty()) {
+            StringBuilder sbSub = new StringBuilder();
+            for (int i = 0; i < Math.min(4, meta.subjects.size()); i++) {
+                if (i > 0) sbSub.append(" • ");
+                sbSub.append(meta.subjects.get(i));
+            }
+            msg.append("Topics: ").append(sbSub.toString()).append("\n");
+        }
+        if (isOpenLibRec) {
+            msg.append("Availability: Book info via Open Library (tap 'Search Catalog' to check OPDS / Gutenberg)\n");
+        } else {
+            msg.append("Source: ").append(book.sourceName).append("\n");
+        }
+        if (!meta.description.isEmpty()) {
+            String desc = meta.description.length() > 520 ? meta.description.substring(0, 520) + "..." : meta.description;
+            msg.append("\n").append(desc).append("\n");
+        }
+        return msg.toString();
+    }
+
+    private static void populateSimilarContainer(final Context ctx, final LinearLayout container, final List<String> similarTitles, final EditText searchInput, final Runnable doSearch, final AlertDialog dialog) {
+        if (container == null) return;
+        container.removeAllViews();
+        if (similarTitles == null || similarTitles.isEmpty()) return;
+        TextView simHdr = new TextView(ctx);
+        simHdr.setText("\nSimilar Books (tap to search):");
+        simHdr.setTextSize(14f);
+        simHdr.setTypeface(null, Typeface.BOLD);
+        container.addView(simHdr);
+        for (int i = 0; i < Math.min(4, similarTitles.size()); i++) {
+            final String simTitle = similarTitles.get(i);
+            Button simBtn = new Button(ctx);
+            simBtn.setText(simTitle);
+            simBtn.setAllCaps(false);
+            simBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (dialog != null && dialog.isShowing()) {
+                        dialog.dismiss();
+                    }
+                    if (searchInput != null && doSearch != null) {
+                        searchInput.setText(simTitle);
+                        doSearch.run();
+                    }
+                }
+            });
+            container.addView(simBtn);
+        }
+    }
+
     private static void showBookDetails(final Context ctx, final Handler mainHandler, final BookResult book, final EditText searchInput, final Runnable doSearch) {
         ScrollView scroll = new ScrollView(ctx);
         final LinearLayout box = new LinearLayout(ctx);
@@ -806,13 +877,27 @@ public final class OpenCatalogView {
         covLp.bottomMargin = 24;
         box.addView(coverView, covLp);
 
+        final boolean isOpenLibRec = (book.epubUrl == null || book.epubUrl.isEmpty());
+        final OpenLibraryClient.BookMeta quickMeta = OpenLibraryClient.getQuickMeta(book.title, book.author);
+
         final TextView msgView = new TextView(ctx);
-        msgView.setText("Author: " + book.author + "\nSource: " + book.sourceName + "\n\nFetching Open Library ratings, synopsis & similar books...");
         msgView.setTextSize(15f);
+        if (quickMeta != null && (quickMeta.firstPublishYear > 0 || !quickMeta.description.isEmpty())) {
+            msgView.setText(formatMetaMessage(book, quickMeta, isOpenLibRec));
+        } else {
+            msgView.setText("Author: " + book.author + "\nSource: " + book.sourceName + "\n\nFetching Open Library ratings, synopsis & similar books...");
+        }
         box.addView(msgView);
+
+        final LinearLayout simContainer = new LinearLayout(ctx);
+        simContainer.setOrientation(LinearLayout.VERTICAL);
+        box.addView(simContainer);
+
+        if (quickMeta != null && !quickMeta.similarTitles.isEmpty()) {
+            populateSimilarContainer(ctx, simContainer, quickMeta.similarTitles, searchInput, doSearch, null);
+        }
         scroll.addView(box);
 
-        final boolean isOpenLibRec = (book.epubUrl == null || book.epubUrl.isEmpty());
         final AlertDialog dialog = new AlertDialog.Builder(ctx)
                 .setTitle(book.title)
                 .setView(scroll)
@@ -838,6 +923,21 @@ public final class OpenCatalogView {
             public void run() {
                 final OpenLibraryClient.BookMeta meta = OpenLibraryClient.fetchMeta(book.title, book.author);
 
+                // 1. Update text metadata immediately so ratings, year, topics & synopsis appear without delay!
+                final String msg = formatMetaMessage(book, meta, isOpenLibRec);
+                mainHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (dialog.isShowing()) {
+                            msgView.setText(msg);
+                            if (!meta.similarTitles.isEmpty()) {
+                                populateSimilarContainer(ctx, simContainer, meta.similarTitles, searchInput, doSearch, dialog);
+                            }
+                        }
+                    }
+                });
+
+                // 2. Fetch cover image asynchronously so slow networks don't block text metadata
                 Bitmap bmp = null;
                 if (book.coverUrl != null && !book.coverUrl.isEmpty()) {
                     try {
@@ -865,63 +965,6 @@ public final class OpenCatalogView {
                         }
                     });
                 }
-                final StringBuilder msg = new StringBuilder();
-                msg.append("Author: ").append(book.author).append("\n");
-                if (meta.firstPublishYear > 0) {
-                    msg.append("First Published: ").append(meta.firstPublishYear).append("\n");
-                }
-                if (meta.ratingsCount > 0) {
-                    msg.append(String.format(Locale.US, "Open Library Rating: %.2f / 5 (%d ratings)\n", meta.avgRating, meta.ratingsCount));
-                }
-                if (!meta.subjects.isEmpty()) {
-                    StringBuilder sbSub = new StringBuilder();
-                    for (int i = 0; i < Math.min(4, meta.subjects.size()); i++) {
-                        if (i > 0) sbSub.append(" • ");
-                        sbSub.append(meta.subjects.get(i));
-                    }
-                    msg.append("Topics: ").append(sbSub.toString()).append("\n");
-                }
-                if (isOpenLibRec) {
-                    msg.append("Availability: Book info via Open Library (tap 'Search Catalog' to check OPDS / Gutenberg)\n");
-                } else {
-                    msg.append("Source: ").append(book.sourceName).append("\n");
-                }
-                if (!meta.description.isEmpty()) {
-                    String desc = meta.description.length() > 520 ? meta.description.substring(0, 520) + "..." : meta.description;
-                    msg.append("\n").append(desc).append("\n");
-                }
-                mainHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (dialog.isShowing()) {
-                            msgView.setText(msg.toString());
-                            if (!meta.similarTitles.isEmpty()) {
-                                TextView simHdr = new TextView(ctx);
-                                simHdr.setText("\nSimilar Books (tap to search):");
-                                simHdr.setTextSize(14f);
-                                simHdr.setTypeface(null, Typeface.BOLD);
-                                box.addView(simHdr);
-                                for (int i = 0; i < Math.min(4, meta.similarTitles.size()); i++) {
-                                    final String simTitle = meta.similarTitles.get(i);
-                                    Button simBtn = new Button(ctx);
-                                    simBtn.setText(simTitle);
-                                    simBtn.setAllCaps(false);
-                                    simBtn.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            dialog.dismiss();
-                                            if (searchInput != null && doSearch != null) {
-                                                searchInput.setText(simTitle);
-                                                doSearch.run();
-                                            }
-                                        }
-                                    });
-                                    box.addView(simBtn);
-                                }
-                            }
-                        }
-                    }
-                });
             }
         }).start();
     }

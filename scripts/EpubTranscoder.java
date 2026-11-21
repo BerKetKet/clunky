@@ -410,6 +410,20 @@ public final class EpubTranscoder {
         List<ChapterToc> chapters = new ArrayList<ChapterToc>();
         List<Kf8Section> kf8Sections = new ArrayList<Kf8Section>();
 
+        // Omit redundant cover-only HTML spine item when hasCover is true so cover is rendered
+        // exclusively via native fullscreen CoverOverlayView (zero white-margined HTML cover page!)
+        if (hasCover && spinePaths.size() > 1) {
+            String firstHp = spinePaths.get(0);
+            byte[] firstRaw = zipEntries.get(firstHp);
+            if (firstRaw != null && isLikelyCoverSpineItem(firstHp, new String(firstRaw, UTF8))) {
+                spinePaths.remove(0);
+            }
+        }
+
+        if (hasCover) {
+            chapters.add(new ChapterToc("Cover", 0));
+        }
+
         Map<String, Integer> spineIndexMap = new HashMap<String, Integer>();
         for (int i = 0; i < spinePaths.size(); i++) {
             String sp = spinePaths.get(i);

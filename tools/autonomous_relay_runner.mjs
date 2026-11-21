@@ -36,12 +36,22 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
 
     const evalScript = `(() => {
       const isGenerating = !!document.querySelector('button[aria-label*="Stop" i]');
-      const btns = Array.from(document.querySelectorAll('button[aria-label*="Download to_antig" i]')).map(b => b.getAttribute('aria-label'));
-      const hasTarget = btns.some(l => l && l.includes("${targetLabel}"));
       
-      const msgEls = document.querySelectorAll('message-content');
+      // Look for any button or link matching target round
+      const candidates = Array.from(document.querySelectorAll('button, a')).map(b => ({
+        aria: b.getAttribute('aria-label') || '',
+        text: b.innerText || ''
+      }));
+      
+      const hasTarget = candidates.some(c => 
+        (c.aria && c.aria.toLowerCase().includes("${targetLabel}".toLowerCase())) ||
+        (c.text && c.text.toLowerCase().includes("${targetLabel}".toLowerCase())) ||
+        (c.aria && c.aria.toLowerCase().includes("round_${roundTag}".toLowerCase()))
+      );
+      
+      const msgEls = document.querySelectorAll('message-content, model-response, .model-response-text');
       const lastMsg = msgEls.length ? msgEls[msgEls.length - 1].innerText : '';
-      return { isGenerating, btns, hasTarget, lastMsg: lastMsg.substring(0, 300) };
+      return { isGenerating, hasTarget, lastMsg: lastMsg.slice(-300) };
     })()`;
 
     const raw = runCli(`eval id:${TAB_ID} -`, evalScript);
@@ -57,7 +67,13 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
     if (state.hasTarget) {
       console.log(`\n[Monitor @ ${elapsedSec}s] Found target ${targetLabel}! Triggering download...`);
       const clickScript = `(() => {
-        const btn = Array.from(document.querySelectorAll('button[aria-label*="Download to_antig" i]')).find(b => b.getAttribute('aria-label')?.includes("${targetLabel}"));
+        const btn = Array.from(document.querySelectorAll('button, a')).find(b => {
+          const aria = b.getAttribute('aria-label') || '';
+          const text = b.innerText || '';
+          return aria.toLowerCase().includes("${targetLabel}".toLowerCase()) ||
+                 text.toLowerCase().includes("${targetLabel}".toLowerCase()) ||
+                 aria.toLowerCase().includes("round_${roundTag}".toLowerCase());
+        });
         if (btn) {
           btn.click();
           return 'clicked';
@@ -70,7 +86,7 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
       // Wait for file in ~/Downloads
       const targetZip = path.join(DOWNLOAD_DIR, `${targetLabel}.zip`);
       console.log(`[Monitor] Waiting for file: ${targetZip}...`);
-      for (let w = 0; w < 15; w++) {
+      for (let w = 0; w < 20; w++) {
         await sleep(1000);
         if (fs.existsSync(targetZip)) {
           console.log(`[Monitor] Downloaded ${targetZip} (${fs.statSync(targetZip).size} bytes)!`);
@@ -99,7 +115,7 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
 }
 
 async function main() {
-  const round = parseInt(process.argv[2] || '14', 10);
+  const round = parseInt(process.argv[2] || '20', 10);
   const maxWait = parseInt(process.argv[3] || '2000', 10);
   const res = await waitForRound(round, maxWait);
   console.log('[Monitor Output]:', JSON.stringify(res));

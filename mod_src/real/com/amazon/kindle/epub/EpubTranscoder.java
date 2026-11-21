@@ -38,6 +38,7 @@ import java.util.zip.ZipInputStream;
  */
 public final class EpubTranscoder {
     private static final Charset UTF8 = Charset.forName("UTF-8");
+    public static volatile String lastCoverPath = null;
 
     private static final class ChapterToc {
         final String label;
@@ -122,6 +123,11 @@ public final class EpubTranscoder {
                 transcode(file, outFile, isKf8Enabled());
             }
             if (outFile.exists() && outFile.length() >= 512) {
+                File coverSidecar = new File(outFile.getAbsolutePath() + ".cover.jpg");
+                if (coverSidecar.exists()) {
+                    lastCoverPath = coverSidecar.getAbsolutePath();
+                    CoverOverlayView.resetSession();
+                }
                 return outFile;
             }
         } catch (Throwable ignored) {
@@ -394,6 +400,8 @@ public final class EpubTranscoder {
                 } finally {
                     cfos.close();
                 }
+                lastCoverPath = coverSidecar.getAbsolutePath();
+                CoverOverlayView.resetSession();
             } catch (Throwable ignored) {}
         }
 
@@ -401,6 +409,20 @@ public final class EpubTranscoder {
         ByteArrayOutputStream htmlBaos = new ByteArrayOutputStream(65536);
         List<ChapterToc> chapters = new ArrayList<ChapterToc>();
         List<Kf8Section> kf8Sections = new ArrayList<Kf8Section>();
+
+        // Omit redundant cover-only HTML spine item when hasCover is true so cover is rendered
+        // exclusively via native fullscreen CoverOverlayView (zero white-margined HTML cover page!)
+        if (hasCover && spinePaths.size() > 1) {
+            String firstHp = spinePaths.get(0);
+            byte[] firstRaw = zipEntries.get(firstHp);
+            if (firstRaw != null && isLikelyCoverSpineItem(firstHp, new String(firstRaw, UTF8))) {
+                spinePaths.remove(0);
+            }
+        }
+
+        if (hasCover) {
+            chapters.add(new ChapterToc("Cover", 0));
+        }
 
         Map<String, Integer> spineIndexMap = new HashMap<String, Integer>();
         for (int i = 0; i < spinePaths.size(); i++) {
