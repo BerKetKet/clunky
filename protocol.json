@@ -1,14 +1,15 @@
 {
-  "round": 11,
+  "round": 12,
   "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
+  "app_label": "Folio",
   "stock_package_read_only": "com.amazon.kindle",
   "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report011.zip",
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report012.zip",
   "max_report_size_mb": 100,
   "tasks": [
-    "Deploy Round 011 EpubTranscoder.java (KF8 kindle:pos:fid: internal link rewriting) and OpenCatalogView.java (tappable Similar Books buttons)",
-    "Verify KF8 inline <a href> link tap and embedded images rendering",
-    "Verify tappable Similar Books dialog and end-to-end Gutenberg download -> KF8 reader flow"
+    "Rebrand com.amazon.kindle.epub to 'Folio' with custom 512x512 launcher icon while keeping stock com.amazon.kindle untouched",
+    "Deploy hardened 4-tier mirror + ZIP magic-byte validated downloadAndOpen in OpenCatalogView.java",
+    "Stress-test real downloads of 2 fresh books from Home catalog and verify valid EPUBs, KF8 rendering, TOC, and Library covers"
   ]
 }

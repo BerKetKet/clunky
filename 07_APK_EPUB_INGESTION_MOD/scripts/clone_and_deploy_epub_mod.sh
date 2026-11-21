@@ -29,7 +29,15 @@ echo "[2/6] Decoding base.apk manifest with apktool (no-src)..."
 apktool d -s -f "${WORK_DIR}/orig_splits/base.apk" -o "${WORK_DIR}/base_dec"
 
 echo "[3/6] Rewriting package name (${NEW_PKG}), removing sharedUserId, and renaming conflicting authorities/permissions..."
-python3 - "${WORK_DIR}/base_dec/AndroidManifest.xml" "${NEW_PKG}" <<'PYEOF'
+HAS_CUSTOM_ICON=0
+ICON_SRC="${MOD_ROOT}/assets/folio_launcher_icon.png"
+if [[ -f "${ICON_SRC}" ]]; then
+    mkdir -p "${WORK_DIR}/base_dec/res/drawable"
+    cp "${ICON_SRC}" "${WORK_DIR}/base_dec/res/drawable/folio_launcher_icon.png"
+    HAS_CUSTOM_ICON=1
+    echo "Bundled custom launcher icon: ${ICON_SRC}"
+fi
+APP_LABEL="${APP_LABEL:-Folio}" HAS_CUSTOM_ICON="${HAS_CUSTOM_ICON}" python3 - "${WORK_DIR}/base_dec/AndroidManifest.xml" "${NEW_PKG}" <<'PYEOF'
 import re, sys
 manifest_path, new_pkg = sys.argv[1], sys.argv[2]
 with open(manifest_path, "r", encoding="utf-8") as f:
@@ -59,8 +67,52 @@ for p in custom_perms:
     new_p = p.replace("com.amazon.kindle", new_pkg) if "com.amazon.kindle" in p else f"{new_pkg}.perm.{p}"
     xml = xml.replace(f'"{p}"', f'"{new_p}"')
 
-# 5. Update app label so you can tell the cloned app apart in launcher
-xml = re.sub(r'android:label="[^"]*"', 'android:label="Kindle EPUB"', xml, count=1)
+# 5. Update app label ("Folio") and custom launcher icon (@drawable/folio_launcher_icon)
+import os
+app_label = os.environ.get("APP_LABEL", "Folio")
+has_custom_icon = os.environ.get("HAS_CUSTOM_ICON", "0") == "1"
+
+# Patch <application> label, icon, roundIcon
+def patch_app_tag(m):
+    tag = m.group(0)
+    if 'android:label=' in tag:
+        tag = re.sub(r'android:label="[^"]*"', f'android:label="{app_label}"', tag)
+    else:
+        tag = tag.replace('<application', f'<application android:label="{app_label}"', 1)
+    if has_custom_icon:
+        if 'android:icon=' in tag:
+            tag = re.sub(r'android:icon="[^"]*"', 'android:icon="@drawable/folio_launcher_icon"', tag)
+        else:
+            tag = tag.replace('<application', '<application android:icon="@drawable/folio_launcher_icon"', 1)
+        if 'android:roundIcon=' in tag:
+            tag = re.sub(r'android:roundIcon="[^"]*"', 'android:roundIcon="@drawable/folio_launcher_icon"', tag)
+        else:
+            tag = tag.replace('<application', '<application android:roundIcon="@drawable/folio_launcher_icon"', 1)
+    return tag
+xml = re.sub(r'<application\b[^>]*>', patch_app_tag, xml, count=1)
+
+# Also patch any <activity> or <activity-alias> containing CATEGORY_LAUNCHER so launcher displays new name & icon
+def patch_launcher_elem(m):
+    block = m.group(0)
+    if 'android.intent.category.LAUNCHER' not in block:
+        return block
+    open_tag_m = re.match(r'<(activity(?:-alias)?)\b[^>]*>', block)
+    if not open_tag_m:
+        return block
+    ot = open_tag_m.group(0)
+    if 'android:label=' in ot:
+        ot = re.sub(r'android:label="[^"]*"', f'android:label="{app_label}"', ot)
+    else:
+        ot = ot[:-1] + f' android:label="{app_label}">'
+    if has_custom_icon:
+        if 'android:icon=' in ot:
+            ot = re.sub(r'android:icon="[^"]*"', 'android:icon="@drawable/folio_launcher_icon"', ot)
+        else:
+            ot = ot[:-1] + ' android:icon="@drawable/folio_launcher_icon">'
+        if 'android:roundIcon=' in ot:
+            ot = re.sub(r'android:roundIcon="[^"]*"', 'android:roundIcon="@drawable/folio_launcher_icon"', ot)
+    return ot + block[open_tag_m.end():]
+xml = re.sub(r'<(activity(?:-alias)?)\b[^>]*>.*?</\1>', patch_launcher_elem, xml, flags=re.DOTALL)
 
 # 6. Add MANAGE_EXTERNAL_STORAGE permission for Android 11+ scoped storage access
 if 'android.permission.MANAGE_EXTERNAL_STORAGE' not in xml:

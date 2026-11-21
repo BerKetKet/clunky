@@ -1,0 +1,1008 @@
+Activity Resolver Table:
+  Full MIME Types:
+      application/epub+zip:
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 7ba4470
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "file"
+          StaticType: "application/epub+zip"
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 9c973e9
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "content"
+          StaticType: "application/epub+zip"
+      application/pdf:
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 14f65ed
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "file"
+          StaticType: "application/pdf"
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 22acc22
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "content"
+          StaticType: "application/pdf"
+      */*:
+        2bc65a5 com.amazon.kindle.epub/com.amazon.kindle.s2k.SendToKindleActivity filter 3cdbd7a
+          Action: "android.intent.action.SEND"
+          Category: "android.intent.category.DEFAULT"
+          StaticType: "*"
+          mPriority=0, mOrder=0, mHasStaticPartialTypes=true, mHasDynamicPartialTypes=false
+
+  Base MIME Types:
+      application:
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 14f65ed
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "file"
+          StaticType: "application/pdf"
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 22acc22
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "content"
+          StaticType: "application/pdf"
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 7ba4470
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "file"
+          StaticType: "application/epub+zip"
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 9c973e9
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "content"
+          StaticType: "application/epub+zip"
+
+  Wild MIME Types:
+      *:
+        2bc65a5 com.amazon.kindle.epub/com.amazon.kindle.s2k.SendToKindleActivity filter 3cdbd7a
+          Action: "android.intent.action.SEND"
+          Category: "android.intent.category.DEFAULT"
+          StaticType: "*"
+          mPriority=0, mOrder=0, mHasStaticPartialTypes=true, mHasDynamicPartialTypes=false
+
+  Schemes:
+      kindle:
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter acdf017
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "kindle"
+      mlpassist:
+        c4b0215 com.amazon.kindle.epub/com.amazon.mlpassistlibrary.StarterActivity filter 7d0792a
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "mlpassist"
+          Authority: "guide": -1
+          Path: "PatternMatcher{PREFIX: /ping}"
+        92a931b com.amazon.kindle.epub/com.amazon.mlpassistlibrary.GuideActivity filter 1d50cb8
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "mlpassist"
+          Authority: "guide": -1
+          Path: "PatternMatcher{PREFIX: /start}"
+      com.amazon.mobile.identity.verification:
+        fe6aa91 com.amazon.kindle.epub/com.amazon.identity.auth.device.customtabs.CustomTabProxyActivity filter a54fdf6
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "com.amazon.mobile.identity.verification"
+          Authority: "amazon.com": -1
+          Path: "PatternMatcher{PREFIX: /CloseInAppBrowser}"
+      file:
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 14f65ed
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "file"
+          StaticType: "application/pdf"
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter ab776b3
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "file"
+          Authority: "": -1 WILD
+          Path: "PatternMatcher{GLOB: .*.pdf}"
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 7ba4470
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "file"
+          StaticType: "application/epub+zip"
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter b4d886e
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "file"
+          Authority: "": -1 WILD
+          Path: "PatternMatcher{GLOB: .*.epub}"
+      http:
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 1a06c04
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "http"
+          Scheme: "https"
+          Authority: "read.amazon.com": -1
+          Authority: "read.amazon.com": -1
+          Authority: "read.amazon.com": -1
+          Authority: "read.amazon.ca": -1
+          Authority: "read.amazon.co.jp": -1
+          Authority: "read.amazon.co.uk": -1
+          Authority: "read.amazon.com.au": -1
+          Authority: "read.amazon.in": -1
+          Authority: "leer.amazon.com.mx": -1
+          Authority: "leer.amazon.es": -1
+          Authority: "leggi.amazon.it": -1
+          Authority: "ler.amazon.com.br": -1
+          Authority: "lesen.amazon.de": -1
+          Authority: "lezen.amazon.nl": -1
+          Authority: "lire.amazon.fr": -1
+          Path: "PatternMatcher{PREFIX: /application}"
+          Path: "PatternMatcher{PREFIX: /gp/r.html}"
+          AutoVerify=true
+      https:
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 1a06c04
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "http"
+          Scheme: "https"
+          Authority: "read.amazon.com": -1
+          Authority: "read.amazon.com": -1
+          Authority: "read.amazon.com": -1
+          Authority: "read.amazon.ca": -1
+          Authority: "read.amazon.co.jp": -1
+          Authority: "read.amazon.co.uk": -1
+          Authority: "read.amazon.com.au": -1
+          Authority: "read.amazon.in": -1
+          Authority: "leer.amazon.com.mx": -1
+          Authority: "leer.amazon.es": -1
+          Authority: "leggi.amazon.it": -1
+          Authority: "ler.amazon.com.br": -1
+          Authority: "lesen.amazon.de": -1
+          Authority: "lezen.amazon.nl": -1
+          Authority: "lire.amazon.fr": -1
+          Path: "PatternMatcher{PREFIX: /application}"
+          Path: "PatternMatcher{PREFIX: /gp/r.html}"
+          AutoVerify=true
+      content:
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 22acc22
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "content"
+          StaticType: "application/pdf"
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 9c973e9
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "content"
+          StaticType: "application/epub+zip"
+
+  Non-Data Actions:
+      android.intent.action.MAIN:
+        2a8cb0f com.amazon.kindle.epub/com.amazon.kindle.UpgradePage filter c57379c
+          Action: "android.intent.action.MAIN"
+          Category: "android.intent.category.LAUNCHER"
+          Category: "android.intent.category.MULTIWINDOW_LAUNCHER"
+      com.amazon.kindle.socialsharing.ACTION_SHARE:
+        cd895ff com.amazon.kindle.epub/com.amazon.kindle.socialsharing.ui.activity.SocialSharingActivity filter 825bfcc
+          Action: "com.amazon.kindle.socialsharing.ACTION_SHARE"
+          Category: "android.intent.category.DEFAULT"
+      android.intent.action.SEARCH:
+        4b1092b com.amazon.kindle.epub/com.amazon.kcp.search.v2.SearchActivity filter 26e3188
+          Action: "android.intent.action.SEARCH"
+          Category: "android.intent.category.DEFAULT"
+        332b721 com.amazon.kindle.epub/com.amazon.kcp.search.SearchActivity filter 4ea3746
+          Action: "android.intent.action.SEARCH"
+          Category: "android.intent.category.DEFAULT"
+        ab50d07 com.amazon.kindle.epub/com.amazon.kcp.search.RubySearchActivity filter 378de34
+          Action: "android.intent.action.SEARCH"
+          Category: "android.intent.category.DEFAULT"
+        e62a45d com.amazon.kindle.epub/com.amazon.kcp.search.BookReaderSearchActivity filter b0281d2
+          Action: "android.intent.action.SEARCH"
+          Category: "android.intent.category.DEFAULT"
+        e0b72a3 com.amazon.kindle.epub/com.amazon.kcp.search.enhancedsearch.ReaderSearchActivity filter 4dfa9a0
+          Action: "android.intent.action.SEARCH"
+          Category: "android.intent.category.DEFAULT"
+        aaa2959 com.amazon.kindle.epub/com.amazon.kcp.search.PeriodicalReaderSearchActivity filter 6e2e91e
+          Action: "android.intent.action.SEARCH"
+          Category: "android.intent.category.DEFAULT"
+
+  MIME Typed Actions:
+      android.intent.action.SEND:
+        2bc65a5 com.amazon.kindle.epub/com.amazon.kindle.s2k.SendToKindleActivity filter 3cdbd7a
+          Action: "android.intent.action.SEND"
+          Category: "android.intent.category.DEFAULT"
+          StaticType: "*"
+          mPriority=0, mOrder=0, mHasStaticPartialTypes=true, mHasDynamicPartialTypes=false
+      android.intent.action.VIEW:
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 14f65ed
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "file"
+          StaticType: "application/pdf"
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 22acc22
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "content"
+          StaticType: "application/pdf"
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 7ba4470
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "file"
+          StaticType: "application/epub+zip"
+        dbb7c96 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage filter 9c973e9
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.BROWSABLE"
+          Scheme: "content"
+          StaticType: "application/epub+zip"
+
+Receiver Resolver Table:
+  Schemes:
+      kindle:
+        cc8fcef com.amazon.kindle.epub/com.amazon.kcp.notifications.receiver.ReaderNotificationsActionReceiver filter e7eb3fc
+          Action: "com.amazon.kcp.notifications.TAP_ACTION"
+          Action: "com.amazon.kcp.notifications.FIRST_BUTTON"
+          Action: "com.amazon.kcp.notifications.SECOND_BUTTON"
+          Action: "com.amazon.kcp.notifications.ICS"
+          Scheme: "kindle"
+
+  Non-Data Actions:
+      com.amazon.dcp.sso.action.secondary.account.removed:
+        50e4a93 com.amazon.kindle.epub/com.amazon.kindle.map.MAPAccountRemovedReceiver filter 280bad0
+          Action: "com.amazon.dcp.sso.action.account.removed"
+          Action: "com.amazon.dcp.sso.action.secondary.account.removed"
+      androidx.profileinstaller.action.SAVE_PROFILE:
+        57d0bd7 com.amazon.kindle.epub/androidx.profileinstaller.ProfileInstallReceiver filter 51a6ae2
+          Action: "androidx.profileinstaller.action.SAVE_PROFILE"
+      com.amazon.kindle.otter.settings.GOODREADS_UNLINKED:
+        4d2790b com.amazon.kindle.epub/com.amazon.startactions.plugin.receiver.GoodreadsLinkReceiver filter 80113e8
+          Action: "com.amazon.kindle.otter.settings.GOODREADS_UNLINKED"
+          Action: "com.amazon.kindle.otter.settings.GOODREADS_LINKED"
+      com.amazon.device.messaging.intent.REGISTRATION:
+        dd545f7 com.amazon.kindle.epub/com.amazon.kcp.notifications.ADMNotificationJobService$ADMReceiver filter 32a3c64
+          Action: "com.amazon.device.messaging.intent.REGISTRATION"
+          Action: "com.amazon.device.messaging.intent.RECEIVE"
+          Category: "com.amazon.kindle"
+      com.android.vending.INSTALL_REFERRER:
+        ba5ecd com.amazon.kindle.epub/com.amazon.kindle.marketreferral.MarketReferralTracker filter 7cb0382
+          Action: "com.android.vending.INSTALL_REFERRER"
+      com.amazon.dcp.sso.action.session.users.changed:
+        6d953d com.amazon.kindle.epub/com.amazon.identity.auth.accounts.SessionUserChangedToAccountForPackageChangedAdpater filter c4f5132
+          Action: "com.amazon.dcp.sso.action.session.users.changed"
+      android.intent.action.LOCALE_CHANGED:
+        7b19a85 com.amazon.kindle.epub/com.amazon.kcp.application.LocaleChangedBroadcastReceiver filter b9180da
+          Action: "android.intent.action.LOCALE_CHANGED"
+          Category: "android.intent.category.DEFAULT"
+        9f65a01 com.amazon.kindle.epub/com.amazon.nwstd.utils.LocaleChangeReceiver filter b16d0a6
+          Action: "android.intent.action.LOCALE_CHANGED"
+      androidx.profileinstaller.action.INSTALL_PROFILE:
+        57d0bd7 com.amazon.kindle.epub/androidx.profileinstaller.ProfileInstallReceiver filter f23bcc4
+          Action: "androidx.profileinstaller.action.INSTALL_PROFILE"
+      com.google.android.c2dm.intent.RECEIVE:
+        dc8c571 com.amazon.kindle.epub/com.google.firebase.iid.FirebaseInstanceIdReceiver filter 10aaf56
+          Action: "com.google.android.c2dm.intent.RECEIVE"
+      android.intent.action.TIME_SET:
+        2ad9ae7 com.amazon.kindle.epub/com.amazon.identity.auth.device.storage.LambortishClock$ChangeTimestampsBroadcastReceiver filter ec78694
+          Action: "android.intent.action.TIME_SET"
+      androidx.profileinstaller.action.SKIP_FILE:
+        57d0bd7 com.amazon.kindle.epub/androidx.profileinstaller.ProfileInstallReceiver filter 95347ad
+          Action: "androidx.profileinstaller.action.SKIP_FILE"
+      androidx.profileinstaller.action.BENCHMARK_OPERATION:
+        57d0bd7 com.amazon.kindle.epub/androidx.profileinstaller.ProfileInstallReceiver filter 59c8e73
+          Action: "androidx.profileinstaller.action.BENCHMARK_OPERATION"
+      android.intent.action.BOOT_COMPLETED:
+        8e72ef5 com.amazon.kindle.epub/androidx.work.impl.background.systemalarm.RescheduleReceiver filter 13bd48a
+          Action: "android.intent.action.BOOT_COMPLETED"
+      com.amazon.device.messaging.intent.RECEIVE:
+        dd545f7 com.amazon.kindle.epub/com.amazon.kcp.notifications.ADMNotificationJobService$ADMReceiver filter 32a3c64
+          Action: "com.amazon.device.messaging.intent.REGISTRATION"
+          Action: "com.amazon.device.messaging.intent.RECEIVE"
+          Category: "com.amazon.kindle"
+      com.amazon.kindle.otter.settings.GOODREADS_LINKED:
+        4d2790b com.amazon.kindle.epub/com.amazon.startactions.plugin.receiver.GoodreadsLinkReceiver filter 80113e8
+          Action: "com.amazon.kindle.otter.settings.GOODREADS_UNLINKED"
+          Action: "com.amazon.kindle.otter.settings.GOODREADS_LINKED"
+      android.appwidget.action.APPWIDGET_UPDATE:
+        72efe83 com.amazon.kindle.epub/com.amazon.kindle.appwidget.lastreadbook.LastReadBookWidgetReceiver filter ce07800
+          Action: "android.appwidget.action.APPWIDGET_UPDATE"
+        234839 com.amazon.kindle.epub/com.amazon.kindle.appwidget.readingstreaks.ReadingStreaksWidgetReceiver filter 41d4e7e
+          Action: "android.appwidget.action.APPWIDGET_UPDATE"
+      androidx.work.diagnostics.REQUEST_DIAGNOSTICS:
+        df7bafb com.amazon.kindle.epub/androidx.work.impl.diagnostics.DiagnosticsReceiver filter 6954718
+          Action: "androidx.work.diagnostics.REQUEST_DIAGNOSTICS"
+      android.intent.action.MY_PACKAGE_REPLACED:
+        1d8ffdf com.amazon.kindle.epub/androidx.glance.appwidget.MyPackageReplacedReceiver filter cd5142c
+          Action: "android.intent.action.MY_PACKAGE_REPLACED"
+      com.amazon.dcp.messaging.topic.DeviceMessaging.LanguageLayer.MessageResponse:
+        69b1ac9 com.amazon.kindle.epub/com.amazon.kcp.wordwise.download.WordWiseMessageReceiver filter 2a9d5ce
+          Action: "com.amazon.dcp.messaging.topic.DeviceMessaging.LanguageLayer.MessageResponse"
+      com.amazon.dcp.sso.action.account.removed:
+        50e4a93 com.amazon.kindle.epub/com.amazon.kindle.map.MAPAccountRemovedReceiver filter 280bad0
+          Action: "com.amazon.dcp.sso.action.account.removed"
+          Action: "com.amazon.dcp.sso.action.secondary.account.removed"
+
+Service Resolver Table:
+  Non-Data Actions:
+      com.audible.mobile.download.action.CANCEL_DOWNLOAD:
+        7d1def4 com.amazon.kindle.epub/com.audible.mobile.download.service.AudiobookDownloadService filter b02761d
+          Action: "com.audible.mobile.download.action.CANCEL_DOWNLOAD"
+          Action: "com.audible.mobile.download.action.START_DOWNLOAD"
+          Category: "com.audible.mobile.download.category.Audiobook"
+        7775092 com.amazon.kindle.epub/com.audible.mobile.download.service.CoverArtDownloadService filter b45fa63
+          Action: "com.audible.mobile.download.action.CANCEL_DOWNLOAD"
+          Action: "com.audible.mobile.download.action.START_DOWNLOAD"
+          Category: "com.audible.mobile.download.category.CoverArt"
+        aa7f660 com.amazon.kindle.epub/com.audible.mobile.download.service.PositionSyncDownloadService filter 4d55719
+          Action: "com.audible.mobile.download.action.CANCEL_DOWNLOAD"
+          Action: "com.audible.mobile.download.action.START_DOWNLOAD"
+          Category: "com.audible.mobile.download.category.PositionSync"
+        5b5e3de com.amazon.kindle.epub/com.audible.mobile.download.service.SampleAudiobookDownloadService filter 593d9bf
+          Action: "com.audible.mobile.download.action.CANCEL_DOWNLOAD"
+          Action: "com.audible.mobile.download.action.START_DOWNLOAD"
+          Category: "com.audible.mobile.download.category.SampleAudiobook"
+        506188c com.amazon.kindle.epub/com.audible.mobile.download.service.SamplePositionSyncDownloadService filter 75b4bd5
+          Action: "com.audible.mobile.download.action.CANCEL_DOWNLOAD"
+          Action: "com.audible.mobile.download.action.START_DOWNLOAD"
+          Category: "com.audible.mobile.download.category.SamplePositionSync"
+      com.amazon.identity.action.SYNC_DIRTY_DATA:
+        d423178 com.amazon.kindle.epub/com.amazon.identity.auth.device.storage.DirtyDataSyncingService filter b11d051
+          Action: "com.amazon.identity.action.SYNC_DIRTY_DATA"
+      com.amazon.dcp.sso.AccountSubAuthenticator:
+        578532e com.amazon.kindle.epub/com.amazon.identity.auth.accounts.MAPSubAuthenticatorService filter 1279ecf
+          Action: "com.amazon.dcp.sso.AccountSubAuthenticator"
+      com.google.firebase.MESSAGING_EVENT:
+        35be05c com.amazon.kindle.epub/com.amazon.kcp.notifications.ReaderNotificationsFcmReceiver filter fa2bf65
+          Action: "com.google.firebase.MESSAGING_EVENT"
+        eb85fea com.amazon.kindle.epub/com.google.firebase.messaging.FirebaseMessagingService filter ab652db
+          Action: "com.google.firebase.MESSAGING_EVENT"
+          mPriority=-500, mOrder=0, mHasStaticPartialTypes=false, mHasDynamicPartialTypes=false
+      com.amazon.identity.action.BOOTSTRAP_SSO:
+        2cb9a06 com.amazon.kindle.epub/com.amazon.identity.auth.device.bootstrapSSO.BootstrapSSOService filter 4298c7
+          Action: "com.amazon.identity.action.BOOTSTRAP_SSO"
+      com.audible.mobile.download.action.START_DOWNLOAD:
+        7d1def4 com.amazon.kindle.epub/com.audible.mobile.download.service.AudiobookDownloadService filter b02761d
+          Action: "com.audible.mobile.download.action.CANCEL_DOWNLOAD"
+          Action: "com.audible.mobile.download.action.START_DOWNLOAD"
+          Category: "com.audible.mobile.download.category.Audiobook"
+        7775092 com.amazon.kindle.epub/com.audible.mobile.download.service.CoverArtDownloadService filter b45fa63
+          Action: "com.audible.mobile.download.action.CANCEL_DOWNLOAD"
+          Action: "com.audible.mobile.download.action.START_DOWNLOAD"
+          Category: "com.audible.mobile.download.category.CoverArt"
+        aa7f660 com.amazon.kindle.epub/com.audible.mobile.download.service.PositionSyncDownloadService filter 4d55719
+          Action: "com.audible.mobile.download.action.CANCEL_DOWNLOAD"
+          Action: "com.audible.mobile.download.action.START_DOWNLOAD"
+          Category: "com.audible.mobile.download.category.PositionSync"
+        5b5e3de com.amazon.kindle.epub/com.audible.mobile.download.service.SampleAudiobookDownloadService filter 593d9bf
+          Action: "com.audible.mobile.download.action.CANCEL_DOWNLOAD"
+          Action: "com.audible.mobile.download.action.START_DOWNLOAD"
+          Category: "com.audible.mobile.download.category.SampleAudiobook"
+        506188c com.amazon.kindle.epub/com.audible.mobile.download.service.SamplePositionSyncDownloadService filter 75b4bd5
+          Action: "com.audible.mobile.download.action.CANCEL_DOWNLOAD"
+          Action: "com.audible.mobile.download.action.START_DOWNLOAD"
+          Category: "com.audible.mobile.download.category.SamplePositionSync"
+      com.amazon.identity.action.CLEAN_DATA:
+        3b490b6 com.amazon.kindle.epub/com.amazon.identity.auth.device.storage.DatabaseCleaner$DatabaseCleaningService filter abd41b7
+          Action: "com.amazon.identity.action.CLEAN_DATA"
+      android.media.browse.MediaBrowserService:
+        df4a648 com.amazon.kindle.epub/com.audible.android.kcp.mediasession.AiRMediaBrowserService filter f84ece1
+          Action: "android.media.browse.MediaBrowserService"
+      com.amazon.whisperjoin.deviceprovisioningservice.BindService:
+        bba743a com.amazon.kindle.epub/com.amazon.whisperjoin.deviceprovisioningservice.service.FFSBackgroundProvisioningServiceBinder filter ca958eb
+          Action: "com.amazon.whisperjoin.deviceprovisioningservice.BindService"
+
+Provider Resolver Table:
+  Non-Data Actions:
+      com.amazon.identity.action.CROSS_APP_CONTEXT_PROVIDER:
+        701e130 com.amazon.kindle.epub/com.amazon.identity.auth.device.api.CrossAppContextProvider filter 989b1a9
+          Action: "com.amazon.identity.action.CROSS_APP_CONTEXT_PROVIDER"
+
+Preferred Activities User 0:
+  Full MIME Types:
+      application/epub+zip:
+        dea69a2 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage
+         mMatch=0x600000 mAlways=false
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          StaticType: "application/epub+zip"
+
+  Base MIME Types:
+      application:
+        dea69a2 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage
+         mMatch=0x600000 mAlways=false
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          StaticType: "application/epub+zip"
+
+  MIME Typed Actions:
+      android.intent.action.VIEW:
+        dea69a2 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage
+         mMatch=0x600000 mAlways=false
+          Action: "android.intent.action.VIEW"
+          Category: "android.intent.category.DEFAULT"
+          StaticType: "application/epub+zip"
+
+Domain verification status:
+  com.amazon.kindle.epub:
+    ID: 34f50d59-b4d9-4fb8-8b6c-4e884ac89004
+    Signatures: [5F:1B:33:69:B0:AB:5E:09:88:5E:C0:EB:B2:A4:3F:97:3F:58:B7:62:13:E6:2B:6E:91:31:1E:23:E3:45:32:5F]
+    Domain verification state:
+      read.amazon.co.jp: 1024
+      read.amazon.co.uk: 1024
+      lezen.amazon.nl: 1024
+      leer.amazon.es: 1024
+      leer.amazon.com.mx: 1024
+      read.amazon.ca: 1024
+      read.amazon.in: 1024
+      read.amazon.com.au: 1024
+      ler.amazon.com.br: 1024
+      read.amazon.com: 1024
+      leggi.amazon.it: 1024
+      lesen.amazon.de: 1024
+      lire.amazon.fr: 1024
+    User all:
+      Verification link handling allowed: true
+      Selection state:
+        Disabled:
+          read.amazon.co.jp
+          read.amazon.co.uk
+          lezen.amazon.nl
+          leer.amazon.es
+          leer.amazon.com.mx
+          read.amazon.ca
+          read.amazon.in
+          read.amazon.com.au
+          ler.amazon.com.br
+          read.amazon.com
+          leggi.amazon.it
+          lesen.amazon.de
+          lire.amazon.fr
+
+Permissions:
+  Permission [com.amazon.kindle.epub.perm.com.amazon.appmanager.preload.permission.READ_PRELOAD_DEVICE_INFO_PROVIDER] (54deae1):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature|privileged
+    perm=PermissionInfo{bc5ae2e com.amazon.kindle.epub.perm.com.amazon.appmanager.preload.permission.READ_PRELOAD_DEVICE_INFO_PROVIDER}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.perm.com.amazon.STORE_ACCESS] (ac3c006):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature
+    perm=PermissionInfo{7d4335c com.amazon.kindle.epub.perm.com.amazon.STORE_ACCESS}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.perm.com.amazon.identity.permission.CAN_CALL_MAP_INFORMATION_PROVIDER] (47ec6c7):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature|privileged
+    perm=PermissionInfo{9027f3a com.amazon.kindle.epub.perm.com.amazon.identity.permission.CAN_CALL_MAP_INFORMATION_PROVIDER}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.AllowListPolicyUpdatePermission] (f7574f4):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature
+    perm=PermissionInfo{d1f2948 com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.AllowListPolicyUpdatePermission}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.perm.com.amazon.whisperjoin.setup.ble.PERMISSION] (75d541d):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature
+    perm=PermissionInfo{4095506 com.amazon.kindle.epub.perm.com.amazon.whisperjoin.setup.ble.PERMISSION}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.FFSServiceActionPermission] (dcbd692):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature
+    perm=PermissionInfo{2a191f4 com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.FFSServiceActionPermission}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.perm.com.amazon.dcp.sso.permission.account.changed] (2170863):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature|privileged
+    perm=PermissionInfo{e55bb92 com.amazon.kindle.epub.perm.com.amazon.dcp.sso.permission.account.changed}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.perm.com.amazon.identity.auth.device.perm.AUTH_SDK] (7eeec60):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature|privileged
+    perm=PermissionInfo{e3fd960 com.amazon.kindle.epub.perm.com.amazon.identity.auth.device.perm.AUTH_SDK}
+  Permission [com.amazon.kindle.epub.perm.com.amazon.whisperjoin.provisioner.zigbee.CREDENTIALS_SYNC_PERMISSION] (f001519):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature
+    perm=PermissionInfo{38ffede com.amazon.kindle.epub.perm.com.amazon.whisperjoin.provisioner.zigbee.CREDENTIALS_SYNC_PERMISSION}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.ArcusUpdatePermission] (3ccc9de):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature
+    perm=PermissionInfo{db92b8c com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.ArcusUpdatePermission}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.socialsharing.PERMISSION_SHARE] (367c7bf):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature
+    perm=PermissionInfo{f992aea com.amazon.kindle.epub.socialsharing.PERMISSION_SHARE}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.perm.com.amazon.identity.permission.CALL_AMAZON_DEVICE_INFORMATION_PROVIDER] (ec66e8c):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature|privileged
+    perm=PermissionInfo{9937478 com.amazon.kindle.epub.perm.com.amazon.identity.permission.CALL_AMAZON_DEVICE_INFORMATION_PROVIDER}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.perm.com.amazon.dcp.messaging.permission.INITIATE_HANDLE_DEVICE_MESSAGE] (c73e9d5):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature
+    perm=PermissionInfo{9570bb6 com.amazon.kindle.epub.perm.com.amazon.dcp.messaging.permission.INITIATE_HANDLE_DEVICE_MESSAGE}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.permission.RECEIVE_ADM_MESSAGE] (e57a5ea):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature
+    perm=PermissionInfo{ac76024 com.amazon.kindle.epub.permission.RECEIVE_ADM_MESSAGE}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.perm.com.amazon.dcp.sso.permission.AmazonAccountPropertyService.property.changed] (cdb20db):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature|privileged
+    perm=PermissionInfo{e402d42 com.amazon.kindle.epub.perm.com.amazon.dcp.sso.permission.AmazonAccountPropertyService.property.changed}
+
+Permissions:
+  Permission [com.amazon.kindle.epub.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION] (1b1e778):
+    sourcePackage=com.amazon.kindle.epub
+    uid=10262 gids=[] type=0 prot=signature
+    perm=PermissionInfo{f2c5a90 com.amazon.kindle.epub.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION}
+
+Registered ContentProviders:
+  com.amazon.kindle.epub/com.audible.mobile.download.repository.DownloadProgressReadOnlyContentProvider:
+    Provider{4da9f89 com.amazon.kindle.epub/com.audible.mobile.download.repository.DownloadProgressReadOnlyContentProvider}
+  com.amazon.kindle.epub/com.audible.hushpuppy.controller.audible.stats.db.HushpuppyStatsContentProvider:
+    Provider{aa7db8e com.amazon.kindle.epub/com.audible.hushpuppy.controller.audible.stats.db.HushpuppyStatsContentProvider}
+  com.amazon.kindle.epub/com.bugsnag.android.performance.internal.startup.BugsnagPerformanceProvider:
+    Provider{c31efaf com.amazon.kindle.epub/com.bugsnag.android.performance.internal.startup.BugsnagPerformanceProvider}
+  com.amazon.kindle.epub/androidx.core.content.FileProvider:
+    Provider{8a48fbc com.amazon.kindle.epub/androidx.core.content.FileProvider}
+  com.amazon.kindle.epub/com.amazon.kindle.BugSnagEarlyInitProvider:
+    Provider{944ab45 com.amazon.kindle.epub/com.amazon.kindle.BugSnagEarlyInitProvider}
+  com.amazon.kindle.epub/com.amazon.ka11y.Ka11yContextProvider$ContextInitializer:
+    Provider{aca229a com.amazon.kindle.epub/com.amazon.ka11y.Ka11yContextProvider$ContextInitializer}
+  com.amazon.kindle.epub/com.amazon.kindle.socialsharing.SocialSharingFileProvider:
+    Provider{bb7d7cb com.amazon.kindle.epub/com.amazon.kindle.socialsharing.SocialSharingFileProvider}
+  com.amazon.kindle.epub/com.amazon.ka11y.Ka11ySystemAccessibilityStateSource$SystemSourceRegistrationProvider:
+    Provider{308eba8 com.amazon.kindle.epub/com.amazon.ka11y.Ka11ySystemAccessibilityStateSource$SystemSourceRegistrationProvider}
+  com.amazon.kindle.epub/com.amazon.notebook.module.exporting.NotebookExportFileProvider:
+    Provider{e89b6c1 com.amazon.kindle.epub/com.amazon.notebook.module.exporting.NotebookExportFileProvider}
+  com.amazon.kindle.epub/com.audible.hushpuppy.service.db.HushpuppyStorageProvider:
+    Provider{97ce66 com.amazon.kindle.epub/com.audible.hushpuppy.service.db.HushpuppyStorageProvider}
+  com.amazon.kindle.epub/com.bugsnag.android.internal.BugsnagContentProvider:
+    Provider{a6a25a7 com.amazon.kindle.epub/com.bugsnag.android.internal.BugsnagContentProvider}
+  com.amazon.kindle.epub/com.google.firebase.provider.FirebaseInitProvider:
+    Provider{cd51a54 com.amazon.kindle.epub/com.google.firebase.provider.FirebaseInitProvider}
+  com.amazon.kindle.epub/com.amazon.kcp.search.AndroidSearchRecentSuggestionsProvider:
+    Provider{5b9fdfd com.amazon.kindle.epub/com.amazon.kcp.search.AndroidSearchRecentSuggestionsProvider}
+  com.amazon.kindle.epub/com.amazon.mls.config.internal.sushi.background.ProcessLifecycleTrackerInitialization:
+    Provider{a426af2 com.amazon.kindle.epub/com.amazon.mls.config.internal.sushi.background.ProcessLifecycleTrackerInitialization}
+  com.amazon.kindle.epub/com.audible.playersdk.stats.data.persistence.localDatabase.sqlite.DefaultStatsContentProvider:
+    Provider{4097543 com.amazon.kindle.epub/com.audible.playersdk.stats.data.persistence.localDatabase.sqlite.DefaultStatsContentProvider}
+  com.amazon.kindle.epub/androidx.startup.InitializationProvider:
+    Provider{e9387c0 com.amazon.kindle.epub/androidx.startup.InitializationProvider}
+  com.amazon.kindle.epub/com.amazon.kindle.map.StandaloneMAPInformationProvider:
+    Provider{6ad7cf9 com.amazon.kindle.epub/com.amazon.kindle.map.StandaloneMAPInformationProvider}
+  com.amazon.kindle.epub/com.amazon.identity.auth.device.api.CrossAppContextProvider:
+    Provider{701e130 com.amazon.kindle.epub/com.amazon.identity.auth.device.api.CrossAppContextProvider}
+  com.amazon.kindle.epub/com.amazon.ka11y.Ka11yAccessibilityServiceCharacteristicsProvider$CharacteristicsCacher:
+    Provider{588443e com.amazon.kindle.epub/com.amazon.ka11y.Ka11yAccessibilityServiceCharacteristicsProvider$CharacteristicsCacher}
+
+ContentProvider Authorities:
+  [com.amazon.identity.auth.device.MapInfoProvider.MAPInformationProvider.epub]:
+    Provider{6ad7cf9 com.amazon.kindle.epub/com.amazon.kindle.map.StandaloneMAPInformationProvider}
+      applicationInfo=ApplicationInfo{c164e51 com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.hushpuppy.controller.audible.stats.db.provider]:
+    Provider{aa7db8e com.amazon.kindle.epub/com.audible.hushpuppy.controller.audible.stats.db.HushpuppyStatsContentProvider}
+      applicationInfo=ApplicationInfo{50236b6 com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.androidx-startup]:
+    Provider{e9387c0 com.amazon.kindle.epub/androidx.startup.InitializationProvider}
+      applicationInfo=ApplicationInfo{560efb7 com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.ka11y.Ka11ySystemAccessibilityStateSource$SystemSourceRegistrationProvider]:
+    Provider{308eba8 com.amazon.kindle.epub/com.amazon.ka11y.Ka11ySystemAccessibilityStateSource$SystemSourceRegistrationProvider}
+      applicationInfo=ApplicationInfo{1da0324 com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.file_provider]:
+    Provider{8a48fbc com.amazon.kindle.epub/androidx.core.content.FileProvider}
+      applicationInfo=ApplicationInfo{8a07e8d com.amazon.kindle.epub}
+  [kindlereader.epub]:
+    Provider{5b9fdfd com.amazon.kindle.epub/com.amazon.kcp.search.AndroidSearchRecentSuggestionsProvider}
+      applicationInfo=ApplicationInfo{f30842 com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.audibleStats]:
+    Provider{4097543 com.amazon.kindle.epub/com.audible.playersdk.stats.data.persistence.localDatabase.sqlite.DefaultStatsContentProvider}
+      applicationInfo=ApplicationInfo{90ad053 com.amazon.kindle.epub}
+  [com.amazon.identity.auth.device.CrossAppContextProvider.com.amazon.kindle.epub]:
+    Provider{701e130 com.amazon.kindle.epub/com.amazon.identity.auth.device.api.CrossAppContextProvider}
+      applicationInfo=ApplicationInfo{8462d90 com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.download.progress.provider]:
+    Provider{4da9f89 com.amazon.kindle.epub/com.audible.mobile.download.repository.DownloadProgressReadOnlyContentProvider}
+      applicationInfo=ApplicationInfo{5237689 com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.bugsnag-startup]:
+    Provider{a6a25a7 com.amazon.kindle.epub/com.bugsnag.android.internal.BugsnagContentProvider}
+      applicationInfo=ApplicationInfo{52d668e com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.socialsharing.fileprovider]:
+    Provider{bb7d7cb com.amazon.kindle.epub/com.amazon.kindle.socialsharing.SocialSharingFileProvider}
+      applicationInfo=ApplicationInfo{9681eaf com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.hushpuppydb.contentprovider]:
+    Provider{97ce66 com.amazon.kindle.epub/com.audible.hushpuppy.service.db.HushpuppyStorageProvider}
+      applicationInfo=ApplicationInfo{50892bc com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.firebaseinitprovider]:
+    Provider{cd51a54 com.amazon.kindle.epub/com.google.firebase.provider.FirebaseInitProvider}
+      applicationInfo=ApplicationInfo{ac3f245 com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.BugsnagPerformanceProvider]:
+    Provider{c31efaf com.amazon.kindle.epub/com.bugsnag.android.performance.internal.startup.BugsnagPerformanceProvider}
+      applicationInfo=ApplicationInfo{f9d5d9a com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.NotebookShareProviderModule]:
+    Provider{e89b6c1 com.amazon.kindle.epub/com.amazon.notebook.module.exporting.NotebookExportFileProvider}
+      applicationInfo=ApplicationInfo{7a1f6cb com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.ka11y.Ka11yAccessibilityServiceCharacteristicsProvider$CharacteristicsCacher]:
+    Provider{588443e com.amazon.kindle.epub/com.amazon.ka11y.Ka11yAccessibilityServiceCharacteristicsProvider$CharacteristicsCacher}
+      applicationInfo=ApplicationInfo{52a1ea8 com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.mlsInitializationProvider]:
+    Provider{a426af2 com.amazon.kindle.epub/com.amazon.mls.config.internal.sushi.background.ProcessLifecycleTrackerInitialization}
+      applicationInfo=ApplicationInfo{6366dc1 com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.ka11y.Ka11yContextProvider$ContextInitializer]:
+    Provider{aca229a com.amazon.kindle.epub/com.amazon.ka11y.Ka11yContextProvider$ContextInitializer}
+      applicationInfo=ApplicationInfo{ee3b966 com.amazon.kindle.epub}
+  [com.amazon.kindle.epub.bugsnaginitprovider]:
+    Provider{944ab45 com.amazon.kindle.epub/com.amazon.kindle.BugSnagEarlyInitProvider}
+      applicationInfo=ApplicationInfo{45734a7 com.amazon.kindle.epub}
+
+Key Set Manager:
+  [com.amazon.kindle.epub]
+      Signing KeySets: 62
+
+Packages:
+  Package [com.amazon.kindle.epub] (b567d54):
+    userId=10262
+    pkg=Package{82517ab com.amazon.kindle.epub}
+    codePath=/data/app/~~jMG0AghCiZs6WfuTUP4qBw==/com.amazon.kindle.epub-bLy6AcEgSu9DHuEjeYBIRA==
+    resourcePath=/data/app/~~jMG0AghCiZs6WfuTUP4qBw==/com.amazon.kindle.epub-bLy6AcEgSu9DHuEjeYBIRA==
+    legacyNativeLibraryDir=/data/app/~~jMG0AghCiZs6WfuTUP4qBw==/com.amazon.kindle.epub-bLy6AcEgSu9DHuEjeYBIRA==/lib
+    extractNativeLibs=true
+    primaryCpuAbi=arm64-v8a
+    secondaryCpuAbi=null
+    cpuAbiOverride=null
+    versionCode=1286541811 minSdk=30 targetSdk=36
+    minExtensionVersions=[]
+    versionName=8.159.0.100(2.0.115180.0)
+    usesNonSdkApi=false
+    splits=[base]
+    apkSigningVersion=3
+    flags=[ HAS_CODE ALLOW_CLEAR_USER_DATA LARGE_HEAP ]
+    privateFlags=[ PRIVATE_FLAG_ACTIVITIES_RESIZE_MODE_RESIZEABLE ALLOW_AUDIO_PLAYBACK_CAPTURE PRIVATE_FLAG_REQUEST_LEGACY_EXTERNAL_STORAGE HAS_DOMAIN_URLS PARTIALLY_DIRECT_BOOT_AWARE ]
+    hasPreserveLegacyExternalStorage=true
+    forceQueryable=false
+    queriesPackages=[com.amazon.appmanager, com.android.mms, com.facebook.katana, com.facebook.orca, com.twitter.android, com.whatsapp, com.tencent.mm, com.google.android.apps.plus, com.tumblr, com.linkedin.android, com.pinterest, com.sina.weibo, com.google.android.talk, kik.android, com.skype.raider, jp.naver.line.android]
+    queriesIntents=[Intent { act=android.intent.action.TTS_SERVICE }, Intent { act=com.android.vending.billing.InAppBillingService.BIND }, Intent { act=com.google.android.apps.play.billingtestcompanion.BillingOverrideService.BIND }, Intent { act=com.amazon.identity.action.CROSS_APP_CONTEXT_PROVIDER }, Intent { act=com.amazon.identity.action.BOOTSTRAP_SSO }, Intent { act=com.amazon.dcp.sso.action.session.users.changed }, Intent { act=android.intent.action.MAIN }]
+    dataDir=/data/user/0/com.amazon.kindle.epub
+    supportsScreens=[small, medium, large, xlarge, resizeable, anyDensity]
+    usesOptionalLibraries:
+      org.apache.http.legacy
+      androidx.window.extensions
+      androidx.window.sidecar
+    usesLibraryFiles:
+      /system/framework/org.apache.http.legacy.jar
+    timeStamp=2026-11-21 08:26:23
+    lastUpdateTime=2026-11-21 08:26:26
+    packageSource=0
+    signatures=PackageSignatures{1067841 version:3, signatures:[a6f4223a], past signatures:[]}
+    installPermissionsFixed=true
+    pkgFlags=[ HAS_CODE ALLOW_CLEAR_USER_DATA LARGE_HEAP ]
+    declared permissions:
+      com.amazon.kindle.epub.permission.RECEIVE_ADM_MESSAGE: prot=signature, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.dcp.messaging.permission.INITIATE_HANDLE_DEVICE_MESSAGE: prot=signature, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.STORE_ACCESS: prot=signature, INSTALLED
+      com.amazon.kindle.epub.socialsharing.PERMISSION_SHARE: prot=signature, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.AllowListPolicyUpdatePermission: prot=signature, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.ArcusUpdatePermission: prot=signature, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.whisperjoin.setup.ble.PERMISSION: prot=signature, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.FFSServiceActionPermission: prot=signature, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.whisperjoin.provisioner.zigbee.CREDENTIALS_SYNC_PERMISSION: prot=signature, INSTALLED
+      com.amazon.kindle.epub.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION: prot=signature, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.identity.permission.CAN_CALL_MAP_INFORMATION_PROVIDER: prot=signature|privileged, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.identity.auth.device.perm.AUTH_SDK: prot=signature|privileged, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.dcp.sso.permission.account.changed: prot=signature|privileged, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.dcp.sso.permission.AmazonAccountPropertyService.property.changed: prot=signature|privileged, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.identity.permission.CALL_AMAZON_DEVICE_INFORMATION_PROVIDER: prot=signature|privileged, INSTALLED
+      com.amazon.kindle.epub.perm.com.amazon.appmanager.preload.permission.READ_PRELOAD_DEVICE_INFO_PROVIDER: prot=signature|privileged, INSTALLED
+    requested permissions:
+      android.permission.READ_PHONE_STATE
+      com.amazon.kindle.epub.permission.RECEIVE_ADM_MESSAGE
+      com.amazon.device.messaging.permission.RECEIVE
+      android.permission.WAKE_LOCK
+      com.amazon.dcp.messaging.permission.HANDLE_DEVICE_MESSAGE
+      com.amazon.kindle.epub.perm.com.amazon.STORE_ACCESS
+      android.permission.ACCESS_NETWORK_STATE
+      android.permission.ACCESS_WIFI_STATE
+      android.permission.INTERNET
+      android.permission.AUTHENTICATE_ACCOUNTS
+      android.permission.MANAGE_ACCOUNTS
+      android.permission.USE_CREDENTIALS
+      com.amazon.dcp.sso.permission.AMAZON_ACCOUNT_PROPERTY
+      com.amazon.kindle.epub.perm.com.amazon.dcp.sso.permission.account.changed
+      com.amazon.kindle.epub.perm.com.amazon.identity.permission.CAN_CALL_MAP_INFORMATION_PROVIDER
+      com.samsung.android.providers.context.permission.WRITE_USE_APP_FEATURE_SURVEY
+      android.permission.POST_NOTIFICATIONS
+      android.permission.READ_EXTERNAL_STORAGE
+      android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK
+      com.amazon.kindle.epub.socialsharing.PERMISSION_SHARE
+      com.amazon.kindle.otter.settings.RECEIVE_GOODREADS_UNLINK
+      android.permission.FOREGROUND_SERVICE
+      android.permission.FOREGROUND_SERVICE_DATA_SYNC
+      android.permission.DETECT_SCREEN_CAPTURE
+      android.permission.BLUETOOTH_SCAN
+      android.permission.BLUETOOTH_CONNECT
+      android.permission.BLUETOOTH_ADVERTISE
+      amazon.permission.COLLECT_METRICS
+      com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.AllowListPolicyUpdatePermission
+      com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.ArcusUpdatePermission
+      com.amazon.whisperjoin.deviceprovisioningservice.FFSServiceAction.permission
+      android.permission.GET_TASKS
+      android.permission.BROADCAST_STICKY
+      com.audible.hushpuppy.tablet.permission.COMPANION_MAPPING
+      android.permission.READ_BASIC_PHONE_STATE
+      android.permission.RECEIVE_BOOT_COMPLETED
+      com.amazon.dcp.sso.permission.USE_DEVICE_CREDENTIALS
+      com.amazon.dcp.sso.permission.MANAGE_DEVICE_AND_USER_DATA
+      com.amazon.dcp.sso.permission.MANAGE_COR_PFM
+      com.amazon.identity.permission.GENERIC_IPC
+      com.amazon.dcp.sso.permission.CUSTOMER_ATTRIBUTE_SERVICE
+      com.amazon.dcp.metrics.permission.METRICS_PERMISSION
+      com.amazon.dcp.config.permission.DYN_CONFIG_VALUES_UPDATED
+      com.amazon.kindle.epub.perm.com.amazon.identity.auth.device.perm.AUTH_SDK
+      com.amazon.kindle.epub.perm.com.amazon.dcp.sso.permission.AmazonAccountPropertyService.property.changed
+      com.amazon.dcp.settings.permission.READ_SETTINGS
+      com.amazon.dcp.permission.USE_PERSISTENCE_HELPER
+      com.amazon.kindle.epub.perm.com.amazon.identity.permission.CALL_AMAZON_DEVICE_INFORMATION_PROVIDER
+      com.google.android.gms.permission.AD_ID
+      android.permission.CHANGE_NETWORK_STATE
+      android.permission.CHANGE_WIFI_STATE
+      com.amazon.kindle.cms.CMS_ACCESS
+      android.permission.CHANGE_WIFI_MULTICAST_STATE
+      com.google.android.c2dm.permission.RECEIVE
+      com.android.vending.BILLING
+      com.amazon.kindle.epub.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+      android.permission.SEND_DOWNLOAD_COMPLETED_INTENTS
+      android.permission.DOWNLOAD_WITHOUT_NOTIFICATION
+      com.amazon.kindle.epub.perm.com.amazon.appmanager.preload.permission.READ_PRELOAD_DEVICE_INFO_PROVIDER
+      android.permission.CREDENTIAL_MANAGER_QUERY_CANDIDATE_CREDENTIALS
+      com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE
+      android.permission.MANAGE_EXTERNAL_STORAGE
+    install permissions:
+      com.amazon.kindle.epub.perm.com.amazon.appmanager.preload.permission.READ_PRELOAD_DEVICE_INFO_PROVIDER: granted=true
+      android.permission.DOWNLOAD_WITHOUT_NOTIFICATION: granted=true
+      com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE: granted=true
+      com.amazon.kindle.epub.perm.com.amazon.STORE_ACCESS: granted=true
+      com.google.android.c2dm.permission.RECEIVE: granted=true
+      android.permission.USE_CREDENTIALS: granted=true
+      android.permission.MANAGE_EXTERNAL_STORAGE: granted=false
+      com.amazon.kindle.epub.perm.com.amazon.identity.permission.CAN_CALL_MAP_INFORMATION_PROVIDER: granted=true
+      android.permission.MANAGE_ACCOUNTS: granted=true
+      com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.AllowListPolicyUpdatePermission: granted=true
+      android.permission.SEND_DOWNLOAD_COMPLETED_INTENTS: granted=false
+      android.permission.CHANGE_NETWORK_STATE: granted=true
+      android.permission.FOREGROUND_SERVICE: granted=true
+      android.permission.RECEIVE_BOOT_COMPLETED: granted=true
+      com.amazon.kindle.epub.perm.com.amazon.dcp.sso.permission.account.changed: granted=true
+      android.permission.CHANGE_WIFI_MULTICAST_STATE: granted=true
+      com.amazon.kindle.epub.perm.com.amazon.identity.auth.device.perm.AUTH_SDK: granted=true
+      android.permission.GET_TASKS: granted=true
+      android.permission.AUTHENTICATE_ACCOUNTS: granted=true
+      android.permission.INTERNET: granted=true
+      com.android.vending.BILLING: granted=true
+      com.amazon.kindle.epub.perm.com.amazon.whisperjoin.deviceprovisioningservice.ArcusUpdatePermission: granted=true
+      com.amazon.kindle.epub.socialsharing.PERMISSION_SHARE: granted=true
+      com.amazon.kindle.epub.perm.com.amazon.identity.permission.CALL_AMAZON_DEVICE_INFORMATION_PROVIDER: granted=true
+      android.permission.BROADCAST_STICKY: granted=true
+      android.permission.CHANGE_WIFI_STATE: granted=true
+      android.permission.ACCESS_NETWORK_STATE: granted=true
+      com.amazon.kindle.epub.permission.RECEIVE_ADM_MESSAGE: granted=true
+      android.permission.READ_BASIC_PHONE_STATE: granted=true
+      com.amazon.kindle.epub.perm.com.amazon.dcp.sso.permission.AmazonAccountPropertyService.property.changed: granted=true
+      com.amazon.kindle.epub.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION: granted=true
+      android.permission.ACCESS_WIFI_STATE: granted=true
+      com.google.android.gms.permission.AD_ID: granted=true
+      android.permission.WAKE_LOCK: granted=true
+    User 0: ceDataInode=88358 installed=true hidden=false suspended=false distractionFlags=0 stopped=false notLaunched=false enabled=0 instant=false virtual=false
+      installReason=0
+      firstInstallTime=2024-03-15 06:06:06
+      uninstallReason=0
+      overlay paths:
+        /system/product/overlay/AndroidBlackTheme/AndroidBlackThemeOverlay.apk
+        /system/product/overlay/NavigationBarModeGestural/NavigationBarModeGesturalOverlay.apk
+        /system/product/overlay/FontSanFranciscoDisplayProSource/FontSanFranciscoDisplayProSourceOverlay.apk
+        /data/resource-cache/com.android.systemui-accent-mm3f.frro
+      legacy overlay paths:
+        /system/product/overlay/AndroidBlackTheme/AndroidBlackThemeOverlay.apk
+        /system/product/overlay/NavigationBarModeGestural/NavigationBarModeGesturalOverlay.apk
+        /system/product/overlay/FontSanFranciscoDisplayProSource/FontSanFranciscoDisplayProSourceOverlay.apk
+      gids=[3003]
+      runtime permissions:
+        android.permission.POST_NOTIFICATIONS: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+        android.permission.BLUETOOTH_CONNECT: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+        android.permission.READ_EXTERNAL_STORAGE: granted=true, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED|RESTRICTION_INSTALLER_EXEMPT]
+        android.permission.READ_PHONE_STATE: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+        android.permission.BLUETOOTH_ADVERTISE: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+        android.permission.BLUETOOTH_SCAN: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+      disabledComponents:
+        com.amazon.kindle.appwidget.readingstreaks.ReadingStreaksWidgetReceiver
+        com.amazon.identity.auth.accounts.SessionUserChangedToAccountForPackageChangedAdpater
+        androidx.work.impl.background.systemalarm.RescheduleReceiver
+      enabledComponents:
+        com.amazon.identity.auth.device.bootstrapSSO.BootstrapSSOService
+        com.amazon.identity.auth.device.storage.LambortishClock$ChangeTimestampsBroadcastReceiver
+        com.amazon.kindle.appwidget.lastreadbook.LastReadBookWidgetReceiver
+        androidx.work.impl.background.systemjob.SystemJobService
+
+Queries:
+  system apps queryable: false
+  queries via forceQueryable:
+  queries via package name:
+    com.amazon.kindle.epub:
+      com.whatsapp
+  queries via component:
+    com.amazon.kindle.epub:
+      com.google.android.as
+      com.google.android.projection.gearhead
+      com.henrikherzig.playintegritychecker
+      com.google.android.apps.restore
+      com.google.android.setupwizard
+      com.google.android.settings.intelligence
+      com.android.contacts
+      [com.google.android.calendar,com.google.android.syncadapters.calendar]
+      org.lineageos.aperture
+      com.android.messaging
+      com.android.dreams.phototable
+      com.google.android.calculator
+      com.google.android.inputmethod.latin
+      com.android.deskclock
+      org.cromite.cromite
+      com.overdrive.mobile.android.libby
+      app.morphe.android.youtube
+      com.google.android.apps.photosgo
+      com.foliate.foliate
+      com.android.cellbroadcastreceiver.module
+      com.letterboxd.letterboxd
+      com.topjohnwu.magisk
+      com.dergoogler.mmrl
+      org.matrix.vector.manager
+      com.noobexon.xposedfakelocation
+      org.oxycblt.auxio
+      com.whatsapp
+      com.rk.taskmanager
+      ginlemon.flowerfree
+      com.orion.store
+      com.buge.appmanager
+      app.revanced.android.gms
+      org.connectbot
+      moe.shizuku.privileged.api
+      sushi.hardcore.droidfs
+      org.fossify.calendar
+      com.anthropic.claude
+      com.ujwal.colai
+      com.akshaykadam.pixelboard
+      org.fossify.gallery
+      cn.tydic.ethiopay
+      com.dopex
+      com.audiobooks.androidapp
+      com.one4studio.one4paper
+      ru.tech.imageresizershrinker
+      com.zionhuang.music
+      com.foobnix.pro.pdf.reader
+      net.gsantner.markor
+      demigos.com.mobilism
+      com.machiav3lli.fdroid
+      dev.imranr.obtainium.fdroid
+      com.celzero.bravedns
+      pl.solidexplorer2
+      com.mycompany.app.soulbrowser
+      com.cliffweitzman.speechify2
+      net.thunderbird.android
+      ru.zdevs.zarchiver.pro
+      org.fdroid.fdroid
+      org.fossify.filemanager
+      com.goon.mobile
+      com.mrsep.ttlchanger
+      mark.via.gp
+      com.positron_it.zlib
+      app.mihon
+      com.aurora.store
+      com.amazon.kindle
+      app.opusreader
+    com.google.android.settings.intelligence:
+      com.amazon.kindle.epub
+    com.android.settings.intelligence:
+      com.amazon.kindle.epub
+    app.morphe.android.youtube:
+      com.amazon.kindle.epub
+    com.google.android.apps.photosgo:
+      com.amazon.kindle.epub
+    com.letterboxd.letterboxd:
+      com.amazon.kindle.epub
+    com.whatsapp:
+      com.amazon.kindle.epub
+    com.buge.appmanager:
+      com.amazon.kindle.epub
+    com.ujwal.colai:
+      com.amazon.kindle.epub
+    cn.tydic.ethiopay:
+      com.amazon.kindle.epub
+    com.foobnix.pro.pdf.reader:
+      com.amazon.kindle.epub
+    pl.solidexplorer2:
+      com.amazon.kindle.epub
+    com.cliffweitzman.speechify2:
+      com.amazon.kindle.epub
+    net.thunderbird.android:
+      com.amazon.kindle.epub
+    ru.zdevs.zarchiver.pro:
+      com.amazon.kindle.epub
+    org.fdroid.fdroid:
+      com.amazon.kindle.epub
+    mark.via.gp:
+      com.amazon.kindle.epub
+    com.amazon.kindle:
+      com.amazon.kindle.epub
+  queryable via interaction:
+    User 0:
+      [com.android.dynsystem,com.android.localtransport,com.android.settings,com.android.keychain,com.android.server.telecom,com.android.wallpaperbackup,com.google.android.iwlan,com.android.location.fused,android,me.phh.treble.app,com.android.inputdevices,com.android.providers.settings]:
+        com.amazon.kindle.epub
+      [com.android.soundpicker,com.android.providers.media,com.android.providers.downloads.ui,com.android.providers.downloads,com.android.mtp]:
+        com.amazon.kindle.epub
+      com.android.externalstorage:
+        com.amazon.kindle.epub
+      com.amazon.kindle.epub:
+        [com.android.dynsystem,com.android.localtransport,com.android.settings,com.android.keychain,com.android.server.telecom,com.android.wallpaperbackup,com.google.android.iwlan,com.android.location.fused,android,me.phh.treble.app,com.android.inputdevices,com.android.providers.settings]
+        [com.android.soundpicker,com.android.providers.media,com.android.providers.downloads.ui,com.android.providers.downloads,com.android.mtp]
+        us.spotco.mulch_wv
+      us.spotco.mulch_wv:
+        com.amazon.kindle.epub
+      [com.google.android.gsf,com.google.android.gms]:
+        com.amazon.kindle.epub
+      com.akshaykadam.pixelboard:
+        com.amazon.kindle.epub
+      com.amazon.kindle.epub:
+        com.android.externalstorage
+  queryable via uses-library:
+
+Dexopt state:
+  [com.amazon.kindle.epub]
+    path: /data/app/~~jMG0AghCiZs6WfuTUP4qBw==/com.amazon.kindle.epub-bLy6AcEgSu9DHuEjeYBIRA==/base.apk
+      arm64: [status=verify] [reason=install]
+  BgDexopt state:
+    enabled:true
+    mDexOptThread:null
+    mDexOptCancellingThread:null
+    mFinishedPostBootUpdate:true
+    mLastExecutionStatus:0
+    mLastExecutionStartTimeMs:4283232
+    mLastExecutionDurationIncludingSleepMs:17202
+    mLastExecutionStartUptimeMs:4283232
+    mLastExecutionDurationMs:17202
+    now:125330420
+    mLastCancelledPackages:
+    mFailedPackageNamesPrimary:
+    mFailedPackageNamesSecondary:
+
+Compiler stats:
+  [com.amazon.kindle.epub]
+     base.apk - 4620

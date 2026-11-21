@@ -448,32 +448,73 @@ public final class OpenCatalogView {
                     if (safeName.length() > 50) safeName = safeName.substring(0, 50);
                     final File epubFile = new File(outDir, safeName + "_" + book.id + ".epub");
 
-                    InputStream is = null;
-                    try {
-                        is = SafeHttp.openStream(book.epubUrl);
-                    } catch (Throwable t) {
-                        if (book.id != null && !book.id.isEmpty() && !book.id.startsWith("opds")) {
-                            is = SafeHttp.openStream("http://aleph.gutenberg.org/cache/epub/" + book.id + "/pg" + book.id + ".epub");
-                        } else {
-                            throw t;
+                    List<String> candidateUrls = new ArrayList<String>();
+                    if (book.epubUrl != null && !book.epubUrl.isEmpty()) {
+                        candidateUrls.add(book.epubUrl);
+                    }
+                    if (book.id != null && !book.id.isEmpty() && !book.id.startsWith("opds")) {
+                        candidateUrls.add("https://www.gutenberg.org/cache/epub/" + book.id + "/pg" + book.id + "-images.epub");
+                        candidateUrls.add("http://aleph.gutenberg.org/cache/epub/" + book.id + "/pg" + book.id + "-images.epub");
+                        candidateUrls.add("http://aleph.gutenberg.org/cache/epub/" + book.id + "/pg" + book.id + ".epub");
+                    }
+
+                    Throwable lastErr = null;
+                    boolean downloaded = false;
+                    File tmpFile = new File(outDir, epubFile.getName() + ".part");
+                    for (String candUrl : candidateUrls) {
+                        InputStream is = null;
+                        FileOutputStream fos = null;
+                        try {
+                            is = SafeHttp.openStream(candUrl);
+                            fos = new FileOutputStream(tmpFile);
+                            byte[] buf = new byte[8192];
+                            int n;
+                            long total = 0;
+                            byte[] hdr = new byte[4];
+                            int hdrLen = 0;
+                            while ((n = is.read(buf)) > 0) {
+                                if (hdrLen < 4) {
+                                    int take = Math.min(4 - hdrLen, n);
+                                    System.arraycopy(buf, 0, hdr, hdrLen, take);
+                                    hdrLen += take;
+                                }
+                                fos.write(buf, 0, n);
+                                total += n;
+                            }
+                            fos.flush();
+                            fos.close();
+                            fos = null;
+                            is.close();
+                            is = null;
+                            // Validate real ZIP/EPUB magic bytes (PK\x03\x04) and minimum size
+                            boolean validZip = (hdrLen == 4 && hdr[0] == 0x50 && hdr[1] == 0x4B && hdr[2] == 0x03 && hdr[3] == 0x04 && total >= 1024);
+                            if (validZip) {
+                                if (epubFile.exists()) epubFile.delete();
+                                if (!tmpFile.renameTo(epubFile)) {
+                                    copyFile(tmpFile, epubFile);
+                                    tmpFile.delete();
+                                }
+                                downloaded = true;
+                                break;
+                            } else {
+                                tmpFile.delete();
+                                lastErr = new java.io.IOException("Invalid EPUB response (" + total + " bytes) from " + candUrl);
+                            }
+                        } catch (Throwable t) {
+                            lastErr = t;
+                            try { if (fos != null) fos.close(); } catch (Throwable ignored) {}
+                            try { if (is != null) is.close(); } catch (Throwable ignored) {}
+                            tmpFile.delete();
                         }
                     }
-                    FileOutputStream fos = new FileOutputStream(epubFile);
-                    try {
-                        byte[] buf = new byte[8192];
-                        int n;
-                        while ((n = is.read(buf)) > 0) {
-                            fos.write(buf, 0, n);
-                        }
-                    } finally {
-                        fos.close();
-                        is.close();
+                    if (!downloaded) {
+                        throw (lastErr != null) ? lastErr : new java.io.IOException("All download mirrors failed");
                     }
 
                     mainHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(ctx, "Opening in Kindle EPUB...", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(ctx, "Opening in Folio...", Toast.LENGTH_SHORT).show();
                             Intent openIntent = new Intent(Intent.ACTION_VIEW);
                             openIntent.setClassName(ctx.getPackageName(), "com.amazon.kindle.ThirdPartyUpgradePage");
                             openIntent.setDataAndType(Uri.fromFile(epubFile), "application/epub+zip");

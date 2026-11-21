@@ -22,15 +22,18 @@ function runCli(cmd, input) {
   }
 }
 
-async function waitForRound(roundNum, maxWaitSec = 180) {
+async function waitForRound(roundNum, maxWaitSec = 2000) {
   const roundTag = String(roundNum).padStart(3, '0');
   const targetLabel = `to_antig_clunky_round_${roundTag}`;
-  console.log(`[Monitor] Watching for Round ${roundTag} (target button: ${targetLabel}, max wait: ${maxWaitSec}s)...`);
+  console.log(`[Monitor] Watching for Round ${roundTag} (target: ${targetLabel}, max wait: ${maxWaitSec}s, polling: every 60s)...`);
 
   const startTime = Date.now();
-  let wasGenerating = false;
+  let checkCount = 0;
 
   while ((Date.now() - startTime) < (maxWaitSec * 1000)) {
+    checkCount++;
+    const elapsedSec = Math.round((Date.now() - startTime) / 1000);
+
     const evalScript = `(() => {
       const isGenerating = !!document.querySelector('button[aria-label*="Stop" i]');
       const btns = Array.from(document.querySelectorAll('button[aria-label*="Download to_antig" i]')).map(b => b.getAttribute('aria-label'));
@@ -38,7 +41,7 @@ async function waitForRound(roundNum, maxWaitSec = 180) {
       
       const msgEls = document.querySelectorAll('message-content');
       const lastMsg = msgEls.length ? msgEls[msgEls.length - 1].innerText : '';
-      return { isGenerating, btns, hasTarget, lastMsg: lastMsg.substring(0, 400) };
+      return { isGenerating, btns, hasTarget, lastMsg: lastMsg.substring(0, 300) };
     })()`;
 
     const raw = runCli(`eval id:${TAB_ID} -`, evalScript);
@@ -46,22 +49,13 @@ async function waitForRound(roundNum, maxWaitSec = 180) {
     try {
       state = JSON.parse(raw);
     } catch (e) {
-      console.log(`[Monitor] Warning: eval parse failed (${raw}). Retrying...`);
-      await sleep(4000);
+      console.log(`[Monitor @ ${elapsedSec}s] Warning: eval parse failed (${raw}). Waiting 60s...`);
+      await sleep(60000);
       continue;
     }
 
-    if (state.isGenerating) {
-      wasGenerating = true;
-      process.stdout.write(`.`);
-      await sleep(5000);
-      continue;
-    }
-
-    // Finished generating!
-    console.log(`\n[Monitor] Generation finished. Checking for ${targetLabel}...`);
     if (state.hasTarget) {
-      console.log(`[Monitor] Found ${targetLabel}! Triggering download...`);
+      console.log(`\n[Monitor @ ${elapsedSec}s] Found target ${targetLabel}! Triggering download...`);
       const clickScript = `(() => {
         const btn = Array.from(document.querySelectorAll('button[aria-label*="Download to_antig" i]')).find(b => b.getAttribute('aria-label')?.includes("${targetLabel}"));
         if (btn) {
@@ -80,33 +74,24 @@ async function waitForRound(roundNum, maxWaitSec = 180) {
         await sleep(1000);
         if (fs.existsSync(targetZip)) {
           console.log(`[Monitor] Downloaded ${targetZip} (${fs.statSync(targetZip).size} bytes)!`);
-          // Copy to workspace
           const destZip = path.join(WORKDIR, `${targetLabel}.zip`);
           fs.copyFileSync(targetZip, destZip);
-          // Unzip into workspace
           execSync(`unzip -o ${destZip} -d ${WORKDIR}`, { stdio: 'inherit' });
           console.log(`[Monitor] Successfully staged and extracted ${destZip}!`);
           return { success: true, round: roundNum, zip: destZip };
         }
       }
-      console.log(`[Monitor] Warning: File did not appear in ${DOWNLOAD_DIR} within 15s.`);
       return { success: false, reason: 'download_timeout' };
     }
 
-    // Finished generating, but target button is missing (STALL DETECTED!)
-    console.log(`[Monitor] STALL DETECTED: Gemini finished generating but ${targetLabel} was not provided!`);
-    console.log(`[Monitor] Last message preview: ${state.lastMsg}`);
-    
-    // Automatic recovery prompt
-    const recoveryPrompt = `Please generate and attach ${targetLabel}.zip with INSTRUCTIONS_ROUND_${roundTag}.md so the autonomous relay can proceed!`;
-    console.log(`[Monitor] Sending recovery prompt: "${recoveryPrompt}"...`);
-    runCli(`fill id:${TAB_ID} [role='textbox'] "${recoveryPrompt}"`);
-    await sleep(1000);
-    const sendRes = runCli(`eval id:${TAB_ID} "(() => { const btn = document.querySelector('button[aria-label*=\\"Send message\\" i]'); if (btn) { btn.click(); return 'sent'; } return 'no_send_btn'; })()"`);
-    console.log(`[Monitor] Recovery prompt submit result: ${sendRes}`);
+    if (state.isGenerating) {
+      console.log(`[Monitor @ ${elapsedSec}s] Gemini is still generating... checking again in 60s.`);
+    } else {
+      console.log(`[Monitor @ ${elapsedSec}s] Gemini idle. Target not yet available (last preview: ${state.lastMsg.replace(/\\n/g, ' ').substring(0, 80)}...). Waiting 60s.`);
+    }
 
-    // Wait for regeneration
-    await sleep(5000);
+    // Wait 60 seconds between checks (user rule: monitor less frequently, every minute, no spam)
+    await sleep(60000);
   }
 
   console.log(`[Monitor] Max wait time (${maxWaitSec}s) reached.`);
@@ -114,8 +99,8 @@ async function waitForRound(roundNum, maxWaitSec = 180) {
 }
 
 async function main() {
-  const round = parseInt(process.argv[2] || '7', 10);
-  const maxWait = parseInt(process.argv[3] || '600', 10);
+  const round = parseInt(process.argv[2] || '13', 10);
+  const maxWait = parseInt(process.argv[3] || '2000', 10);
   const res = await waitForRound(round, maxWait);
   console.log('[Monitor Output]:', JSON.stringify(res));
   if (!res.success) process.exit(1);
