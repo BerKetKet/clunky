@@ -245,7 +245,7 @@ public final class OpenCatalogView {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 if (position >= 0 && position < currentResults.size()) {
-                    showBookDetails(ctx, mainHandler, currentResults.get(position));
+                    showBookDetails(ctx, mainHandler, currentResults.get(position), searchInput, doSearch);
                 }
             }
         });
@@ -290,9 +290,9 @@ public final class OpenCatalogView {
                 .show();
     }
 
-    private static void showBookDetails(final Context ctx, final Handler mainHandler, final BookResult book) {
+    private static void showBookDetails(final Context ctx, final Handler mainHandler, final BookResult book, final EditText searchInput, final Runnable doSearch) {
         ScrollView scroll = new ScrollView(ctx);
-        LinearLayout box = new LinearLayout(ctx);
+        final LinearLayout box = new LinearLayout(ctx);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(48, 32, 48, 16);
 
@@ -365,17 +365,35 @@ public final class OpenCatalogView {
                     String desc = meta.description.length() > 380 ? meta.description.substring(0, 380) + "..." : meta.description;
                     msg.append("\n").append(desc).append("\n");
                 }
-                if (!meta.similarTitles.isEmpty()) {
-                    msg.append("\nSimilar Books:\n");
-                    for (int i = 0; i < Math.min(4, meta.similarTitles.size()); i++) {
-                        msg.append("• ").append(meta.similarTitles.get(i)).append("\n");
-                    }
-                }
                 mainHandler.post(new Runnable() {
                     @Override
                     public void run() {
                         if (dialog.isShowing()) {
                             msgView.setText(msg.toString());
+                            if (!meta.similarTitles.isEmpty()) {
+                                TextView simHdr = new TextView(ctx);
+                                simHdr.setText("\nSimilar Books (tap to search):");
+                                simHdr.setTextSize(14f);
+                                simHdr.setTypeface(null, Typeface.BOLD);
+                                box.addView(simHdr);
+                                for (int i = 0; i < Math.min(4, meta.similarTitles.size()); i++) {
+                                    final String simTitle = meta.similarTitles.get(i);
+                                    Button simBtn = new Button(ctx);
+                                    simBtn.setText(simTitle);
+                                    simBtn.setAllCaps(false);
+                                    simBtn.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            dialog.dismiss();
+                                            if (searchInput != null && doSearch != null) {
+                                                searchInput.setText(simTitle);
+                                                doSearch.run();
+                                            }
+                                        }
+                                    });
+                                    box.addView(simBtn);
+                                }
+                            }
                         }
                     }
                 });
@@ -430,7 +448,16 @@ public final class OpenCatalogView {
                     if (safeName.length() > 50) safeName = safeName.substring(0, 50);
                     final File epubFile = new File(outDir, safeName + "_" + book.id + ".epub");
 
-                    InputStream is = SafeHttp.openStream(book.epubUrl);
+                    InputStream is = null;
+                    try {
+                        is = SafeHttp.openStream(book.epubUrl);
+                    } catch (Throwable t) {
+                        if (book.id != null && !book.id.isEmpty() && !book.id.startsWith("opds")) {
+                            is = SafeHttp.openStream("http://aleph.gutenberg.org/cache/epub/" + book.id + "/pg" + book.id + ".epub");
+                        } else {
+                            throw t;
+                        }
+                    }
                     FileOutputStream fos = new FileOutputStream(epubFile);
                     try {
                         byte[] buf = new byte[8192];

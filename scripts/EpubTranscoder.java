@@ -336,6 +336,18 @@ public final class EpubTranscoder {
         List<ChapterToc> chapters = new ArrayList<ChapterToc>();
         List<Kf8Section> kf8Sections = new ArrayList<Kf8Section>();
 
+        Map<String, Integer> spineIndexMap = new HashMap<String, Integer>();
+        for (int i = 0; i < spinePaths.size(); i++) {
+            String sp = spinePaths.get(i);
+            spineIndexMap.put(sp, Integer.valueOf(i));
+            spineIndexMap.put(sp.toLowerCase(Locale.US), Integer.valueOf(i));
+            String sbName = getBaseName(sp);
+            if (!spineIndexMap.containsKey(sbName)) {
+                spineIndexMap.put(sbName, Integer.valueOf(i));
+                spineIndexMap.put(sbName.toLowerCase(Locale.US), Integer.valueOf(i));
+            }
+        }
+
         if (kf8Mode) {
             for (int i = 0; i < spinePaths.size(); i++) {
                 String hp = spinePaths.get(i);
@@ -352,7 +364,7 @@ public final class EpubTranscoder {
                 htmlBaos.write(skelBytes);
                 int skelLen = skelBytes.length;
 
-                String body = extractAndNormalizeBody(rawHtml, getDirName(hp), imgRecMap, true);
+                String body = extractAndNormalizeBody(rawHtml, getDirName(hp), imgRecMap, spineIndexMap, true);
                 String fragHtml = (body == null || body.isEmpty()) ? "<p>&#160;</p>" : body;
                 byte[] fragBytes = fragHtml.getBytes(UTF8);
                 int fragStart = htmlBaos.size();
@@ -380,7 +392,7 @@ public final class EpubTranscoder {
                 ChapterToc ct = new ChapterToc(chapLabel, chapStart);
                 chapters.add(ct);
 
-                String body = extractAndNormalizeBody(rawHtml, getDirName(hp), imgRecMap, false);
+                String body = extractAndNormalizeBody(rawHtml, getDirName(hp), imgRecMap, spineIndexMap, false);
                 htmlBaos.write(body.getBytes(UTF8));
                 ct.length = Math.max(1, htmlBaos.size() - chapStart);
             }
@@ -1084,7 +1096,7 @@ public final class EpubTranscoder {
         return raw;
     }
 
-    private static String extractAndNormalizeBody(String rawHtml, String htmlDir, Map<String, Integer> imgRecMap, boolean kf8Mode) {
+    private static String extractAndNormalizeBody(String rawHtml, String htmlDir, Map<String, Integer> imgRecMap, Map<String, Integer> spineIndexMap, boolean kf8Mode) {
         String s = rawHtml;
         int bIdx = indexOfIgnoreCase(s, "<body");
         if (bIdx >= 0) {
@@ -1123,6 +1135,38 @@ public final class EpubTranscoder {
         }
         imgM.appendTail(sb);
         s = sb.toString();
+        if (kf8Mode && spineIndexMap != null && !spineIndexMap.isEmpty()) {
+            Matcher aM = Pattern.compile("<a\\b[^>]*>", Pattern.CASE_INSENSITIVE).matcher(s);
+            StringBuffer aSb = new StringBuffer();
+            while (aM.find()) {
+                String tag = aM.group(0);
+                String href = extractAttr(tag, "href");
+                if (href != null && !href.isEmpty()) {
+                    String lowerH = href.toLowerCase(Locale.US);
+                    if (!lowerH.startsWith("http://") && !lowerH.startsWith("https://") && !lowerH.startsWith("mailto:") && !lowerH.startsWith("kindle:")) {
+                        String filePart = href;
+                        int hIdx = filePart.indexOf('#');
+                        if (hIdx >= 0) filePart = filePart.substring(0, hIdx);
+                        if (!filePart.isEmpty()) {
+                            String resolved = resolveRelPath(htmlDir, filePart);
+                            Integer fidx = spineIndexMap.get(resolved);
+                            if (fidx == null) fidx = spineIndexMap.get(resolved.toLowerCase(Locale.US));
+                            if (fidx == null) fidx = spineIndexMap.get(getBaseName(filePart));
+                            if (fidx == null) fidx = spineIndexMap.get(getBaseName(filePart).toLowerCase(Locale.US));
+                            if (fidx != null) {
+                                String kf8Href = "kindle:pos:fid:" + toBase32Four(fidx.intValue()) + ":off:0000000000";
+                                String replacedTag = tag.replaceFirst("(?i)href\\s*=\\s*(\"[^\"]*\"|'[^']*')", "href=\"" + kf8Href + "\"");
+                                aM.appendReplacement(aSb, Matcher.quoteReplacement(replacedTag));
+                                continue;
+                            }
+                        }
+                    }
+                }
+                aM.appendReplacement(aSb, Matcher.quoteReplacement(tag));
+            }
+            aM.appendTail(aSb);
+            s = aSb.toString();
+        }
         if (!kf8Mode) {
             s = Pattern.compile("<table\\b(?![^>]*border=)", Pattern.CASE_INSENSITIVE).matcher(s).replaceAll("<table border=\"1\"");
         }

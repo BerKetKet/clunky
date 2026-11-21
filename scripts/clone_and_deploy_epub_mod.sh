@@ -66,9 +66,10 @@ xml = re.sub(r'android:label="[^"]*"', 'android:label="Kindle EPUB"', xml, count
 if 'android.permission.MANAGE_EXTERNAL_STORAGE' not in xml:
     xml = re.sub(r'(<application\b)', r'<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>\n    \1', xml, count=1)
 
-# 7. Ensure android:usesCleartextTraffic="true" on <application>
+# 7. Ensure android:usesCleartextTraffic="true" on <application> and remove networkSecurityConfig
 if 'android:usesCleartextTraffic' not in xml:
     xml = re.sub(r'(<application\b)', r'\1 android:usesCleartextTraffic="true"', xml, count=1)
+xml = re.sub(r'\s*android:networkSecurityConfig="[^"]*"', '', xml)
 
 # 8. Register OpenCatalogActivity inside <application> (no LAUNCHER filter, embedded via Home tab)
 catalog_activity = '''
@@ -81,6 +82,11 @@ with open(manifest_path, "w", encoding="utf-8") as f:
     f.write(xml)
 print(f"Patched AndroidManifest.xml: registered OpenCatalogActivity, {len(custom_perms)} custom permissions & all authorities renamed for {new_pkg}")
 PYEOF
+
+if [[ -f "${WORK_DIR}/base_dec/res/xml/network_security_config.xml" ]]; then
+    sed -i 's/cleartextTrafficPermitted="false"/cleartextTrafficPermitted="true"/g' "${WORK_DIR}/base_dec/res/xml/network_security_config.xml"
+    echo "Patched network_security_config.xml to allow cleartext traffic"
+fi
 
 echo "[3.5/6] Compiling mod DEX (EpubTranscoder, EpubBookBuilder, dp.g, OpenCatalogView) with javac + d8..."
 bash "${MOD_ROOT}/tools/compile_mod_dex.sh" "${MOD_ROOT}/dex/classes9.dex"

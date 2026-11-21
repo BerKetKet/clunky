@@ -8,11 +8,8 @@ export PATH="/opt/android-sdk/build-tools/36.0.0:/opt/android-sdk/build-tools/34
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOD_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SRC_STUBS="${MOD_ROOT}/mod_src/stubs"
-if [[ ! -d "${SRC_STUBS}" ]]; then
-    SRC_STUBS="${MOD_ROOT}/07_APK_EPUB_INGESTION_MOD/mod_src/stubs"
-fi
-SRC_REAL="${MOD_ROOT}/07_APK_EPUB_INGESTION_MOD/mod_src/real"
-OUT_DEX="${1:-${MOD_ROOT}/07_APK_EPUB_INGESTION_MOD/dex/classes9.dex}"
+SRC_REAL="${MOD_ROOT}/mod_src/real"
+OUT_DEX="${1:-${MOD_ROOT}/dex/classes9.dex}"
 
 ANDROID_JAR="$(ls -1 /opt/android-sdk/platforms/android-*/android.jar 2>/dev/null | sort -V | tail -n1 || true)"
 if [[ -z "${ANDROID_JAR}" ]]; then

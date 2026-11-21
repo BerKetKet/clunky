@@ -25,11 +25,18 @@ public final class GutendexSource implements BookSource {
         for (int i = 0; i < results.length(); i++) {
             JSONObject item = results.optJSONObject(i);
             if (item == null) continue;
+            int id = item.optInt("id");
             JSONObject formats = item.optJSONObject("formats");
             if (formats == null) continue;
             String epubUrl = formats.optString("application/epub+zip", "");
+            if (id > 0 && (epubUrl.isEmpty() || epubUrl.contains("gutenberg.org"))) {
+                epubUrl = "http://aleph.gutenberg.org/cache/epub/" + id + "/pg" + id + ".epub";
+            }
             if (epubUrl.isEmpty()) continue;
             String coverUrl = formats.optString("image/jpeg", "");
+            if (id > 0 && (coverUrl.isEmpty() || coverUrl.contains("gutenberg.org"))) {
+                coverUrl = "http://aleph.gutenberg.org/cache/epub/" + id + "/pg" + id + ".cover.medium.jpg";
+            }
             String title = item.optString("title", "Untitled");
             String author = "Unknown Author";
             JSONArray authors = item.optJSONArray("authors");

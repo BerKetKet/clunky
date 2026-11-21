@@ -24,7 +24,7 @@ public final class OpenLibraryClient {
         BookMeta meta = new BookMeta();
         try {
             String q = URLEncoder.encode(title + " " + author, "UTF-8");
-            String searchJson = GutendexSource.httpGet("https://openlibrary.org/search.json?q=" + q + "&limit=1");
+            String searchJson = GutendexSource.httpGet("https://openlibrary.org/search.json?q=" + q + "&fields=key,title,author_name,cover_i,isbn,subject&limit=1");
             JSONObject root = new JSONObject(searchJson);
             JSONArray docs = root.optJSONArray("docs");
             if (docs == null || docs.length() == 0) return meta;
@@ -63,21 +63,22 @@ public final class OpenLibraryClient {
                 } catch (Throwable t) { android.util.Log.e("OpenLibraryClient", "Error", t); }
             }
 
-            // Similar books via first subject
+            // Similar books via subject
             JSONArray subjects = doc.optJSONArray("subject");
             if (subjects != null && subjects.length() > 0) {
-                String subj = subjects.optString(0, "").toLowerCase().replace(" ", "_").replaceAll("[^a-z0-9_]", "");
-                if (!subj.isEmpty()) {
+                for (int si = 0; si < subjects.length() && meta.similarTitles.size() < 4; si++) {
+                    String subj = subjects.optString(si, "").toLowerCase().replace(" ", "_").replaceAll("[^a-z0-9_]", "");
+                    if (subj.isEmpty()) continue;
                     try {
                         String sJson = GutendexSource.httpGet("https://openlibrary.org/subjects/" + subj + ".json?limit=6");
                         JSONObject sRoot = new JSONObject(sJson);
                         JSONArray works = sRoot.optJSONArray("works");
                         if (works != null) {
-                            for (int i = 0; i < works.length(); i++) {
+                            for (int i = 0; i < works.length() && meta.similarTitles.size() < 4; i++) {
                                 JSONObject w = works.optJSONObject(i);
                                 if (w == null) continue;
                                 String wt = w.optString("title", "");
-                                if (!wt.isEmpty() && !wt.equalsIgnoreCase(title)) {
+                                if (!wt.isEmpty() && !wt.equalsIgnoreCase(title) && !meta.similarTitles.contains(wt)) {
                                     meta.similarTitles.add(wt);
                                 }
                             }
