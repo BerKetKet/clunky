@@ -528,6 +528,8 @@ public final class OpenCatalogView {
                     String mime = "application/epub+zip";
                     if (targetPath.toLowerCase(Locale.US).endsWith(".pdf")) {
                         mime = "application/pdf";
+                    } else if (targetPath.toLowerCase(Locale.US).endsWith(".kfx")) {
+                        mime = "application/x-kfx";
                     }
                     openIntent.setDataAndType(Uri.fromFile(new File(targetPath)), mime);
                     openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

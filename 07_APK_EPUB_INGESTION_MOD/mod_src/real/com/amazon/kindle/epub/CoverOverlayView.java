@@ -160,6 +160,12 @@ public final class CoverOverlayView {
             if (readerCtrl != null) {
                 Object dv = readerCtrl.getClass().getMethod("getDocViewer").invoke(readerCtrl);
                 if (dv != null) {
+                    String dvName = dv.getClass().getName();
+                    android.util.Log.i("CoverOverlayView", "Current DocViewer: " + dvName);
+                    if (dvName.contains("KRIF") || dvName.contains("kfx") || dvName.contains("KRF")) {
+                        android.util.Log.i("CoverOverlayView", "Skipping CoverOverlayView for native KFX book (KRIFDocViewer active)");
+                        return false;
+                    }
                     pos = ((Integer) dv.getClass().getMethod("getPageStartPosition").invoke(dv)).intValue();
                     android.util.Log.i("CoverOverlayView", "getPageStartPosition: " + pos);
                     Object bookInfo = dv.getClass().getMethod("getBookInfo").invoke(dv);
@@ -201,6 +207,10 @@ public final class CoverOverlayView {
             android.content.Intent intent = activity.getIntent();
             if (intent != null && intent.getData() != null) {
                 String dataPath = intent.getData().getPath();
+                if (dataPath != null && dataPath.toLowerCase(java.util.Locale.US).endsWith(".kfx")) {
+                    android.util.Log.i("CoverOverlayView", "Skipping CoverOverlayView for native KFX book: " + dataPath);
+                    return false;
+                }
                 if (dataPath != null && !dataPath.isEmpty()) {
                     if (dataPath.startsWith("file://")) dataPath = dataPath.substring(7);
                     if (new File(dataPath + ".cover.jpg").exists() && new File(dataPath + ".cover.jpg").length() > 256) {
@@ -279,25 +289,7 @@ public final class CoverOverlayView {
             return showIfAvailable(activity, cp);
         }
 
-        // 1e. Fallback search /sdcard/kindle/ for newest .cover.jpg
-        File dir = new File("/sdcard/kindle");
-        if (dir.exists() && dir.isDirectory()) {
-            File[] files = dir.listFiles();
-            if (files != null) {
-                File newest = null;
-                for (File f : files) {
-                    if (f.getName().endsWith(".cover.jpg") && f.length() > 256) {
-                        if (newest == null || f.lastModified() > newest.lastModified()) {
-                            newest = f;
-                        }
-                    }
-                }
-                if (newest != null) {
-                    android.util.Log.i("CoverOverlayView", "Found fallback cover in /sdcard/kindle: " + newest.getAbsolutePath());
-                    return showIfAvailable(activity, newest.getAbsolutePath());
-                }
-            }
-        }
+
 
         // 2. Only if NO .cover.jpg exists anywhere, fallback to Kindle's native cover directories
         if (asin != null && !asin.isEmpty()) {

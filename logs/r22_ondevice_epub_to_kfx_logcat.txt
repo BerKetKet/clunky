@@ -1,0 +1,4 @@
+11-21 22:06:12.884 23971 23971 I AmazonKindle.com.amazon.kindle.rendering.KRIFView: [main]: setContinuousScrollReflowableEnabled because of swipe and scroll called in KRIFView with value: false
+11-21 22:06:12.884 23971 23971 I AmazonKindle.com.amazon.kindle.rendering.KRIFView: [main]: setContinuousScrollReflowableEnabled because of continuous scroll called in KRIFView with value: false
+11-21 22:06:14.563 23971 23971 I AmazonKindle.l60.d: [main]: Content opened (asin: 1616AF66B40ADD8A3A4294C2304D9FF8, sample: false, title: Delphi Complete Works of Aristophanes (Illustrated) (Delphi Ancient Classics), downloadState: LOCAL, content type: BOOK, MIME type: application/x-kfx-ebook, format: YJBINARY, fixed layout: false, free trial: false, content language: en, content class: DEFAULT)
+11-21 22:06:44.116 23971 23971 I EpubTranscoder: Successfully converted Sophocles - Delphi Complete Works.epub to KFX on-device in 736ms (4038066 bytes)

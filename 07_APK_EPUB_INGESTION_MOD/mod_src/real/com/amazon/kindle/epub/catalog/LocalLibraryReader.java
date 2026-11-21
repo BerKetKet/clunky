@@ -209,7 +209,7 @@ public final class LocalLibraryReader {
                             for (File f : files) {
                                 if (!f.isFile()) continue;
                                 String fn = f.getName().toLowerCase(Locale.US);
-                                if (!fn.endsWith(".epub") && !fn.endsWith(".azw3") && !fn.endsWith(".mobi") && !fn.endsWith(".prc")) continue;
+                                if (!fn.endsWith(".epub") && !fn.endsWith(".kfx") && !fn.endsWith(".azw3") && !fn.endsWith(".mobi") && !fn.endsWith(".prc")) continue;
                                 String fnNorm = fn.replaceAll("[^a-z0-9]", "");
                                 if (!norm.isEmpty() && fnNorm.contains(norm)) {
                                     return f.getAbsolutePath();

@@ -1,15 +1,15 @@
 {
-  "round": 21,
+  "round": 22,
   "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
   "app_label": "Folio",
   "stock_package_read_only": "com.amazon.kindle",
   "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report021.zip",
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report022.zip",
   "max_report_size_mb": 100,
   "tasks": [
-    "Deploy persistent DiskCache (metadata + cover bitmaps + stale-on-error fallback) in SafeHttp and OpenCatalogView",
-    "Run /sdcard/epub/ side-by-side visual parity benchmark comparing every EPUB in Folio vs stock Kindle (read-only)",
-    "Inspect stock Kindle Send-to-Kindle KFX files (read-only) and test local unencrypted .kfx routing into Folio's KRIFDocViewer"
+    "Clone and test pure-Rust hwanjongyu/kfx_converter EPUB->KFX output inside Folio's native KRIFDocViewer",
+    "Skip CoverOverlayView on native .kfx books so stale covers never flash",
+    "Cross-compile kfx-conv for aarch64-linux-android as lib/arm64-v8a/libkfxconv.so and wire on-device EPUB->KFX with automatic KF8 fallback"
   ]
 }
