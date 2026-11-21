@@ -1,15 +1,16 @@
 {
-  "round": 14,
+  "round": 15,
   "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
   "app_label": "Folio",
   "stock_package_read_only": "com.amazon.kindle",
   "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report014.zip",
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report015.zip",
   "max_report_size_mb": 100,
   "tasks": [
-    "Deploy EPUB3 nav.xhtml TOC fallback and intra-file #anchor KF8 hyperlink resolution in EpubTranscoder.java",
-    "Deploy OPDS Quick Presets and Backup/Restore dialog in OpenCatalogView.java",
-    "Verify dialogs, KF8 regression check, and stage signed Folio v1.0 release APKs"
+    "Deploy redesigned Folio Home screen with Continue Reading, Library-seeded Open Library Recommendations, and Popular Free EPUBs cover carousels",
+    "Deploy fullscreen black cover page styling + high-res cover + CSS spacing sanitizer in EpubTranscoder.java",
+    "Capture Home carousels, black cover page, spaced prose, and Aa Font/Layout screenshots",
+    "Reverse-engineer Aa Font -> Spacing gate and native fullscreen cover mode in classes*.dex for Round 016"
   ]
 }

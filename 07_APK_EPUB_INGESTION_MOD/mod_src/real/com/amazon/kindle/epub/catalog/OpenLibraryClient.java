@@ -2,12 +2,16 @@ package com.amazon.kindle.epub.catalog;
 
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * Queries Open Library API for book ratings, ISBN, description, and similar books by subject.
+ * Queries Open Library API for book ratings, ISBN, description, similar books,
+ * and personalized cover-illustrated recommendations seeded from the user's Library.
  */
 public final class OpenLibraryClient {
     public static final class BookMeta {
@@ -24,7 +28,7 @@ public final class OpenLibraryClient {
         BookMeta meta = new BookMeta();
         try {
             String q = URLEncoder.encode(title + " " + author, "UTF-8");
-            String searchJson = GutendexSource.httpGet("https://openlibrary.org/search.json?q=" + q + "&fields=key,title,author_name,cover_i,isbn,subject&limit=1");
+            String searchJson = GutendexSource.httpGet("https://openlibrary.org/search.json?q=" + q + "&limit=1&fields=key,title,author_name,cover_i,isbn,subject");
             JSONObject root = new JSONObject(searchJson);
             JSONArray docs = root.optJSONArray("docs");
             if (docs == null || docs.length() == 0) return meta;
@@ -49,7 +53,7 @@ public final class OpenLibraryClient {
                         meta.avgRating = summary.optDouble("average", 0.0);
                         meta.ratingsCount = summary.optInt("count", 0);
                     }
-                } catch (Throwable t) { android.util.Log.e("OpenLibraryClient", "Error", t); }
+                } catch (Throwable t) { android.util.Log.e("OpenLibraryClient", "Ratings error", t); }
 
                 try {
                     String wJson = GutendexSource.httpGet("https://openlibrary.org" + meta.workKey + ".json");
@@ -60,17 +64,16 @@ public final class OpenLibraryClient {
                     } else if (descObj instanceof JSONObject) {
                         meta.description = ((JSONObject) descObj).optString("value", "");
                     }
-                } catch (Throwable t) { android.util.Log.e("OpenLibraryClient", "Error", t); }
+                } catch (Throwable t) { android.util.Log.e("OpenLibraryClient", "Work error", t); }
             }
 
-            // Similar books via subject
             JSONArray subjects = doc.optJSONArray("subject");
-            if (subjects != null && subjects.length() > 0) {
-                for (int si = 0; si < subjects.length() && meta.similarTitles.size() < 4; si++) {
-                    String subj = subjects.optString(si, "").toLowerCase().replace(" ", "_").replaceAll("[^a-z0-9_]", "");
-                    if (subj.isEmpty()) continue;
+            if (subjects != null) {
+                for (int si = 0; si < Math.min(4, subjects.length()) && meta.similarTitles.size() < 4; si++) {
+                    String subj = normalizeSubject(subjects.optString(si, ""));
+                    if (subj.isEmpty() || subj.length() > 36) continue;
                     try {
-                        String sJson = GutendexSource.httpGet("https://openlibrary.org/subjects/" + subj + ".json?limit=6");
+                        String sJson = GutendexSource.httpGet("https://openlibrary.org/subjects/" + subj + ".json?limit=8");
                         JSONObject sRoot = new JSONObject(sJson);
                         JSONArray works = sRoot.optJSONArray("works");
                         if (works != null) {
@@ -83,11 +86,86 @@ public final class OpenLibraryClient {
                                 }
                             }
                         }
-                    } catch (Throwable t) { android.util.Log.e("OpenLibraryClient", "Error", t); }
+                    } catch (Throwable ignored) {}
                 }
             }
-        } catch (Throwable t) { android.util.Log.e("OpenLibraryClient", "Outer error", t);
+        } catch (Throwable t) {
+            android.util.Log.e("OpenLibraryClient", "Outer error", t);
         }
         return meta;
+    }
+
+    /**
+     * Fetches rich cover-illustrated recommendations from Open Library based on a seed book
+     * in the user's local Library.
+     */
+    public static List<BookResult> fetchRecommendations(String seedTitle, String seedAuthor, int limit) {
+        List<BookResult> recs = new ArrayList<BookResult>();
+        Set<String> seen = new HashSet<String>();
+        seen.add(seedTitle.toLowerCase(Locale.US));
+        try {
+            String q = URLEncoder.encode(seedTitle + " " + seedAuthor, "UTF-8");
+            String searchJson = GutendexSource.httpGet("https://openlibrary.org/search.json?q=" + q + "&limit=1&fields=key,title,subject");
+            JSONObject root = new JSONObject(searchJson);
+            JSONArray docs = root.optJSONArray("docs");
+            if (docs == null || docs.length() == 0) return recs;
+            JSONObject doc = docs.optJSONObject(0);
+            if (doc == null) return recs;
+            JSONArray subjects = doc.optJSONArray("subject");
+            if (subjects == null) return recs;
+
+            for (int si = 0; si < Math.min(5, subjects.length()) && recs.size() < limit; si++) {
+                String subj = normalizeSubject(subjects.optString(si, ""));
+                if (subj.isEmpty() || subj.length() > 32) continue;
+                try {
+                    String sJson = GutendexSource.httpGet("https://openlibrary.org/subjects/" + subj + ".json?limit=14");
+                    JSONObject sRoot = new JSONObject(sJson);
+                    JSONArray works = sRoot.optJSONArray("works");
+                    if (works == null) continue;
+                    for (int i = 0; i < works.length() && recs.size() < limit; i++) {
+                        JSONObject w = works.optJSONObject(i);
+                        if (w == null) continue;
+                        String wt = w.optString("title", "").trim();
+                        int coverId = w.optInt("cover_id", 0);
+                        if (wt.isEmpty() || coverId <= 0) continue;
+                        String keyLow = wt.toLowerCase(Locale.US);
+                        if (seen.contains(keyLow)) continue;
+                        seen.add(keyLow);
+
+                        String auth = "Unknown Author";
+                        JSONArray authors = w.optJSONArray("authors");
+                        if (authors != null && authors.length() > 0) {
+                            JSONObject a0 = authors.optJSONObject(0);
+                            if (a0 != null) auth = a0.optString("name", auth);
+                        }
+                        String coverUrl = "https://covers.openlibrary.org/b/id/" + coverId + "-M.jpg";
+                        recs.add(new BookResult(
+                                "ol_" + coverId,
+                                "Open Library",
+                                wt,
+                                auth,
+                                "", // Will resolve via Gutendex/OPDS when user taps Download & Read
+                                coverUrl,
+                                "",
+                                0
+                        ));
+                    }
+                } catch (Throwable ignored) {}
+            }
+        } catch (Throwable t) {
+            android.util.Log.e("OpenLibraryClient", "Recs error", t);
+        }
+        return recs;
+    }
+
+    private static String normalizeSubject(String raw) {
+        if (raw == null) return "";
+        String s = raw.toLowerCase(Locale.US).trim();
+        if (s.contains("accessible book") || s.contains("protected daisy") || s.contains("in library") || s.contains("lending")) {
+            return "";
+        }
+        s = s.replace(" ", "_").replaceAll("[^a-z0-9_]", "");
+        while (s.contains("__")) s = s.replace("__", "_");
+        return s;
     }
 }

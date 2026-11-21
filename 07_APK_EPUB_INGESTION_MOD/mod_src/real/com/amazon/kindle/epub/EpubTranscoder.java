@@ -334,16 +334,21 @@ public final class EpubTranscoder {
             }
         }
 
-        // 3. Collect CSS (for KF8 Flow 1)
+        // 3. Collect & sanitize CSS (for KF8 Flow 1) so Kindle's native Aa theme/spacing controls work cleanly
         StringBuilder cssBuf = new StringBuilder();
         if (kf8Mode) {
+            cssBuf.append("body { margin: 0; padding: 0; }\n");
+            cssBuf.append("p { margin-top: 0; margin-bottom: 0.35em; }\n");
+            cssBuf.append("table { border-collapse: collapse; }\n");
+            cssBuf.append("img { max-width: 100%; height: auto; }\n");
+            cssBuf.append(".folio-cover-page { margin: 0 !important; padding: 0 !important; width: 100%; height: 100%; background-color: #000000 !important; }\n");
+            cssBuf.append(".folio-cover-wrap { display: table; width: 100%; height: 100%; background-color: #000000; margin: 0; padding: 0; }\n");
+            cssBuf.append(".folio-cover-cell { display: table-cell; vertical-align: middle; text-align: center; background-color: #000000; padding: 0; margin: 0; }\n");
+            cssBuf.append(".folio-cover-img { width: 100%; height: auto; max-width: 100%; max-height: 100%; display: block; margin: 0 auto; }\n");
             for (Map.Entry<String, byte[]> e : zipEntries.entrySet()) {
                 if (e.getKey().toLowerCase(Locale.US).endsWith(".css")) {
-                    cssBuf.append(new String(e.getValue(), UTF8)).append("\n");
+                    cssBuf.append(sanitizeEpubCssForKindle(new String(e.getValue(), UTF8))).append("\n");
                 }
-            }
-            if (cssBuf.length() == 0) {
-                cssBuf.append("body { margin: 0; padding: 0; } table { border-collapse: collapse; }\n");
             }
         }
         byte[] cssBytes = cssBuf.toString().getBytes(UTF8);
@@ -406,7 +411,10 @@ public final class EpubTranscoder {
                 String hp = spinePaths.get(i);
                 String rawHtml = new String(zipEntries.get(hp), UTF8);
                 String aid = String.format(Locale.US, "%04X", i + 1);
-                String skel = "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"kindle:flow:0001?mime=text/css\"/></head><body aid=\"0\"><div aid=\"" + aid + "\"></div></body></html>\n";
+                boolean isCoverPage = (i == 0 && hasCover && isLikelyCoverSpineItem(hp, rawHtml));
+                String skel = isCoverPage
+                        ? "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"kindle:flow:0001?mime=text/css\"/></head><body aid=\"0\" class=\"folio-cover-page\" style=\"margin:0;padding:0;background-color:#000000;\"><div aid=\"" + aid + "\" class=\"folio-cover-wrap\"></div></body></html>\n"
+                        : "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"kindle:flow:0001?mime=text/css\"/></head><body aid=\"0\"><div aid=\"" + aid + "\"></div></body></html>\n";
                 byte[] skelBytes = skel.getBytes(UTF8);
                 int skelStart = htmlBaos.size();
                 int insertPos = skelStart + skel.indexOf("</div>");
@@ -414,7 +422,9 @@ public final class EpubTranscoder {
                 int skelLen = skelBytes.length;
 
                 String body = extractAndNormalizeBody(rawHtml, getDirName(hp), i, imgRecMap, spineIndexMap, true);
-                String fragHtml = (body == null || body.isEmpty()) ? "<p>&#160;</p>" : body;
+                String fragHtml = isCoverPage
+                        ? "<div class=\"folio-cover-cell\"><img class=\"folio-cover-img\" src=\"kindle:embed:0001?mime=image/jpeg\"/></div>"
+                        : ((body == null || body.isEmpty()) ? "<p>&#160;</p>" : body);
                 byte[] fragBytes = fragHtml.getBytes(UTF8);
                 int fragStart = htmlBaos.size();
                 htmlBaos.write(fragBytes);
@@ -1175,13 +1185,13 @@ public final class EpubTranscoder {
     private static byte[] ensureMobiCompatibleImage(String path, byte[] raw, boolean isCover) {
         if (raw == null || raw.length < 4) return raw;
         boolean isJpeg = ((raw[0] & 0xFF) == 0xFF && (raw[1] & 0xFF) == 0xD8);
-        if (isJpeg && (!isCover || raw.length <= 58000)) return raw;
+        if (isJpeg && (!isCover || raw.length <= 350000)) return raw;
         try {
             Bitmap bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length);
             if (bmp != null) {
                 int w = bmp.getWidth(), h = bmp.getHeight();
-                if (isCover && (w > 450 || h > 600)) {
-                    float scale = Math.min(450f / w, 600f / h);
+                if (isCover && (w > 1080 || h > 1600)) {
+                    float scale = Math.min(1080f / w, 1600f / h);
                     int nw = Math.max(1, (int) (w * scale));
                     int nh = Math.max(1, (int) (h * scale));
                     Bitmap scaled = Bitmap.createScaledBitmap(bmp, nw, nh, true);
@@ -1201,6 +1211,29 @@ public final class EpubTranscoder {
             }
         } catch (Throwable ignored) {}
         return raw;
+    }
+
+    private static boolean isLikelyCoverSpineItem(String path, String rawHtml) {
+        String p = (path == null) ? "" : path.toLowerCase(Locale.US);
+        if (p.contains("cover") || p.contains("titlepage")) return true;
+        if (rawHtml != null) {
+            String stripped = rawHtml.replaceAll("(?s)<head\\b[^>]*>.*?</head>", "")
+                    .replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+            boolean hasImg = rawHtml.toLowerCase(Locale.US).contains("<img") || rawHtml.toLowerCase(Locale.US).contains("<image");
+            if (hasImg && stripped.length() < 40) return true;
+        }
+        return false;
+    }
+
+    private static String sanitizeEpubCssForKindle(String css) {
+        if (css == null || css.isEmpty()) return "";
+        // Strip rigid line-height and fixed body/paragraph font-size declarations that crush Kindle's Aa theme spacing
+        String s = css.replaceAll("(?i)line-height\\s*:[^;\\}]+;?", "");
+        s = s.replaceAll("(?i)letter-spacing\\s*:[^;\\}]+;?", "");
+        s = s.replaceAll("(?i)word-spacing\\s*:[^;\\}]+;?", "");
+        // Avoid fixed px/pt font-size locking body prose (keep em/% headings intact)
+        s = s.replaceAll("(?i)font-size\\s*:\\s*[0-9.]+(px|pt)\\s*;?", "");
+        return s;
     }
 
     private static String extractAndNormalizeBody(String rawHtml, String htmlDir, int currentSpineIdx, Map<String, Integer> imgRecMap, Map<String, Integer> spineIndexMap, boolean kf8Mode) {

@@ -9,20 +9,22 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
+import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -30,174 +32,235 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- * Embedded Open Book Catalog View replacing Amazon Store / Kindle+ upsells
- * inside RubyHomeFragment (Home tab of com.amazon.kindle.epub).
- * Supports pluggable sources (Project Gutenberg via Gutendex + Custom OPDS feeds),
- * Open Library ratings/descriptions/similar books, cover thumbnails, and local DB backups.
+ * Folio Home Screen — Rich dark editorial discovery & reading hub:
+ * - Sleek rounded search bar + source pills (Gutenberg / OPDS / Backup) + Genre chips
+ * - "Continue Reading" horizontal cover carousel from local kindle_library.db
+ * - "Because You Read ..." personalized horizontal cover carousel via Open Library API
+ * - "Popular Free EPUBs" horizontal cover carousel with live cover thumbnails
+ * - Cover-illustrated search results & Book Details dialog with 4-tier ZIP-validated downloads
  */
 public final class OpenCatalogView {
-    private static final String PREFS = "OpenCatalogPrefs";
+    private static final String PREFS_NAME = "folio_catalog_prefs";
     private static final String KEY_CUSTOM_OPDS = "custom_opds_url";
 
-    public static View wrap(View originalHomeView) {
-        if (originalHomeView == null) return null;
+    private static final int BG_DARK = 0xFF101216;
+    private static final int BG_SURFACE = 0xFF1B1F27;
+    private static final int BG_CARD = 0xFF232833;
+    private static final int ACCENT_AMBER = 0xFFE6A23C;
+    private static final int ACCENT_TEAL = 0xFF38BDF8;
+    private static final int TEXT_PRIMARY = 0xFFF3F4F6;
+    private static final int TEXT_MUTED = 0xFF9CA3AF;
+
+    private static final ExecutorService IMG_POOL = Executors.newFixedThreadPool(4);
+
+    public static View wrap(View originalView) {
         try {
-            Context ctx = originalHomeView.getContext();
-            FrameLayout container = new FrameLayout(ctx);
-            container.setLayoutParams(new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT));
-
-            originalHomeView.setVisibility(View.GONE);
-            container.addView(originalHomeView);
-
-            View catalogRoot = buildCatalogView(ctx);
-            container.addView(catalogRoot, new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT));
-            return container;
+            if (originalView == null) return null;
+            return build(originalView.getContext());
         } catch (Throwable t) {
-            return originalHomeView;
+            android.util.Log.e("OpenCatalogView", "Failed to build Folio Home", t);
+            return originalView;
         }
     }
 
     public static View buildCatalogView(final Context ctx) {
+        return build(ctx);
+    }
+
+    public static View build(final Context ctx) {
+        final Handler mainHandler = new Handler(Looper.getMainLooper());
+        final SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        final float d = ctx.getResources().getDisplayMetrics().density;
+
         final List<BookSource> sources = new ArrayList<BookSource>();
         sources.add(new GutendexSource());
-        final SharedPreferences prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String savedOpds = prefs.getString(KEY_CUSTOM_OPDS, "");
-        if (!savedOpds.isEmpty()) {
-            sources.add(new OpdsSource("Custom OPDS", savedOpds, ""));
+        if (savedOpds != null && !savedOpds.isEmpty()) {
+            sources.add(new OpdsSource("OPDS Feed", savedOpds, ""));
         }
-
         final int[] activeSourceIdx = new int[]{0};
-        final List<BookResult> currentResults = new ArrayList<BookResult>();
-        final List<String> displayItems = new ArrayList<String>();
-        final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-        LinearLayout root = new LinearLayout(ctx);
+        ScrollView mainScroll = new ScrollView(ctx);
+        mainScroll.setBackgroundColor(BG_DARK);
+        mainScroll.setFillViewport(true);
+        mainScroll.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        final LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.parseColor("#121212"));
-        root.setPadding(36, 96, 36, 160);
+        root.setBackgroundColor(BG_DARK);
+        root.setPadding(dp(d, 16), dp(d, 18), dp(d, 16), dp(d, 84));
+        mainScroll.addView(root);
 
-        // Header row: Title + Backup button
+        // --- Top Brand Header ---
         LinearLayout headerRow = new LinearLayout(ctx);
         headerRow.setOrientation(LinearLayout.HORIZONTAL);
         headerRow.setGravity(Gravity.CENTER_VERTICAL);
+        headerRow.setPadding(0, 0, 0, dp(d, 12));
 
-        TextView header = new TextView(ctx);
-        header.setText("Discover Free EPUBs");
-        header.setTextColor(Color.WHITE);
-        header.setTextSize(21f);
-        header.setTypeface(Typeface.SERIF, Typeface.BOLD);
-        headerRow.addView(header, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView brand = new TextView(ctx);
+        brand.setText("Folio");
+        brand.setTextColor(TEXT_PRIMARY);
+        brand.setTextSize(26f);
+        brand.setTypeface(Typeface.SERIF, Typeface.BOLD);
+        headerRow.addView(brand, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        Button backupBtn = new Button(ctx);
-        backupBtn.setText("Backup");
-        backupBtn.setTextSize(12f);
-        backupBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showBackupRestoreDialog(ctx);
-            }
-        });
-        headerRow.addView(backupBtn);
+        TextView opdsPill = makePill(ctx, d, sources.size() > 1 ? "OPDS" : "+ OPDS", BG_SURFACE, TEXT_PRIMARY);
+        headerRow.addView(opdsPill);
+
+        View gap = new View(ctx);
+        headerRow.addView(gap, new LinearLayout.LayoutParams(dp(d, 8), 1));
+
+        TextView backupPill = makePill(ctx, d, "Backup", BG_SURFACE, ACCENT_AMBER);
+        headerRow.addView(backupPill);
         root.addView(headerRow);
 
-        // Source Switcher row
-        LinearLayout sourceRow = new LinearLayout(ctx);
-        sourceRow.setOrientation(LinearLayout.HORIZONTAL);
-        sourceRow.setPadding(0, 8, 0, 8);
-
-        final Button gutenBtn = new Button(ctx);
-        gutenBtn.setText("Gutenberg");
-        gutenBtn.setTextSize(12f);
-        sourceRow.addView(gutenBtn);
-
-        final Button opdsBtn = new Button(ctx);
-        opdsBtn.setText(savedOpds.isEmpty() ? "+ OPDS Feed" : "Custom OPDS");
-        opdsBtn.setTextSize(12f);
-        sourceRow.addView(opdsBtn);
-
-        root.addView(sourceRow);
-
-        // Search row
-        LinearLayout searchRow = new LinearLayout(ctx);
-        searchRow.setOrientation(LinearLayout.HORIZONTAL);
+        // --- Rounded Search Bar ---
+        LinearLayout searchBar = new LinearLayout(ctx);
+        searchBar.setOrientation(LinearLayout.HORIZONTAL);
+        searchBar.setGravity(Gravity.CENTER_VERTICAL);
+        searchBar.setBackground(roundRect(BG_SURFACE, dp(d, 24), 0xFF2D3340, dp(d, 1)));
+        searchBar.setPadding(dp(d, 16), dp(d, 4), dp(d, 8), dp(d, 4));
+        LinearLayout.LayoutParams sbLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        sbLp.bottomMargin = dp(d, 12);
 
         final EditText searchInput = new EditText(ctx);
-        searchInput.setHint("Search title or author...");
-        searchInput.setHintTextColor(Color.parseColor("#999999"));
-        searchInput.setTextColor(Color.WHITE);
+        searchInput.setHint("Search books, authors, or topics...");
+        searchInput.setHintTextColor(TEXT_MUTED);
+        searchInput.setTextColor(TEXT_PRIMARY);
+        searchInput.setTextSize(15f);
+        searchInput.setBackgroundColor(Color.TRANSPARENT);
         searchInput.setSingleLine(true);
-        searchRow.addView(searchInput, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        searchInput.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+        searchBar.addView(searchInput, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        Button searchBtn = new Button(ctx);
-        searchBtn.setText("Search");
-        searchRow.addView(searchBtn);
-        root.addView(searchRow);
+        final TextView searchGo = makePill(ctx, d, "Search", ACCENT_AMBER, 0xFF101216);
+        searchBar.addView(searchGo);
+        root.addView(searchBar, sbLp);
 
-        final TextView statusView = new TextView(ctx);
-        statusView.setText("Loading popular public-domain books...");
-        statusView.setTextColor(Color.parseColor("#BBBBBB"));
-        statusView.setPadding(0, 12, 0, 12);
-        root.addView(statusView);
+        // --- Genre Quick Chips ---
+        HorizontalScrollView chipScroll = new HorizontalScrollView(ctx);
+        chipScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout chipRow = new LinearLayout(ctx);
+        chipRow.setOrientation(LinearLayout.HORIZONTAL);
+        chipRow.setPadding(0, 0, 0, dp(d, 14));
+        chipScroll.addView(chipRow);
+        root.addView(chipScroll);
 
-        final ArrayAdapter<String> adapter = new ArrayAdapter<String>(ctx, android.R.layout.simple_list_item_1, displayItems) {
-            @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
-                TextView tv = (TextView) super.getView(position, convertView, parent);
-                tv.setTextColor(Color.WHITE);
-                tv.setPadding(12, 20, 12, 20);
-                return tv;
-            }
-        };
+        // --- Search Results Container (hidden until user searches) ---
+        final LinearLayout searchSection = new LinearLayout(ctx);
+        searchSection.setOrientation(LinearLayout.VERTICAL);
+        searchSection.setVisibility(View.GONE);
+        root.addView(searchSection);
 
-        ListView listView = new ListView(ctx);
-        listView.setAdapter(adapter);
-        root.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        // --- Section 1: Continue Reading (Local Library Carousel) ---
+        final LinearLayout libSection = new LinearLayout(ctx);
+        libSection.setOrientation(LinearLayout.VERTICAL);
+        libSection.setVisibility(View.GONE);
+        root.addView(libSection);
 
+        // --- Section 2: Because You Read ... (Open Library Personalized Carousel) ---
+        final LinearLayout recSection = new LinearLayout(ctx);
+        recSection.setOrientation(LinearLayout.VERTICAL);
+        recSection.setVisibility(View.GONE);
+        root.addView(recSection);
+
+        // --- Section 3: Popular Free EPUBs (Gutendex Carousel) ---
+        final LinearLayout popSection = new LinearLayout(ctx);
+        popSection.setOrientation(LinearLayout.VERTICAL);
+        root.addView(popSection);
+
+        final TextView popTitle = makeSectionTitle(ctx, d, "Popular Free EPUBs");
+        popSection.addView(popTitle);
+        final TextView popStatus = new TextView(ctx);
+        popStatus.setText("Loading Project Gutenberg catalog...");
+        popStatus.setTextColor(TEXT_MUTED);
+        popStatus.setTextSize(13f);
+        popStatus.setPadding(0, dp(d, 6), 0, dp(d, 12));
+        popSection.addView(popStatus);
+
+        final HorizontalScrollView popScroll = new HorizontalScrollView(ctx);
+        popScroll.setHorizontalScrollBarEnabled(false);
+        final LinearLayout popCarousel = new LinearLayout(ctx);
+        popCarousel.setOrientation(LinearLayout.HORIZONTAL);
+        popScroll.addView(popCarousel);
+        popSection.addView(popScroll);
+
+        // --- Search Action ---
         final Runnable doSearch = new Runnable() {
             @Override
             public void run() {
+                final String q = searchInput.getText().toString().trim();
                 final BookSource src = sources.get(activeSourceIdx[0]);
-                final String q = searchInput.getText().toString();
-                statusView.setText(q.trim().isEmpty() ? "Loading " + src.getName() + "..." : "Searching " + src.getName() + " for \"" + q + "\"...");
+                if (q.isEmpty() && activeSourceIdx[0] == 0) {
+                    searchSection.setVisibility(View.GONE);
+                    return;
+                }
+                searchSection.setVisibility(View.VISIBLE);
+                searchSection.removeAllViews();
+
+                LinearLayout srHdr = new LinearLayout(ctx);
+                srHdr.setOrientation(LinearLayout.HORIZONTAL);
+                srHdr.setGravity(Gravity.CENTER_VERTICAL);
+                TextView srTitle = makeSectionTitle(ctx, d, q.isEmpty() ? src.getName() : ("Results for \"" + q + "\""));
+                srHdr.addView(srTitle, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                TextView clearBtn = makePill(ctx, d, "Clear", BG_SURFACE, TEXT_MUTED);
+                clearBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        searchInput.setText("");
+                        activeSourceIdx[0] = 0;
+                        searchSection.setVisibility(View.GONE);
+                    }
+                });
+                srHdr.addView(clearBtn);
+                searchSection.addView(srHdr);
+
+                final TextView loadingTv = new TextView(ctx);
+                loadingTv.setText("Searching " + src.getName() + "...");
+                loadingTv.setTextColor(TEXT_MUTED);
+                loadingTv.setTextSize(13f);
+                loadingTv.setPadding(0, dp(d, 6), 0, dp(d, 12));
+                searchSection.addView(loadingTv);
+
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
                         try {
-                            final List<BookResult> found = src.search(q);
+                            final List<BookResult> results = src.search(q);
                             mainHandler.post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    currentResults.clear();
-                                    displayItems.clear();
-                                    currentResults.addAll(found);
-                                    for (BookResult b : found) {
-                                        String sub = (b.downloadCount > 0)
-                                                ? (b.author + "  •  " + b.downloadCount + " downloads")
-                                                : b.author;
-                                        displayItems.add(b.title + "\n" + sub);
+                                    searchSection.removeView(loadingTv);
+                                    if (results.isEmpty()) {
+                                        TextView emptyTv = new TextView(ctx);
+                                        emptyTv.setText("No books found. Try another keyword or OPDS feed.");
+                                        emptyTv.setTextColor(TEXT_MUTED);
+                                        emptyTv.setPadding(0, dp(d, 8), 0, dp(d, 16));
+                                        searchSection.addView(emptyTv);
+                                        return;
                                     }
-                                    adapter.notifyDataSetChanged();
-                                    statusView.setText("Found " + found.size() + " EPUBs via " + src.getName());
+                                    for (int i = 0; i < Math.min(20, results.size()); i++) {
+                                        final BookResult br = results.get(i);
+                                        searchSection.addView(buildSearchRow(ctx, d, mainHandler, br, searchInput, this));
+                                    }
                                 }
                             });
                         } catch (final Throwable t) {
                             mainHandler.post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    statusView.setText("Network error (" + t.getMessage() + "). Tap Search to retry.");
+                                    loadingTv.setText("Error: " + t.getMessage());
                                 }
                             });
                         }
@@ -206,52 +269,400 @@ public final class OpenCatalogView {
             }
         };
 
-        gutenBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                activeSourceIdx[0] = 0;
-                doSearch.run();
-            }
-        });
-
-        opdsBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (sources.size() > 1) {
-                    activeSourceIdx[0] = 1;
+        // Populate Genre Chips
+        String[] genres = new String[]{"Sci-Fi", "Fantasy", "Mystery", "Horror", "Classic", "History", "Philosophy", "Adventure"};
+        for (final String g : genres) {
+            TextView chip = makePill(ctx, d, g, BG_SURFACE, TEXT_PRIMARY);
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            clp.rightMargin = dp(d, 8);
+            chip.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    activeSourceIdx[0] = 0;
+                    searchInput.setText(g);
                     doSearch.run();
-                } else {
-                    promptCustomOpds(ctx, prefs, sources, activeSourceIdx, opdsBtn, doSearch);
                 }
-            }
-        });
+            });
+            chipRow.addView(chip, clp);
+        }
 
-        opdsBtn.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                promptCustomOpds(ctx, prefs, sources, activeSourceIdx, opdsBtn, doSearch);
-                return true;
-            }
-        });
-
-        searchBtn.setOnClickListener(new View.OnClickListener() {
+        // Wire Buttons
+        searchGo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 doSearch.run();
             }
         });
-
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        searchInput.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if (position >= 0 && position < currentResults.size()) {
-                    showBookDetails(ctx, mainHandler, currentResults.get(position), searchInput, doSearch);
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_ACTION_SEARCH || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                    doSearch.run();
+                    return true;
+                }
+                return false;
+            }
+        });
+        backupPill.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showBackupRestoreDialog(ctx);
+            }
+        });
+        opdsPill.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                promptCustomOpds(ctx, prefs, sources, activeSourceIdx, opdsPill, doSearch);
+            }
+        });
+
+        // --- Async Load 1: Local Library Carousel + Open Library Personalized Recommendations ---
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final List<LocalLibraryReader.LocalBook> localBooks = LocalLibraryReader.loadRecentBooks(ctx, 10);
+                if (!localBooks.isEmpty()) {
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            libSection.setVisibility(View.VISIBLE);
+                            libSection.removeAllViews();
+                            libSection.addView(makeSectionTitle(ctx, d, "Continue Reading"));
+                            HorizontalScrollView hs = new HorizontalScrollView(ctx);
+                            hs.setHorizontalScrollBarEnabled(false);
+                            LinearLayout row = new LinearLayout(ctx);
+                            row.setOrientation(LinearLayout.HORIZONTAL);
+                            row.setPadding(0, dp(d, 8), 0, dp(d, 18));
+                            for (final LocalLibraryReader.LocalBook lb : localBooks) {
+                                row.addView(buildLocalCoverCard(ctx, d, mainHandler, lb));
+                            }
+                            hs.addView(row);
+                            libSection.addView(hs);
+                        }
+                    });
+
+                    // Seed personalized Open Library recommendations from the top book in Library
+                    final LocalLibraryReader.LocalBook seed = localBooks.get(0);
+                    final List<BookResult> recs = OpenLibraryClient.fetchRecommendations(seed.title, seed.author, 10);
+                    if (!recs.isEmpty()) {
+                        mainHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                recSection.setVisibility(View.VISIBLE);
+                                recSection.removeAllViews();
+                                String shortSeed = seed.title.length() > 26 ? seed.title.substring(0, 26) + "..." : seed.title;
+                                recSection.addView(makeSectionTitle(ctx, d, "Because You Read " + shortSeed));
+                                HorizontalScrollView hs = new HorizontalScrollView(ctx);
+                                hs.setHorizontalScrollBarEnabled(false);
+                                LinearLayout row = new LinearLayout(ctx);
+                                row.setOrientation(LinearLayout.HORIZONTAL);
+                                row.setPadding(0, dp(d, 8), 0, dp(d, 18));
+                                for (BookResult rec : recs) {
+                                    row.addView(buildRemoteCoverCard(ctx, d, mainHandler, rec, searchInput, doSearch));
+                                }
+                                hs.addView(row);
+                                recSection.addView(hs);
+                            }
+                        });
+                    }
+                }
+            }
+        }).start();
+
+        // --- Async Load 2: Popular Free EPUBs Carousel (Gutendex) ---
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final List<BookResult> popular = sources.get(0).search("");
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            popStatus.setVisibility(View.GONE);
+                            popCarousel.removeAllViews();
+                            popCarousel.setPadding(0, dp(d, 8), 0, dp(d, 18));
+                            for (int i = 0; i < Math.min(14, popular.size()); i++) {
+                                popCarousel.addView(buildRemoteCoverCard(ctx, d, mainHandler, popular.get(i), searchInput, doSearch));
+                            }
+                        }
+                    });
+                } catch (final Throwable t) {
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            popStatus.setText("Catalog error: " + t.getMessage());
+                        }
+                    });
+                }
+            }
+        }).start();
+
+        return mainScroll;
+    }
+
+    private static View buildLocalCoverCard(final Context ctx, float d, final Handler mainHandler, final LocalLibraryReader.LocalBook lb) {
+        LinearLayout card = new LinearLayout(ctx);
+        card.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(d, 114), ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.rightMargin = dp(d, 12);
+        card.setLayoutParams(lp);
+
+        FrameLayout coverFrame = new FrameLayout(ctx);
+        coverFrame.setBackground(roundRect(BG_CARD, dp(d, 8), 0xFF323946, dp(d, 1)));
+        coverFrame.setClipToOutline(true);
+        LinearLayout.LayoutParams cfLp = new LinearLayout.LayoutParams(dp(d, 114), dp(d, 168));
+        cfLp.bottomMargin = dp(d, 6);
+
+        final ImageView iv = new ImageView(ctx);
+        iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        coverFrame.addView(iv, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        final TextView fallback = new TextView(ctx);
+        fallback.setText(lb.title);
+        fallback.setTextColor(TEXT_PRIMARY);
+        fallback.setTextSize(12f);
+        fallback.setGravity(Gravity.CENTER);
+        fallback.setPadding(dp(d, 8), dp(d, 8), dp(d, 8), dp(d, 8));
+        coverFrame.addView(fallback);
+        card.addView(coverFrame, cfLp);
+
+        TextView titleTv = new TextView(ctx);
+        titleTv.setText(lb.title);
+        titleTv.setTextColor(TEXT_PRIMARY);
+        titleTv.setTextSize(12.5f);
+        titleTv.setTypeface(null, Typeface.BOLD);
+        titleTv.setMaxLines(2);
+        titleTv.setEllipsize(TextUtils.TruncateAt.END);
+        card.addView(titleTv);
+
+        if (!lb.author.isEmpty()) {
+            TextView authTv = new TextView(ctx);
+            authTv.setText(lb.author);
+            authTv.setTextColor(TEXT_MUTED);
+            authTv.setTextSize(11f);
+            authTv.setMaxLines(1);
+            authTv.setEllipsize(TextUtils.TruncateAt.END);
+            card.addView(authTv);
+        }
+
+        IMG_POOL.execute(new Runnable() {
+            @Override
+            public void run() {
+                final Bitmap bmp = LocalLibraryReader.decodeCover(lb.coverPath);
+                if (bmp != null) {
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            iv.setImageBitmap(bmp);
+                            fallback.setVisibility(View.GONE);
+                        }
+                    });
                 }
             }
         });
 
-        doSearch.run();
-        return root;
+        card.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (lb.filePath != null && !lb.filePath.isEmpty() && new File(lb.filePath).exists()) {
+                    Intent openIntent = new Intent(Intent.ACTION_VIEW);
+                    openIntent.setClassName(ctx.getPackageName(), "com.amazon.kindle.ThirdPartyUpgradePage");
+                    openIntent.setDataAndType(Uri.fromFile(new File(lb.filePath)), "application/epub+zip");
+                    openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    ctx.startActivity(openIntent);
+                } else {
+                    Toast.makeText(ctx, "Open \"" + lb.title + "\" from your Library tab", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        return card;
+    }
+
+    private static View buildRemoteCoverCard(
+            final Context ctx, float d, final Handler mainHandler, final BookResult book,
+            final EditText searchInput, final Runnable doSearch
+    ) {
+        LinearLayout card = new LinearLayout(ctx);
+        card.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(d, 114), ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.rightMargin = dp(d, 12);
+        card.setLayoutParams(lp);
+
+        FrameLayout coverFrame = new FrameLayout(ctx);
+        coverFrame.setBackground(roundRect(BG_CARD, dp(d, 8), 0xFF323946, dp(d, 1)));
+        coverFrame.setClipToOutline(true);
+        LinearLayout.LayoutParams cfLp = new LinearLayout.LayoutParams(dp(d, 114), dp(d, 168));
+        cfLp.bottomMargin = dp(d, 6);
+
+        final ImageView iv = new ImageView(ctx);
+        iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        coverFrame.addView(iv, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        final TextView fallback = new TextView(ctx);
+        fallback.setText(book.title);
+        fallback.setTextColor(TEXT_PRIMARY);
+        fallback.setTextSize(12f);
+        fallback.setGravity(Gravity.CENTER);
+        fallback.setPadding(dp(d, 8), dp(d, 8), dp(d, 8), dp(d, 8));
+        coverFrame.addView(fallback);
+        card.addView(coverFrame, cfLp);
+
+        TextView titleTv = new TextView(ctx);
+        titleTv.setText(book.title);
+        titleTv.setTextColor(TEXT_PRIMARY);
+        titleTv.setTextSize(12.5f);
+        titleTv.setTypeface(null, Typeface.BOLD);
+        titleTv.setMaxLines(2);
+        titleTv.setEllipsize(TextUtils.TruncateAt.END);
+        card.addView(titleTv);
+
+        TextView authTv = new TextView(ctx);
+        authTv.setText(book.author);
+        authTv.setTextColor(TEXT_MUTED);
+        authTv.setTextSize(11f);
+        authTv.setMaxLines(1);
+        authTv.setEllipsize(TextUtils.TruncateAt.END);
+        card.addView(authTv);
+
+        loadRemoteCoverAsync(book, iv, fallback, mainHandler);
+
+        card.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showBookDetails(ctx, mainHandler, book, searchInput, doSearch);
+            }
+        });
+        return card;
+    }
+
+    private static View buildSearchRow(
+            final Context ctx, float d, final Handler mainHandler, final BookResult book,
+            final EditText searchInput, final Runnable doSearch
+    ) {
+        LinearLayout row = new LinearLayout(ctx);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setBackground(roundRect(BG_SURFACE, dp(d, 10), 0xFF282E3A, dp(d, 1)));
+        row.setPadding(dp(d, 10), dp(d, 10), dp(d, 12), dp(d, 10));
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rlp.bottomMargin = dp(d, 10);
+        row.setLayoutParams(rlp);
+
+        FrameLayout thumbBox = new FrameLayout(ctx);
+        thumbBox.setBackground(roundRect(BG_CARD, dp(d, 6), 0, 0));
+        final ImageView iv = new ImageView(ctx);
+        iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        thumbBox.addView(iv, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        final TextView fb = new TextView(ctx);
+        fb.setText("EPUB");
+        fb.setTextColor(TEXT_MUTED);
+        fb.setTextSize(10f);
+        fb.setGravity(Gravity.CENTER);
+        thumbBox.addView(fb);
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(dp(d, 52), dp(d, 76));
+        tlp.rightMargin = dp(d, 12);
+        row.addView(thumbBox, tlp);
+
+        LinearLayout info = new LinearLayout(ctx);
+        info.setOrientation(LinearLayout.VERTICAL);
+        TextView tvTitle = new TextView(ctx);
+        tvTitle.setText(book.title);
+        tvTitle.setTextColor(TEXT_PRIMARY);
+        tvTitle.setTextSize(15f);
+        tvTitle.setTypeface(null, Typeface.BOLD);
+        tvTitle.setMaxLines(2);
+        tvTitle.setEllipsize(TextUtils.TruncateAt.END);
+        info.addView(tvTitle);
+
+        TextView tvMeta = new TextView(ctx);
+        String metaLine = book.author + (book.downloadCount > 0 ? (" • " + book.downloadCount + " downloads") : (" • " + book.sourceName));
+        tvMeta.setText(metaLine);
+        tvMeta.setTextColor(TEXT_MUTED);
+        tvMeta.setTextSize(12.5f);
+        tvMeta.setPadding(0, dp(d, 3), 0, 0);
+        info.addView(tvMeta);
+        row.addView(info, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        loadRemoteCoverAsync(book, iv, fb, mainHandler);
+
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showBookDetails(ctx, mainHandler, book, searchInput, doSearch);
+            }
+        });
+        return row;
+    }
+
+    private static void loadRemoteCoverAsync(final BookResult book, final ImageView iv, final View fallback, final Handler mainHandler) {
+        IMG_POOL.execute(new Runnable() {
+            @Override
+            public void run() {
+                Bitmap bmp = null;
+                if (book.coverUrl != null && !book.coverUrl.isEmpty()) {
+                    try {
+                        InputStream is = SafeHttp.openStream(book.coverUrl);
+                        bmp = BitmapFactory.decodeStream(is);
+                        is.close();
+                    } catch (Throwable ignored) {}
+                }
+                if (bmp == null) {
+                    try {
+                        OpenLibraryClient.BookMeta m = OpenLibraryClient.fetchMeta(book.title, book.author);
+                        if (m.coverUrl != null && !m.coverUrl.isEmpty()) {
+                            InputStream is = SafeHttp.openStream(m.coverUrl);
+                            bmp = BitmapFactory.decodeStream(is);
+                            is.close();
+                        }
+                    } catch (Throwable ignored) {}
+                }
+                if (bmp != null) {
+                    final Bitmap finalBmp = bmp;
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            iv.setImageBitmap(finalBmp);
+                            if (fallback != null) fallback.setVisibility(View.GONE);
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private static TextView makeSectionTitle(Context ctx, float d, String text) {
+        TextView tv = new TextView(ctx);
+        tv.setText(text);
+        tv.setTextColor(TEXT_PRIMARY);
+        tv.setTextSize(17.5f);
+        tv.setTypeface(Typeface.SERIF, Typeface.BOLD);
+        tv.setPadding(0, dp(d, 6), 0, dp(d, 4));
+        return tv;
+    }
+
+    private static TextView makePill(Context ctx, float d, String text, int bgColor, int textColor) {
+        TextView tv = new TextView(ctx);
+        tv.setText(text);
+        tv.setTextColor(textColor);
+        tv.setTextSize(12.5f);
+        tv.setTypeface(null, Typeface.BOLD);
+        tv.setBackground(roundRect(bgColor, dp(d, 18), 0xFF2D3340, dp(d, 1)));
+        tv.setPadding(dp(d, 14), dp(d, 7), dp(d, 14), dp(d, 7));
+        return tv;
+    }
+
+    private static GradientDrawable roundRect(int fillColor, int radiusPx, int strokeColor, int strokeWidth) {
+        GradientDrawable gd = new GradientDrawable();
+        gd.setColor(fillColor);
+        gd.setCornerRadius(radiusPx);
+        if (strokeWidth > 0) gd.setStroke(strokeWidth, strokeColor);
+        return gd;
+    }
+
+    private static int dp(float density, int value) {
+        return (int) (value * density + 0.5f);
     }
 
     private static void promptCustomOpds(
@@ -259,7 +670,7 @@ public final class OpenCatalogView {
             final SharedPreferences prefs,
             final List<BookSource> sources,
             final int[] activeIdx,
-            final Button opdsBtn,
+            final TextView opdsBtn,
             final Runnable doSearch
     ) {
         LinearLayout layout = new LinearLayout(ctx);
@@ -309,13 +720,13 @@ public final class OpenCatalogView {
                         String url = input.getText().toString().trim();
                         if (!url.isEmpty()) {
                             prefs.edit().putString(KEY_CUSTOM_OPDS, url).apply();
-                            OpdsSource opds = new OpdsSource("Custom OPDS", url, "");
+                            OpdsSource opds = new OpdsSource("OPDS Feed", url, "");
                             if (sources.size() > 1) {
                                 sources.set(1, opds);
                             } else {
                                 sources.add(opds);
                             }
-                            opdsBtn.setText("OPDS Feed");
+                            opdsBtn.setText("OPDS");
                             activeIdx[0] = 1;
                             doSearch.run();
                         }
@@ -344,13 +755,21 @@ public final class OpenCatalogView {
         box.addView(msgView);
         scroll.addView(box);
 
+        final boolean isOpenLibRec = (book.epubUrl == null || book.epubUrl.isEmpty());
         final AlertDialog dialog = new AlertDialog.Builder(ctx)
                 .setTitle(book.title)
                 .setView(scroll)
-                .setPositiveButton("Download & Read", new DialogInterface.OnClickListener() {
+                .setPositiveButton(isOpenLibRec ? "Find Free EPUB" : "Download & Read", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int which) {
-                        downloadAndOpen(ctx, mainHandler, book);
+                        if (isOpenLibRec) {
+                            if (searchInput != null && doSearch != null) {
+                                searchInput.setText(book.title);
+                                doSearch.run();
+                            }
+                        } else {
+                            downloadAndOpen(ctx, mainHandler, book);
+                        }
                     }
                 })
                 .setNegativeButton("Close", null)
@@ -362,21 +781,20 @@ public final class OpenCatalogView {
             public void run() {
                 final OpenLibraryClient.BookMeta meta = OpenLibraryClient.fetchMeta(book.title, book.author);
 
-                // Fetch cover bitmap: try book.coverUrl first, fallback to Open Library if Gutenberg is 503
                 Bitmap bmp = null;
                 if (book.coverUrl != null && !book.coverUrl.isEmpty()) {
                     try {
                         InputStream is = SafeHttp.openStream(book.coverUrl);
                         bmp = BitmapFactory.decodeStream(is);
                         is.close();
-                    } catch (Throwable t) { android.util.Log.e("OpenCatalogView", "Primary cover error", t); }
+                    } catch (Throwable ignored) {}
                 }
                 if (bmp == null && meta.coverUrl != null && !meta.coverUrl.isEmpty()) {
                     try {
                         InputStream is = SafeHttp.openStream(meta.coverUrl);
                         bmp = BitmapFactory.decodeStream(is);
                         is.close();
-                    } catch (Throwable t) { android.util.Log.e("OpenCatalogView", "Fallback cover error", t); }
+                    } catch (Throwable ignored) {}
                 }
                 if (bmp != null) {
                     final Bitmap finalBmp = bmp;
@@ -537,7 +955,7 @@ public final class OpenCatalogView {
                     if (book.epubUrl != null && !book.epubUrl.isEmpty()) {
                         candidateUrls.add(book.epubUrl);
                     }
-                    if (book.id != null && !book.id.isEmpty() && !book.id.startsWith("opds")) {
+                    if (book.id != null && !book.id.isEmpty() && !book.id.startsWith("opds") && !book.id.startsWith("ol_")) {
                         candidateUrls.add("https://www.gutenberg.org/cache/epub/" + book.id + "/pg" + book.id + "-images.epub");
                         candidateUrls.add("http://aleph.gutenberg.org/cache/epub/" + book.id + "/pg" + book.id + "-images.epub");
                         candidateUrls.add("http://aleph.gutenberg.org/cache/epub/" + book.id + "/pg" + book.id + ".epub");
@@ -571,7 +989,6 @@ public final class OpenCatalogView {
                             fos = null;
                             is.close();
                             is = null;
-                            // Validate real ZIP/EPUB magic bytes (PK\x03\x04) and minimum size
                             boolean validZip = (hdrLen == 4 && hdr[0] == 0x50 && hdr[1] == 0x4B && hdr[2] == 0x03 && hdr[3] == 0x04 && total >= 1024);
                             if (validZip) {
                                 if (epubFile.exists()) epubFile.delete();

@@ -1,4 +1,4 @@
-# Round 014 Report — EPUB3 `nav.xhtml` TOC + Intra-File `#anchor` KF8 Links + OPDS Quick Presets & Backup/Restore UI + Release v1.0 Bundle
+# Round 015 Report — Flagship Home Carousels + Fullscreen Black Cover + Spacing/Theme Parity Bytecode Analysis
 
 **Target Package:** `com.amazon.kindle.epub` ("Folio")  
 **Stock Invariant Status:** `com.amazon.kindle` (v8.160.1.0) is **100% UNTOUCHED and READ-ONLY** (verified via package manager dumpsys `lastUpdateTime=2026-11-19 21:59:23`).  
@@ -8,49 +8,38 @@
 
 ## 1. Executive Summary
 
-In Round 014, all assigned capabilities and verification tasks were executed, validated on-device, and bundled:
-1. **Task A (Build & Deploy Round 014)**:
-   - Integrated EPUB3 `nav.xhtml` TOC fallback parsing and intra-file `#anchor` KF8 link rewriting (`kindle:pos:fid:XXXX:off:YYYYYYYYYY` via `toBase32Ten`) into `EpubTranscoder.java`, cleanly preserving the multi-chapter `NavAnchor` parser and 4-digit `%04d` INDX keys from Round 013.
-   - Deployed updated `OpenCatalogView.java` with OPDS Quick Presets and Library/Notes Backup & Restore dialog.
-   - Built `classes9.dex` (65,016 bytes), repackaged split APKs, signed, and installed `com.amazon.kindle.epub` with exit code `Success`.
-   - Verified that stock `com.amazon.kindle` package is 100% untouched.
-2. **Task B (Home Catalog Dialogs & Backup Execution)**:
-   - Verified the `+ OPDS Feed` modal with Quick Preset buttons (**Feedbooks Public Domain**, **Project Gutenberg OPDS**, **Internet Archive OPDS**) and custom URL entry (`screenshots/verify_r14_opds_presets.png`).
-   - Verified the **Folio Library & Notes Backup** modal (`Backup Now` / `Restore Latest`) (`screenshots/verify_r14_backup_restore.png`).
-   - Executed **Backup Now** and verified on `/sdcard/kindle/backups/` that fresh timestamped database backups were written:
-     - `20261121_090505_annotations.db` (36,864 bytes)
-     - `20261121_090505_kindle_library.db` (180,224 bytes)
-3. **Task C (Regression Check & Release v1.0 Bundle)**:
-   - Re-transcoded *Moby Dick* (`Moby_Dick__Or__The_Whale_2701.epub`), launched in `StandAloneBookReaderActivity`, and opened the native TOC drawer to verify zero regressions in multi-chapter navigation (`screenshots/verify_r14_kf8_regression.png`).
-   - Saved signed release binaries cleanly into `07_APK_EPUB_INGESTION_MOD/release/folio_v1.0/`:
-     - `base.apk`: 134,811,261 bytes
-     - `base.apk.idsig`: 1,074,563 bytes
+In Round 015, all assigned objectives across UI modernization, EPUB transcoder enhancement, on-device verification, and smali reverse-engineering were completed end-to-end:
+1. **Task A (Build & Deploy Round 015)**:
+   - Integrated the four Round 015 modules: `EpubTranscoder.java`, `catalog/LocalLibraryReader.java`, `catalog/OpenLibraryClient.java`, and `catalog/OpenCatalogView.java`.
+   - Fixed compile discrepancies: added `OpenCatalogView.buildCatalogView(Context)` alias and corrected `BookResult` parameter order in `OpenLibraryClient.java`.
+   - Built Dalvik DEX `classes9.dex` (82,492 bytes), repackaged base APK, resigned, and deployed via `clone_and_deploy_epub_mod.sh` (`Success`).
+   - Verified that stock `com.amazon.kindle` package remains 100% untouched.
+2. **Task B (On-Device UI Verification & Screenshots)**:
+   - **Home Screen Carousels**: Verified the editorial dark Home screen with pill buttons (`+ OPDS`, `Backup`), genre quick chips (`Sci-Fi`, `Fantasy`, `Mystery`, `Horror`, `Classic`, `History`), and live horizontal cover carousels: **Continue Reading** (seeded with local library covers), **Because You Read Metro 2034** (recommendations via Open Library API), and **Popular Free EPUBs** (`screenshots/verify_r15_home_carousels.png`).
+   - **Cover Page on #000000 Black**: Cleared cached `.azw3` files and re-transcoded *Moby Dick*. Verified cover rendered full-width vertically centered on pure black (`screenshots/verify_r15_cover_black.png`).
+   - **Spaced Prose**: Verified Chapter 1 prose breathing cleanly without rigid EPUB CSS constraints (`screenshots/verify_r15_spaced_prose.png`).
+   - **`Aa` Menu Parity**: Captured both the **Font** tab (`screenshots/verify_r15_aa_font.png`) and the **Layout** tab (`screenshots/verify_r15_aa_layout.png`).
+3. **Task C (Deep Bytecode Reverse-Engineering for Round 016)**:
+   - Disassembled and traced the `Aa → Font → Spacing` ("Adjust text spacing of the page") visibility gate down to `com.amazon.kindle.viewoptions.textspacing.TextSpacingModel.getTextSpacingWidgetEnabled()` in `classes6.dex`.
+   - Pinpointed the exact reason MOBI8/KF8 hides the Spacing sub-tab while KFX reveals it: `MobiDocViewer` inherits from `KindleDocViewerImpl` in `classes2.dex`, where `hasLineSpacingV2Support()`, `hasLetterSpacingSupport()`, `hasParagraphSpacingSupport()`, and `hasWordSpacingSupport()` are hardcoded to `const/4 v0, 0` (`false`).
+   - Located the cover viewport rendering path in `z8.i` and `MobiDocViewer.h1()`, providing the blueprint for zero-margin full-bleed cover rendering in Round 016.
+   - Comprehensive disassembly logs and smali snippets saved to `logs/aa_spacing_and_cover_analysis.txt`.
 4. **Task D (Packaging & Autonomous Delivery)**:
-   - Packaged report into `antig_to_gemini_neon_clunky_report014.zip` (< 100 MB).
+   - Packaged all artifacts into `antig_to_gemini_neon_clunky_report015.zip` (< 100 MB).
 
 ---
 
 ## 2. Task A — Code Integration & Build Verification
 
-### A.1 Clean Integration of Transcoder Enhancements
-The upstream draft of `EpubTranscoder.java` omitted the Round 013 `NavAnchor` intra-file chapter infrastructure. A unified merge was performed:
-- Retained full regex `<navPoint>` and `<content src="...#fragment">` anchor resolution.
-- Retained 4-digit Secondary INDX keys (`%04d`).
-- Added EPUB3 `nav.xhtml` fallback:
-  - Scans OPF `<manifest>` for `<item properties="nav" ... href="...">` or ID `nav`.
-  - Parses `<nav epub:type="toc">` or standard `<nav>` elements, extracting `<a href="...">` links and nested headings when `toc.ncx` is missing.
-- Added Intra-File `#anchor` Link Rewriter:
-  - Implemented `rewriteAnchorLinks(html, fileNum, spineEntry)` to rewrite same-file internal references:
-    - `<a href="#id">` $\to$ `<a href="kindle:pos:fid:XXXX:off:YYYYYYYYYY">`
-    - `<a href="samefile.xhtml#id">` $\to$ `<a href="kindle:pos:fid:XXXX:off:YYYYYYYYYY">`
-  - Encoded target byte offsets into 10-character Base-32 Kindle position format using `toBase32Ten(offset)`.
+### A.1 Fixes Applied During Ingest
+1. **`OpenCatalogView.java`**: Added `public static View buildCatalogView(final Context ctx)` delegating to `build(ctx)` to ensure backward-compatibility with `OpenCatalogActivity`.
+2. **`OpenLibraryClient.java`**: Corrected `BookResult` instantiation on line 142 to pass `(id, sourceName, title, author, epubUrl, coverUrl, isbn, downloadCount)` matching `BookResult.java`'s 8-parameter constructor.
 
-### A.2 Compilation & Deployment Stats
-- **Classes Compiled**: `EpubTranscoder.class`, `EpubTranscoder$NavAnchor.class`, `OpenCatalogView.class`, `OpenCatalogView$1.class`, `OpenCatalogView$2.class`, etc.
-- **DEX Output**: `classes9.dex` (65,016 bytes).
-- **APKs Resigned**: `signed_splits/base.apk` (134,811,261 bytes).
-- **Package Manager**: Installed via `pm install -r -d` (`Success`).
-- **Stock App Verification**:
+### A.2 Compilation & Deployment Metrics
+- **DEX Output**: `07_APK_EPUB_INGESTION_MOD/dex/classes9.dex` (82,492 bytes, up from 65,016 bytes).
+- **Injected Layer**: Injected as `classes4.dex` in the multidex shift chain.
+- **Install Verification**: `pm install -r -d` completed with `Success`.
+- **Stock App Invariant**:
   ```
   Package: com.amazon.kindle
   versionName=8.160.1.0(2.0.124621.0)
@@ -60,64 +49,58 @@ The upstream draft of `EpubTranscoder.java` omitted the Round 013 `NavAnchor` in
 
 ---
 
-## 3. Task B — Home Catalog Dialogs & Backup Verification
+## 3. Task B — On-Device Verification Evidence
 
-### B.1 OPDS Quick Presets Dialog
-- Navigated to Home Catalog tab in Folio.
-- Tapped `+ OPDS Feed` (`[46,128][353,205]`).
-- Modal successfully popped with preset options:
-  1. `Feedbooks Public Domain` (`https://catalog.feedbooks.com/publicdomain/browse.atom`)
-  2. `Project Gutenberg OPDS` (`https://m.gutenberg.org/ebooks.opds/`)
-  3. `Internet Archive OPDS` (`https://bookserver.archive.org/catalog/`)
-  4. Custom URL input field + Save / Cancel buttons.
-- **Evidence Screenshot:** `screenshots/verify_r14_opds_presets.png`
+### B.1 Home Screen Cover Carousels
+- Navigated to the Home tab in Folio.
+- Verified the new editorial layout:
+  - Header: Folio branding with rounded `+ OPDS` and `Backup` pill buttons.
+  - Quick Search: Rounded search bar and genre chips (`Sci-Fi`, `Fantasy`, `Mystery`, `Horror`, `Classic`, `History`).
+  - **Continue Reading Carousel**: Displays cover tiles for *Metro 2034*, *Moby Dick*, *Alice's Adventures in Wonderland*, and *Frankenstein*.
+  - **Because You Read Metro 2034**: Populated asynchronously via Open Library API.
+- **Evidence Screenshot:** `screenshots/verify_r15_home_carousels.png`
 
-### B.2 Folio Library & Notes Backup Dialog
-- Tapped `Backup` button on the Home Catalog bar.
-- Modal displayed:
-  - Title: **Folio Library & Notes Backup**
-  - Description: Automatic SQLite backups to `/sdcard/kindle/backups/`.
-  - Actions: **Backup Now** / **Restore Latest** / **Cancel**.
-- **Evidence Screenshot:** `screenshots/verify_r14_backup_restore.png`
+### B.2 Fullscreen Black Cover Page
+- Removed cached `Moby_Dick__Or__The_Whale_2701.epub.azw3` and reopened through `ThirdPartyUpgradePage`.
+- Re-transcoded with Round 015 high-res cover preservation and black styling (`background-color: #000000`).
+- Navigated to "Cover" via native TOC drawer.
+- Cover image rendered full-width vertically centered against pure black.
+- **Evidence Screenshot:** `screenshots/verify_r15_cover_black.png`
 
-### B.3 On-Device Backup Verification
-- Tapped **Backup Now**; toast confirmation displayed.
-- Verified on filesystem via adb:
-  ```
-  /sdcard/kindle/backups/
-  -rw-rw---- 1 root everybody  36864 2026-11-21 09:05 20261121_090505_annotations.db
-  -rw-rw---- 1 root everybody 180224 2026-11-21 09:05 20261121_090505_kindle_library.db
-  ```
-- Both `kindle_library.db` (catalog metadata, reading progress) and `annotations.db` (bookmarks, highlights) were backed up cleanly.
+### B.3 Spaced Prose Verification
+- Navigated to Chapter 1 ("CHAPTER 1. Loomings.").
+- Verified prose renders cleanly with normalized line-height and letter-spacing sanitized by `sanitizeEpubCssForKindle()`.
+- **Evidence Screenshot:** `screenshots/verify_r15_spaced_prose.png`
+
+### B.4 `Aa` Reader Menu (Font & Layout Tabs)
+- Tapped Reading Settings (`menuitem_viewoptions` at `[804,83][942,251]`).
+- **Font Tab**: Rendered font face options (Bookerly, Caecilia, Droid Serif, Georgia), font size slider, and brightness control (`screenshots/verify_r15_aa_font.png`).
+- **Layout Tab**: Rendered page colors (white, sepia, green, black), margins (narrow, normal, wide), and orientation lock (`screenshots/verify_r15_aa_layout.png`).
 
 ---
 
-## 4. Task C — Reader Regression Check & Release v1.0 Bundle
+## 4. Task C — Reverse-Engineering Findings for Round 016
 
-### C.1 Native TOC Drawer & KF8 Reader Regression Verification
-- Re-transcoded and opened `/sdcard/kindle/Moby_Dick__Or__The_Whale_2701.epub`.
-- Summoned reading chrome and opened Table of Contents drawer (`com.amazon.kindle.epub:id/menuitem_hamburger` at `[138,83][276,251]`).
-- The native TOC drawer rendered all chapter headings accurately:
-  - `Moby Dick; Or, The Whale`
-  - `MOBY-DICK; or, THE WHALE.`
-  - `ETYMOLOGY.`
-  - `EXTRACTS.`
-  - `CHAPTER 1. Loomings.`
-  - `CHAPTER 2. The Carpet-Bag.`
-  - `CHAPTER 3. The Spouter-Inn.`
-  - ... through all consecutive chapters.
-- **Evidence Screenshot:** `screenshots/verify_r14_kf8_regression.png`
+### C.1 `Aa → Font → Spacing` Visibility Gate
+- **Location:** `com.amazon.kindle.viewoptions.textspacing.TextSpacingModel` in `classes6.dex` (originally `classes5.dex`).
+- **The Gate Method:** `getTextSpacingWidgetEnabled(Lcom/amazon/kindle/krx/viewoptions/AaSettingIdentifier;Lcom/amazon/android/docviewer/q0;)Z`
+- **Method Logic:**
+  ```smali
+  1e4174: invoke-interface {v2}, Lcom/amazon/android/docviewer/q0;->hasLetterSpacingSupport:()Z
+  1e417e: invoke-interface {v2}, Lcom/amazon/android/docviewer/q0;->hasWordSpacingSupport:()Z
+  1e4188: invoke-interface {v2}, Lcom/amazon/android/docviewer/q0;->hasParagraphSpacingSupport:()Z
+  1e4192: invoke-interface {v2}, Lcom/amazon/android/docviewer/q0;->hasLineSpacingV2Support:()Z
+  ```
+- **The Core Discrepancy:**
+  - For KFX: `q0` is `com.amazon.kindle.rendering.KRIFDocViewer`, which queries KRF engine capabilities and returns `true`.
+  - For MOBI8/KF8: `q0` is `com.amazon.android.docviewer.mobi.MobiDocViewer`, which inherits from `KindleDocViewerImpl` (classes2.dex offset `0x2cc7a4` - `0x2cc7f2`), where all 4 methods return `const/4 v0, 0` (`false`).
+- **Round 016 Smali Patch Blueprint:**
+  In `TextSpacingModel.getTextSpacingWidgetEnabled`, replace opcode `0x6200` with `const/4 v0, 0x1; return v0` (at offset `0x1e4148`), or patch `KindleDocViewerImpl` in `classes2.dex`. This will immediately unlock the native `Aa → Font → Spacing` sub-panel for all EPUB/KF8 books.
 
-### C.2 Clean Release v1.0 APK Bundle
-The signed production APKs for Folio v1.0 have been saved into `07_APK_EPUB_INGESTION_MOD/release/folio_v1.0/`:
-- **Directory:** `07_APK_EPUB_INGESTION_MOD/release/folio_v1.0/`
-- **Files & Exact Byte Sizes:**
-  ```
-  -rw-r--r-- 1 bgg bgg 134811261 Nov 21 09:07 base.apk
-  -rw-r--r-- 1 bgg bgg   1074563 Nov 21 09:07 base.apk.idsig
-  ```
-- Total bundle size: 135,885,824 bytes (~129.6 MB).
-- Note: Release APKs are stored locally and omitted from the report zip to keep the archive $< 100\text{ MB}$.
+### C.2 Fullscreen Cover Page Mode
+- `MobiDocViewer.hasCoverPage():Z` returns `const/4 v0, 0x1` (classes2.dex offset `0x2dfbb8`).
+- Viewport margins are managed by `z8.i.setMargin(Margin)` via `MobiDocViewer.h1()`.
+- To achieve edge-to-edge zero-margin cover rendering in Round 016, a page position hook in `BaseAnimatedPageFlipper` or `MobiDocViewer` can swap `m_margin` to `Margin.ZERO` whenever position is Cover (FID 0).
 
 ---
 
@@ -125,11 +108,12 @@ The signed production APKs for Folio v1.0 have been saved into `07_APK_EPUB_INGE
 
 | Item | Description | Verification Status | Artifact Path |
 |---|---|---|---|
-| Task A | Round 014 Build & Install | Verified (`pm install` Success) | `logs/logcat_r14.txt` |
+| Task A | Round 015 Build & Install | Verified (`pm install` Success) | `07_APK_EPUB_INGESTION_MOD/dex/classes9.dex` (82,492 B) |
 | Task A | Stock Invariant | Verified (Untouched, lastUpdateTime 2026-11-19) | `dumpsys package com.amazon.kindle` |
-| Task B.1 | OPDS Quick Presets Dialog | Verified on-device | `screenshots/verify_r14_opds_presets.png` |
-| Task B.2 | Backup & Restore Dialog | Verified on-device | `screenshots/verify_r14_backup_restore.png` |
-| Task B.3 | Backup Now SQLite Output | Verified (`/sdcard/kindle/backups/`) | `20261121_090505_*.db` |
-| Task C.1 | Reader & TOC Drawer Regression | Verified on-device (Moby Dick 135+ TOC) | `screenshots/verify_r14_kf8_regression.png` |
-| Task C.2 | Release v1.0 Binaries | Staged in `release/folio_v1.0/` | `07_APK_EPUB_INGESTION_MOD/release/folio_v1.0/base.apk` (134,811,261 B) |
-| Task D | Report Archive | Verified (< 100 MB) | `antig_to_gemini_neon_clunky_report014.zip` |
+| Task B.1 | Home Cover Carousels | Verified on-device | `screenshots/verify_r15_home_carousels.png` |
+| Task B.2 | Fullscreen Black Cover | Verified on-device | `screenshots/verify_r15_cover_black.png` |
+| Task B.3 | Spaced Prose (Sanitized CSS) | Verified on-device | `screenshots/verify_r15_spaced_prose.png` |
+| Task B.4 | `Aa` Reader Menu (Font Tab) | Verified on-device | `screenshots/verify_r15_aa_font.png` |
+| Task B.4 | `Aa` Reader Menu (Layout Tab)| Verified on-device | `screenshots/verify_r15_aa_layout.png` |
+| Task C | Reverse-Engineering Analysis | Verified (Exact smali & bytecode offsets) | `logs/aa_spacing_and_cover_analysis.txt` |
+| Task D | Report Archive | Verified (< 100 MB) | `antig_to_gemini_neon_clunky_report015.zip` |

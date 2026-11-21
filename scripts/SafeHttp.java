@@ -45,7 +45,7 @@ public final class SafeHttp {
             }
             return sb.toString();
         } finally {
-            try { is.close(); } catch (Throwable t) { android.util.Log.e("SafeHttp", "DoH/HTTP error", t);}
+            try { is.close(); } catch (Throwable ignored) {}
         }
     }
 
@@ -60,7 +60,7 @@ public final class SafeHttp {
             }
             return baos.toByteArray();
         } finally {
-            try { is.close(); } catch (Throwable t) { android.util.Log.e("SafeHttp", "DoH/HTTP error", t);}
+            try { is.close(); } catch (Throwable ignored) {}
         }
     }
 
@@ -178,7 +178,7 @@ public final class SafeHttp {
                         }
                     }
                 }
-            } catch (Throwable t) { android.util.Log.e("SafeHttp", "DoH/HTTP error", t);
+            } catch (Throwable ignored) {
             } finally {
                 if (conn != null) conn.disconnect();
             }
