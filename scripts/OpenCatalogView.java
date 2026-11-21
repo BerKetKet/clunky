@@ -505,14 +505,31 @@ public final class OpenCatalogView {
         card.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (lb.filePath != null && !lb.filePath.isEmpty() && new File(lb.filePath).exists()) {
+                String targetPath = lb.filePath;
+                if (targetPath == null || targetPath.isEmpty() || !new File(targetPath).exists()) {
+                    targetPath = LocalLibraryReader.resolveLocalFile(targetPath, lb.title);
+                }
+                if (targetPath != null && !targetPath.isEmpty() && new File(targetPath).exists()) {
                     Intent openIntent = new Intent(Intent.ACTION_VIEW);
                     openIntent.setClassName(ctx.getPackageName(), "com.amazon.kindle.ThirdPartyUpgradePage");
-                    openIntent.setDataAndType(Uri.fromFile(new File(lb.filePath)), "application/epub+zip");
+                    String mime = "application/epub+zip";
+                    if (targetPath.toLowerCase(Locale.US).endsWith(".pdf")) {
+                        mime = "application/pdf";
+                    }
+                    openIntent.setDataAndType(Uri.fromFile(new File(targetPath)), mime);
                     openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     ctx.startActivity(openIntent);
                 } else {
-                    Toast.makeText(ctx, "Open \"" + lb.title + "\" from your Library tab", Toast.LENGTH_SHORT).show();
+                    Intent readerIntent = new Intent();
+                    readerIntent.setClassName(ctx.getPackageName(), "com.amazon.kcp.reader.StandAloneBookReaderActivity");
+                    readerIntent.putExtra("book_id", lb.id);
+                    readerIntent.putExtra("asin", lb.asin);
+                    readerIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    try {
+                        ctx.startActivity(readerIntent);
+                    } catch (Throwable t) {
+                        android.util.Log.e("OpenCatalogView", "Direct reader launch failed for " + lb.title, t);
+                    }
                 }
             }
         });
@@ -799,7 +816,7 @@ public final class OpenCatalogView {
         final AlertDialog dialog = new AlertDialog.Builder(ctx)
                 .setTitle(book.title)
                 .setView(scroll)
-                .setPositiveButton(isOpenLibRec ? "Find Free EPUB" : "Download & Read", new DialogInterface.OnClickListener() {
+                .setPositiveButton(isOpenLibRec ? "Search Catalog" : "Download & Read", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int which) {
                         if (isOpenLibRec) {
@@ -850,12 +867,27 @@ public final class OpenCatalogView {
                 }
                 final StringBuilder msg = new StringBuilder();
                 msg.append("Author: ").append(book.author).append("\n");
-                msg.append("Source: ").append(book.sourceName).append("\n");
+                if (meta.firstPublishYear > 0) {
+                    msg.append("First Published: ").append(meta.firstPublishYear).append("\n");
+                }
                 if (meta.ratingsCount > 0) {
                     msg.append(String.format(Locale.US, "Open Library Rating: %.2f / 5 (%d ratings)\n", meta.avgRating, meta.ratingsCount));
                 }
+                if (!meta.subjects.isEmpty()) {
+                    StringBuilder sbSub = new StringBuilder();
+                    for (int i = 0; i < Math.min(4, meta.subjects.size()); i++) {
+                        if (i > 0) sbSub.append(" • ");
+                        sbSub.append(meta.subjects.get(i));
+                    }
+                    msg.append("Topics: ").append(sbSub.toString()).append("\n");
+                }
+                if (isOpenLibRec) {
+                    msg.append("Availability: Book info via Open Library (tap 'Search Catalog' to check OPDS / Gutenberg)\n");
+                } else {
+                    msg.append("Source: ").append(book.sourceName).append("\n");
+                }
                 if (!meta.description.isEmpty()) {
-                    String desc = meta.description.length() > 380 ? meta.description.substring(0, 380) + "..." : meta.description;
+                    String desc = meta.description.length() > 520 ? meta.description.substring(0, 520) + "..." : meta.description;
                     msg.append("\n").append(desc).append("\n");
                 }
                 mainHandler.post(new Runnable() {

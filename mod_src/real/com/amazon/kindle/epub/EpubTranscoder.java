@@ -341,10 +341,6 @@ public final class EpubTranscoder {
             cssBuf.append("p { margin-top: 0; margin-bottom: 0.35em; }\n");
             cssBuf.append("table { border-collapse: collapse; }\n");
             cssBuf.append("img { max-width: 100%; height: auto; }\n");
-            cssBuf.append(".folio-cover-page { margin: 0 !important; padding: 0 !important; width: 100%; height: 100%; background-color: #000000 !important; }\n");
-            cssBuf.append(".folio-cover-wrap { display: table; width: 100%; height: 100%; background-color: #000000; margin: 0; padding: 0; }\n");
-            cssBuf.append(".folio-cover-cell { display: table-cell; vertical-align: middle; text-align: center; background-color: #000000; padding: 0; margin: 0; }\n");
-            cssBuf.append(".folio-cover-img { width: 100%; height: auto; max-width: 100%; max-height: 100%; display: block; margin: 0 auto; }\n");
             for (Map.Entry<String, byte[]> e : zipEntries.entrySet()) {
                 if (e.getKey().toLowerCase(Locale.US).endsWith(".css")) {
                     cssBuf.append(sanitizeEpubCssForKindle(new String(e.getValue(), UTF8))).append("\n");
@@ -388,6 +384,18 @@ public final class EpubTranscoder {
                 imgRecMap.put(base.toLowerCase(Locale.US), recIndex1Based);
             }
         }
+        // Save standalone high-res cover image sidecar (<outFile>.cover.jpg) for native fullscreen CoverOverlayView
+        if (hasCover && !imageRecords.isEmpty()) {
+            try {
+                File coverSidecar = new File(outFile.getAbsolutePath() + ".cover.jpg");
+                FileOutputStream cfos = new FileOutputStream(coverSidecar);
+                try {
+                    cfos.write(imageRecords.get(0));
+                } finally {
+                    cfos.close();
+                }
+            } catch (Throwable ignored) {}
+        }
 
         // 5. Assemble spine HTML and record exact UTF-8 byte offsets for NCX INDX (and SKEL/FRAG in KF8)
         ByteArrayOutputStream htmlBaos = new ByteArrayOutputStream(65536);
@@ -411,10 +419,7 @@ public final class EpubTranscoder {
                 String hp = spinePaths.get(i);
                 String rawHtml = new String(zipEntries.get(hp), UTF8);
                 String aid = String.format(Locale.US, "%04X", i + 1);
-                boolean isCoverPage = (i == 0 && hasCover && isLikelyCoverSpineItem(hp, rawHtml));
-                String skel = isCoverPage
-                        ? "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"kindle:flow:0001?mime=text/css\"/></head><body aid=\"0\" class=\"folio-cover-page\" style=\"margin:0;padding:0;background-color:#000000;\"><div aid=\"" + aid + "\" class=\"folio-cover-wrap\"></div></body></html>\n"
-                        : "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"kindle:flow:0001?mime=text/css\"/></head><body aid=\"0\"><div aid=\"" + aid + "\"></div></body></html>\n";
+                String skel = "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"kindle:flow:0001?mime=text/css\"/></head><body aid=\"0\"><div aid=\"" + aid + "\"></div></body></html>\n";
                 byte[] skelBytes = skel.getBytes(UTF8);
                 int skelStart = htmlBaos.size();
                 int insertPos = skelStart + skel.indexOf("</div>");
@@ -422,9 +427,7 @@ public final class EpubTranscoder {
                 int skelLen = skelBytes.length;
 
                 String body = extractAndNormalizeBody(rawHtml, getDirName(hp), i, imgRecMap, spineIndexMap, true);
-                String fragHtml = isCoverPage
-                        ? "<div class=\"folio-cover-cell\"><img class=\"folio-cover-img\" src=\"kindle:embed:0001?mime=image/jpeg\"/></div>"
-                        : ((body == null || body.isEmpty()) ? "<p>&#160;</p>" : body);
+                String fragHtml = (body == null || body.isEmpty()) ? "<p>&#160;</p>" : body;
                 byte[] fragBytes = fragHtml.getBytes(UTF8);
                 int fragStart = htmlBaos.size();
                 htmlBaos.write(fragBytes);

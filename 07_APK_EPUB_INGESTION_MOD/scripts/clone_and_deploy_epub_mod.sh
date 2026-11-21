@@ -156,7 +156,8 @@ fi
 echo "[3.5/6] Compiling mod DEX (EpubTranscoder, EpubBookBuilder, dp.g, OpenCatalogView) with javac + d8..."
 bash "${MOD_ROOT}/tools/compile_mod_dex.sh" "${MOD_ROOT}/dex/classes9.dex"
 
-echo "[4/6] Patching classes3 (RubyHomeFragment), shifting DEX files, patching classes4 -> classes5, classes5 -> classes6, injecting enhanced classes4.dex, and rebuilding..."
+echo "[4/6] Patching classes2 (Spacing gates), classes3 (RubyHomeFragment), shifting DEX files, patching classes4 -> classes5, classes5 -> classes6, injecting enhanced classes4.dex, and rebuilding..."
+python3 "${MOD_ROOT}/tools/patch_classes2.py" "${WORK_DIR}/base_dec/classes2.dex"
 bash "${MOD_ROOT}/tools/patch_classes3.sh" "${WORK_DIR}/base_dec/classes3.dex"
 mv "${WORK_DIR}/base_dec/classes8.dex" "${WORK_DIR}/base_dec/classes9.dex"
 mv "${WORK_DIR}/base_dec/classes7.dex" "${WORK_DIR}/base_dec/classes8.dex"

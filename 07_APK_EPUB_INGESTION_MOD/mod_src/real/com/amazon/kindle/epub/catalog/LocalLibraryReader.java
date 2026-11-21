@@ -32,25 +32,38 @@ public final class LocalLibraryReader {
             File dbFile = new File(ctx.getApplicationInfo().dataDir, "databases/kindle_library.db");
             if (!dbFile.exists()) return out;
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
+            File coversLarge = new File(ctx.getApplicationInfo().dataDir, "files/coverslarge");
+            File coversMedium = new File(ctx.getApplicationInfo().dataDir, "files/coversmedium");
             File coversSmall = new File(ctx.getApplicationInfo().dataDir, "files/coverssmall");
             File coversDir = new File(ctx.getApplicationInfo().dataDir, "files/covers");
 
-            // Query KindleContent joined with UserContent if available, else fallback to KindleContent
+            // Query KindleContent joined with LocalContent for exact file path, and UserContent for last accessed time
             Cursor c = null;
             try {
                 c = db.rawQuery(
-                        "SELECT k.ID, k.TITLE, k.AUTHOR, k.LOCATION, COALESCE(u.LAST_ACCESSED, 0) AS LA " +
-                        "FROM KindleContent k LEFT JOIN UserContent u ON k.ID = u.ID " +
+                        "SELECT k.ID, k.TITLE, k.AUTHOR, l.FILE_PATH, COALESCE(u.LAST_ACCESSED, 0) AS LA " +
+                        "FROM KindleContent k " +
+                        "JOIN LocalContent l ON k.ID = l.KEY " +
+                        "LEFT JOIN UserContent u ON k.ID = u.KEY " +
                         "WHERE k.TITLE IS NOT NULL AND k.TITLE != '' " +
                         "ORDER BY LA DESC, k.ROWID DESC LIMIT ?",
                         new String[]{String.valueOf(maxCount * 3)}
                 );
-            } catch (Throwable ignored) {
-                c = db.rawQuery(
-                        "SELECT ID, TITLE, AUTHOR, '' AS LOCATION, ROWID AS LA FROM KindleContent " +
-                        "WHERE TITLE IS NOT NULL AND TITLE != '' ORDER BY ROWID DESC LIMIT ?",
-                        new String[]{String.valueOf(maxCount * 3)}
-                );
+            } catch (Throwable t1) {
+                try {
+                    c = db.rawQuery(
+                            "SELECT k.ID, k.TITLE, k.AUTHOR, COALESCE(l.FILE_PATH, '') AS FILE_PATH, k.ROWID AS LA " +
+                            "FROM KindleContent k LEFT JOIN LocalContent l ON k.ID = l.KEY " +
+                            "WHERE k.TITLE IS NOT NULL AND k.TITLE != '' ORDER BY k.ROWID DESC LIMIT ?",
+                            new String[]{String.valueOf(maxCount * 3)}
+                    );
+                } catch (Throwable t2) {
+                    c = db.rawQuery(
+                            "SELECT ID, TITLE, AUTHOR, '' AS FILE_PATH, ROWID AS LA FROM KindleContent " +
+                            "WHERE TITLE IS NOT NULL AND TITLE != '' ORDER BY ROWID DESC LIMIT ?",
+                            new String[]{String.valueOf(maxCount * 3)}
+                    );
+                }
             }
 
             if (c != null) {
@@ -70,7 +83,7 @@ public final class LocalLibraryReader {
                         lb.title = title;
                         lb.author = author;
                         lb.filePath = resolveLocalFile(loc, title);
-                        lb.coverPath = findCoverFile(coversSmall, coversDir, lb.asin, id);
+                        lb.coverPath = findCoverFile(coversLarge, coversMedium, coversSmall, coversDir, lb.asin, id);
                         out.add(lb);
                     }
                 } finally {
@@ -102,16 +115,22 @@ public final class LocalLibraryReader {
 
     private static String extractAsin(String id) {
         if (id == null) return "";
-        String[] parts = id.split("/");
-        if (parts.length >= 2 && !parts[1].isEmpty()) return parts[1];
+        if (id.startsWith("AMZNID0/")) {
+            String[] parts = id.split("/");
+            if (parts.length >= 2) return parts[1];
+        }
         return id;
     }
 
-    private static String findCoverFile(File coversSmall, File coversDir, String asin, String id) {
+    public static String findCoverFile(File coversLarge, File coversMedium, File coversSmall, File coversDir, String asin, String id) {
         if (asin != null && !asin.isEmpty()) {
-            File[] dirs = new File[]{coversDir, coversSmall};
+            File[] dirs = new File[]{coversLarge, coversMedium, coversDir, coversSmall};
             for (File d : dirs) {
                 if (d == null || !d.isDirectory()) continue;
+                File target = new File(d, asin);
+                if (target.exists() && target.length() > 100) {
+                    return target.getAbsolutePath();
+                }
                 File[] files = d.listFiles();
                 if (files == null) continue;
                 for (File f : files) {
@@ -124,30 +143,39 @@ public final class LocalLibraryReader {
         return "";
     }
 
-    private static String resolveLocalFile(String loc, String title) {
+    public static String resolveLocalFile(String loc, String title) {
         if (loc != null && !loc.isEmpty()) {
             String p = loc.startsWith("file://") ? loc.substring(7) : loc;
             if (new File(p).exists()) return p;
         }
-        // Fallback scan in /sdcard/kindle/
+        // Fallback scan in files/epub_cache/ and /sdcard/kindle/
         try {
-            File dir = new File("/sdcard/kindle");
-            File[] files = dir.listFiles();
-            if (files != null && title != null && title.length() >= 4) {
+            if (title != null && title.length() >= 4) {
                 String norm = title.toLowerCase(Locale.US).replaceAll("[^a-z0-9]", "");
-                if (norm.length() > 12) norm = norm.substring(0, 12);
-                for (File f : files) {
-                    if (!f.isFile()) continue;
-                    String fn = f.getName().toLowerCase(Locale.US);
-                    if (!fn.endsWith(".epub") && !fn.endsWith(".azw3") && !fn.endsWith(".mobi")) continue;
-                    String fnNorm = fn.replaceAll("[^a-z0-9]", "");
-                    if (!norm.isEmpty() && fnNorm.contains(norm)) {
-                        return f.getAbsolutePath();
+                if (norm.length() > 10) norm = norm.substring(0, 10);
+                File[] cacheDirs = new File[]{
+                        new File("/data/user/0/com.amazon.kindle.epub/files/epub_cache"),
+                        new File("/sdcard/kindle")
+                };
+                for (File dir : cacheDirs) {
+                    if (dir.exists() && dir.isDirectory()) {
+                        File[] files = dir.listFiles();
+                        if (files != null) {
+                            for (File f : files) {
+                                if (!f.isFile()) continue;
+                                String fn = f.getName().toLowerCase(Locale.US);
+                                if (!fn.endsWith(".epub") && !fn.endsWith(".azw3") && !fn.endsWith(".mobi") && !fn.endsWith(".prc")) continue;
+                                String fnNorm = fn.replaceAll("[^a-z0-9]", "");
+                                if (!norm.isEmpty() && fnNorm.contains(norm)) {
+                                    return f.getAbsolutePath();
+                                }
+                            }
+                        }
                     }
                 }
             }
         } catch (Throwable ignored) {}
-        return "";
+        return (loc != null && !loc.isEmpty()) ? loc : "";
     }
 
     private static String safeStr(String s) {

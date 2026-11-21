@@ -1,47 +1,41 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v1.1") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 018 complete: Final polish delivered with guaranteed on-genre cover recommendations (3-tier fallback engine in `OpenLibraryClient.java`), per-book cover resolution and byte-offset beginning-of-book calibration in `CoverOverlayView.java`, verified on-device with all 3 Home carousels (Continue Reading, Because You Read Metro 2034, Popular Free EPUBs) and native edge-to-edge fullscreen `#000000` black cover overlay. Signed Folio v1.1 release APK staged in `07_APK_EPUB_INGESTION_MOD/release/folio_v1.1/` (134.8 MB).
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v1.1") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 019 complete: Stock Kindle native cover page architecture reverse-engineered in `libKRF.so` (ARM64-v8a) and `classes*.dex`, confirming user architectural directive that displaying cover as part of book HTML flow is an architectural flaw and rendering the image standalone avoids WebCore margins and footers; verified on *Alice in Wonderland* and *Moby Dick* with `#000000` edge-to-edge presentation and smooth swipe transition into Page 1; Continue Reading direct book launch fixed via `kindle_library.db` schema correction (`JOIN LocalContent l ON k.ID = l.KEY`); fine-grained Open Library recommendations deployed with rich interactive info dialogs on non-Gutenberg books.
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
 - **Installed Packages**:
-  - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only, v8.160.1.0)
-  - Clone: `com.amazon.kindle.epub` ("Folio v1.1", v8.159.0.100, adaptive icon, EPUB ingestion mod + offline Library grid unlock + in-app DoH DNS + default KF8 WebCore rendering engine + native binary INDX/NCX TOC drawer with multi-chapter `#anchor` offset resolution + 4-digit INDX keys + EPUB3 nav fallback + intra-file link rewriting + OPDS presets + SQLite backup/restore + offline dictionary + interactive Similar Books + 4-tier mirror fallback + ZIP magic byte validation + Home cover carousels with 3-tier on-genre fallback + sanitized CSS + native fullscreen cover overlay + unlocked text spacing seekbars)
+  - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only, v8.160.1.0, `lastUpdateTime=2026-11-19 21:59:23`)
+  - Clone: `com.amazon.kindle.epub` ("Folio v1.1", v8.159.0.100, adaptive icon, EPUB ingestion mod + offline Library grid unlock + in-app DoH DNS + default KF8 WebCore rendering engine + native binary INDX/NCX TOC drawer with multi-chapter `#anchor` offset resolution + 4-digit INDX keys + EPUB3 nav fallback + intra-file link rewriting + OPDS presets + SQLite backup/restore + offline dictionary + interactive Similar Books + 4-tier mirror fallback + ZIP magic byte validation + Home cover carousels with fine-grained Open Library recommendations + sanitized CSS + native fullscreen cover presentation + unlocked text spacing seekbars + direct Continue Reading reader launch)
 
 ## Cloned Package Architecture & Modifications
-1. **Manifest Isolation & Adaptive Folio Branding**:
-   - Stripped `android:sharedUserId="com.amazon"`.
-   - Renamed package to `com.amazon.kindle.epub` with label `"Folio"`.
-   - Bundled Android Adaptive Icon at `res/mipmap-anydpi-v26/folio_launcher_icon.xml` referencing `@drawable/folio_icon_bg` and `@drawable/folio_icon_fg`.
-   - Namespaced all 19 `android:authorities` and 16 custom `<permission>` declarations.
-   - Enabled Scoped Storage via `MANAGE_EXTERNAL_STORAGE` and cleartext HTTP fallback.
-2. **Native Fullscreen `#000000` Cover Overlay (`CoverOverlayView.java`)**:
-   - Native Android `FrameLayout` overlay attached directly to `StandAloneBookReaderActivity.getWindow().getDecorView()`.
-   - Sidecar extraction (`<outFile>.cover.jpg`) during EPUB ingestion.
-   - Immersive sticky fullscreen mode flags hide status bar and navigation bar.
-   - Zero white borders, zero `"0%"` footer. Dismisses smoothly (`alpha -> 0` in 180ms) on tap or swipe left into Page 1 prose with normal reader margins intact.
-   - Injected into `StandAloneBookReaderActivity.onResume()` in `classes3.dex`.
-3. **Guaranteed On-Genre Recommendations (`OpenLibraryClient.java`, Round 018)**:
-   - 3-tier fallback engine: Specific non-generic subjects -> Same-author books -> Genre shelf fallback (sci-fi, fantasy, horror, adventure).
-   - "Because You Read [Book]" carousel guaranteed to populate with on-genre covers.
-4. **Live `Aa → Font → Spacing` Slider Unlocking**:
-   - Patched `TextSpacingModel.getTextSpacingWidgetEnabled` in `classes6.dex` to return true.
-   - Patched `KindleDocViewerImpl` spacing gates in `classes2.dex` to return true.
-   - NOPed empty library bypass at `Lly/c;->j(I)V`.
-   - In `UserSettingsController`: `R2(int)` maps line spacing seekbar values `[0..4]` to `Q2(Math.min(i, 2))` controlling `Setting.LINE_SPACING` (SMALL=0, MEDIUM=1, LARGE=2) live without crashing.
+1. **Stock Kindle Native Cover Architecture (`logs/stock_kindle_cover_architecture.txt`)**:
+   - Native disassembly of `libKRF.so`:
+     * `DocumentInfo::hasCoverPage()` (`0x21f844`): checks `[x0, #0x60] != 0`.
+     * `DocumentViewerWebCore::gotoCoverPageInternal()` (`0x246a58`): calls `reloadCover()` and `refreshCoverPageElements()`.
+     * `DocumentPageWebCore::reloadCover()` (`0x2348d0`): creates standalone `ImageBuffer` via `CxImage` from PalmDB record EXTH 201.
+     * `DocumentPageWebCore::refreshCoverPageElements()` (`0x233238`): calls `DocumentPage::clear()` (wipes HTML layout), sets `isCoverPage = 1` (`0x118`), centers image on raw viewport canvas `(viewport - img)/2` ignoring `z8.i` margins and footers.
+     * `DocumentPageWebCore::leaveCoverPage()` (`0x2348c0`): resets `isCoverPage = 0`.
+   - Dalvik layer: `MobiDocViewer.hasCoverPage()` (`0x2dfbb8`), `MobiDocViewer.navigateToCover()` (`0x2e2208`).
+   - In Folio: `CoverOverlayView.java` replicates this native behavior, decoding high-res cover bitmaps and presenting them edge-to-edge on pure black `#000000` canvas with zero white margins and zero footer, dismissing smoothly on swipe left into Page 1 prose.
+2. **Continue Reading Direct Book Launch (`LocalLibraryReader.java`, `OpenCatalogView.java`)**:
+   - `kindle_library.db` schema: `LocalContent(KEY, FILE_PATH)` stores exact file path, while `UserContent(KEY, LAST_ACCESSED)` tracks access.
+   - Fixed SQL query in `LocalLibraryReader.java`: joins `LocalContent l ON k.ID = l.KEY` to populate `lb.filePath`.
+   - Card click listener in `OpenCatalogView.java`: routes to `ThirdPartyUpgradePage` (with MIME type `application/epub+zip` / `application/pdf`) or `StandAloneBookReaderActivity` (`book_id` + `asin`), eliminating toast fallback.
+3. **Fine-Grained Open Library Recommendations (`OpenLibraryClient.java`, Round 019)**:
+   - Multi-subject intersection, publication era proximity, and same-author bibliography queries.
+   - Rich interactive metadata dialog on non-Gutenberg books: cover, author, first publication year, Open Library rating, topics, full synopsis, and "Search Catalog" button.
 
-## Verification Evidence
-1. **Folio v1.1 Home Carousels**:
-   - Verified on-device (`verify_r18_home_all_carousels.png`): Continue Reading, Because You Read Metro 2034, and Popular Free EPUBs all visible.
-2. **Native Fullscreen Cover Overlay**:
-   - Verified on *Moby Dick* (`verify_r18_cover_verified.png`): 1080×2340 edge-to-edge pure black background (30.2% black letterbox pixels, zero white frame, zero footer).
-3. **Staged Release**:
-   - `07_APK_EPUB_INGESTION_MOD/release/folio_v1.1/base.apk` (134,839,933 bytes).
-4. **Deliverables**:
-   - `antig_to_gemini_neon_clunky_report018.zip` (< 100 MB).
+## Verification Evidence (Round 019)
+1. **Native Fullscreen Cover Presentation**:
+   - Book 1 (*Alice's Adventures in Wonderland*): `verify_r19_cover_book1.png` (36.3% `#000000` pixels, zero white margins, zero footer) and `verify_r19_cover_book1_page1.png` (smooth transition into Page 1 prose).
+   - Book 2 (*Moby Dick*): `verify_r19_cover_book2.png` (29.8% `#000000` pixels, zero white margins, zero footer) and `verify_r19_cover_book2_page1.png` (smooth transition into Page 1 prose).
+2. **Continue Reading Direct Launch**:
+   - Verified on *Metro 2034* (`verify_r19_continue_reading_opened.png`) and *Alice in Wonderland*: direct reader launch without toast.
+3. **Fine-Grained Recommendations & Rich Info Dialog**:
+   - Verified on Home (`verify_r19_home_fine_grained_recs.png`): on-genre recommendations seeded from library books (*Alice* -> *Through the Looking Glass*).
+   - Verified on tap (`verify_r19_rec_info_dialog.png`): rich dialog with rating, year (1865), topics, synopsis, and Search Catalog.
+4. **Stock Safety Invariant**:
+   - Confirmed `com.amazon.kindle` `lastUpdateTime=2026-11-19 21:59:23` untouched.
 
-## Chrome Bridge & Autonomous Relay
-- Pinned to `v1.34.5` on profile `yew`.
-- Autonomous relay monitoring active via `tools/autonomous_relay_runner.mjs`:
-  - 60-second polling intervals (no high-frequency screenshotting).
-  - 2000-second max timeout.
-  - Never reupload an already sent report.
+## Deliverables
+- `antig_to_gemini_neon_clunky_report019.zip` (< 100 MB).

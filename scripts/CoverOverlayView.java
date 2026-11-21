@@ -17,13 +17,14 @@ import java.io.File;
  * Activity's decor/content FrameLayout — completely outside WebCore/MobiDocViewer
  * reflow margins and footer overlays!
  *
- * Matches stock Kindle's cover presentation: full-width high-res cover centered
+ * Matches stock Kindle's native cover presentation: full-width high-res cover centered
  * vertically on pure #000000 black, zero margins, zero 0% footer.
- * Tap or swipe left to smoothly dismiss straight into Page 1 of the book.
+ * Tap or swipe left to smoothly dismiss straight into Page 1 of the book prose.
  */
 public final class CoverOverlayView {
     private static final String OVERLAY_TAG = "folio_fullscreen_cover_overlay";
     public static volatile boolean sDismissedThisSession = false;
+    private static volatile String sLastActiveBookId = null;
 
     /**
      * Attaches a fullscreen #000000 black cover overlay onto the given Activity
@@ -96,7 +97,7 @@ public final class CoverOverlayView {
                             } else if (act == MotionEvent.ACTION_UP) {
                                 float dx = ev.getX() - downX[0];
                                 android.util.Log.i("CoverOverlayView", "Touch UP: dx=" + dx);
-                                // Tap or swipe left dismisses smoothly into the book
+                                // Tap or swipe left dismisses smoothly into Page 1 of the book
                                 if (Math.abs(dx) < 60f || dx < -60f) {
                                     sDismissedThisSession = true;
                                     dismissOverlay(decor, overlay);
@@ -138,10 +139,11 @@ public final class CoverOverlayView {
      */
     public static boolean showForCurrentBook(final Activity activity) {
         android.util.Log.i("CoverOverlayView", "showForCurrentBook called: activity=" + activity + " sDismissedThisSession=" + sDismissedThisSession);
-        if (activity == null || sDismissedThisSession) {
-            android.util.Log.w("CoverOverlayView", "showForCurrentBook aborted: activity=" + activity + " dismissed=" + sDismissedThisSession);
+        if (activity == null) {
             return false;
         }
+
+        String asin = null;
         int pos = 0;
         try {
             Object factory = Class.forName("com.amazon.kcp.util.Utils").getMethod("getFactory").invoke(null);
@@ -151,10 +153,29 @@ public final class CoverOverlayView {
                 if (dv != null) {
                     pos = ((Integer) dv.getClass().getMethod("getPageStartPosition").invoke(dv)).intValue();
                     android.util.Log.i("CoverOverlayView", "getPageStartPosition: " + pos);
+                    Object bookInfo = dv.getClass().getMethod("getBookInfo").invoke(dv);
+                    if (bookInfo != null) {
+                        Object asinObj = bookInfo.getClass().getMethod("getAsin").invoke(bookInfo);
+                        if (asinObj != null) {
+                            asin = asinObj.toString();
+                            android.util.Log.i("CoverOverlayView", "Active book ASIN: " + asin);
+                        }
+                    }
                 }
             }
         } catch (Throwable t) {
-            android.util.Log.w("CoverOverlayView", "Failed to query getPageStartPosition: " + t);
+            android.util.Log.w("CoverOverlayView", "Failed to query getPageStartPosition / ASIN: " + t);
+        }
+
+        // If a different book is opened, reset dismissed session flag
+        if (asin != null && !asin.equals(sLastActiveBookId)) {
+            sLastActiveBookId = asin;
+            sDismissedThisSession = false;
+        }
+
+        if (sDismissedThisSession) {
+            android.util.Log.w("CoverOverlayView", "showForCurrentBook aborted: dismissed=" + sDismissedThisSession);
+            return false;
         }
 
         // Only auto-show cover overlay when at the beginning of the book (pos <= 500)
@@ -165,7 +186,26 @@ public final class CoverOverlayView {
             return false;
         }
 
-        // First try matching the exact book opened via Activity intent URI -> epub_cache/<name>.azw3.cover.jpg
+        // 1. If ASIN is known, check Kindle's native cover directories (coverslarge, coversmedium, covers, coverssmall)
+        if (asin != null && !asin.isEmpty()) {
+            File[] coverDirs = new File[]{
+                    new File(activity.getFilesDir(), "coverslarge"),
+                    new File(activity.getFilesDir(), "coversmedium"),
+                    new File(activity.getFilesDir(), "covers"),
+                    new File(activity.getFilesDir(), "coverssmall")
+            };
+            for (File cd : coverDirs) {
+                if (cd.exists() && cd.isDirectory()) {
+                    File cf = new File(cd, asin);
+                    if (cf.exists() && cf.length() > 256) {
+                        android.util.Log.i("CoverOverlayView", "Found cover for ASIN " + asin + " in " + cd.getName() + ": " + cf.getAbsolutePath());
+                        return showIfAvailable(activity, cf.getAbsolutePath());
+                    }
+                }
+            }
+        }
+
+        // 2. Try matching the exact book opened via Activity intent URI -> <path>.cover.jpg / epub_cache/<name>.azw3.cover.jpg
         try {
             android.content.Intent intent = activity.getIntent();
             if (intent != null && intent.getData() != null) {
@@ -183,13 +223,14 @@ public final class CoverOverlayView {
             }
         } catch (Throwable ignored) {}
 
+        // 3. Fallback to last transcoded cover path
         String cp = EpubTranscoder.lastCoverPath;
         android.util.Log.i("CoverOverlayView", "lastCoverPath=" + cp);
         if (cp != null && new File(cp).exists()) {
             return showIfAvailable(activity, cp);
         }
 
-        // Search /sdcard/kindle/ for newest .cover.jpg
+        // 4. Fallback search /sdcard/kindle/ for newest .cover.jpg
         File dir = new File("/sdcard/kindle");
         if (dir.exists() && dir.isDirectory()) {
             File[] files = dir.listFiles();
