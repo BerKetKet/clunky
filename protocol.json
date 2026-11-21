@@ -1,16 +1,15 @@
 {
-  "round": 24,
+  "round": 25,
   "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
   "app_label": "Folio",
   "stock_package_read_only": "com.amazon.kindle",
   "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report024.zip",
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report025.zip",
   "max_report_size_mb": 15,
   "tasks": [
-    "Port jloutsch/kfxgen native KFX table structures ($278/$279/$585) into Rust libkfxconv.so",
-    "Strip redundant in-spine cover HTML in libkfxconv.so while keeping native KFX cover resource ($417/$164/$495)",
-    "Port override_kindle_font:false, language metadata, and transparent PNG/inline image handling into libkfxconv.so",
-    "Cross-compile ARM64 libkfxconv.so, deploy Folio v2.1, verify across multiple books, and confirm report024.zip attaches cleanly"
+    "Diff stock STK KFX table Ion hierarchy and fix mashed table cells in Rust libkfxconv.so",
+    "Diff stock STK KFX cover section Ion structure and fix small top-left white-page cover in Rust libkfxconv.so",
+    "Cross-compile ARM64 libkfxconv.so, deploy Folio v2.2, and capture full-screen verification screenshots across 2+ distinct books"
   ]
 }

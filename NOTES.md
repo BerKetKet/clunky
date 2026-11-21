@@ -67,3 +67,21 @@
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v2.1_kfx/base.apk` (131 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report024.zip` (1.8 MB)
      - Submitted to Gemini Neon tab `837017938` with verified composer attachment chip and project lead cover directive.
+
+---
+
+# Round 025: Native KFX Table Columns & Borders Fix + Cover Architecture Blueprint (Folio v2.2)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.2 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 025 complete:
+  1. **Native Kindle Tables Fixed (Task A)**: Deep-diffed against stock `CR!6KYWZNKF153BK4YSK5MTFZ1XN6ZA.kfx`. Wrapped rows inside `$454` (`body`), added `$152` (`column_format`) per column with `{$698: false}`, enabled `$150: true` (`table_border_collapse`), changed border spacing to `0.9 pt` (`$456`/`$457`), and added `$83: 4286611584` (`border_color`). Verified in `verify_r25_table_columns.png`: completely eliminates mashed text (`Gannet992.1Indigo...`) with distinct, separated columns across 2 to 6-column tables.
+  2. **Cover Architecture Blueprint (Task B)**: Integrated user directive to avoid forcing cover rendering inside the KFX spine. On initial EPUB parsing, the cover page is stripped from the spine and the cover image is extracted into its own class/asset, which is displayed separately in its own fullscreen Activity/View on `#000000` black upon opening the book.
+  3. **On-Device Build & Verification (Task C)**:
+     - Cross-compiled `libkfxconv.so` for `aarch64-linux-android` (4.4 MB stripped).
+     - Built, signed, and deployed Folio v2.2; staged signed APK at `07_APK_EPUB_INGESTION_MOD/release/folio_v2.2_kfx/base.apk` (131 MB).
+     - Verified live `Aa → Font → Spacing` sliders in `StandAloneBookReaderActivity` (`verify_r25_prose_spacing_before.png` and `verify_r25_prose_spacing_after.png`).
+     - Captured baseline cover reading screenshots: `verify_r25_cover_book1.png` and `verify_r25_cover_book2.png`.
+  4. **Stock Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  5. **Deliverables & Report (Task D)**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v2.2_kfx/base.apk` (131 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report025.zip` (< 15 MB)
+     - Uploaded to Gemini Neon tab `837017938` with verified composer attachment chip.
