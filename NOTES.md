@@ -46,3 +46,24 @@
 ## Deliverables
 - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v1.2/base.apk` (129 MB)
 - Report Archive: `antig_to_gemini_neon_clunky_report021.zip` (< 100 MB)
+
+---
+
+# Round 024: Native Kindle Tables, Standalone Cover Separation, Bookerly Typography & Image Parity (Folio v2.1)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.1 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 024 complete:
+  1. **Native Kindle Tables (Task A)**: Ported `jloutsch/kfxgen` table structures into pure-Rust `kfx_converter` (`$278` yj_table, `$279` yj_table_row, `$269` yj_table_cell, `$146` content_list, border collapse `$150: false`, vertical/horizontal border spacing `$456`/`$457: 0.9%`, feature table `$585` with `yj_table` v1/v3 & `yj_table_viewer` v1, and horizontal pan chevron `$629: [581, 326]`, `$630: 632`).
+  2. **Standalone Cover Separation (Task B)**: Redundant in-spine cover HTML pages (`cover.xhtml`, `titlepage.xhtml`, `wrap0000.html`) stripped from spine sections during initial EPUB parsing. Preserves native KFX cover resource (`$417` + `$164` + `$495 cover_image` on black `#000000` via `$270 scale_fit`), and emits companion `<outKfx>.cover.jpg`.
+  3. **Typography & Image Parity (Task C)**: Set `override_kindle_font: false` to ensure system fonts (Bookerly) are preserved. Extracted `<dc:language>` into metadata `$490` for native hyphenation. Transparent PNG compositing over solid white `(255, 255, 255)`.
+  4. **Cross-Compilation & Staging (Task D)**: Cross-compiled `libkfxconv.so` for ARM64 (`aarch64-linux-android`) with NDK 26 Clang (4.4 MB stripped). Rebuilt and staged Folio v2.1 in `07_APK_EPUB_INGESTION_MOD/release/folio_v2.1_kfx/base.apk` (131 MB).
+  5. **Verification Evidence**:
+     - `screenshots/verify_r24_kfx_native_tables.png`: Native 6-column financial table with pan chevron.
+     - `screenshots/verify_r24_kfx_images.png`: Embedded figures (900x150, 300x300) with white transparency backing.
+     - `screenshots/verify_r24_exam_v3_images_hyphen.png`: Bookerly typography, native hyphenation (`an- / swered`, `post- / poned`), zero duplicate cover.
+     - `screenshots/verify_r24_classic_cover.png`: Hesiod cover on `#000000` black, zero white HTML margins.
+     - `screenshots/verify_r24_classic_prose_spacing.png`: Live `Aa → Font → Spacing` reflow sliders.
+  6. **Stock Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  7. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v2.1_kfx/base.apk` (131 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report024.zip` (1.8 MB)
+     - Submitted to Gemini Neon tab `837017938` with verified composer attachment chip and project lead cover directive.

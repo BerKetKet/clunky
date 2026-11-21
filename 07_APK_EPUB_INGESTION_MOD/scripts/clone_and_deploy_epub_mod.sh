@@ -101,6 +101,10 @@ def patch_app_tag(m):
             tag = re.sub(r'android:roundIcon="[^"]*"', 'android:roundIcon="@mipmap/folio_launcher_icon"', tag)
         else:
             tag = tag.replace('<application', '<application android:roundIcon="@mipmap/folio_launcher_icon"', 1)
+    if 'android:extractNativeLibs=' in tag:
+        tag = re.sub(r'android:extractNativeLibs="[^"]*"', 'android:extractNativeLibs="true"', tag)
+    else:
+        tag = tag.replace('<application', '<application android:extractNativeLibs="true"', 1)
     return tag
 xml = re.sub(r'<application\b[^>]*>', patch_app_tag, xml, count=1)
 
@@ -168,6 +172,12 @@ rm -f "${WORK_DIR}/base_dec/classes5.dex"
 python3 "${MOD_ROOT}/tools/patch_classes4.py" "${WORK_DIR}/base_dec/classes4.dex" "${WORK_DIR}/base_dec/classes5.dex"
 cp "${MOD_ROOT}/dex/classes9.dex" "${WORK_DIR}/base_dec/classes4.dex"
 
+if [[ -f "${MOD_ROOT}/lib/arm64-v8a/libkfxconv.so" ]]; then
+    mkdir -p "${WORK_DIR}/base_dec/lib/arm64-v8a"
+    cp "${MOD_ROOT}/lib/arm64-v8a/libkfxconv.so" "${WORK_DIR}/base_dec/lib/arm64-v8a/libkfxconv.so"
+    echo "Bundled libkfxconv.so into base_dec/lib/arm64-v8a/"
+fi
+
 apktool b "${WORK_DIR}/base_dec" -o "${WORK_DIR}/base_cloned_raw.apk"
 
 echo "[5/6] Signing base_cloned.apk + all split APKs with persistent keystore..."
@@ -184,6 +194,14 @@ fi
 
 zipalign -f -p 4 "${WORK_DIR}/base_cloned_raw.apk" "${WORK_DIR}/signed_splits/base.apk"
 apksigner sign --ks "${KEYSTORE}" --ks-pass pass:android --ks-key-alias "${ALIAS}" --key-pass pass:android "${WORK_DIR}/signed_splits/base.apk"
+
+RELEASE_V21="${MOD_ROOT}/release/folio_v2.1_kfx"
+mkdir -p "${RELEASE_V21}"
+cp "${WORK_DIR}/signed_splits/base.apk" "${RELEASE_V21}/base.apk"
+if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
+    cp "${WORK_DIR}/signed_splits/base.apk.idsig" "${RELEASE_V21}/base.apk.idsig"
+fi
+echo "Staged Folio v2.1 in ${RELEASE_V21}/base.apk"
 
 for f in "${WORK_DIR}/orig_splits/"*.apk; do
     bn="$(basename "$f")"

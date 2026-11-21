@@ -224,9 +224,19 @@ public final class EpubTranscoder {
             if (!kfxDisabled) {
                 File kfxFile = new File(cacheDir, file.getName() + ".kfx");
                 if (kfxFile.exists() && kfxFile.length() >= 512 && kfxFile.lastModified() >= file.lastModified() && verifyKfxMagic(kfxFile)) {
+                    File coverSidecar = new File(kfxFile.getAbsolutePath() + ".cover.jpg");
+                    if (coverSidecar.exists()) {
+                        lastCoverPath = coverSidecar.getAbsolutePath();
+                        CoverOverlayView.resetSession();
+                    }
                     return kfxFile;
                 }
                 if (transcodeToKfx(file, kfxFile)) {
+                    File coverSidecar = new File(kfxFile.getAbsolutePath() + ".cover.jpg");
+                    if (coverSidecar.exists()) {
+                        lastCoverPath = coverSidecar.getAbsolutePath();
+                        CoverOverlayView.resetSession();
+                    }
                     return kfxFile;
                 }
             }
