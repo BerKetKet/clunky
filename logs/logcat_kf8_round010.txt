@@ -1,0 +1,30 @@
+11-21 07:28:23.295  4938  5820 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=file:///... typ=application/epub+zip flg=0x10000000 cmp=com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage} from uid 0
+11-21 07:28:23.643  4938  7997 D CoreBackPreview: Window{63077d2 u0 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@cb58fa0, mPriority=0}
+11-21 07:28:55.904  4938  5282 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=file:///... typ=application/epub+zip flg=0x10000000 cmp=com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage} from uid 2000
+11-21 07:28:56.024  4938  5027 I ActivityManager: Start proc 14496:com.amazon.kindle.epub/u0a262 for next-top-activity {com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage}
+11-21 07:28:58.758  4938  7913 D CoreBackPreview: Window{4e969da u0 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@139a4e8, mPriority=0}
+11-21 07:28:59.262  4938  5019 W ActivityTaskManager: Activity top resumed state loss timeout for ActivityRecord{4556f78 u0 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage} t145 f}}
+11-21 07:28:59.284  4938  5019 W ActivityTaskManager: Activity pause timeout for ActivityRecord{4556f78 u0 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage} t145 f}}
+11-21 07:28:59.930 14496 14496 W AmazonKindle.com.amazon.android.docviewer.mobi.MobiDocViewer: [main]: Detected invalid content class DEFAULT
+11-21 07:29:01.129  4938  5070 D CoreBackPreview: Window{4e969da u0 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage}: Setting back callback null
+11-21 07:29:01.137  4938  5070 W InputManager-JNI: Input channel object '4e969da com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage (client)' was disposed without first being removed with the input manager!
+11-21 07:29:01.943 14496 14496 I AmazonKindle.l60.d: [main]: Content opened (asin: B0B164901B, sample: false, title: Kindle Render Exam v3, downloadState: LOCAL, content type: BOOK, MIME type: application/x-mobi8-ebook, format: MOBI8, fixed layout: false, free trial: false, content language: en, content class: DEFAULT)
+11-21 07:30:22.380 14496 15203 I AmazonKindle.com.amazon.kcp.reader.ui.dictionary.internal.d: [DefaultDispatcher-worker-7]: Opening dictionary B003ODIZL6
+11-21 07:30:22.380 14496 15203 I AmazonKindle.ik.b: [DefaultDispatcher-worker-7]: getting new dictionary B003ODIZL6
+11-21 07:30:22.788 14496 15203 W KindleDictionary: Called Java_com_amazon_kindle_dictionary_IDictionaryDoc_renderNativeBitmap
+11-21 07:30:23.139 14496 15203 W KindleDictionary: Called Java_com_amazon_kindle_dictionary_IDictionaryDoc_renderNativeBitmap
+11-21 07:30:42.524  4938  5705 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=file:///... typ=application/epub+zip flg=0x10000000 cmp=com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage} from uid 0
+11-21 07:30:43.114  4938  7526 D CoreBackPreview: Window{8407d84 u0 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@758f9a2, mPriority=0}
+11-21 07:30:43.266 14496 14496 I AmazonKindle.ik.a: [main]: Closing current dictionary
+11-21 07:30:43.267 14496 14496 I AmazonKindle.ik.b: [main]: Closing current dictionary and reseting in dictionaryStore
+11-21 07:30:43.267 14496 14496 I AmazonKindle.com.amazon.kcp.reader.ui.dictionary.internal.d: [main]: Closing current dictionary
+11-21 07:30:43.470 14496 14496 W AmazonKindle.com.amazon.android.docviewer.mobi.MobiDocViewer: [main]: Detected invalid content class DEFAULT
+11-21 07:30:44.058  4938  7526 W InputManager-JNI: Input channel object '8407d84 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage (client)' was disposed without first being removed with the input manager!
+11-21 07:30:55.442  4938  7526 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=file:///... typ=application/epub+zip flg=0x10000000 cmp=com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage} from uid 2000
+11-21 07:30:55.647  4938  5069 D CoreBackPreview: Window{1206cf5 u0 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@8be28fb, mPriority=0}
+11-21 07:30:55.689 14496 14496 I AmazonKindle.com.amazon.kcp.reader.ui.dictionary.internal.d: [main]: Closing current dictionary
+11-21 07:30:55.852 14496 14496 W AmazonKindle.com.amazon.android.docviewer.mobi.MobiDocViewer: [main]: Detected invalid content class DEFAULT
+11-21 07:30:56.148 14496 14496 W AmazonKindle.com.amazon.android.docviewer.mobi.MobiDocViewer: [main]: Detected invalid content class DEFAULT
+11-21 07:30:56.819  4938  5705 D CoreBackPreview: Window{1206cf5 u0 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage}: Setting back callback null
+11-21 07:30:56.819  4938  7640 W InputManager-JNI: Input channel object '1206cf5 com.amazon.kindle.epub/com.amazon.kindle.ThirdPartyUpgradePage (client)' was disposed without first being removed with the input manager!
+11-21 07:30:57.309 14496 14496 I AmazonKindle.l60.d: [main]: Content opened (asin: B0EC17DC48, sample: false, title: Kindle Tables and Images Exam, downloadState: LOCAL, content type: BOOK, MIME type: application/x-mobi8-ebook, format: MOBI8, fixed layout: false, free trial: false, content language: en, content class: DEFAULT)

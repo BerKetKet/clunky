@@ -1,14 +1,13 @@
 {
-  "round": 9,
+  "round": 10,
   "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_read_only": "com.amazon.kindle",
   "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report009.zip",
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report010.zip",
   "max_report_size_mb": 100,
   "tasks": [
-    "Deploy Round 009 EpubTranscoder.java with P-//*[@aid='...'] CNCX selectors, Rashomon PalmDB record ordering, and extra_data_flags=1",
-    "Verify KF8 CSS3 tables, images, typography, and native TOC chapter jump under /sdcard/kindle/.use_kf8",
-    "If still blank, diff Flow 0 SKEL/FRAG entries against Rashomon and Other Stories.azw3 and patch/verify directly"
+    "Deploy Round 010 EpubTranscoder.java with FRAG Tag 6a relative offset = 0, clean fragHtml, and KF8-by-default",
+    "Verify zero truncation on Contents page, exact E06 TOC jump, CSS3 tables/images, and offline dictionary popup under default KF8"
   ]
 }

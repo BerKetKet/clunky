@@ -73,9 +73,9 @@ public final class EpubTranscoder {
 
     public static boolean isKf8Enabled() {
         try {
-            return new File("/sdcard/kindle/.use_kf8").exists();
+            return !new File("/sdcard/kindle/.use_mobi7").exists();
         } catch (Throwable ignored) {
-            return false;
+            return true;
         }
     }
 
@@ -353,7 +353,7 @@ public final class EpubTranscoder {
                 int skelLen = skelBytes.length;
 
                 String body = extractAndNormalizeBody(rawHtml, getDirName(hp), imgRecMap, true);
-                String fragHtml = "<div aid=\"" + aid + "\">" + body + "</div>";
+                String fragHtml = (body == null || body.isEmpty()) ? "<p>&#160;</p>" : body;
                 byte[] fragBytes = fragHtml.getBytes(UTF8);
                 int fragStart = htmlBaos.size();
                 htmlBaos.write(fragBytes);
@@ -825,7 +825,7 @@ public final class EpubTranscoder {
             writeVwiForward(secE, cncxOffs[i]);  // Tag 2: cncx offset
             writeVwiForward(secE, sec.fileNum);  // Tag 3: file_num
             writeVwiForward(secE, 0);            // Tag 4: seq_num
-            writeVwiForward(secE, sec.fragStart);// Tag 6a: start
+            writeVwiForward(secE, 0);            // Tag 6a: relative start offset after skeleton end (0 = exact start of fragment!)
             writeVwiForward(secE, sec.fragLen);  // Tag 6b: length
         }
         while (secE.size() % 4 != 0) secE.write(0);

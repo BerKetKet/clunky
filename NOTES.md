@@ -1,11 +1,11 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Kindle EPUB") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 009 complete: full KF8 (`libWebCoreKRF.so`) rendering resolved, CSS3 tables/images and typography rendered, DOM fragment XPath selector anchor resolved via `<body aid="0"><div aid="..."></div></body>`, native slide-out TOC drawer populated, and chapter jump to Location 252 (41%) verified. Engine flag `/sdcard/kindle/.use_kf8` remains active.
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Kindle EPUB") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 010 complete: KF8 promoted to default engine (`.use_kf8` flag eliminated), relative fragment offset bug fixed (`writeVwiForward(secE, 0)`), zero truncation on Contents page verified, exact TOC jump to Chapter E06 confirmed, offline Wiktionary dictionary popup operational under KF8, and rich multi-column CSS3 tables/images rendering cleanly.
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
 - **Installed Packages**:
   - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only)
-  - Clone: `com.amazon.kindle.epub` (cloned with EPUB ingestion mod + offline Library grid unlock + in-app DoH DNS + full KF8 WebCore rendering engine + native binary INDX/NCX TOC drawer)
+  - Clone: `com.amazon.kindle.epub` (cloned with EPUB ingestion mod + offline Library grid unlock + in-app DoH DNS + default KF8 WebCore rendering engine + native binary INDX/NCX TOC drawer + offline dictionary)
 
 ## Cloned Package Architecture & Modifications
 1. **Manifest Isolation**:
