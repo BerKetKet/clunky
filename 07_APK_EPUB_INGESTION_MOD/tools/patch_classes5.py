@@ -48,11 +48,13 @@ def get_method_name(idx):
     _, _, n_idx = struct.unpack_from("<HHI", dex, m_off + idx * 8)
     return get_str(n_idx)
 
-patched = False
+patched_library = False
+patched_spacing = False
 for i in range(c_size):
     entry_off = c_off + i * 32
     class_idx, _, _, _, _, _, class_data_off, _ = struct.unpack_from("<IIIIIIII", dex, entry_off)
-    if get_type(class_idx) == "Lly/c;" and class_data_off != 0:
+    tname = get_type(class_idx)
+    if tname == "Lly/c;" and class_data_off != 0:
         pos = class_data_off
         sf, pos = read_uleb128(dex, pos)
         inf, pos = read_uleb128(dex, pos)
@@ -73,12 +75,35 @@ for i in range(c_size):
                 old_word = struct.unpack_from("<H", dex, unit_off)[0]
                 assert old_word == 0x0312, f"Unexpected opcode at Lly/c;->j+0x15: 0x{old_word:04x}"
                 struct.pack_into("<H", dex, unit_off, 0x0000) # nop
-                patched = True
+                patched_library = True
                 print(f"Patched Lly/c;->j(I)V at file offset 0x{unit_off:x}: 0x0312 -> 0x0000 (nop)")
                 break
-        break
 
-assert patched, "Failed to locate Lly/c;->j(I)V in classes5.dex"
+    elif tname == "Lcom/amazon/kindle/viewoptions/textspacing/TextSpacingModel;" and class_data_off != 0:
+        pos = class_data_off
+        sf, pos = read_uleb128(dex, pos)
+        inf, pos = read_uleb128(dex, pos)
+        dm, pos = read_uleb128(dex, pos)
+        vm, pos = read_uleb128(dex, pos)
+        for _ in range(sf + inf):
+            _, pos = read_uleb128(dex, pos); _, pos = read_uleb128(dex, pos)
+        m_idx = 0
+        for _ in range(dm):
+            diff, pos = read_uleb128(dex, pos)
+            _, pos = read_uleb128(dex, pos)
+            code_off, pos = read_uleb128(dex, pos)
+            m_idx += diff
+            if get_method_name(m_idx) == "getTextSpacingWidgetEnabled":
+                unit_off = code_off + 16
+                old_bytes = dex[unit_off:unit_off+4]
+                assert old_bytes == b"\x62\x00\xff\x0f", f"Unexpected bytes at getTextSpacingWidgetEnabled: {old_bytes.hex()}"
+                dex[unit_off:unit_off+4] = b"\x12\x10\x0f\x00" # const/4 v0, 1; return v0
+                patched_spacing = True
+                print(f"Patched TextSpacingModel.getTextSpacingWidgetEnabled at 0x{unit_off:x}: 6200ff0f -> 12100f00 (return true)")
+                break
+
+assert patched_library, "Failed to locate Lly/c;->j(I)V in classes5.dex"
+assert patched_spacing, "Failed to locate TextSpacingModel.getTextSpacingWidgetEnabled in classes5.dex"
 
 sha1 = hashlib.sha1(dex[32:]).digest()
 dex[12:32] = sha1

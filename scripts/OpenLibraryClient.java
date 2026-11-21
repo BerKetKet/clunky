@@ -69,7 +69,7 @@ public final class OpenLibraryClient {
 
             JSONArray subjects = doc.optJSONArray("subject");
             if (subjects != null) {
-                for (int si = 0; si < Math.min(4, subjects.length()) && meta.similarTitles.size() < 4; si++) {
+                for (int si = 0; si < Math.min(12, subjects.length()) && meta.similarTitles.size() < 4; si++) {
                     String subj = normalizeSubject(subjects.optString(si, ""));
                     if (subj.isEmpty() || subj.length() > 36) continue;
                     try {
@@ -114,7 +114,7 @@ public final class OpenLibraryClient {
             JSONArray subjects = doc.optJSONArray("subject");
             if (subjects == null) return recs;
 
-            for (int si = 0; si < Math.min(5, subjects.length()) && recs.size() < limit; si++) {
+            for (int si = 0; si < Math.min(18, subjects.length()) && recs.size() < limit; si++) {
                 String subj = normalizeSubject(subjects.optString(si, ""));
                 if (subj.isEmpty() || subj.length() > 32) continue;
                 try {
@@ -161,11 +161,22 @@ public final class OpenLibraryClient {
     private static String normalizeSubject(String raw) {
         if (raw == null) return "";
         String s = raw.toLowerCase(Locale.US).trim();
-        if (s.contains("accessible book") || s.contains("protected daisy") || s.contains("in library") || s.contains("lending")) {
+        if (s.contains("accessible book") || s.contains("protected daisy") || s.contains("in library")
+                || s.contains("lending") || s.contains("staff picks") || s.contains("bestseller")
+                || s.contains("translation") || s.contains("reading level") || s.contains("large type")) {
             return "";
         }
-        s = s.replace(" ", "_").replaceAll("[^a-z0-9_]", "");
+        s = s.replace("-", "_").replace(" ", "_").replaceAll("[^a-z0-9_]", "");
         while (s.contains("__")) s = s.replace("__", "_");
+        // Skip overly generic subjects that produce off-genre recommendations (e.g. Wizard of Oz for Metro 2034)
+        String[] generic = new String[]{
+            "fiction", "novel", "novels", "literature", "general", "stories", "books",
+            "english", "classic", "classics", "juvenile_fiction", "childrens_stories",
+            "open_library_staff_picks", "fiction_general", "popular_works"
+        };
+        for (String g : generic) {
+            if (s.equals(g)) return "";
+        }
         return s;
     }
 }

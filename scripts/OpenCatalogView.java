@@ -65,10 +65,50 @@ public final class OpenCatalogView {
     public static View wrap(View originalView) {
         try {
             if (originalView == null) return null;
-            return build(originalView.getContext());
+            final View v = build(originalView.getContext());
+            v.post(new Runnable() {
+                @Override
+                public void run() {
+                    hideRedundantKindleSearchBar(v);
+                }
+            });
+            return v;
         } catch (Throwable t) {
             android.util.Log.e("OpenCatalogView", "Failed to build Folio Home", t);
             return originalView;
+        }
+    }
+
+    private static void hideRedundantKindleSearchBar(View anchor) {
+        try {
+            View root = anchor.getRootView();
+            if (!(root instanceof ViewGroup)) return;
+            hideSearchKindleRecursive((ViewGroup) root, anchor);
+        } catch (Throwable ignored) {}
+    }
+
+    private static void hideSearchKindleRecursive(ViewGroup vg, View skipSubtree) {
+        if (vg == skipSubtree) return;
+        for (int i = 0; i < vg.getChildCount(); i++) {
+            View c = vg.getChildAt(i);
+            if (c == skipSubtree) continue;
+            if (c instanceof TextView) {
+                CharSequence txt = ((TextView) c).getText();
+                CharSequence hint = ((TextView) c).getHint();
+                String s1 = txt != null ? txt.toString() : "";
+                String s2 = hint != null ? hint.toString() : "";
+                if (s1.contains("Search Kindle") || s2.contains("Search Kindle")) {
+                    View target = c;
+                    if (c.getParent() instanceof View && c.getParent() != vg.getRootView()) {
+                        target = (View) c.getParent();
+                    }
+                    target.setVisibility(View.GONE);
+                    return;
+                }
+            }
+            if (c instanceof ViewGroup) {
+                hideSearchKindleRecursive((ViewGroup) c, skipSubtree);
+            }
         }
     }
 

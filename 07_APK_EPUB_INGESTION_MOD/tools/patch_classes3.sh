@@ -50,6 +50,24 @@ new_content = content.replace(target, replacement, 1)
 with open(smali_path, "w", encoding="utf-8") as f:
     f.write(new_content)
 print("Successfully patched RubyHomeFragment.smali with OpenCatalogView.wrap(p1)")
+
+reader_smali = "${TMP_DIR}/com/amazon/kcp/reader/StandAloneBookReaderActivity.smali"
+with open(reader_smali, "r", encoding="utf-8") as f:
+    rcontent = f.read()
+
+rtarget = """    invoke-super {p0}, Lcom/amazon/kcp/reader/BookReaderActivity;->onResume()V"""
+rreplace = """    invoke-super {p0}, Lcom/amazon/kcp/reader/BookReaderActivity;->onResume()V
+
+    invoke-static {p0}, Lcom/amazon/kindle/epub/CoverOverlayView;->showForCurrentBook(Landroid/app/Activity;)Z"""
+
+if rtarget not in rcontent:
+    print("ERROR: Target onResume smali snippet not found in StandAloneBookReaderActivity.smali", file=sys.stderr)
+    sys.exit(1)
+
+rnew_content = rcontent.replace(rtarget, rreplace, 1)
+with open(reader_smali, "w", encoding="utf-8") as f:
+    f.write(rnew_content)
+print("Successfully patched StandAloneBookReaderActivity.smali with CoverOverlayView.showForCurrentBook(p0)")
 PYEOF
 
 echo "Reassembling patched classes3.dex..."
