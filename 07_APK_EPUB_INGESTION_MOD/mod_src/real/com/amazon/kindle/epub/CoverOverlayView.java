@@ -157,6 +157,32 @@ public final class CoverOverlayView {
             android.util.Log.w("CoverOverlayView", "Failed to query getPageStartPosition: " + t);
         }
 
+        // Only auto-show cover overlay when at the beginning of the book (pos <= 500)
+        // Note: In Kindle DocViewer, getPageStartPosition() returns raw text byte offset,
+        // which starts at ~100-200 bytes (header/fragment 0) on the very first page of the book.
+        if (pos > 500) {
+            android.util.Log.i("CoverOverlayView", "Skipping auto-cover overlay at mid-book pos=" + pos);
+            return false;
+        }
+
+        // First try matching the exact book opened via Activity intent URI -> epub_cache/<name>.azw3.cover.jpg
+        try {
+            android.content.Intent intent = activity.getIntent();
+            if (intent != null && intent.getData() != null) {
+                String dataPath = intent.getData().getPath();
+                if (dataPath != null && !dataPath.isEmpty()) {
+                    if (new File(dataPath + ".cover.jpg").exists()) {
+                        return showIfAvailable(activity, dataPath + ".cover.jpg");
+                    }
+                    String baseName = new File(dataPath).getName();
+                    File cacheCover = new File(activity.getFilesDir(), "epub_cache/" + baseName + ".azw3.cover.jpg");
+                    if (cacheCover.exists()) {
+                        return showIfAvailable(activity, cacheCover.getAbsolutePath());
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+
         String cp = EpubTranscoder.lastCoverPath;
         android.util.Log.i("CoverOverlayView", "lastCoverPath=" + cp);
         if (cp != null && new File(cp).exists()) {

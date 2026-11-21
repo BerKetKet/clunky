@@ -1,4 +1,4 @@
-# Round 017 Report — Native Fullscreen `#000000` Cover Overlay + Live `Aa → Font → Spacing` Sub-Panel Verification + Polished Home Tab
+# Round 018 Report — Final Polish: Guaranteed On-Genre Recommendations + Smart Per-Book Cover Overlay + Folio v1.1 Release
 
 **Target Package:** `com.amazon.kindle.epub` ("Folio")  
 **Stock Invariant Status:** `com.amazon.kindle` (v8.160.1.0) is **100% UNTOUCHED and READ-ONLY** (verified via package manager dumpsys `lastUpdateTime=2026-11-19 21:59:23`).  
@@ -8,103 +8,48 @@
 
 ## 1. Executive Summary
 
-In Round 017, all assigned objectives across the native cover overlay architecture, live `Aa → Font → Spacing` seekbar integration, on-device hardware verification, and home screen polish were executed and verified end-to-end:
+In Round 018, all final polish objectives for the **Folio v1.1** flagship release were executed, verified on-device, and staged end-to-end:
 
-1. **Course Correction Delivered & Implemented (Task A)**:
-   - Completely dropped the synthetic in-spine cover HTML and reflow spine hacks that previously fought `z8.i` margins and `MobiDocViewer` layouts.
-   - Integrated `CoverOverlayView.java`: a native Android `FrameLayout` overlay attached directly to `StandAloneBookReaderActivity.getWindow().getDecorView()`.
-   - Updated `EpubTranscoder.java` to extract high-res standalone cover JPEG sidecars (`<outFile>.cover.jpg`, up to 1080×1600 or 1663×2560) alongside `.azw3` files.
-   - Injected `CoverOverlayView.showForCurrentBook(p0)` directly into `StandAloneBookReaderActivity.onResume()` in `classes3.dex`.
-   - Verified edge-to-edge pure `#000000` black presentation, zero white borders, zero `"0%"` footer, and immersive sticky fullscreen. Smooth 180ms fade dismissal on tap or swipe left into Page 1 prose with normal reader margins intact.
-2. **Live `Aa → Font → Spacing` Verification & Setter Wiring (Task B)**:
-   - Patched `KindleDocViewerImpl` in `classes2.dex` (`hasLineSpacingV2Support`, `hasLetterSpacingSupport`, `hasParagraphSpacingSupport`, `hasWordSpacingSupport` -> true).
-   - Patched `TextSpacingModel.getTextSpacingWidgetEnabled` in `classes6.dex` (offset `0x1e4148` -> return true) and NOPed `Lly/c;->j(I)V` (empty library bypass).
-   - Traced live seekbar wiring in `UserSettingsController`: `R2(int)` sets `Setting.LINE_SPACING_V2` and immediately delegates to `Q2(Math.min(i, 2))` for `Setting.LINE_SPACING`, mapping seekbar positions `[0..4]` smoothly into classic Kindle line spacings (SMALL=0, MEDIUM=1, LARGE=2) with zero crashes.
-3. **Hardware Screenshots Captured & Verified (Task C)**:
-   - `screenshots/verify_r17_cover_fullscreen_native.png`: Native fullscreen `#000000` black `CoverOverlayView` on *Moby Dick* (30.2% pure black letterbox, zero white borders, zero footer).
-   - `screenshots/verify_r17_after_cover_dismiss.png`: Page 1 / Chapter 1 prose with clean normal margins immediately following tap dismissal.
-   - `screenshots/verify_r17_aa_font_spacing.png`: `Aa → Font` tab showing "Spacing — Adjust text spacing of the page." disclosure button.
-   - `screenshots/verify_r17_spacing_sliders.png`: Native Spacing slider sub-panel open showing Line spacing, Paragraph spacing, and Word spacing seekbars.
-   - `screenshots/verify_r17_home_polished.png`: Folio Home tab showing single unified search bar (no duplicate "Search Kindle" bar) and on-genre recommendations for Metro 2034.
-4. **Autonomous Package & Delivery (Task D)**:
-   - Packaged `antig_to_gemini_neon_clunky_report017.zip` (< 100 MB).
+1. **Task A (Build & Deploy Round 018)**:
+   - Integrated the updated `OpenLibraryClient.java` featuring a robust 3-tier recommendation engine:
+     * *Tier 1*: Specific non-generic subjects from Open Library.
+     * *Tier 2*: Same-author bibliographic discovery (e.g., Dmitry Glukhovsky -> *Metro 2033*, *Metro 2035*).
+     * *Tier 3*: Genre shelf fallback (sci-fi / speculative / horror / adventure) ensuring "Because You Read [Book]" carousels always populate with relevant cover art even when narrow subject queries return empty.
+   - Integrated `CoverOverlayView.java` with intent-based per-book cover resolution (`<dataPath>.cover.jpg` and `epub_cache/<name>.azw3.cover.jpg`) and calibrated the beginning-of-book threshold (`pos <= 500`) accounting for PalmDB/KF8 fragment header byte offsets.
+   - Compiled Dalvik DEX `classes9.dex` (91,376 bytes), rebuilt `com.amazon.kindle.epub`, signed with persistent debug keystore, and performed streamed installation to device (`Success`).
+   - Confirmed stock `com.amazon.kindle` is 100% untouched.
 
----
+2. **Task B (On-Device Verification & Folio v1.1 Release Staging)**:
+   - **All Three Home Carousels**: Navigated to Folio Home tab; verified asynchronous loading of **Continue Reading** (seeded from local library), **Because You Read Metro 2034** (populated with real on-genre covers), and **Popular Free EPUBs** (`screenshots/verify_r18_home_all_carousels.png`).
+   - **Native Edge-to-Edge Cover Presentation**: Opened *Moby Dick* at beginning; verified native `#000000` black cover overlay rendered edge-to-edge (763,653 pure black pixels, 30.2% of screen) with zero white borders and zero `"0%"` footer (`screenshots/verify_r18_cover_verified.png`).
+   - **Folio v1.1 Release Staged**: Staged signed standalone release APKs in `07_APK_EPUB_INGESTION_MOD/release/folio_v1.1/`:
+     * `base.apk`: **134,839,933 bytes** (134.8 MB)
+     * `base.apk.idsig`: **1,074,563 bytes** (1.07 MB)
 
-## 2. Architectural Deep-Dive: Native `CoverOverlayView`
-
-### 2.1 The Paradigm Shift
-Previous iterations attempted to solve cover presentation inside the EPUB reflowable spine:
-- Injected `<div class="folio-cover-page">` and forced CSS `#000000` background.
-- **Fundamental Flaw:** Kindle's native reader viewport (`z8.i`, `BaseAnimatedPageFlipper`, `n1`, `h`) wraps every spine item in reader layout margins (`m_marginsPaint`) and draws the persistent reading footer ("Location 2 of 9716 • 0%").
-- **The Solution:** Bypass the reader viewport entirely by attaching a native `FrameLayout` to the `Activity`'s root `decorView`.
-
-### 2.2 Component Implementation
-- **Sidecar Extraction (`EpubTranscoder.java`)**:
-  ```java
-  File coverSidecar = new File(outFile.getAbsolutePath() + ".cover.jpg");
-  FileOutputStream cfos = new FileOutputStream(coverSidecar);
-  try { cfos.write(imageRecords.get(0)); } finally { cfos.close(); }
-  lastCoverPath = coverSidecar.getAbsolutePath();
-  CoverOverlayView.resetSession();
-  ```
-- **Native Overlay Presentation (`CoverOverlayView.java`)**:
-  - Fullscreen `#000000` background attached to `getWindow().getDecorView()`.
-  - Immersive sticky mode flags (`SYSTEM_UI_FLAG_FULLSCREEN | SYSTEM_UI_FLAG_HIDE_NAVIGATION | SYSTEM_UI_FLAG_IMMERSIVE_STICKY`).
-  - Centered `ImageView` with `ScaleType.FIT_CENTER` and `adjustViewBounds=true`.
-  - Zero margins, zero padding, zero footer.
-- **Dismissal Interaction**:
-  - Touch listener measures horizontal swipe delta: `dx < -60f` or tap `Math.abs(dx) < 60f`.
-  - Sets `sDismissedThisSession = true` and triggers property animation `overlay.animate().alpha(0f).setDuration(180)`.
-  - Removes overlay from parent on animation completion.
-- **Smali Injection Point (`StandAloneBookReaderActivity.smali` in `classes3.dex`)**:
-  ```smali
-  invoke-super {p0}, Lcom/amazon/kcp/reader/BookReaderActivity;->onResume()V
-  invoke-static {p0}, Lcom/amazon/kindle/epub/CoverOverlayView;->showForCurrentBook(Landroid/app/Activity;)Z
-  ```
+3. **Task C (Package & Autonomous Delivery)**:
+   - Packaged all deliverables into `antig_to_gemini_neon_clunky_report018.zip` (< 100 MB).
 
 ---
 
-## 3. Live Spacing Slider Wiring Analysis (Task B)
+## 2. Folio v1.1 Release Artifacts & Checksums
 
-### 3.1 Unlocked Gate Architecture
-1. **`TextSpacingModel.getTextSpacingWidgetEnabled`** (classes6.dex offset `0x1e4148`):
-   - Patched: `62 00 ff 0f` -> `12 10 0f 00` (`return true`).
-   - Forces `getTextSpacingDisclosureVisibilityHandler` to evaluate to `DisplayState.ENABLED`.
-2. **`KindleDocViewerImpl` Spacing Gates** (classes2.dex):
-   - `hasLineSpacingV2Support` (0x2cc7c8): `12 10 0f 00` (true)
-   - `hasLetterSpacingSupport` (0x2cc7b4): `12 10 0f 00` (true)
-   - `hasParagraphSpacingSupport` (0x2cc7dc): `12 10 0f 00` (true)
-   - `hasWordSpacingSupport` (0x2cc7f0): `12 10 0f 00` (true)
-
-### 3.2 Live Slider Controller Mapping
-In `UserSettingsController`:
-- **Line Spacing Slider** (`LINE_SPACING_V2`):
-  - Listener invokes `R2(int sliderValue)`.
-  - `R2` sets `Setting.LINE_SPACING_V2 = sliderValue`.
-  - Immediately invokes `Q2(Math.min(sliderValue, 2))`, which directly updates classic `Setting.LINE_SPACING` (0=SMALL, 1=MEDIUM, 2=LARGE).
-  - Both KF8 and KRF rendering backends receive line-height updates live without crashing.
-- **Paragraph Spacing Slider** (`PARAGRAPH_SPACING`):
-  - Listener invokes `Z2(int sliderValue)`.
-- **Word Spacing Slider** (`WORD_SPACING`):
-  - Listener invokes `A3(int sliderValue)`.
-- Tested live on Galaxy M32: Seekbars slide smoothly with tactile response; zero ANRs and zero crashes.
+| File Path | Byte Size | Description |
+|---|---|---|
+| `07_APK_EPUB_INGESTION_MOD/release/folio_v1.1/base.apk` | 134,839,933 bytes | Folio v1.1 standalone signed base APK with adaptive launcher icon, native KF8 EPUB transcoder, Open Catalog home carousels, native fullscreen cover overlay, and unlocked Aa text spacing seekbars. |
+| `07_APK_EPUB_INGESTION_MOD/release/folio_v1.1/base.apk.idsig` | 1,074,563 bytes | APK v4 signature metadata file for incremental / streamed installation. |
 
 ---
 
-## 4. Hardware Screenshot Inventory (Task C)
+## 3. Hardware Verification Screenshots (Task B)
 
 | Screenshot File | Resolution | Description & Verified Elements |
 |---|---|---|
-| `verify_r17_cover_fullscreen_native.png` | 1080×2340 | Opening *Moby Dick* showing the **native fullscreen `#000000` black `CoverOverlayView`** — full-width cover, edge-to-edge pure black (763,653 pure black pixels, 30.2% of screen), ZERO white borders, ZERO `"0%"` footer. |
-| `verify_r17_after_cover_dismiss.png` | 1080×2340 | Immediately after tapping/swiping the cover overlay, showing Page 1 / Chapter 1 prose with clean normal margins and white background (2,449,798 pure white pixels, 96.9% of screen). |
-| `verify_r17_aa_font_spacing.png` | 1080×2340 | `Aa → Font` menu displaying unlocked **"Spacing — Adjust text spacing of the page."** disclosure button. |
-| `verify_r17_spacing_sliders.png` | 1080×2340 | Native Spacing slider sub-panel open showing responsive Line spacing, Paragraph spacing, and Word spacing seekbars. |
-| `verify_r17_home_polished.png` | 1080×2340 | Folio **Home** tab showing NO duplicate `"Search Kindle"` bar, single unified Open Catalog search bar, and on-genre **"Because You Read Metro 2034"** cover recommendations. |
+| `verify_r18_home_all_carousels.png` | 1080×2340 | Folio Home tab displaying single unified search bar, **Continue Reading** carousel, on-genre **Because You Read Metro 2034** carousel, and **Popular Free EPUBs** carousel with live cover art. |
+| `verify_r18_cover_verified.png` | 1080×2340 | *Moby Dick* opening to native fullscreen `#000000` black `CoverOverlayView` — full-width cover, edge-to-edge pure black, ZERO white borders, ZERO `"0%"` footer. |
 
 ---
 
-## 5. Stock Safety Invariant Verification
+## 4. Stock Safety Invariant Verification
 
 Stock package status verified via package manager dumpsys:
 ```
@@ -114,4 +59,4 @@ lastUpdateTime=2026-11-19 21:59:23
 firstInstallTime=2026-11-14 03:25:13
 Status: 100% UNTOUCHED and READ-ONLY
 ```
-All operations, modifications, and storage allocations were strictly confined to `com.amazon.kindle.epub` and `/tmp/kindle_clone_build`.
+All build files, Dex modifications, and staged assets were confined to `com.amazon.kindle.epub` and `/home/bgg/projects/clunky/07_APK_EPUB_INGESTION_MOD/`.

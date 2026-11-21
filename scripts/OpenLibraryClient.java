@@ -152,6 +152,67 @@ public final class OpenLibraryClient {
                     }
                 } catch (Throwable ignored) {}
             }
+            // Tier 2 fallback: same-author books from Open Library (e.g. Metro 2033 / Metro 2035 for Metro 2034!)
+            if (recs.size() < 6 && seedAuthor != null && !seedAuthor.isEmpty() && !seedAuthor.equalsIgnoreCase("Unknown Author")) {
+                try {
+                    String aq = URLEncoder.encode(seedAuthor, "UTF-8");
+                    String aJson = GutendexSource.httpGet("https://openlibrary.org/search.json?author=" + aq + "&limit=12&fields=title,author_name,cover_i");
+                    JSONObject aRoot = new JSONObject(aJson);
+                    JSONArray aDocs = aRoot.optJSONArray("docs");
+                    if (aDocs != null) {
+                        for (int i = 0; i < aDocs.length() && recs.size() < limit; i++) {
+                            JSONObject ad = aDocs.optJSONObject(i);
+                            if (ad == null) continue;
+                            String wt = ad.optString("title", "").trim();
+                            int coverId = ad.optInt("cover_i", 0);
+                            if (wt.isEmpty() || coverId <= 0) continue;
+                            String keyLow = wt.toLowerCase(Locale.US);
+                            if (seen.contains(keyLow)) continue;
+                            seen.add(keyLow);
+                            String auth = seedAuthor;
+                            JSONArray an = ad.optJSONArray("author_name");
+                            if (an != null && an.length() > 0) auth = an.optString(0, auth);
+                            String coverUrl = "https://covers.openlibrary.org/b/id/" + coverId + "-M.jpg";
+                            recs.add(new BookResult("ol_" + coverId, "Open Library", wt, auth, "", coverUrl, "", 0));
+                        }
+                    }
+                } catch (Throwable ignored) {}
+            }
+
+            // Tier 3 fallback: sci-fi / speculative / adventure subject shelf if still < 4
+            if (recs.size() < 4) {
+                String fallbackSubj = "science_fiction";
+                String lt = seedTitle.toLowerCase(Locale.US);
+                if (lt.contains("wonderland") || lt.contains("oz") || lt.contains("tower")) fallbackSubj = "fantasy";
+                else if (lt.contains("moby") || lt.contains("treasure")) fallbackSubj = "adventure";
+                else if (lt.contains("pride") || lt.contains("jane")) fallbackSubj = "romance";
+                else if (lt.contains("frankenstein") || lt.contains("dracula")) fallbackSubj = "horror";
+                try {
+                    String sJson = GutendexSource.httpGet("https://openlibrary.org/subjects/" + fallbackSubj + ".json?limit=12");
+                    JSONObject sRoot = new JSONObject(sJson);
+                    JSONArray works = sRoot.optJSONArray("works");
+                    if (works != null) {
+                        for (int i = 0; i < works.length() && recs.size() < limit; i++) {
+                            JSONObject w = works.optJSONObject(i);
+                            if (w == null) continue;
+                            String wt = w.optString("title", "").trim();
+                            int coverId = w.optInt("cover_id", 0);
+                            if (wt.isEmpty() || coverId <= 0) continue;
+                            String keyLow = wt.toLowerCase(Locale.US);
+                            if (seen.contains(keyLow)) continue;
+                            seen.add(keyLow);
+                            String auth = "Unknown Author";
+                            JSONArray authors = w.optJSONArray("authors");
+                            if (authors != null && authors.length() > 0) {
+                                JSONObject a0 = authors.optJSONObject(0);
+                                if (a0 != null) auth = a0.optString("name", auth);
+                            }
+                            String coverUrl = "https://covers.openlibrary.org/b/id/" + coverId + "-M.jpg";
+                            recs.add(new BookResult("ol_" + coverId, "Open Library", wt, auth, "", coverUrl, "", 0));
+                        }
+                    }
+                } catch (Throwable ignored) {}
+            }
         } catch (Throwable t) {
             android.util.Log.e("OpenLibraryClient", "Recs error", t);
         }

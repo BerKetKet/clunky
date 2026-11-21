@@ -24,4 +24,12 @@ if [[ $(ls -1 "${WORK_DIR}/signed_splits/"*.apk | wc -l) -gt 1 ]]; then
 else
     adb install -r -d "${WORK_DIR}/signed_splits/base.apk"
 fi
-echo "Fast rebuild and deploy successful!"
+
+echo "[5/5] Staging Folio v1.1 release..."
+mkdir -p "${MOD_ROOT}/release/folio_v1.1"
+cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/folio_v1.1/base.apk"
+if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
+    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/folio_v1.1/base.apk.idsig"
+fi
+
+echo "Fast rebuild, deploy, and Folio v1.1 staging successful!"
