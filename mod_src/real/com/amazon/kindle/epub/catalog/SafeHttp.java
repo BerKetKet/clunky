@@ -35,17 +35,36 @@ public final class SafeHttp {
     private static final Map<String, String> DNS_CACHE = new ConcurrentHashMap<String, String>();
 
     public static String getString(String urlStr) throws Exception {
-        InputStream is = openStream(urlStr);
+        long ttl = DiskCache.ttlForUrl(urlStr);
+        String cached = DiskCache.getText(urlStr, ttl, false);
+        if (cached != null) {
+            return cached;
+        }
         try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line).append('\n');
+            InputStream is = openStream(urlStr);
+            try {
+                BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) {
+                    sb.append(line).append('\n');
+                }
+                String res = sb.toString();
+                if (!res.isEmpty()) {
+                    DiskCache.putText(urlStr, res);
+                }
+                return res;
+            } finally {
+                try { is.close(); } catch (Throwable ignored) {}
             }
-            return sb.toString();
-        } finally {
-            try { is.close(); } catch (Throwable ignored) {}
+        } catch (Exception netErr) {
+            // Stale-on-error fallback (keeps Folio working smoothly during Gutenberg/OpenLibrary maintenance!)
+            String stale = DiskCache.getText(urlStr, ttl, true);
+            if (stale != null) {
+                android.util.Log.w("SafeHttp", "Serving stale cache for " + urlStr + " after error: " + netErr.getMessage());
+                return stale;
+            }
+            throw netErr;
         }
     }
 

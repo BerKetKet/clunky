@@ -1,16 +1,15 @@
 {
-  "round": 15,
+  "round": 21,
   "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
   "app_label": "Folio",
   "stock_package_read_only": "com.amazon.kindle",
   "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report015.zip",
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report021.zip",
   "max_report_size_mb": 100,
   "tasks": [
-    "Deploy redesigned Folio Home screen with Continue Reading, Library-seeded Open Library Recommendations, and Popular Free EPUBs cover carousels",
-    "Deploy fullscreen black cover page styling + high-res cover + CSS spacing sanitizer in EpubTranscoder.java",
-    "Capture Home carousels, black cover page, spaced prose, and Aa Font/Layout screenshots",
-    "Reverse-engineer Aa Font -> Spacing gate and native fullscreen cover mode in classes*.dex for Round 016"
+    "Deploy persistent DiskCache (metadata + cover bitmaps + stale-on-error fallback) in SafeHttp and OpenCatalogView",
+    "Run /sdcard/epub/ side-by-side visual parity benchmark comparing every EPUB in Folio vs stock Kindle (read-only)",
+    "Inspect stock Kindle Send-to-Kindle KFX files (read-only) and test local unencrypted .kfx routing into Folio's KRIFDocViewer"
   ]
 }

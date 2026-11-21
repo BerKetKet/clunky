@@ -1,0 +1,81 @@
+=== STOCK KINDLE SEND-TO-KINDLE (STK) KFX INSPECTION REPORT ===
+Date: 2026-11-21
+Stock Package: com.amazon.kindle (v8.160.1.0) - Read-Only Inspection
+Target Package: com.amazon.kindle.epub ("Folio")
+
+1. Directory Hierarchy & Storage Layout
+---------------------------------------
+Stock Kindle stores cloud-delivered Send-to-Kindle (STK) personal documents across two primary locations:
+a) Main book container storage:
+   /sdcard/Android/data/com.amazon.kindle/files/kindle/
+   Contains monolithic .kfx files named using Amazon Content Reference (ACR) format:
+   `CR!<Base32_ID>.kfx` (e.g., CR!6KYWZNKF153BK4YSK5MTFZ1XN6ZA.kfx, CR!ZTD3FX31BX225B7KRMNC6MN5NFHZ.kfx)
+   Also contains metadata/index sidecars:
+   - `<timestamp>.index`
+   - `.pagination.cache/<hash>` (cached page calculation hashes)
+
+b) Per-ASIN tracking directories:
+   /sdcard/Android/data/com.amazon.kindle/files/<ASIN_OR_UUID>/
+   - `<ASIN>.ticr` (Typographical/Interactive Content Reading state / position markers)
+   - `<ASIN>.ticr.backup`
+   - `autocompletecache.ser` (serialized Java search index for in-book search)
+
+c) Internal app databases:
+   /data/data/com.amazon.kindle/databases/kindle_library.db
+   - Table `KindleContent`: stores ID, TITLE, AUTHOR, STATE ('LOCAL' or 'REMOTE'), CONTENT_TYPE ('PDOC' / 'EBOK')
+   - Table `LocalContent`: maps KEY (ID) to FILE_PATH on disk
+
+2. KFX Container Binary Header Analysis
+---------------------------------------
+Every STK .kfx file begins with the standard Amazon KFX Container format (KFX-CONT v2):
+Offset 0x00 - 0x03: 43 4f 4e 54 ("CONT")
+Offset 0x04 - 0x05: 02 00 (Container format version 2)
+Offset 0x06 - 0x07: Chunk offset table size
+Offset 0x08 - 0x09: Chunk header offset
+Offset 0x0A - 0x0B: 50 00 / 51 00 / 53 00 (Entity table flags)
+
+Sample Hexdump (CR!ZTD3FX31BX225B7KRMNC6MN5NFHZ.kfx, 242 KB):
+00000000: 434f 4e54 0200 4312 0000 c210 0000 5000  CONT..C.......P.
+00000010: 0000 ab03 0000 9100 0000 0000 0000 0000  ................
+00000020: 0000 4821 0000 0000 0000 bb03 0000 9100  ..H!............
+00000030: 0000 4821 0000 0000 0000 cc20 0000 0000  ..H!....... ....
+
+3. Unencrypted Ion / YellowJersey Payload Verification
+------------------------------------------------------
+Analysis of personal documents sent via Send-to-Kindle reveals:
+- Amazon's Send-to-Kindle cloud pipeline converts EPUB -> KFX using Amazon's server-side generator (YJReaderSDK).
+- Generator stamp found in KFX metadata:
+  `PackageVersion:YJReaderSDK-1.0.x.x GitSHA: c805492 Month-Day:04-22`
+  `ApplicationVersion: 20.12.238.0`
+- Crucially, personal documents (PDOCs) are NOT encrypted with Amazon DRM.
+- Symbol tables and text streams are stored as uncompressed / unencrypted Amazon Ion binary structures:
+  * Symbol table: `YJ_symbols`
+  * Text blocks: `kfxgen.textBlock`
+  * Fragment symbols: `content_1`, `content_2`, `c10-ad`, etc.
+  * Resources: `resource/rsrcW0`, `resource/rsrcW1` (JPEG/PNG images stored directly in container)
+  * PID mapping: `kfxgen.pidMapWithOffset`
+  * Table of Contents: Plaintext ASCII/UTF-8 strings directly parseable (e.g. "Contents", "E01 The Ferryman's Almanac", "T1 Column counts")
+
+4. Mapping Between Stock STK Books and Local EPUBs
+--------------------------------------------------
+In stock Kindle's library database (`kindle_library.db`):
+- All 17 Delphi Complete Works classics exist in `KindleContent` with STATE='REMOTE' (uploaded to cloud).
+- Local STK books currently on device in `KindleContent` (STATE='LOCAL'):
+  * AMZNID0/CAC605D6124543D98B9B96C7D27CEE9A/4/ -> "The Odyssey (Homer)" -> CR!C1KNSBHJT9547FG0JX3QTXVXS41W.kfx (3.4M)
+  * AMZNID0/D5B1F5C7A49E4135892DEA2D1C66263E/4/ -> "kindle_tables_images_exam" -> CR!6KYWZNKF153BK4YSK5MTFZ1XN6ZA.kfx (1.3M)
+  * AMZNID0/D4235A9F241B4B5AB08D6AB9C7D09342/4/ -> "kindle_exam_v3" -> CR!ZTD3FX31BX225B7KRMNC6MN5NFHZ.kfx (242K)
+  * AMZNID0/2C636DEF50A94DDD8CC69925CCFACE2A/4/ -> "kindle_exam_v2" -> CR!QWR93Y9FP52E3AN0VEY67CBPHMNR.kfx (491K)
+  * AMZNID0/CB7439AC934A4F6788F8CB9C28EF72B7/4/ -> "Metro 2034" -> CR!AE2V9HFM2X0SDF9K7NY5XFFST45T.kfx (893K)
+  * AMZNID0/CF29CE134ECD4B3191ACE6B2ECBF2F51/4/ -> "Blindsight" -> CR!WWQSC2SFR57F5CW1T5VSXE2HFSS9.kfx (1.1M)
+  * AMZNID0/36B380864A914994ADA3AA24CB401CDF/4/ -> "Stranger in a Strange Land" -> CR!DKR6XEFRY57B91SXXQCJJS17CY5M.kfx (1.5M)
+  * AMZNID0/8810FE237E4A416F90212B691A769851/4/ -> "God Emperor of Dune" -> CR!QD5541WEW90575PKC79SKQ5EDSD3.kfx (3.1M)
+  * AMZNID0/471AF4949F994CD88701844AED284CA8/4/ -> "Revelation Space" -> CR!5MG9TW087N36B6PXDMNAHQMP16X0.kfx (4.0M)
+  * AMZNID0/B955A354178740A1BA10394334CBCA9D/4/ -> "Collected Stories of Frank Herbert" -> CR!2HDKDNHA7D55ZADJ0BYVPF44R7HQ.kfx (4.7M)
+  * AMZNID0/F82A86FB5D3246FF82C4ED93E07AB77B/4/ -> "The Hyperion Cantos" -> CR!660GNZJJWD08BBZCWJRDM45C2KXV.kfx (6.7M)
+  * AMZNID0/5FACEDFC98AE470F9C86289E447F18B1/4/ -> "The Complete Witcher" -> CR!DGKEWDT5E55MH3903SS0RH8Y9NCM.kfx (7.6M)
+  * AMZNID0/B9049D6AD84A4EAB9467B919BF7F9B4A/4/ -> "The Foundation Novels" -> CR!54KHFWKCM906X7K9F3NT1GPX0JXP.kfx (13M)
+  * AMZNID0/86827D07ACB64D3B89E7A3F01518091C/4/ -> "Complete Works (Kafka)" -> CR!QV2HT61R957Q3FC2V1P5Q3AM2TAE.kfx (15M)
+  * AMZNID0/D3AAA20471C6418B88CF45167EA11D8D/4/ -> "New Annotated H. P. Lovecraft" -> CR!C3J3N0PGM95ENEM4P094XFVRBSVZ.kfx (20M)
+  * AMZNID0/0AEC7B532126483B82779C77F005949A/4/ -> "Andrzej Sapkowski Complete Works" -> CR!V5DY8Y65Z92QQBKDGFCGF0C25GW0.kfx (22M)
+  * AMZNID0/65C0B63BD4A7426B94D31684D9A6EE92/4/ -> "H. P. Lovecraft - Beyond Arkham" -> CR!REMXPCQ3611CZ1VE92EHFQB38HBH.kfx (23M)
+  * AMZNID0/02D4ABACCC744742944A0986A530FE77/4/ -> "The Complete Malazan" -> CR!BT4KQ10CGX0MZD0XXJ17J3SRAZKP.kfx (32M)

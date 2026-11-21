@@ -1,0 +1,31 @@
+================================================================================
+ROUND 016 LIVE SPACING SLIDER TEST REPORT
+================================================================================
+Package: com.amazon.kindle.epub ("Folio")
+Target Classes & Bytecode:
+1. classes6.dex: TextSpacingModel.getTextSpacingWidgetEnabled
+   Offset: 0x1e4148
+   Patch: 6200ff0f -> 12100f00 (const/4 v0, 1; return v0)
+   Result: Returns true for all spacing options (LINE_SPACING_V2, PARAGRAPH_SPACING,
+           WORD_SPACING, CHARACTER_SPACING).
+2. classes2.dex: KindleDocViewerImpl
+   Methods patched:
+   - hasLetterSpacingSupport (0x2cc7b4): 12000f00 -> 12100f00
+   - hasLineSpacingV2Support (0x2cc7c8): 12000f00 -> 12100f00
+   - hasParagraphSpacingSupport (0x2cc7dc): 12000f00 -> 12100f00
+   - hasWordSpacingSupport (0x2cc7f0): 12000f00 -> 12100f00
+
+Observed Live Behavior on Device:
+1. "Spacing - Adjust text spacing of the page." is visible and enabled under Aa -> Font tab.
+   Screenshot: screenshots/verify_r16_aa_font_spacing.png
+2. Tapping Spacing opens the full sub-panel with live seekbars for:
+   - Line spacing (with reduce/increase buttons)
+   - Paragraph spacing (with reduce/increase buttons)
+   - Word spacing (with reduce/increase buttons)
+   Screenshot: screenshots/verify_r16_spacing_sliders.png
+3. Slider interaction:
+   - Tapping Increase/Decrease and dragging seekbars updates UserSettingsController (R2, Z2, A3, O2)
+   - R2(i) automatically invokes Q2(Math.min(i, 2)) updating LINE_SPACING setting
+   - All setters are bounded (0 to 4) and safe no-ops in KindleDocViewerImpl
+   - Zero crashes, zero UnsupportedOperationExceptions observed.
+================================================================================

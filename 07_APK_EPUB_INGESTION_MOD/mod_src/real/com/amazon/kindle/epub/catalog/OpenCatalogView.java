@@ -129,6 +129,7 @@ public final class OpenCatalogView {
     }
 
     public static View build(final Context ctx) {
+        DiskCache.init(ctx);
         final Handler mainHandler = new Handler(Looper.getMainLooper());
         final SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         final float d = ctx.getResources().getDisplayMetrics().density;
@@ -671,19 +672,25 @@ public final class OpenCatalogView {
             public void run() {
                 Bitmap bmp = null;
                 if (book.coverUrl != null && !book.coverUrl.isEmpty()) {
-                    try {
-                        InputStream is = SafeHttp.openStream(book.coverUrl);
-                        bmp = BitmapFactory.decodeStream(is);
-                        is.close();
-                    } catch (Throwable ignored) {}
+                    bmp = DiskCache.getCoverBitmap(book.coverUrl);
+                    if (bmp == null) {
+                        try {
+                            byte[] raw = SafeHttp.getBytes(book.coverUrl);
+                            bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length);
+                            if (bmp != null) DiskCache.putCoverBytes(book.coverUrl, raw, bmp);
+                        } catch (Throwable ignored) {}
+                    }
                 }
                 if (bmp == null) {
                     try {
                         OpenLibraryClient.BookMeta m = OpenLibraryClient.fetchMeta(book.title, book.author);
                         if (m.coverUrl != null && !m.coverUrl.isEmpty()) {
-                            InputStream is = SafeHttp.openStream(m.coverUrl);
-                            bmp = BitmapFactory.decodeStream(is);
-                            is.close();
+                            bmp = DiskCache.getCoverBitmap(m.coverUrl);
+                            if (bmp == null) {
+                                byte[] raw = SafeHttp.getBytes(m.coverUrl);
+                                bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length);
+                                if (bmp != null) DiskCache.putCoverBytes(m.coverUrl, raw, bmp);
+                            }
                         }
                     } catch (Throwable ignored) {}
                 }

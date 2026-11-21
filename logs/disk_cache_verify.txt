@@ -1,0 +1,23 @@
+=== FOLIO DISK CACHE VERIFICATION ===
+Sat Nov 21 18:03:17 UTC 2026
+Target Package: com.amazon.kindle.epub
+--- Cover Cache --- [folio_cover_cache]
+total 222
+drwx--S---  2 u0_a262 u0_a262_cache  3488 2026-11-21 21:02 .
+drwxrws--x 13 u0_a262 u0_a262_cache  3488 2026-11-21 21:01 ..
+-rw-------  1 u0_a262 u0_a262_cache 17037 2026-11-21 21:01 3dbaf305cd5650468b4e29a92d6afe9e.img
+-rw-------  1 u0_a262 u0_a262_cache 25557 2026-11-21 21:01 54ae40433db11bd4750900753974631d.img
+-rw-------  1 u0_a262 u0_a262_cache 16710 2026-11-21 21:01 54d87fe49e9d91924638038bdb32c0c9.img
+-rw-------  1 u0_a262 u0_a262_cache 17387 2026-11-21 21:01 9362a67ff79b876f5fe0a41347b48b3b.img
+-rw-------  1 u0_a262 u0_a262_cache 18278 2026-11-21 21:01 b0bb1be839c078ad3cc5965f005d3d7e.img
+-rw-------  1 u0_a262 u0_a262_cache 15585 2026-11-21 21:01 b52f88f57f251b2be5894c8e561d47b8.img
+-rw-------  1 u0_a262 u0_a262_cache 21413 2026-11-21 21:01 bd998d245264f0c3478fe05138d46ca1.img
+-rw-------  1 u0_a262 u0_a262_cache 20933 2026-11-21 21:02 d5033fe7b6df021389377d907dee5a08.img
+-rw-------  1 u0_a262 u0_a262_cache 42234 2026-11-21 21:01 df84e0f9a463e2d7464922da5a25a495.img
+198622	/data/data/com.amazon.kindle.epub/cache/folio_cover_cache/
+--- Meta Cache --- [folio_meta_cache]
+total 66
+drwx--S---  2 u0_a262 u0_a262_cache  3488 2026-11-21 21:01 .
+drwxrws--x 13 u0_a262 u0_a262_cache  3488 2026-11-21 21:01 ..
+-rw-------  1 u0_a262 u0_a262_cache 58843 2026-11-21 21:01 da87f7dbcb5f3aa8492b60d265eed27c.txt
+62331	/data/data/com.amazon.kindle.epub/cache/folio_meta_cache/
