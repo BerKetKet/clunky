@@ -1,16 +1,16 @@
 {
-  "round": 26,
+  "round": 27,
   "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
   "app_label": "Folio",
   "stock_package_read_only": "com.amazon.kindle",
   "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report026.zip",
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report027.zip",
   "max_report_size_mb": 15,
   "tasks": [
-    "Implement Amazon YJConversionTools standalone $270 (scale_fit, center, width/height) Cover Section c0 in Rust libkfxconv.so",
-    "Strip all cover-only HTML spine items (including SVG wrappers) so no white-page cover thumbnail ever appears",
-    "Verify native #000000 fullscreen KFX cover on 2 distinct /sdcard/epub/ books and live Aa -> Font -> Spacing reflow on an on-device KFX book",
-    "Stage Folio v2.3 release APK and upload lean (<15 MB) report026.zip"
+    "HTML Whitespace Normalization to eliminate stray line breaks in Contents and text nodes",
+    "Multi-byte UTF-16 code unit offset calculations for accurate inline styles, bold/italics, and anchor links",
+    "Native YellowJersey internal anchor links ($266) and $179 link_to style events for live navigation",
+    "Cross-compile ARM64 libkfxconv.so, stage Folio v2.4, verify on-device (Contents, internal links, verse, dark mode, library, home), and relay lean report027.zip"
   ]
 }

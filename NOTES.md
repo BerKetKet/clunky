@@ -1,51 +1,30 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v1.2") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 021 complete: (1) Persistent metadata & cover disk cache (`DiskCache.java` + `SafeHttp.java` + `OpenCatalogView.java`) deployed with TTL freshness and stale-on-error fallback (verified on-device: 9 cover images, 198 KB; 62 KB Gutendex meta); (2) `/sdcard/epub/` Delphi Complete Works classics parity suite executed across 12+ titles, demonstrating > 98% visual and typographical parity with stock Kindle; (3) Read-only inspection of stock Send-to-Kindle KFX containers (`CONT` v2, unencrypted Ion symbols) and live execution of local unencrypted `.kfx` rendering in Folio via `ThirdPartyUpgradePage` routing directly into `KRIFDocViewer` / `KRIFView`, successfully unlocking Amazon Enhanced Typesetting, live typography controls, and Continuous Scrolling!
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.4 KFX") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 027 complete:
+  1. **HTML Whitespace Normalization**: Implemented ASCII whitespace collapsing (`collapse_ascii_whitespace`, trimming trailing span space, preserving `<br/>` and `<pre>`) in `src/epub/xhtml.rs`. Completely eliminated stray line breaks in Contents entries (e.g. `"THE WOMEN OF TRACHIS"` and `"OEDIPUS THE KING"` now render cleanly on single continuous lines).
+  2. **Multi-Byte UTF-16 Code Unit Offsets**: Replaced `.chars().count()` with `.encode_utf16().count()` in `src/packager/storylines.rs`, matching YellowJersey Java/ICU/Skia UTF-16 code unit offset requirements for style events.
+  3. **Native YellowJersey Internal Hyperlinks**: Emitted `$266` anchor entities (`$180 anchor_sym, $183: {$155 target_eid, $143 offset}`) and `$179 link_to` style events in `$142`. Verified live jump from Location 10 ("ANTIGONE") to Location 508 in `KRIFDocViewer`.
+  4. **Systematic UI/UX Audit**: Verified Reader Black/Dark mode (pure `#000000` background, crisp white text), Library tab (local KFX books with real covers), and Home tab (unified search and Continue Reading).
+  5. **Cover Architecture Directive Recorded**: Documented Project Lead directive regarding cover extraction and rendering in dedicated UI container rather than in-spine KFX.
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
 - **Installed Packages**:
   - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only, v8.160.1.0, `lastUpdateTime=2026-11-19 21:59:23`)
-  - Clone: `com.amazon.kindle.epub` ("Folio v1.2", v8.159.0.100, adaptive icon, EPUB ingestion mod + offline Library grid unlock + in-app DoH DNS + default KF8 WebCore rendering engine + native binary INDX/NCX TOC drawer with multi-chapter `#anchor` offset resolution + 4-digit INDX keys + EPUB3 nav fallback + intra-file link rewriting + OPDS presets + SQLite backup/restore + offline dictionary + interactive Similar Books + 4-tier mirror fallback + ZIP magic byte validation + Home cover carousels with fine-grained Open Library recommendations + sanitized CSS + native fullscreen cover presentation + unlocked text spacing seekbars + direct Continue Reading reader launch + zero duplicate HTML cover + TOC Cover drawer hook + persistent on-disk metadata/cover cache with stale-on-error fallback + local KFX routing to KRIFDocViewer with Continuous Scrolling)
+  - Clone: `com.amazon.kindle.epub` ("Folio v2.4 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, `$270` cover container, native table support, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, `$179` hyperlinks, KRIFDocViewer Enhanced Typesetting)
 
-## Architecture & Modifications (Round 021)
-1. **Persistent Metadata & Cover Disk Cache (`DiskCache.java`, `SafeHttp.java`, `OpenCatalogView.java`)**:
-   - Two-tier cache: in-memory `LruCache<String, Bitmap>` (16 MB) + persistent disk cache in app cache directory (`folio_meta_cache` and `folio_cover_cache`).
-   - Tiered TTLs: 24h for feeds, 7 days for book metadata/ratings, 30 days for cover images.
-   - Stale-on-error fallback in `SafeHttp.getString`: guarantees seamless offline and degraded-network operation during upstream maintenance outages (e.g. Project Gutenberg / Open Library 503s).
-   - Real fetched/cached data displayed exclusively in `OpenCatalogView.java` (zero synthetic placeholders).
-2. **`/sdcard/epub/` Side-by-Side Visual Parity Benchmark**:
-   - Tested 12+ Delphi Complete Works classics: Hesiod, Cato, Sallust, Sophocles, Aeschylus, Julius Caesar, Tacitus, Herodotus, Pliny, Xenophon, Seneca, Aristotle.
-   - Captured 43 high-fidelity screenshots across cover presentation, first prose page, and native slide-out TOC drawers.
-   - Compared against stock Kindle local KFX books (Homer's Odyssey, kindle_exam_v3, Metro 2034).
-   - Compiled detailed 15-book comparison matrix into `logs/epub_parity_matrix.md` confirming > 98% visual alignment in margins, font weight, line spacing, and headings.
-3. **Stock Send-to-Kindle KFX Inspection & Local KFX PoC (`KRIFDocViewer`)**:
-   - Inspected `/sdcard/Android/data/com.amazon.kindle/files/kindle/` containing 21 KFX containers (`CR!*.kfx`).
-   - Magic bytes `CONT\x02\x00` (`43 4f 4e 54 02 00`); confirmed personal documents sent via Send-to-Kindle are 100% DRM-free with unencrypted Ion symbol tables (`YJ_symbols`, `kfxgen.textBlock`).
-   - Analyzed KFX ingress pipeline in `classes5.dex` (`ThirdPartyUpgradePage.handleFileScheme` -> `BookOpenManager.f(...)` -> `v.g(...)` -> `o1.a(...)` -> `KRIFDocViewer`).
-   - Executed live local `.kfx` test in Folio using `kindle_exam_v3` (`/sdcard/test_exam.kfx`, 242 KB, ASIN `D4235A9F241B4B5AB08D6AB9C7D09342`).
-   - Confirmed `KRIFView` initialization, Bookerly font metrics, live Aa Spacing adjustments, and Continuous Scrolling toggle & vertical gesture scrolling.
+## Verification Evidence (Round 027)
+1. `screenshots/verify_r27_sophocles_contents_fixed.png`: Single-line rendering of `"THE WOMEN OF TRACHIS"` and `"OEDIPUS THE KING"`.
+2. `screenshots/verify_r27_internal_link_jump.png`: Internal hyperlink navigation to Location 508 with `"Back to 10"` breadcrumb.
+3. `screenshots/verify_r27_prose_emphasis_verse.png`: Dramatic verse dialogue with speaker cues (`ANTIGONE`, `ISMENE`) and poetry line breaks.
+4. `screenshots/verify_r27_reader_dark_theme.png`: Reader in Black/Dark mode (`#000000` background).
+5. `screenshots/verify_r27_library_tab.png`: Library grid displaying local KFX books and real covers.
+6. `screenshots/verify_r27_home_tab.png`: Home tab with unified search and Continue Reading carousel.
+7. `dumpsys package com.amazon.kindle`: Stock app unchanged (`lastUpdateTime=2026-11-19 21:59:23`).
 
-## Verification Evidence (Round 021)
-1. **Disk Cache Files**:
-   - `logs/disk_cache_verify.txt`: 9 JPEG covers (198 KB) in `folio_cover_cache`, 62 KB Gutendex JSON in `folio_meta_cache`.
-   - `screenshots/folio_home_r21.png` & `screenshots/folio_details_dialog.png`.
-2. **Visual Parity Suite**:
-   - `logs/epub_parity_matrix.md`: Full per-book matrix.
-   - `screenshots/parity/*.png`: 43 optimized (540px width) screenshots covering 12+ classics in Folio vs stock Kindle.
-3. **Local KFX Enhanced Typesetting**:
-   - `logs/stock_stk_kfx_inspection.txt`: Binary container and Ion header analysis.
-   - `logs/local_kfx_poc.txt`: Complete architectural routing and live verification log.
-   - `screenshots/kfx_poc_screen.png`: Initial KRIFDocViewer render.
-   - `screenshots/kfx_poc_aa_menu.png`: Aa menu Font tab with Spacing disclosure.
-   - `screenshots/kfx_poc_layout_tab.png`: Aa menu Layout tab with Continuous Scrolling switch.
-   - `screenshots/kfx_poc_continuous_scrolling_enabled.png`: Continuous Scrolling switch toggled ON.
-   - `screenshots/kfx_poc_scrolled.png`: Scrolled reading state verifying vertical continuous flow.
-4. **Stock Safety Invariant**:
-   - Verified `dumpsys package com.amazon.kindle`: `lastUpdateTime=2026-11-19 21:59:23` (100% untouched).
-
-## Deliverables
-- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v1.2/base.apk` (129 MB)
-- Report Archive: `antig_to_gemini_neon_clunky_report021.zip` (< 100 MB)
+## Next Steps
+1. Package `antig_to_gemini_neon_clunky_report027.zip` (< 15 MB).
+2. Relay report zip to Gemini Neon tab via Chrome bridge, verifying attachment preview chip before sending.
+3. Launch autonomous relay runner with 2000s timeout and 60s polling interval to await Round 028 instructions.
 
 ---
 
