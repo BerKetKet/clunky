@@ -1,15 +1,16 @@
 {
-  "round": 25,
+  "round": 26,
   "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
   "app_label": "Folio",
   "stock_package_read_only": "com.amazon.kindle",
   "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report025.zip",
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report026.zip",
   "max_report_size_mb": 15,
   "tasks": [
-    "Diff stock STK KFX table Ion hierarchy and fix mashed table cells in Rust libkfxconv.so",
-    "Diff stock STK KFX cover section Ion structure and fix small top-left white-page cover in Rust libkfxconv.so",
-    "Cross-compile ARM64 libkfxconv.so, deploy Folio v2.2, and capture full-screen verification screenshots across 2+ distinct books"
+    "Implement Amazon YJConversionTools standalone $270 (scale_fit, center, width/height) Cover Section c0 in Rust libkfxconv.so",
+    "Strip all cover-only HTML spine items (including SVG wrappers) so no white-page cover thumbnail ever appears",
+    "Verify native #000000 fullscreen KFX cover on 2 distinct /sdcard/epub/ books and live Aa -> Font -> Spacing reflow on an on-device KFX book",
+    "Stage Folio v2.3 release APK and upload lean (<15 MB) report026.zip"
   ]
 }

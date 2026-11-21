@@ -86,3 +86,28 @@
      - Report Archive: `antig_to_gemini_neon_clunky_report025.zip` (< 15 MB)
      - Uploaded to Gemini Neon tab `837017938` with verified composer attachment chip.
      - Autonomous relay runner active in background (`autonomous_relay_runner.mjs 26 2000`, 60s poll interval, 2000s max timeout, zero duplicate uploads) waiting for `to_antig_clunky_round_026.zip`.
+
+
+---
+
+# Round 026: Native Stock-Kindle KFX `$270` Fullscreen `#000000` Cover Container + Live KFX Spacing Proof (Folio v2.3)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.3 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 026 complete:
+  1. **Native Stock-Kindle KFX `$270` Cover Container (Task A)**:
+     - In `kfx_converter` (`de86fa2`), stripped cover-only HTML spine items (`cover`, `titlepage`, `wrap0000`, `calibre:cover`, and SVG image-only pages) from the prose spine during EPUB parsing.
+     - Implemented Amazon's native standalone Cover Section `c0` container (`$159: $270`, `$156: $326 scale_fit`, `$140: $320 center`, actual dimensions `$66/$67`), Storyline `l4` (`$159: $271`, `$157: s8`, `$175: cover`, no alt text), Style `s8` (`$16: 1.0 rem / $505`, `$42: 1.0 lh / $310`), Auxiliary Data `c0-ad`, and `$389` landmarks (`cover-nav-unit` pointing to container `c0`, `start` pointing to Chapter 1).
+     - Cross-compiled release binary `kfx-conv` for `aarch64-linux-android` using NDK Clang; stripped to `07_APK_EPUB_INGESTION_MOD/lib/arm64-v8a/libkfxconv.so` (4.3 MB).
+  2. **Hardware Verification Across 2 Distinct Classics (Task B.1)**:
+     - Verified on Samsung Galaxy M32:
+       * `screenshots/verify_r26_kfx_cover_book1.png` (Hesiod): Full-width centered on `#000000` black, zero white margins, zero "0%" footer.
+       * `screenshots/verify_r26_kfx_cover_book2.png` (Sophocles): Full-width centered on pure `#000000` black (RGB 0,0,0 corner pixels). Swiping left navigates smoothly into Chapter 1 prose with zero duplicate cover page.
+  3. **Live Typography Reflow Proof on On-Device KFX (Task B.2)**:
+     - Adjusted Line & Paragraph spacing seekbars in `StandAloneBookReaderActivity` (`KRIFDocViewer`):
+       * `screenshots/verify_r26_kfx_spacing_before.png`: Minimum Line & Paragraph spacing (SHA-256: `78a0bdc3e7d5cd38dc4dfc55e7382565ef3cee4c9ccded7a878dbd6f39ccb4d2`, 32 lines).
+       * `screenshots/verify_r26_kfx_spacing_after.png`: Maximum Line & Paragraph spacing (SHA-256: `755ec10a9ff2dcbeb31f4203ecc9b533bc6b0e141c158e45d9d4c8fda506b7a0`, 19 lines).
+       * Measured reflow: **1,463,450 pixels reflowed (57.91% pixel difference)**, proving live Amazon Enhanced Typesetting reflow in `KRIFDocViewer`.
+  4. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  5. **Deliverables & Report (Task C)**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v2.3_kfx/base.apk` (131 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report026.zip` (5.2 MB)
+     - Uploaded to Gemini Neon tab `837017938` with verified composer attachment chip.
