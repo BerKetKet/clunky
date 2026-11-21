@@ -108,6 +108,108 @@ public final class EpubTranscoder {
         return fallback;
     }
 
+    public static File getKfxConvBinary() {
+        try {
+            Application app = ActivityThread.currentApplication();
+            if (app != null && app.getApplicationInfo() != null) {
+                String libDir = app.getApplicationInfo().nativeLibraryDir;
+                if (libDir != null) {
+                    File lib = new File(libDir, "libkfxconv.so");
+                    if (lib.exists()) {
+                        if (!lib.canExecute()) {
+                            lib.setExecutable(true, false);
+                        }
+                        if (lib.canExecute()) {
+                            return lib;
+                        }
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            android.util.Log.w("EpubTranscoder", "getKfxConvBinary error: " + t.getMessage());
+        }
+        File pkgLib = new File("/data/data/com.amazon.kindle.epub/lib/libkfxconv.so");
+        if (pkgLib.exists()) {
+            if (!pkgLib.canExecute()) {
+                pkgLib.setExecutable(true, false);
+            }
+            if (pkgLib.canExecute()) {
+                return pkgLib;
+            }
+        }
+        File tmpBin = new File("/data/local/tmp/kfx-conv");
+        if (tmpBin.exists()) {
+            if (!tmpBin.canExecute()) {
+                tmpBin.setExecutable(true, false);
+            }
+            if (tmpBin.canExecute()) {
+                return tmpBin;
+            }
+        }
+        return null;
+    }
+
+    public static boolean verifyKfxMagic(File file) {
+        if (file == null || !file.exists() || file.length() < 16) return false;
+        FileInputStream fis = null;
+        try {
+            fis = new FileInputStream(file);
+            byte[] magic = new byte[4];
+            int r = fis.read(magic);
+            return r == 4 && magic[0] == 'C' && magic[1] == 'O' && magic[2] == 'N' && magic[3] == 'T';
+        } catch (Throwable ignored) {
+            return false;
+        } finally {
+            if (fis != null) {
+                try { fis.close(); } catch (Throwable ignored) {}
+            }
+        }
+    }
+
+    public static boolean transcodeToKfx(File inEpub, File outKfx) {
+        File bin = getKfxConvBinary();
+        if (bin == null) {
+            android.util.Log.w("EpubTranscoder", "kfx-conv binary not found; falling back to KF8");
+            return false;
+        }
+        long startTime = System.currentTimeMillis();
+        try {
+            if (outKfx.exists()) {
+                outKfx.delete();
+            }
+            ProcessBuilder pb = new ProcessBuilder(
+                bin.getAbsolutePath(),
+                inEpub.getAbsolutePath(),
+                "-o", outKfx.getAbsolutePath(),
+                "-w", "false",
+                "-c", "EBOK"
+            );
+            pb.redirectErrorStream(true);
+            Process proc = pb.start();
+            java.io.InputStream is = proc.getInputStream();
+            byte[] buf = new byte[1024];
+            while (is.read(buf) != -1) {}
+            is.close();
+            int exitCode = proc.waitFor();
+            long elapsed = System.currentTimeMillis() - startTime;
+            if (exitCode == 0 && verifyKfxMagic(outKfx)) {
+                android.util.Log.i("EpubTranscoder", "Successfully converted " + inEpub.getName() + " to KFX on-device in " + elapsed + "ms (" + outKfx.length() + " bytes)");
+                return true;
+            } else {
+                android.util.Log.w("EpubTranscoder", "kfx-conv returned code " + exitCode + " or invalid magic in " + elapsed + "ms; falling back to KF8");
+                if (outKfx.exists() && !verifyKfxMagic(outKfx)) {
+                    outKfx.delete();
+                }
+            }
+        } catch (Throwable t) {
+            android.util.Log.w("EpubTranscoder", "transcodeToKfx exception: " + t.getMessage(), t);
+            if (outKfx.exists() && !verifyKfxMagic(outKfx)) {
+                outKfx.delete();
+            }
+        }
+        return false;
+    }
+
     public static String ensureKindlePath(String path) {
         if (path == null) return null;
         return ensureKindleFile(new File(path)).getAbsolutePath();
@@ -117,6 +219,19 @@ public final class EpubTranscoder {
         if (!isEpubFile(file)) return file;
         try {
             File cacheDir = getCacheDir();
+            // 1. Try KFX on-device first (Enhanced Typesetting / KRIFDocViewer)
+            boolean kfxDisabled = new File("/sdcard/kindle/.disable_kfx").exists();
+            if (!kfxDisabled) {
+                File kfxFile = new File(cacheDir, file.getName() + ".kfx");
+                if (kfxFile.exists() && kfxFile.length() >= 512 && kfxFile.lastModified() >= file.lastModified() && verifyKfxMagic(kfxFile)) {
+                    return kfxFile;
+                }
+                if (transcodeToKfx(file, kfxFile)) {
+                    return kfxFile;
+                }
+            }
+
+            // 2. Fall back seamlessly to Java KF8 / MOBI7 transcoder
             String ext = isKf8Enabled() ? ".azw3" : ".prc";
             File outFile = new File(cacheDir, file.getName() + ext);
             if (!outFile.exists() || outFile.length() < 512 || outFile.lastModified() < file.lastModified()) {

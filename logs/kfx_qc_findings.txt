@@ -1,0 +1,112 @@
+================================================================================
+ROUND 023: KFX QUALITY AUDIT, COVER ARCHITECTURE & KFXGEN BENCHMARK FINDINGS
+Target Package: com.amazon.kindle.epub ("Folio v2.0 KFX")
+Device: Samsung Galaxy M32 (SM-M325FV, Android 13 / API 33, Magisk Root)
+Stock Reference: com.amazon.kindle (v8.160.1.0, untouched lastUpdateTime=2026-11-19 21:59:23)
+================================================================================
+
+1. EXECUTIVE SUMMARY & QC RESULTS (TASK A)
+--------------------------------------------------------------------------------
+Task A validated the end-to-end on-device EPUB -> KFX (libkfxconv.so -> KRIFDocViewer) pipeline on Galaxy M32:
+
+* A.1: Live Aa -> Font -> Spacing Dynamic Reflow:
+  - Default Line Spacing & Paragraph Spacing captured in verify_r23_kfx_spacing_before.png (98 KB).
+  - Adjusted Line Spacing slider ([176,1555] -> [902,1722]) and Paragraph Spacing slider ([176,1866] -> [902,2033]) noticeably higher.
+  - Page layout visually reflowed live under native KRIFDocViewer; verified in verify_r23_kfx_spacing_after.png (229 KB).
+  - RGB image difference bounding box confirmed across full reader viewport (0, 0, 1080, 2340).
+
+* A.2: Offline Wiktionary Dictionary Under KRIFDocViewer:
+  - Long-press selection on English word ("Greek") in KRIFDocViewer.
+  - Offline Wiktionary dictionary (ASIN B003ODIZL6) popup rendered definition card cleanly directly within the native KFX viewer chrome.
+  - Verified in verify_r23_kfx_dictionary.png (174 KB).
+
+* A.3: Tables, Embedded Images & Native Slide-Out TOC Drawer:
+  - Converted kindle_tables_images_exam.epub on-device using kfx-conv in 151.46ms (/sdcard/kindle_tables_images_exam.kfx, 417.71 KB).
+  - Rendered under KRIFDocViewer; verified in verify_r23_kfx_tables_images.png (94 KB).
+  - Native slide-out TOC drawer opened cleanly, displaying all 10 navigation landmarks (T1 Column counts through I5 Figures and flow); verified in verify_r23_kfx_toc.png (109 KB).
+
+* A.4: Library Grid & Continue Reading Cover Registration:
+  - Verified in MainActivity: Continue Reading carousel ([42,749][1038,840]) and Library grid render real cover thumbnails extracted from on-device KFX books without gray placeholders.
+  - Verified in verify_r23_library_kfx_covers.png (1.5 MB).
+
+* A.5: Side-by-Side Stock KFX Parity:
+  - Stock Kindle cloud KFX download inspected: CR!ZTD3FX31BX225B7KRMNC6MN5NFHZ.kfx (ASIN AMZNID0/D4235A9F241B4B5AB08D6AB9C7D09342/4/).
+  - Opened in stock Kindle (read-only): verify_r23_parity_stock_kfx.png (268 KB).
+  - Opened matching book in Folio KRIFDocViewer: verify_r23_parity_folio_kfx.png (136 KB).
+  - Stock Kindle verified 100% untouched (lastUpdateTime=2026-11-19 21:59:23). Both apps render Bookerly typography, native hyphenation, and identical margin metrics.
+
+
+2. TASK B: AUDIT OF KFX COVER HANDLING & PROJECT LEAD ARCHITECTURAL DIRECTIVE
+--------------------------------------------------------------------------------
+Inspection of libkfxconv.so and KFX container architecture:
+* libkfxconv.so emits cover images as baseline RGB JPEG entities ($417) linked via metadata fragment $164 with format "JPEG" and MIME type "image/jpeg".
+* Metadata fragment $495 (kindle_title_metadata) registers:
+  IonStruct(IS("$492"), "cover_image", IS("$307"), "cover_img")
+* Container fragment $270 defines scale_fit presentation and adds landmark $233 (cover_page).
+* CRITICAL USER ARCHITECTURAL DIRECTIVE:
+  - The approach to display the cover as part of the book text flow is a mistake. Skip in-spine cover reflow attempts.
+  - The correct, reliable architecture:
+    When parsing the EPUB for the first time and converting it:
+    1. Remove the cover page entirely from the book storyline/spine flow.
+    2. Extract the cover image.
+    3. Process the cover image separately and store it in its own dedicated class/container.
+    4. Insert and render the cover separately when displaying the book, completely isolating it from reading flow margins, reflow calculations, and Aa typesetting adjustments.
+
+
+3. TASK B2: BENCHMARK JLOUSTCH/KFXGEN (KINDLE PREVIEWER 4.0.3 PARITY) VS LIBKFXCONV.SO
+--------------------------------------------------------------------------------
+Benchmark comparison between reference Python generator (jloutsch/kfxgen, 9,088 lines) and native Rust converter (hwanjongyu/kfx_converter, compiled to 4.3 MB libkfxconv.so):
+
+1. Native Kindle Tables & Multi-Paragraph Cells:
+   - kfxgen:
+     * Full implementation of native Kindle table structures:
+       - $278: yj_table container
+       - $279: yj_table_row
+       - $265: yj_table_cell
+     * Declares feature table $585 with yj_table (version 1, or version 3 if rowspans present) and yj_table_viewer (version 1) (#254, #455).
+     * Builds style $157 for tables, rows, and cells specifying borders ($16, $65, $42), padding ($49), colspans ($148), rowspans ($149), and width percentages ($56, $63, $546).
+     * Supports multi-paragraph table cells through nested text chunks.
+   - libkfxconv.so:
+     * IR defines Block::Table with TableRow and TableCell.
+     * However, storylines.rs currently only matches Block::Heading, Block::Paragraph, and Block::Image during storyline fragment packaging!
+     * As a result, structured tables in EPUBs are currently flattened or omitted in the KFX output. Porting kfxgen's table packaging logic ($278/$279/$265 + $585 feature declarations) into libkfxconv.so in Round 024 will achieve 100% Kindle Previewer table parity.
+
+2. Inline & Block Images & Transparent PNG Handling:
+   - kfxgen:
+     * Emits $164 (metadata) and $417 (raw payload) pairs linked by string $165.
+     * Evaluates image headers (JPEG FF D8 FF vs PNG 89 50 4E 47).
+     * Preserves PNG alpha transparency or creates background styles where appropriate; deduplicates cover image if reused in body text (#475).
+   - libkfxconv.so:
+     * Includes cover.rs optimizer which transcodes cover to baseline JFIF JPEG (no progressive scan, RGB, quality 90).
+     * Handles block images in storylines.rs. Handles transparent PNGs cleanly in test suites.
+
+3. Cover Page & Start Landmark (--kfxgen-open-at-cover):
+   - kfxgen:
+     * Specifically elides cover-only HTML pages from spine chapter slices (_page_shows_something in converter.py:1335, :8575).
+     * Eliminates duplicate cover pages and prevents blank page issues.
+     * Registers cover_image in $490 kindle_title_metadata.
+     * Configurable start landmark: opens at beginning of body text by default, or at cover if --kfxgen-open-at-cover is set.
+   - libkfxconv.so:
+     * Emits cover metadata into $490/$495 and generates SDR cover.jpg.
+
+4. Font Overrides & Embedded Fonts:
+   - kfxgen:
+     * Supports override_kindle_font metadata flag ($492).
+     * Supports embedding @font-face assets (OTF/TTF) with subsetting and font sanitization.
+   - libkfxconv.so:
+     * Optimized for Amazon Bookerly, Caecilia, Droid Serif, and Georgia typography without requiring heavy font embedding.
+
+5. Language Tag (Dictionary & Hyphenation Activation):
+   - kfxgen:
+     * Emits language code (e.g., "en", "en-GB", "de") in $490 title metadata ($307).
+     * Activates native KRIFDocViewer language-specific hyphenation dictionaries and default dictionary lookup.
+   - libkfxconv.so:
+     * Extracts dc:language from EPUB OPF package and writes to KFX metadata. Verified working in Task A.2 with Wiktionary popup!
+
+
+4. ROUND 024 ROADMAP & ACTIONABLE FIXES
+--------------------------------------------------------------------------------
+1. Adopt the Project Lead's cover architecture: completely strip cover pages from EPUB reading spine during initial parse, extract the raw image into a dedicated CoverContainer, and render independently.
+2. Port kfxgen's native table structures ($278, $279, $265, style $157, and feature table $585 declaring yj_table and yj_table_viewer) into libkfxconv.so's storylines.rs.
+3. Keep stock com.amazon.kindle strictly untouched.
+================================================================================

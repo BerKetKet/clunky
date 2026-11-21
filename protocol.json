@@ -1,15 +1,16 @@
 {
-  "round": 22,
+  "round": 23,
   "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
   "app_label": "Folio",
   "stock_package_read_only": "com.amazon.kindle",
   "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report022.zip",
-  "max_report_size_mb": 100,
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report023.zip",
+  "max_report_size_mb": 15,
   "tasks": [
-    "Clone and test pure-Rust hwanjongyu/kfx_converter EPUB->KFX output inside Folio's native KRIFDocViewer",
-    "Skip CoverOverlayView on native .kfx books so stale covers never flash",
-    "Cross-compile kfx-conv for aarch64-linux-android as lib/arm64-v8a/libkfxconv.so and wire on-device EPUB->KFX with automatic KF8 fallback"
+    "Verify live Aa -> Font -> Spacing before/after visual change, offline Wiktionary dictionary, tables/images, and TOC drawer on on-device libkfxconv.so KFX books",
+    "Capture side-by-side Folio on-device KFX vs stock Kindle cloud KFX parity screenshots",
+    "Audit kfx_converter cover handling and Library/Continue Reading cover thumbnails for KFX books",
+    "Stage Folio v2.0 KFX release APK and upload lean (<15 MB) report023 zip with attachment verified"
   ]
 }
