@@ -337,9 +337,6 @@ public final class EpubTranscoder {
         List<Kf8Section> kf8Sections = new ArrayList<Kf8Section>();
 
         if (kf8Mode) {
-            String skelTemplate = "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"kindle:flow:0001?mime=text/css\"/></head><body></body></html>";
-            byte[] skelBytes = skelTemplate.getBytes(UTF8);
-            int bodyCloseRel = skelTemplate.indexOf("</body>");
             for (int i = 0; i < spinePaths.size(); i++) {
                 String hp = spinePaths.get(i);
                 String rawHtml = new String(zipEntries.get(hp), UTF8);
@@ -347,12 +344,14 @@ public final class EpubTranscoder {
                 if (chapLabel == null || chapLabel.isEmpty()) {
                     chapLabel = extractHeadingOrTitle(rawHtml, "Section " + (i + 1));
                 }
+                String aid = String.format(Locale.US, "%04X", i + 1);
+                String skel = "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"kindle:flow:0001?mime=text/css\"/></head><body aid=\"0\"><div aid=\"" + aid + "\"></div></body></html>\n";
+                byte[] skelBytes = skel.getBytes(UTF8);
                 int skelStart = htmlBaos.size();
-                int insertPos = skelStart + bodyCloseRel;
+                int insertPos = skelStart + skel.indexOf("</div>");
                 htmlBaos.write(skelBytes);
                 int skelLen = skelBytes.length;
 
-                String aid = String.format(Locale.US, "%04X", i + 1);
                 String body = extractAndNormalizeBody(rawHtml, getDirName(hp), imgRecMap, true);
                 String fragHtml = "<div aid=\"" + aid + "\">" + body + "</div>";
                 byte[] fragBytes = fragHtml.getBytes(UTF8);
@@ -615,23 +614,23 @@ public final class EpubTranscoder {
         System.arraycopy(htmlBytes, 0, combinedText, 0, htmlBytes.length);
         System.arraycopy(cssBytes, 0, combinedText, htmlBytes.length, cssBytes.length);
 
-        List<byte[]> textRecords = sliceUtf8Records(combinedText);
-        List<byte[]> ncxRecords = buildNcxIndxRecords(chapters);
-        List<byte[]> skelRecords = buildKf8SkelIndx(kf8Sections);
+        List<byte[]> textRecords = sliceUtf8RecordsWithOverlap(combinedText);
         List<byte[]> fragRecords = buildKf8FragIndx(kf8Sections);
+        List<byte[]> skelRecords = buildKf8SkelIndx(kf8Sections);
+        List<byte[]> ncxRecords = buildNcxIndxRecords(chapters);
         byte[] fdstRec = buildFdstRecord(htmlBytes.length, cssBytes.length);
 
         int numText = textRecords.size();
         int numImgs = imageRecords.size();
-        int firstNonBookIdx = numText + 1;
-        int firstImgIdx = (numImgs > 0) ? (numText + 1) : -1;
-
-        int curIdx = numText + numImgs + 1;
-        int fdstIdx = curIdx; curIdx += 1;
-        int skelIdx = curIdx; curIdx += skelRecords.size();
+        int curIdx = numText + 1;
+        int firstNonBookIdx = curIdx; // Points directly to FRAG Master INDX (matches working AZW3)
         int fragIdx = curIdx; curIdx += fragRecords.size();
+        int skelIdx = curIdx; curIdx += skelRecords.size();
         int ncxIdx = !ncxRecords.isEmpty() ? curIdx : -1;
         curIdx += ncxRecords.size();
+        int firstImgIdx = (numImgs > 0) ? curIdx : -1;
+        curIdx += numImgs;
+        int fdstIdx = curIdx++;
         int flisIdx = curIdx++;
         int fcisIdx = curIdx++;
 
@@ -673,7 +672,7 @@ public final class EpubTranscoder {
         putIntBE(rec0, 228, 0);
         putIntBE(rec0, 232, -1);
         putIntBE(rec0, 236, -1);
-        putIntBE(rec0, 240, 0);       // MOBI+224 (rec0+240): extra_data_flags = 0 (no trailing bytes)
+        putIntBE(rec0, 240, 1);       // MOBI+224 (rec0+240): extra_data_flags = 1 (multibyte overlap trailer)
         putIntBE(rec0, 244, ncxIdx);  // MOBI+228 (rec0+244): ncx_index
         putIntBE(rec0, 248, fragIdx); // MOBI+232 (rec0+248): frag_index
         putIntBE(rec0, 252, skelIdx); // MOBI+236 (rec0+252): skel_index
@@ -686,11 +685,11 @@ public final class EpubTranscoder {
         List<byte[]> allRecords = new ArrayList<byte[]>();
         allRecords.add(rec0);
         allRecords.addAll(textRecords);
+        allRecords.addAll(fragRecords);
+        allRecords.addAll(skelRecords);
+        allRecords.addAll(ncxRecords);
         allRecords.addAll(imageRecords);
         allRecords.add(fdstRec);
-        allRecords.addAll(skelRecords);
-        allRecords.addAll(fragRecords);
-        allRecords.addAll(ncxRecords);
         allRecords.add(makeFlisRecord());
         allRecords.add(makeFcisRecord(combinedText.length));
         allRecords.add(new byte[]{(byte)0xE9, (byte)0x8E, 0x0D, 0x0A});
@@ -804,7 +803,8 @@ public final class EpubTranscoder {
         int[] cncxOffs = new int[count];
         for (int i = 0; i < count; i++) {
             cncxOffs[i] = cncx.size();
-            byte[] aidBytes = sections.get(i).aid.getBytes(UTF8);
+            String selector = "P-//*[@aid='" + sections.get(i).aid + "']";
+            byte[] aidBytes = selector.getBytes(UTF8);
             writeVwiForward(cncx, aidBytes.length);
             cncx.write(aidBytes);
         }
@@ -959,6 +959,27 @@ public final class EpubTranscoder {
             pos = end;
         }
         if (recs.isEmpty()) recs.add("<html><head></head><body></body></html>".getBytes(UTF8));
+        return recs;
+    }
+
+    private static List<byte[]> sliceUtf8RecordsWithOverlap(byte[] data) {
+        List<byte[]> recs = new ArrayList<byte[]>();
+        int pos = 0, total = data.length;
+        while (pos < total) {
+            int end = Math.min(pos + 4096, total);
+            while (end < total && end > pos && (data[end] & 0xC0) == 0x80) end--;
+            if (end == pos) end = Math.min(pos + 4096, total);
+            int len = end - pos;
+            byte[] chunk = new byte[len + 1];
+            System.arraycopy(data, pos, chunk, 0, len);
+            chunk[len] = 0x00; // 0 multibyte overlap bytes (extra_data_flags = 1)
+            recs.add(chunk);
+            pos = end;
+        }
+        if (recs.isEmpty()) {
+            byte[] empty = "<html><head></head><body></body></html>\0".getBytes(UTF8);
+            recs.add(empty);
+        }
         return recs;
     }
 

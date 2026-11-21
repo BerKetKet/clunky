@@ -1,14 +1,14 @@
 {
-  "round": 8,
+  "round": 9,
   "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_read_only": "com.amazon.kindle",
   "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report008.zip",
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report009.zip",
   "max_report_size_mb": 100,
   "tasks": [
-    "Deploy fixed KF8 binary layout in EpubTranscoder.java (rec0 offsets 240..260, mobiHdrLen=248, INDX 16=2/12=1, FRAG 0x0F, per-chapter SKEL/FRAG, Base32 kindle:embed)",
-    "Verify KF8 rendering on kindle_tables_images_exam.epub and kindle_exam_v3.epub + native TOC drawer under /sdcard/kindle/.use_kf8",
-    "If KF8 still rejected by libKRF.so, disassemble createViewer and/or fix & verify directly"
+    "Deploy Round 009 EpubTranscoder.java with P-//*[@aid='...'] CNCX selectors, Rashomon PalmDB record ordering, and extra_data_flags=1",
+    "Verify KF8 CSS3 tables, images, typography, and native TOC chapter jump under /sdcard/kindle/.use_kf8",
+    "If still blank, diff Flow 0 SKEL/FRAG entries against Rashomon and Other Stories.azw3 and patch/verify directly"
   ]
 }

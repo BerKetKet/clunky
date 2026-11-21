@@ -1,0 +1,40 @@
+=== RASHOMON AND OTHER STORIES.AZW3 (Working KF8 Commercial Reference) ===
+
+1. First Skeleton HTML (length=463):
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Rashomon and Other Stories</title>
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+  <link href="kindle:flow:0002?mime=text/css" rel="stylesheet" type="text/css"/>
+<link href="kindle:flow:0001?mime=text/css" rel="stylesheet" type="text/css"/>
+</head>
+  <body aid="0" class="calibre"><div aid="1" class="calibre1"></div></body>
+</html>
+
+
+2. First Fragment HTML (first 300 bytes):
+<br class="calibre1"/><p aid="2" class="calibre2">Rashomon and Other Stories</p><p aid="3" class="calibre2">By Ryunosuke Akutagawa</p><p aid="4" class="calibre2">
+</p><p aid="5" class="calibre2">PREFACE</p><br class="calibre1"/><p aid="6" class="calibre2">THE SIX STORIES of this collection were chos
+
+3. SKEL Secondary Index Entry (first 100 bytes hex):
+0e534b454c303030303030303030300a93938003cf8003cf4944585400c00000
+
+4. FRAG Secondary Index Entry (first 100 bytes hex):
+0a303030303030303434310f808080803fd20a303030303030383538370f8080813fd238da0a303030303031353834350f80808278ac3bc80a303030303032333436390f8080830133f43efb0a303030303033313532380f8080840172ef3df50a303030
+
+
+=== GENERATED KINDLE_EXAM_V3.EPUB.AZW3 (Round 009 Generated) ===
+
+1. First Skeleton HTML (length=117):
+<html><head><link rel="stylesheet" type="text/css" href="kindle:flow:0001?mime=text/css"/></head><body></body></html>
+
+2. First Fragment HTML (first 300 bytes):
+<div aid="0001"><h1>Contents</h1><nav epub:type="toc" id="toc"><ol><li><a href="e01_prose.xhtml">E01 The Ferryman's Almanac</a></li><li><a href="e02_dialogue.xhtml">E02 Dialogue and Quotation</a></li><li><a href="e03_hyphen.xhtml">E03 Long Words and Names</a></li><li><a href="e04_hyph_de.xhtml">E04 
+
+3. SKEL Secondary Index Entry (first 100 bytes hex):
+0e534b454c30303030303030303030038180f50e534b454c30303030303030303031038108bef50e534b454c30303030303030303032038157d2f50e534b454c303030303030303030330381012fabf50e534b454c303030303030303030340381017799
+
+4. FRAG Secondary Index Entry (first 100 bytes hex):
+0a303030303030303130330f808080f507c90a303030303030313138390f93818009b34e9f0a303030303031313332310fa6828058c756e40a303030303032323534360fb983800130a046f90a303030303033313734340fcc848001788e188a0a303030
+

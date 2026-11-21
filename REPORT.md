@@ -1,4 +1,4 @@
-# Relay Report: Round 008 (`antig_to_gemini_neon_clunky_report008.zip`)
+# Round 009 Verification Report — Full KF8 (`libWebCoreKRF.so`) Rendering & Native TOC
 
 **To:** Gemini Neon Manager  
 **From:** Antigravity  
@@ -10,68 +10,86 @@
 
 ## 1. Executive Summary & Verification Matrix
 
-All tasks specified in `INSTRUCTIONS_ROUND_008.md` have been executed, deployed to the test Samsung Galaxy M32 device (`32001776e8e82623`), and thoroughly analyzed. The stock app `com.amazon.kindle` remained strictly read-only and untouched.
+All tasks specified in `INSTRUCTIONS_ROUND_009.md` have been executed, deployed to the test Samsung Galaxy M32 device (`32001776e8e82623`), and verified on-device. The stock app `com.amazon.kindle` remained strictly read-only and untouched.
 
 | Verification Item | Target State | Verified Result | Evidence |
 |---|---|---|---|
-| **Stock App Isolation** | `com.amazon.kindle` completely untouched | Verified zero writes/modifications | Bit-for-bit intact, read-only |
-| **Task A: Mod Deployment** | Deploy Round 008 `EpubTranscoder.java` | Successfully compiled & installed | `classes9.dex` (56,532 bytes) |
-| **Task B: KF8 Viewer Creation** | `IKindleDocument.createViewer` | **RESOLVED & NON-NULL** (`format: MOBI8`) | `logs/logcat_kf8_round008.txt` |
-| **Task B: KF8 Native TOC** | Native slide-out TOC drawer under KF8 | Verified all chapters populated & jumping | `screenshots/verify_kf8_native_toc.png` |
-| **Task B: KF8 Content Rendering** | Render tables/images/CSS3 | Identified blank body root cause; reverted flag | `screenshots/verify_kf8_tables_images.png` |
-| **Task C: KF8 & libKRF.so Analysis** | Binary diff against working Calibre/Kindle AZW3 | Discovered `P-//*[@aid='...']` selector & record ordering | `logs/kf8_krf_analysis.txt` |
-| **Fallback Stability** | Safe reversion to MOBI7+NCX | Verified 101,626 non-white rendered pixels | `/tmp/screen_mobi7_verify.png` |
+| **Stock App Isolation** | `com.amazon.kindle` completely untouched | Verified zero writes/modifications | Intact, read-only (`/data/data/com.amazon.kindle`) |
+| **Task A: Mod Deployment** | Deploy Round 009 `EpubTranscoder.java` | Successfully compiled & installed | `classes9.dex` (56,932 bytes) |
+| **Task B: KF8 Viewer Creation** | `IKindleDocument.createViewer` | **RESOLVED & NON-NULL** (`format: MOBI8`) | `logs/logcat_kf8_round009.txt` |
+| **Task B: KF8 Body & Table Rendering** | Render CSS3 tables, typography & embedded images | **RESOLVED**: 203,765 content pixels | `screenshots/verify_kf8_tables_images.png` |
+| **Task B: KF8 Typography & Headings** | Render CSS3 prose, font styling & headings | **RESOLVED**: 75,808 content pixels | `screenshots/verify_kf8_exam_v3.png` |
+| **Task B: KF8 Native TOC Drawer** | Slide-out native drawer populated with 16 chapters | **RESOLVED**: All chapters rendered | `screenshots/verify_kf8_native_toc.png` |
+| **Task B: KF8 Native Chapter Jump** | Tap `E06 Headings and Blocks` jumps to chapter | **RESOLVED**: Jumped to Loc 252 (41%), 583,653 content pixels | `screenshots/verify_kf8_chapter_jump.png` |
+| **Engine Retention** | Keep `/sdcard/kindle/.use_kf8` active | **ACTIVE & VERIFIED** | `/sdcard/kindle/.use_kf8` kept in place |
 
 ---
 
-## 2. Technical Findings & Root Cause Analysis
+## 2. Technical Findings & Root Cause Resolution
 
-### 1. `IKindleDocument.createViewer` Now Returns Success
-In Round 007, `createViewer` returned null with `KRFError`. With Round 008's header alignment and EXTH record updates, Kindle's native `libWebCoreKRF.so` engine successfully initialized the viewer:
-```
-11-21 00:21:01.028 I AmazonKindle.l60.d: [main]: Content opened (asin: B0EC17DC48, sample: false,
-    title: Kindle Tables and Images Exam, downloadState: LOCAL, content type: BOOK,
+### The Blank White Page Root Cause in KF8
+In the initial Round 009 build, `IKindleDocument.createViewer` succeeded and recognized `format: MOBI8` and `MIME type: application/x-mobi8-ebook`. However, the book content area initially rendered 0 non-white pixels (blank white).
+
+By generating an exhaustive binary and text diff against `Rashomon and Other Stories.azw3` (`logs/kf8_rashomon_flow_diff.txt`), we discovered the missing piece:
+1. **Skeleton Anchor Element Requirement**:
+   - In `Rashomon.azw3`, the skeleton HTML contains:
+     ```html
+     <body aid="0" class="calibre"><div aid="1" class="calibre1"></div></body>
+     ```
+   - In our previous `skelTemplate`, the skeleton was bare:
+     ```html
+     <html><head><link rel="stylesheet" .../></head><body></body></html>
+     ```
+2. **XPath Anchor Resolution in `FragmentLoader`**:
+   - `libWebCoreKRF.so`'s `FragmentLoader` evaluates the CNCX XPath selector `P-//*[@aid='...']` against the skeleton DOM to locate where the incoming fragment HTML must be inserted.
+   - Because the previous skeleton had an empty `<body>`, `//*[@aid='...']` matched zero DOM nodes. `FragmentLoader` could not find the target anchor, leaving the skeleton body completely empty.
+3. **The Applied Fix**:
+   - Updated section skeleton generation to inject the matching AID container:
+     ```java
+     String aid = String.format(Locale.US, "%04X", i + 1);
+     String skel = "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"kindle:flow:0001?mime=text/css\"/></head><body aid=\"0\"><div aid=\"" + aid + "\"></div></body></html>\n";
+     int insertPos = skelStart + skel.indexOf("</div>");
+     ```
+   - Recompiled `classes9.dex` (56,932 bytes) and redeployed `com.amazon.kindle.epub`.
+   - Result: `FragmentLoader` immediately located `<div aid="...">` and inserted the HTML DOM fragments. `kindle_exam_v3.epub` rendered with 75,808 content pixels and `kindle_tables_images_exam.epub` rendered with 203,765 rich content pixels!
+
+---
+
+## 3. On-Device Verification Evidence
+
+### 1. KF8 Logcat Output (`logs/logcat_kf8_round009.txt`)
+```text
+11-21 00:47:11.747 20004 20004 I AmazonKindle.l60.d: [main]: Content opened (asin: B0B164901B, sample: false,
+    title: Kindle Render Exam v3, downloadState: LOCAL, content type: BOOK,
     MIME type: application/x-mobi8-ebook, format: MOBI8, fixed layout: false,
     content language: en, content class: DEFAULT)
 ```
-The document was recognized as `MOBI8`, the native slide-out Table of Contents drawer opened, and all 13 chapters (`T1 Column counts`, `T2 Text in cells`, ... `I5 Figures and flow`) were listed cleanly (`screenshots/verify_kf8_native_toc.png`).
+
+### 2. Native Slide-Out TOC Drawer & Chapter Jump
+- Opened native TOC drawer via Kindle top toolbar button `com.amazon.kindle.epub:id/menuitem_hamburger` at `(207, 167)`.
+- Verified all 16 chapters loaded cleanly in the native drawer (`screenshots/verify_kf8_native_toc.png`).
+- Tapped `E06 Headings and Blocks` at `(495, 1263)`.
+- Reader jumped instantly to `Location 252 of 615 • 41%`, rendering 583,653 content pixels with full CSS3 typography and headings (`screenshots/verify_kf8_chapter_jump.png`).
+
+### 3. Active Engine State
+- Flag `/sdcard/kindle/.use_kf8` remains active on the device.
+- Full KF8 rendering (`libWebCoreKRF.so`) is verified working end-to-end.
 
 ---
 
-### 2. Root Cause of Blank White Page in KF8
-While the viewer initialized and TOC navigation worked, the book content area rendered blank white. By comparing the generated AZW3 files against verified working commercial/Calibre AZW3 files on disk (`Rashomon and Other Stories.azw3`, `The 210th Day.azw3`), we identified the root cause:
+## 4. Deliverables in Archive `antig_to_gemini_neon_clunky_report009.zip`
 
-1. **Fragment XPath Selector Syntax in CNCX (Critical)**:
-   - In `EpubTranscoder.java`, the CNCX table stored bare AID numbers: `0001`, `0002`, etc.
-   - In working KF8 files, Kindle's `FragmentLoader` and `WebCoreViewer` expect an XPath path selector prefix:
-     ```
-     P-//*[@aid='1']
-     ```
-   - Because the selector was missing the `P-//*[@aid='...']` wrapper, WebCore's DOM query failed to locate the insertion target inside the skeleton HTML (`<html><head>...</head><body></body></html>`), leaving the `<body>` completely empty!
-2. **PalmDB Record Ordering & `first_non_book` Index**:
-   - In generated AZW3, image records were placed before `SKEL` and `FRAG`, causing `first_non_book` (`fnb`) to point to image records instead of the `FRAG` master index.
-   - In working KF8, `FRAG` and `SKEL` INDX records immediately follow the text records, with images placed after `SKEL`.
-3. **PalmDoc Compression & Extra Data Flags**:
-   - `extra_data_flags` at `rec0 + 240` was set to `0`. Working KF8 sets `extra_data_flags = 1` or `3` with PalmDoc LZ77 compression (`comp = 2` or `17480`).
-
----
-
-### 3. Safe Reversion to MOBI7+NCX
-Per instruction step 5, `/sdcard/kindle/.use_kf8` was cleanly removed. The app immediately fell back to the rock-solid MOBI7+NCX engine, rendering `kindle_exam_v3.epub` with 101,626 content pixels, intact formatting, and full native TOC drawer support.
-
----
-
-## 3. Deliverables in Archive `antig_to_gemini_neon_clunky_report008.zip`
-
-- `REPORT.md`: This comprehensive report.
+- `REPORT.md` (This document)
 - `scripts/`:
-  - `EpubTranscoder.java` (Round 008 transcoder with KF8 binary fixes)
+  - `EpubTranscoder.java` (Round 009 transcoder with DOM Fragment anchor fix)
   - `SafeHttp.java` (In-app DoH DNS fallback)
-  - `GutendexSource.java` & `OpdsSource.java` & `OpenCatalogView.java`
-  - `clone_and_deploy_epub_mod.sh` & `compile_mod_dex.sh`
+  - `GutendexSource.java`, `OpdsSource.java`, `OpenCatalogView.java`
+  - `clone_and_deploy_epub_mod.sh`, `compile_mod_dex.sh`
 - `screenshots/`:
-  - `verify_kf8_native_toc.png` (Native slide-out TOC drawer under KF8 with all chapters)
-  - `verify_kf8_exam_v3.png` & `verify_kf8_tables_images.png` (KF8 rendering captures)
+  - `verify_kf8_exam_v3.png` (CSS3 typography & headings under KF8)
+  - `verify_kf8_tables_images.png` (CSS3 tables & embedded images under KF8)
+  - `verify_kf8_native_toc.png` (Native slide-out TOC drawer under KF8)
+  - `verify_kf8_chapter_jump.png` (Jumped to E06 at Loc 252 41% with rich text rendering)
 - `logs/`:
-  - `logcat_kf8_round008.txt` (Filtered logcat capture of Round 008 execution)
-  - `kf8_krf_analysis.txt` (Exhaustive side-by-side header & INDX binary diff)
+  - `logcat_kf8_round009.txt` (Filtered logcat capture of Round 009 KF8 execution)
+  - `kf8_rashomon_flow_diff.txt` (Exhaustive Flow 0, SKEL, and FRAG binary diff)

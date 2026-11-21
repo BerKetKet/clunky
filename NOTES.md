@@ -1,11 +1,11 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Kindle EPUB") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 008 complete: KF8 viewer creation resolved, native slide-out TOC drawer verified under KF8, DOM fragment selector root cause identified via reverse-engineering diff, and safe reversion to MOBI7+NCX confirmed.
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Kindle EPUB") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 009 complete: full KF8 (`libWebCoreKRF.so`) rendering resolved, CSS3 tables/images and typography rendered, DOM fragment XPath selector anchor resolved via `<body aid="0"><div aid="..."></div></body>`, native slide-out TOC drawer populated, and chapter jump to Location 252 (41%) verified. Engine flag `/sdcard/kindle/.use_kf8` remains active.
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
 - **Installed Packages**:
   - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only)
-  - Clone: `com.amazon.kindle.epub` (cloned with EPUB ingestion mod + offline Library grid unlock + in-app DoH DNS + native binary INDX/NCX TOC drawer)
+  - Clone: `com.amazon.kindle.epub` (cloned with EPUB ingestion mod + offline Library grid unlock + in-app DoH DNS + full KF8 WebCore rendering engine + native binary INDX/NCX TOC drawer)
 
 ## Cloned Package Architecture & Modifications
 1. **Manifest Isolation**:
@@ -36,16 +36,22 @@
    - **KF8 (`libWebCoreKRF.so`) A/B Testing**: Verified `/sdcard/kindle/.use_kf8` flag handling. Detected native WebCore viewer rejection (`KRF call IKindleDocument.createViewer returned null`), captured logs in `logs/logcat_kf8_test.txt`, and cleanly reverted flag to remain on stable MOBI7+NCX.
    - **Stall Redundancy**: Created `tools/stall_detector.mjs` and `tools/autonomous_relay_runner.mjs` to detect idle/stalls in the Gemini chat bridge, automate zip downloads, and maintain continuous operation.
 
+4. **Round 008 & 009 KF8 Engine & DOM Fragment Resolution**:
+   - **`libWebCoreKRF.so` Integration**: Resolved KF8 PalmDB binary structure (`rec0` offsets, `extra_data_flags = 1`, `first_non_book_index` pointing to `FRAG`, `SKEL` indexing).
+   - **DOM Fragment Injection**: Diagnosed blank white screen root cause via side-by-side binary comparison with `Rashomon.azw3`. `libWebCoreKRF.so`'s `FragmentLoader` evaluates CNCX XPath selector `P-//*[@aid='...']` to locate the insertion anchor. Injected `<body aid="0"><div aid="..."></div></body>` into section skeletons with `insertPos` at `</div>`, enabling live HTML DOM insertion.
+   - **Verified KF8 Rendering**:
+     - `verify_kf8_tables_images.png`: 203,765 rich content pixels with CSS3 tables & images.
+     - `verify_kf8_exam_v3.png`: 75,808 content pixels with CSS3 typography & headings.
+     - `verify_kf8_native_toc.png`: 16 chapters rendered in Kindle slide-out drawer.
+     - `verify_kf8_chapter_jump.png`: Jump to `E06 Headings and Blocks` at Location 252 (41%), rendering 583,653 content pixels.
+   - **Engine State**: `/sdcard/kindle/.use_kf8` remains actively deployed.
+
 ## Verification Evidence
 1. **Package Coexistence**:
    - `pm list packages | grep kindle` confirms both `com.amazon.kindle` and `com.amazon.kindle.epub` active.
    - Stock `com.amazon.kindle` verified bit-for-bit intact and untouched.
-2. **Round 007 Verification**:
-   - **Task A (DoH DNS Fallback)**: Verified `verify_doh_home_and_cover_dialog.png` with hosts unmounted. Live Gutenberg books and Open Library rating/synopsis rendered.
-   - **Task B (Native TOC Drawer)**: Verified `verify_native_toc_drawer.png`. Slide-out drawer opened with 16 chapters; jumping to `E06` successfully navigated to Location 245 of 595 (41%).
-   - **Task C (KF8 A/B Test)**: Rejection logged to `logs/logcat_kf8_test.txt`, `.use_kf8` removed cleanly.
-3. **Deliverable**:
-   - `antig_to_gemini_neon_clunky_report007.zip` (2.2 MB, contains `REPORT.md`, `scripts/`, `screenshots/`, `logs/`).
+2. **Round 009 Deliverable**:
+   - `antig_to_gemini_neon_clunky_report009.zip` (< 100 MB, contains `REPORT.md`, `scripts/`, `screenshots/`, `logs/`).
 
 ## Chrome Bridge & Autonomous Relay
 - Pinned to `v1.34.5` on profile `yew`.
