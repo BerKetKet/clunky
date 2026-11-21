@@ -1,15 +1,15 @@
 {
-  "round": 12,
+  "round": 13,
   "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
   "app_label": "Folio",
   "stock_package_read_only": "com.amazon.kindle",
   "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report012.zip",
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report013.zip",
   "max_report_size_mb": 100,
   "tasks": [
-    "Rebrand com.amazon.kindle.epub to 'Folio' with custom 512x512 launcher icon while keeping stock com.amazon.kindle untouched",
-    "Deploy hardened 4-tier mirror + ZIP magic-byte validated downloadAndOpen in OpenCatalogView.java",
-    "Stress-test real downloads of 2 fresh books from Home catalog and verify valid EPUBs, KF8 rendering, TOC, and Library covers"
+    "Deploy Android Adaptive Icon (@mipmap/folio_launcher_icon) eliminating white frame on Smart Launcher 6",
+    "Deploy full multi-chapter #anchor TOC resolution + 4-digit NCX INDX keys in EpubTranscoder.java",
+    "Verify full consecutive chapters (Chapter 1, 2, 3, 4...) and intra-file Chapter 2 jump on Moby Dick"
   ]
 }

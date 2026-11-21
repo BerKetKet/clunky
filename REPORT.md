@@ -1,4 +1,4 @@
-# Round 012 Report — Custom App Name & Launcher Icon ("Folio") + Multi-Book Real Download Stress Test
+# Round 013 Report — True Android Adaptive Icon (Zero White Frame) + Full Multi-Chapter `#anchor` TOC Support (135+ Chapters)
 
 **Target Package:** `com.amazon.kindle.epub` ("Folio")  
 **Stock Invariant Status:** `com.amazon.kindle` (v8.160.1.0) is **100% UNTOUCHED and READ-ONLY** (verified via package manager dumpsys).  
@@ -8,118 +8,82 @@
 
 ## 1. Executive Summary
 
-In Round 012, all tasks have been completed and verified on-device:
-1. **Task A (Branding & Deployment)**: Rebranded cloned standalone package `com.amazon.kindle.epub` to **Folio** with custom midnight-navy/amber launcher icon (`folio_launcher_icon.png`). Rebuilt split APKs and installed without impacting stock `com.amazon.kindle`. Confirmed custom launcher icon and "Folio" title visible in Android launcher.
-2. **Task B (Multi-Book Real Download Stress Test)**: Downloaded two fresh books from Open Catalog (*Alice's Adventures in Wonderland* #11 and *Moby Dick; Or, The Whale* #2701). Verified `PK\x03\x04` magic bytes, complete ZIP archive integrity via `unzip -t`, auto-transcoding to KF8 (`BOOKMOBI`), reader launch, and native TOC drawers. Verified both appear at the top of the Folio Library grid with covers.
-3. **Task C (Packaging & Autonomous Delivery)**: Assembled verified artifacts into `antig_to_gemini_neon_clunky_report012.zip` (< 100 MB).
+In Round 013, all objectives were deployed, executed, and verified on-device:
+1. **Task A (True Android Adaptive Icon)**: Upgraded Folio's launcher icon to a full Android `<adaptive-icon>` (`res/mipmap-anydpi-v26/folio_launcher_icon.xml` combining `@drawable/folio_icon_bg` + `@drawable/folio_icon_fg`). Verified on Smart Launcher 6 that the icon fills the squircle edge-to-edge with **zero white border or wrapping frame**. Confirmed stock `com.amazon.kindle` package is untouched.
+2. **Task B (Full 135-Chapter Native TOC on *Moby Dick*)**:
+   - Re-transcoded *Moby Dick; Or, The Whale* (`Moby_Dick__Or__The_Whale_2701.epub`) using the enhanced `EpubTranscoder.java`.
+   - Verified that all consecutive intra-file `#anchor` chapters (`CHAPTER 1. Loomings.`, `CHAPTER 2. The Carpet-Bag.`, `CHAPTER 3. The Spouter-Inn.`, `CHAPTER 4. The Counterpane.`, `CHAPTER 5. Breakfast.`, etc.) are rendered in the native slide-out Table of Contents drawer.
+   - Verified that tapping `CHAPTER 2. The Carpet-Bag.` immediately jumps the KF8 reader directly to Chapter 2 (`Location 440 of 9711`).
+3. **Task C (Packaging & Delivery)**: Assembled verified artifacts into `antig_to_gemini_neon_clunky_report013.zip` (< 100 MB).
 
 ---
 
-## 2. Task A — Folio Rebrand & Stock Invariant Verification
+## 2. Task A — Android Adaptive Icon Deployment & Verification
 
-### A.1 Manifest & Resource Rewriting
-- Updated `tools/clone_and_deploy_epub_mod.sh` to bundle `assets/folio_launcher_icon.png` into `res/drawable/folio_launcher_icon.png`.
-- Replaced app label with `android:label="Folio"` across all localized label entries.
-- Added `android:icon="@drawable/folio_launcher_icon"` and `android:roundIcon="@drawable/folio_launcher_icon"` to `<application>` and all `CATEGORY_LAUNCHER` activity declarations.
-- Re-signed and deployed via `adb install-multiple`.
+### A.1 Adaptive Icon Configuration
+- Staged `assets/folio_icon_bg.png` (deep midnight navy background) and `assets/folio_icon_fg.png` (transparent foreground with open ivory book and amber ribbon bookmark).
+- Generated `res/mipmap-anydpi-v26/folio_launcher_icon.xml`:
+  ```xml
+  <?xml version="1.0" encoding="utf-8"?>
+  <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+      <background android:drawable="@drawable/folio_icon_bg"/>
+      <foreground android:drawable="@drawable/folio_icon_fg"/>
+  </adaptive-icon>
+  ```
+- Bundled legacy fallback `@mipmap-xxxhdpi/folio_launcher_icon.png` (512×512) for older launchers.
+- Linked `android:icon="@mipmap/folio_launcher_icon"` and `android:roundIcon="@mipmap/folio_launcher_icon"` in `<application>` and all `CATEGORY_LAUNCHER` declarations.
 
-### A.2 Stock vs Mod Verification
-```
-# Mod Package:
-Package: com.amazon.kindle.epub
-Label: Folio (application-label: 'Folio')
-Icon: res/drawable/folio_launcher_icon.png
-Version: 8.159.0.100
-
-# Stock Package (Strictly Untouched):
-Package: com.amazon.kindle
-Label: Kindle
-Version: 8.160.1.0(2.0.124621.0)
-State: 100% untouched and separate.
-```
-
-- **Evidence Screenshot:** `screenshots/verify_r12_launcher_icon_name.png` (displays "Folio" in the launcher app drawer alongside other apps).
+### A.2 On-Device Verification
+- Stock `com.amazon.kindle` remains untouched at version `8.160.1.0(2.0.124621.0)`.
+- Smart Launcher 6 app drawer rendered Folio with the adaptive background filling the entire icon squircle.
+- **Evidence Screenshot:** `screenshots/verify_r13_adaptive_icon.png`
 
 ---
 
-## 3. Task B — Multi-Book Download Stress Test Results
+## 3. Task B — Full Multi-Chapter `#anchor` TOC Transcoder Verification
 
-### B.1 Book 1: *Alice's Adventures in Wonderland* (ID: 11, Lewis Carroll)
-- **Saved EPUB Path:** `/sdcard/kindle/Alice_s_Adventures_in_Wonderland_11.epub`
-- **Byte Size:** `136,759` bytes
-- **Header Magic Bytes:** `50 4b 03 04` (`PK\x03\x04`)
-- **ZIP Archive Test (`unzip -t`):**
-  ```
-  Archive: /tmp/Alice.epub
-      testing: mimetype                 OK
-      testing: META-INF/container.xml   OK
-      testing: OEBPS/7402354833213361015_cover.jpg   OK
-      testing: OEBPS/8620333367427747180_11-h-0.htm.html   OK
-      ...
-      testing: OEBPS/toc.ncx            OK
-  No errors detected in compressed data of /tmp/Alice.epub.
-  ```
-- **Auto-Transcode KF8 Cache:**
-  - Path: `/data/data/com.amazon.kindle.epub/files/epub_cache/Alice_s_Adventures_in_Wonderland_11.epub.azw3`
-  - Byte Size: `246,381` bytes
-  - PalmDB Format: `BOOKMOBI` (KF8)
-- **Native Reader & TOC Drawer:**
-  - Opens directly into `StandAloneBookReaderActivity`.
-  - Native Table of Contents drawer verified with 12 chapters ("CHAPTER I. Down the Rabbit-Hole", "CHAPTER II. The Pool of Tears", etc.).
-- **Evidence Screenshot:** `screenshots/verify_r12_downloaded_book1.png`
+### B.1 Multi-Chapter Spine & NCX Anchor Resolution
+- **Problem Solved**: Project Gutenberg bundles multiple chapters into single spine HTML files (e.g. `2701-h-0.htm`, `2701-h-1.htm`) referenced by `#id` URL fragments in `toc.ncx`. Previously, only 1 TOC entry per spine file was created.
+- **Transcoder Solution (`EpubTranscoder.java`)**:
+  - Parsed all `<navPoint>` entries in NCX with regex extracting both `src` file and `#fragment` anchor.
+  - Implemented `findAnchorByteOffset(html, fragId)` to match `id="..."` and `name="..."` attributes and compute exact UTF-8 byte offsets inside KF8 fragments.
+  - Upgraded Secondary INDX keys from 2-digit `%02d` to 4-digit `%04d` (`0000` through `9999`) to support arbitrary chapter counts.
+  - Normalized chapter lengths to ensure clean chapter-to-chapter boundary ranges.
 
----
+### B.2 Re-Transcode Metrics on *Moby Dick*
+- **EPUB Source:** `/sdcard/kindle/Moby_Dick__Or__The_Whale_2701.epub` (722,877 bytes, valid ZIP)
+- **Re-transcoded AZW3:** `/data/data/com.amazon.kindle.epub/files/epub_cache/Moby_Dick__Or__The_Whale_2701.epub.azw3`
+- **AZW3 File Size:** `1,529,416` bytes (expanded from 1,523,748 bytes with 135+ chapter INDX entries)
+- **Native TOC Drawer Inspection:**
+  - `MOBY-DICK; or, THE WHALE.`
+  - `ETYMOLOGY.`
+  - `EXTRACTS.`
+  - `CHAPTER 1. Loomings.`
+  - `CHAPTER 2. The Carpet-Bag.`
+  - `CHAPTER 3. The Spouter-Inn.`
+  - `CHAPTER 4. The Counterpane.`
+  - `CHAPTER 5. Breakfast.`
+  - `CHAPTER 6. The Street.`
+  - `CHAPTER 7. The Chapel.`
+  - `CHAPTER 8. The Pulpit.`
+  - `CHAPTER 9. The Sermon.`
+  - ... all 135 chapters consecutively indexed.
+- **Evidence Screenshot:** `screenshots/verify_r13_mobydick_full_toc.png`
 
-### B.2 Book 2: *Moby Dick; Or, The Whale* (ID: 2701, Herman Melville)
-- **Saved EPUB Path:** `/sdcard/kindle/Moby_Dick__Or__The_Whale_2701.epub`
-- **Byte Size:** `722,877` bytes
-- **Header Magic Bytes:** `50 4b 03 04` (`PK\x03\x04`)
-- **ZIP Archive Test (`unzip -t`):**
-  ```
-  Archive: /tmp/Moby.epub
-      testing: mimetype                 OK
-      testing: META-INF/container.xml   OK
-      testing: OEBPS/2296071534275781326_cover.jpg   OK
-      testing: OEBPS/8951984864809045623_2701-h-0.htm.html   OK
-      ...
-      testing: OEBPS/8951984864809045623_2701-h-26.htm.html  OK
-      testing: OEBPS/toc.ncx            OK
-  No errors detected in compressed data of /tmp/Moby.epub.
-  ```
-- **Auto-Transcode KF8 Cache:**
-  - Path: `/data/data/com.amazon.kindle.epub/files/epub_cache/Moby_Dick__Or__The_Whale_2701.epub.azw3`
-  - Byte Size: `1,523,748` bytes
-  - PalmDB Format: `BOOKMOBI` (KF8)
-- **Native Reader & TOC Drawer:**
-  - Opens cleanly into `StandAloneBookReaderActivity`.
-  - Native Table of Contents drawer verified with 27+ sections ("MOBY-DICK; or, THE WHALE.", "CHAPTER 1. Loomings.", "CHAPTER 4. The Counterpane.", etc.).
-- **Evidence Screenshot:** `screenshots/verify_r12_downloaded_book2.png`
-
----
-
-### B.3 Library Tab Grid Verification
-- SQLite database `kindle_library.db` verified:
-  - Both books registered in `KindleContent` as `LOCAL` and `BT_EBOOK`.
-  - Both books registered in `UserContent` with valid `LAST_ACCESSED` timestamps.
-  - Cover images generated in `covers.db` and stored in `/data/data/com.amazon.kindle.epub/files/coverssmall/`.
-- UI Grid verification:
-  - Both *Moby Dick* and *Alice's Adventures in Wonderland* appear at the top row of the Library grid.
-- **Evidence Screenshot:** `screenshots/verify_r12_library_with_downloads.png`
+### B.3 Intra-File Jump Test
+- Tapped `CHAPTER 2. The Carpet-Bag.` (anchor within the first spine file) in native TOC drawer.
+- Reader jumped immediately to Chapter 2 header at `Location 440 of 9711 • 5%`.
+- **Evidence Screenshot:** `screenshots/verify_r13_mobydick_ch2_jump.png`
 
 ---
 
 ## 4. Verification Checkpoint Table
 
-| Checkpoint | Target / Value | Status |
-|---|---|---|
-| Stock `com.amazon.kindle` | Unmodified, v8.160.1.0 | **PASS (Untouched)** |
-| Mod Package Label | "Folio" | **PASS** |
-| Mod Package Icon | `folio_launcher_icon.png` (Navy/Amber) | **PASS** |
-| Launcher App Drawer | "Folio" visible with custom icon | **PASS** (`verify_r12_launcher_icon_name.png`) |
-| Book 1 (Alice) Download | 136,759 bytes, valid ZIP (`PK\x03\x04`) | **PASS** |
-| Book 1 Transcode | 246,381 bytes AZW3, `BOOKMOBI` | **PASS** |
-| Book 1 Reader & TOC | 12 chapters native TOC drawer | **PASS** (`verify_r12_downloaded_book1.png`) |
-| Book 2 (Moby Dick) Download | 722,877 bytes, valid ZIP (`PK\x03\x04`) | **PASS** |
-| Book 2 Transcode | 1,523,748 bytes AZW3, `BOOKMOBI` | **PASS** |
-| Book 2 Reader & TOC | 27+ chapters native TOC drawer | **PASS** (`verify_r12_downloaded_book2.png`) |
-| Library Grid with Covers | Both books visible at top of grid | **PASS** (`verify_r12_library_with_downloads.png`) |
+| Checkpoint | Expected / Target | Observed / Actual | Status |
+|---|---|---|---|
+| Stock `com.amazon.kindle` | Strictly untouched (v8.160.1.0) | v8.160.1.0 unchanged | **PASS (Untouched)** |
+| Adaptive Icon XML | `@mipmap/folio_launcher_icon` with bg/fg | Full adaptive squircle | **PASS** |
+| Launcher Squircle Frame | Zero white border on Smart Launcher 6 | Navy-teal fills squircle edge-to-edge | **PASS** (`verify_r13_adaptive_icon.png`) |
+| Moby Dick Re-transcode | Ingest all NCX navPoints with `#anchor` | 1,529,416 bytes AZW3 | **PASS** |
+| Consecutive Chapters in TOC | Chapter 1, 2, 3, 4, 5... all present | Full consecutive sequence verified | **PASS** (`verify_r13_mobydick_full_toc.png`) |
+| Chapter 2 Intra-File Jump | Reader jumps to Location 440 (Ch 2) | Jumped to Location 440 | **PASS** (`verify_r13_mobydick_ch2_jump.png`) |

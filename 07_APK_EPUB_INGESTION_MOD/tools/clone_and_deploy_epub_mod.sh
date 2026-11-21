@@ -31,11 +31,24 @@ apktool d -s -f "${WORK_DIR}/orig_splits/base.apk" -o "${WORK_DIR}/base_dec"
 echo "[3/6] Rewriting package name (${NEW_PKG}), removing sharedUserId, and renaming conflicting authorities/permissions..."
 HAS_CUSTOM_ICON=0
 ICON_SRC="${MOD_ROOT}/assets/folio_launcher_icon.png"
+ICON_BG="${MOD_ROOT}/assets/folio_icon_bg.png"
+ICON_FG="${MOD_ROOT}/assets/folio_icon_fg.png"
 if [[ -f "${ICON_SRC}" ]]; then
-    mkdir -p "${WORK_DIR}/base_dec/res/drawable"
-    cp "${ICON_SRC}" "${WORK_DIR}/base_dec/res/drawable/folio_launcher_icon.png"
+    mkdir -p "${WORK_DIR}/base_dec/res/drawable" "${WORK_DIR}/base_dec/res/mipmap-xxxhdpi" "${WORK_DIR}/base_dec/res/mipmap-anydpi-v26"
+    cp "${ICON_SRC}" "${WORK_DIR}/base_dec/res/mipmap-xxxhdpi/folio_launcher_icon.png"
+    if [[ -f "${ICON_BG}" && -f "${ICON_FG}" ]]; then
+        cp "${ICON_BG}" "${WORK_DIR}/base_dec/res/drawable/folio_icon_bg.png"
+        cp "${ICON_FG}" "${WORK_DIR}/base_dec/res/drawable/folio_icon_fg.png"
+        cat > "${WORK_DIR}/base_dec/res/mipmap-anydpi-v26/folio_launcher_icon.xml" <<'XMLEND'
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/folio_icon_bg"/>
+    <foreground android:drawable="@drawable/folio_icon_fg"/>
+</adaptive-icon>
+XMLEND
+        echo "Bundled Android Adaptive Icon (@mipmap/folio_launcher_icon)"
+    fi
     HAS_CUSTOM_ICON=1
-    echo "Bundled custom launcher icon: ${ICON_SRC}"
 fi
 APP_LABEL="${APP_LABEL:-Folio}" HAS_CUSTOM_ICON="${HAS_CUSTOM_ICON}" python3 - "${WORK_DIR}/base_dec/AndroidManifest.xml" "${NEW_PKG}" <<'PYEOF'
 import re, sys
@@ -67,7 +80,7 @@ for p in custom_perms:
     new_p = p.replace("com.amazon.kindle", new_pkg) if "com.amazon.kindle" in p else f"{new_pkg}.perm.{p}"
     xml = xml.replace(f'"{p}"', f'"{new_p}"')
 
-# 5. Update app label ("Folio") and custom launcher icon (@drawable/folio_launcher_icon)
+# 5. Update app label ("Folio") and custom launcher icon (@mipmap/folio_launcher_icon)
 import os
 app_label = os.environ.get("APP_LABEL", "Folio")
 has_custom_icon = os.environ.get("HAS_CUSTOM_ICON", "0") == "1"
@@ -81,13 +94,13 @@ def patch_app_tag(m):
         tag = tag.replace('<application', f'<application android:label="{app_label}"', 1)
     if has_custom_icon:
         if 'android:icon=' in tag:
-            tag = re.sub(r'android:icon="[^"]*"', 'android:icon="@drawable/folio_launcher_icon"', tag)
+            tag = re.sub(r'android:icon="[^"]*"', 'android:icon="@mipmap/folio_launcher_icon"', tag)
         else:
-            tag = tag.replace('<application', '<application android:icon="@drawable/folio_launcher_icon"', 1)
+            tag = tag.replace('<application', '<application android:icon="@mipmap/folio_launcher_icon"', 1)
         if 'android:roundIcon=' in tag:
-            tag = re.sub(r'android:roundIcon="[^"]*"', 'android:roundIcon="@drawable/folio_launcher_icon"', tag)
+            tag = re.sub(r'android:roundIcon="[^"]*"', 'android:roundIcon="@mipmap/folio_launcher_icon"', tag)
         else:
-            tag = tag.replace('<application', '<application android:roundIcon="@drawable/folio_launcher_icon"', 1)
+            tag = tag.replace('<application', '<application android:roundIcon="@mipmap/folio_launcher_icon"', 1)
     return tag
 xml = re.sub(r'<application\b[^>]*>', patch_app_tag, xml, count=1)
 
@@ -106,11 +119,11 @@ def patch_launcher_elem(m):
         ot = ot[:-1] + f' android:label="{app_label}">'
     if has_custom_icon:
         if 'android:icon=' in ot:
-            ot = re.sub(r'android:icon="[^"]*"', 'android:icon="@drawable/folio_launcher_icon"', ot)
+            ot = re.sub(r'android:icon="[^"]*"', 'android:icon="@mipmap/folio_launcher_icon"', ot)
         else:
-            ot = ot[:-1] + ' android:icon="@drawable/folio_launcher_icon">'
+            ot = ot[:-1] + ' android:icon="@mipmap/folio_launcher_icon">'
         if 'android:roundIcon=' in ot:
-            ot = re.sub(r'android:roundIcon="[^"]*"', 'android:roundIcon="@drawable/folio_launcher_icon"', ot)
+            ot = re.sub(r'android:roundIcon="[^"]*"', 'android:roundIcon="@mipmap/folio_launcher_icon"', ot)
     return ot + block[open_tag_m.end():]
 xml = re.sub(r'<(activity(?:-alias)?)\b[^>]*>.*?</\1>', patch_launcher_elem, xml, flags=re.DOTALL)
 

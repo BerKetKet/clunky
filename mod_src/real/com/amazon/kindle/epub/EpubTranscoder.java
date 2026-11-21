@@ -51,6 +51,16 @@ public final class EpubTranscoder {
         }
     }
 
+    private static final class NavAnchor {
+        final String label;
+        final String fragId;
+
+        NavAnchor(String label, String fragId) {
+            this.label = label;
+            this.fragId = fragId;
+        }
+    }
+
     private static final class Kf8Section {
         final int fileNum;
         final int skelStart;
@@ -259,24 +269,33 @@ public final class EpubTranscoder {
             Collections.sort(spinePaths);
         }
 
-        // 2. Parse NCX chapter labels (filePath -> label)
-        Map<String, String> fileToTocLabel = new HashMap<String, String>();
+        // 2. Parse ALL NCX chapter labels & #fragment anchors (supports nested navPoints & multi-chapter spine files)
+        Map<String, List<NavAnchor>> fileToNavAnchors = new HashMap<String, List<NavAnchor>>();
         if (ncxPath != null && zipEntries.containsKey(ncxPath)) {
             String ncxXml = new String(zipEntries.get(ncxPath), UTF8);
             String ncxDir = getDirName(ncxPath);
-            Matcher npM = Pattern.compile("<navPoint\\b[^>]*>(.*?)</navPoint>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE).matcher(ncxXml);
+            Matcher npM = Pattern.compile(
+                    "<navLabel\\b[^>]*>.*?<text\\b[^>]*>(.*?)</text>.*?</navLabel>\\s*<content\\b[^>]+src=[\"']([^\"']+)[\"']",
+                    Pattern.DOTALL | Pattern.CASE_INSENSITIVE
+            ).matcher(ncxXml);
             while (npM.find()) {
-                String np = npM.group(1);
-                String lbl = unescapeXml(extractXmlTag(np, "<text", "</text>", ""));
-                Matcher cM = Pattern.compile("<content\\b[^>]+src=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE).matcher(np);
-                if (!lbl.isEmpty() && cM.find()) {
-                    String src = cM.group(1);
+                String lbl = unescapeXml(npM.group(1)).replaceAll("\\s+", " ").trim();
+                String src = npM.group(2);
+                if (!lbl.isEmpty() && src != null && !src.isEmpty()) {
+                    String filePart = src;
+                    String fragId = "";
                     int hash = src.indexOf('#');
-                    if (hash >= 0) src = src.substring(0, hash);
-                    String resolved = resolveRelPath(ncxDir, src);
-                    if (!fileToTocLabel.containsKey(resolved)) {
-                        fileToTocLabel.put(resolved, lbl);
+                    if (hash >= 0) {
+                        filePart = src.substring(0, hash);
+                        fragId = src.substring(hash + 1);
                     }
+                    String resolved = resolveRelPath(ncxDir, filePart);
+                    List<NavAnchor> list = fileToNavAnchors.get(resolved);
+                    if (list == null) {
+                        list = new ArrayList<NavAnchor>();
+                        fileToNavAnchors.put(resolved, list);
+                    }
+                    list.add(new NavAnchor(lbl, fragId));
                 }
             }
         }
@@ -352,10 +371,6 @@ public final class EpubTranscoder {
             for (int i = 0; i < spinePaths.size(); i++) {
                 String hp = spinePaths.get(i);
                 String rawHtml = new String(zipEntries.get(hp), UTF8);
-                String chapLabel = fileToTocLabel.get(hp);
-                if (chapLabel == null || chapLabel.isEmpty()) {
-                    chapLabel = extractHeadingOrTitle(rawHtml, "Section " + (i + 1));
-                }
                 String aid = String.format(Locale.US, "%04X", i + 1);
                 String skel = "<html><head><link rel=\"stylesheet\" type=\"text/css\" href=\"kindle:flow:0001?mime=text/css\"/></head><body aid=\"0\"><div aid=\"" + aid + "\"></div></body></html>\n";
                 byte[] skelBytes = skel.getBytes(UTF8);
@@ -372,9 +387,22 @@ public final class EpubTranscoder {
                 int fragLen = fragBytes.length;
 
                 kf8Sections.add(new Kf8Section(i, skelStart, skelLen, insertPos, fragStart, fragLen, aid));
-                ChapterToc ct = new ChapterToc(chapLabel, fragStart);
-                ct.length = Math.max(1, fragLen);
-                chapters.add(ct);
+
+                List<NavAnchor> anchors = fileToNavAnchors.get(hp);
+                if (anchors != null && !anchors.isEmpty()) {
+                    for (int a = 0; a < anchors.size(); a++) {
+                        NavAnchor na = anchors.get(a);
+                        int relOff = findAnchorByteOffset(fragHtml, na.fragId);
+                        ChapterToc ct = new ChapterToc(na.label, fragStart + relOff);
+                        ct.length = Math.max(1, fragLen - relOff);
+                        chapters.add(ct);
+                    }
+                } else {
+                    String chapLabel = extractHeadingOrTitle(rawHtml, "Section " + (i + 1));
+                    ChapterToc ct = new ChapterToc(chapLabel, fragStart);
+                    ct.length = Math.max(1, fragLen);
+                    chapters.add(ct);
+                }
             }
         } else {
             htmlBaos.write("<html><head></head><body>".getBytes(UTF8));
@@ -385,18 +413,33 @@ public final class EpubTranscoder {
                     htmlBaos.write("<mbp:pagebreak/>".getBytes(UTF8));
                 }
                 int chapStart = htmlBaos.size();
-                String chapLabel = fileToTocLabel.get(hp);
-                if (chapLabel == null || chapLabel.isEmpty()) {
-                    chapLabel = extractHeadingOrTitle(rawHtml, "Section " + (i + 1));
-                }
-                ChapterToc ct = new ChapterToc(chapLabel, chapStart);
-                chapters.add(ct);
-
                 String body = extractAndNormalizeBody(rawHtml, getDirName(hp), imgRecMap, spineIndexMap, false);
-                htmlBaos.write(body.getBytes(UTF8));
-                ct.length = Math.max(1, htmlBaos.size() - chapStart);
+                byte[] bodyBytes = body.getBytes(UTF8);
+                htmlBaos.write(bodyBytes);
+                int bodyLen = bodyBytes.length;
+
+                List<NavAnchor> anchors = fileToNavAnchors.get(hp);
+                if (anchors != null && !anchors.isEmpty()) {
+                    for (int a = 0; a < anchors.size(); a++) {
+                        NavAnchor na = anchors.get(a);
+                        int relOff = findAnchorByteOffset(body, na.fragId);
+                        ChapterToc ct = new ChapterToc(na.label, chapStart + relOff);
+                        ct.length = Math.max(1, bodyLen - relOff);
+                        chapters.add(ct);
+                    }
+                } else {
+                    String chapLabel = extractHeadingOrTitle(rawHtml, "Section " + (i + 1));
+                    ChapterToc ct = new ChapterToc(chapLabel, chapStart);
+                    ct.length = Math.max(1, bodyLen);
+                    chapters.add(ct);
+                }
             }
             htmlBaos.write("</body></html>".getBytes(UTF8));
+        }
+        // Normalize chapter lengths so each chapter spans cleanly up to the next chapter
+        for (int i = 0; i + 1 < chapters.size(); i++) {
+            int diff = chapters.get(i + 1).startOffset - chapters.get(i).startOffset;
+            if (diff > 0) chapters.get(i).length = diff;
         }
         byte[] htmlBytes = htmlBaos.toByteArray();
 
@@ -430,6 +473,25 @@ public final class EpubTranscoder {
     // ==========================================================================
     // Binary NCX INDX Generator (Master INDX + Secondary INDX + CNCX)
     // ==========================================================================
+    private static int findAnchorByteOffset(String html, String fragId) {
+        if (html == null || fragId == null || fragId.isEmpty()) return 0;
+        String[] needles = new String[]{
+            "id=\"" + fragId + "\"",
+            "id='" + fragId + "'",
+            "name=\"" + fragId + "\"",
+            "name='" + fragId + "'"
+        };
+        int idx = -1;
+        for (String needle : needles) {
+            idx = html.indexOf(needle);
+            if (idx >= 0) break;
+        }
+        if (idx < 0) return 0;
+        int tagStart = html.lastIndexOf('<', idx);
+        if (tagStart < 0) tagStart = idx;
+        return html.substring(0, tagStart).getBytes(UTF8).length;
+    }
+
     private static List<byte[]> buildNcxIndxRecords(List<ChapterToc> chapters) throws Exception {
         List<byte[]> out = new ArrayList<byte[]>();
         if (chapters == null || chapters.isEmpty()) return out;
@@ -454,10 +516,10 @@ public final class EpubTranscoder {
         // 2. Build Secondary INDX record (all chapter entries)
         ByteArrayOutputStream secEntries = new ByteArrayOutputStream();
         int[] secOffs = new int[chapters.size()];
-        String lastKey = "00";
+        String lastKey = "0000";
         for (int i = 0; i < chapters.size(); i++) {
             secOffs[i] = 192 + secEntries.size();
-            String key = String.format(Locale.US, "%02d", i);
+            String key = String.format(Locale.US, "%04d", i);
             lastKey = key;
             byte[] kb = key.getBytes(UTF8);
             secEntries.write(kb.length);
