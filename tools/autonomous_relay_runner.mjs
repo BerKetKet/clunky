@@ -3,7 +3,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-const TAB_ID = 837017888;
+const TAB_ID = 837017938;
 const WORKDIR = '/home/bgg/projects/clunky';
 const DOWNLOAD_DIR = '/home/bgg/Downloads';
 const CLI = '/home/bgg/chrome-bridge/cli.mjs';
@@ -99,7 +99,7 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
 }
 
 async function main() {
-  const round = parseInt(process.argv[2] || '13', 10);
+  const round = parseInt(process.argv[2] || '14', 10);
   const maxWait = parseInt(process.argv[3] || '2000', 10);
   const res = await waitForRound(round, maxWait);
   console.log('[Monitor Output]:', JSON.stringify(res));

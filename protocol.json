@@ -1,15 +1,15 @@
 {
-  "round": 13,
+  "round": 14,
   "project": "clunky",
   "target_package": "com.amazon.kindle.epub",
   "app_label": "Folio",
   "stock_package_read_only": "com.amazon.kindle",
   "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report013.zip",
+  "expected_report_zip": "antig_to_gemini_neon_clunky_report014.zip",
   "max_report_size_mb": 100,
   "tasks": [
-    "Deploy Android Adaptive Icon (@mipmap/folio_launcher_icon) eliminating white frame on Smart Launcher 6",
-    "Deploy full multi-chapter #anchor TOC resolution + 4-digit NCX INDX keys in EpubTranscoder.java",
-    "Verify full consecutive chapters (Chapter 1, 2, 3, 4...) and intra-file Chapter 2 jump on Moby Dick"
+    "Deploy EPUB3 nav.xhtml TOC fallback and intra-file #anchor KF8 hyperlink resolution in EpubTranscoder.java",
+    "Deploy OPDS Quick Presets and Backup/Restore dialog in OpenCatalogView.java",
+    "Verify dialogs, KF8 regression check, and stage signed Folio v1.0 release APKs"
   ]
 }

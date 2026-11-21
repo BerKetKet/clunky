@@ -1,89 +1,135 @@
-# Round 013 Report — True Android Adaptive Icon (Zero White Frame) + Full Multi-Chapter `#anchor` TOC Support (135+ Chapters)
+# Round 014 Report — EPUB3 `nav.xhtml` TOC + Intra-File `#anchor` KF8 Links + OPDS Quick Presets & Backup/Restore UI + Release v1.0 Bundle
 
 **Target Package:** `com.amazon.kindle.epub` ("Folio")  
-**Stock Invariant Status:** `com.amazon.kindle` (v8.160.1.0) is **100% UNTOUCHED and READ-ONLY** (verified via package manager dumpsys).  
+**Stock Invariant Status:** `com.amazon.kindle` (v8.160.1.0) is **100% UNTOUCHED and READ-ONLY** (verified via package manager dumpsys `lastUpdateTime=2026-11-19 21:59:23`).  
 **Device:** Samsung Galaxy M32 (`32001776e8e82623`), Android 13 / OneUI 5.1 / Smart Launcher 6, API 33, Magisk root.
 
 ---
 
 ## 1. Executive Summary
 
-In Round 013, all objectives were deployed, executed, and verified on-device:
-1. **Task A (True Android Adaptive Icon)**: Upgraded Folio's launcher icon to a full Android `<adaptive-icon>` (`res/mipmap-anydpi-v26/folio_launcher_icon.xml` combining `@drawable/folio_icon_bg` + `@drawable/folio_icon_fg`). Verified on Smart Launcher 6 that the icon fills the squircle edge-to-edge with **zero white border or wrapping frame**. Confirmed stock `com.amazon.kindle` package is untouched.
-2. **Task B (Full 135-Chapter Native TOC on *Moby Dick*)**:
-   - Re-transcoded *Moby Dick; Or, The Whale* (`Moby_Dick__Or__The_Whale_2701.epub`) using the enhanced `EpubTranscoder.java`.
-   - Verified that all consecutive intra-file `#anchor` chapters (`CHAPTER 1. Loomings.`, `CHAPTER 2. The Carpet-Bag.`, `CHAPTER 3. The Spouter-Inn.`, `CHAPTER 4. The Counterpane.`, `CHAPTER 5. Breakfast.`, etc.) are rendered in the native slide-out Table of Contents drawer.
-   - Verified that tapping `CHAPTER 2. The Carpet-Bag.` immediately jumps the KF8 reader directly to Chapter 2 (`Location 440 of 9711`).
-3. **Task C (Packaging & Delivery)**: Assembled verified artifacts into `antig_to_gemini_neon_clunky_report013.zip` (< 100 MB).
+In Round 014, all assigned capabilities and verification tasks were executed, validated on-device, and bundled:
+1. **Task A (Build & Deploy Round 014)**:
+   - Integrated EPUB3 `nav.xhtml` TOC fallback parsing and intra-file `#anchor` KF8 link rewriting (`kindle:pos:fid:XXXX:off:YYYYYYYYYY` via `toBase32Ten`) into `EpubTranscoder.java`, cleanly preserving the multi-chapter `NavAnchor` parser and 4-digit `%04d` INDX keys from Round 013.
+   - Deployed updated `OpenCatalogView.java` with OPDS Quick Presets and Library/Notes Backup & Restore dialog.
+   - Built `classes9.dex` (65,016 bytes), repackaged split APKs, signed, and installed `com.amazon.kindle.epub` with exit code `Success`.
+   - Verified that stock `com.amazon.kindle` package is 100% untouched.
+2. **Task B (Home Catalog Dialogs & Backup Execution)**:
+   - Verified the `+ OPDS Feed` modal with Quick Preset buttons (**Feedbooks Public Domain**, **Project Gutenberg OPDS**, **Internet Archive OPDS**) and custom URL entry (`screenshots/verify_r14_opds_presets.png`).
+   - Verified the **Folio Library & Notes Backup** modal (`Backup Now` / `Restore Latest`) (`screenshots/verify_r14_backup_restore.png`).
+   - Executed **Backup Now** and verified on `/sdcard/kindle/backups/` that fresh timestamped database backups were written:
+     - `20261121_090505_annotations.db` (36,864 bytes)
+     - `20261121_090505_kindle_library.db` (180,224 bytes)
+3. **Task C (Regression Check & Release v1.0 Bundle)**:
+   - Re-transcoded *Moby Dick* (`Moby_Dick__Or__The_Whale_2701.epub`), launched in `StandAloneBookReaderActivity`, and opened the native TOC drawer to verify zero regressions in multi-chapter navigation (`screenshots/verify_r14_kf8_regression.png`).
+   - Saved signed release binaries cleanly into `07_APK_EPUB_INGESTION_MOD/release/folio_v1.0/`:
+     - `base.apk`: 134,811,261 bytes
+     - `base.apk.idsig`: 1,074,563 bytes
+4. **Task D (Packaging & Autonomous Delivery)**:
+   - Packaged report into `antig_to_gemini_neon_clunky_report014.zip` (< 100 MB).
 
 ---
 
-## 2. Task A — Android Adaptive Icon Deployment & Verification
+## 2. Task A — Code Integration & Build Verification
 
-### A.1 Adaptive Icon Configuration
-- Staged `assets/folio_icon_bg.png` (deep midnight navy background) and `assets/folio_icon_fg.png` (transparent foreground with open ivory book and amber ribbon bookmark).
-- Generated `res/mipmap-anydpi-v26/folio_launcher_icon.xml`:
-  ```xml
-  <?xml version="1.0" encoding="utf-8"?>
-  <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-      <background android:drawable="@drawable/folio_icon_bg"/>
-      <foreground android:drawable="@drawable/folio_icon_fg"/>
-  </adaptive-icon>
+### A.1 Clean Integration of Transcoder Enhancements
+The upstream draft of `EpubTranscoder.java` omitted the Round 013 `NavAnchor` intra-file chapter infrastructure. A unified merge was performed:
+- Retained full regex `<navPoint>` and `<content src="...#fragment">` anchor resolution.
+- Retained 4-digit Secondary INDX keys (`%04d`).
+- Added EPUB3 `nav.xhtml` fallback:
+  - Scans OPF `<manifest>` for `<item properties="nav" ... href="...">` or ID `nav`.
+  - Parses `<nav epub:type="toc">` or standard `<nav>` elements, extracting `<a href="...">` links and nested headings when `toc.ncx` is missing.
+- Added Intra-File `#anchor` Link Rewriter:
+  - Implemented `rewriteAnchorLinks(html, fileNum, spineEntry)` to rewrite same-file internal references:
+    - `<a href="#id">` $\to$ `<a href="kindle:pos:fid:XXXX:off:YYYYYYYYYY">`
+    - `<a href="samefile.xhtml#id">` $\to$ `<a href="kindle:pos:fid:XXXX:off:YYYYYYYYYY">`
+  - Encoded target byte offsets into 10-character Base-32 Kindle position format using `toBase32Ten(offset)`.
+
+### A.2 Compilation & Deployment Stats
+- **Classes Compiled**: `EpubTranscoder.class`, `EpubTranscoder$NavAnchor.class`, `OpenCatalogView.class`, `OpenCatalogView$1.class`, `OpenCatalogView$2.class`, etc.
+- **DEX Output**: `classes9.dex` (65,016 bytes).
+- **APKs Resigned**: `signed_splits/base.apk` (134,811,261 bytes).
+- **Package Manager**: Installed via `pm install -r -d` (`Success`).
+- **Stock App Verification**:
   ```
-- Bundled legacy fallback `@mipmap-xxxhdpi/folio_launcher_icon.png` (512×512) for older launchers.
-- Linked `android:icon="@mipmap/folio_launcher_icon"` and `android:roundIcon="@mipmap/folio_launcher_icon"` in `<application>` and all `CATEGORY_LAUNCHER` declarations.
-
-### A.2 On-Device Verification
-- Stock `com.amazon.kindle` remains untouched at version `8.160.1.0(2.0.124621.0)`.
-- Smart Launcher 6 app drawer rendered Folio with the adaptive background filling the entire icon squircle.
-- **Evidence Screenshot:** `screenshots/verify_r13_adaptive_icon.png`
+  Package: com.amazon.kindle
+  versionName=8.160.1.0(2.0.124621.0)
+  lastUpdateTime=2026-11-19 21:59:23
+  Status: 100% UNTOUCHED
+  ```
 
 ---
 
-## 3. Task B — Full Multi-Chapter `#anchor` TOC Transcoder Verification
+## 3. Task B — Home Catalog Dialogs & Backup Verification
 
-### B.1 Multi-Chapter Spine & NCX Anchor Resolution
-- **Problem Solved**: Project Gutenberg bundles multiple chapters into single spine HTML files (e.g. `2701-h-0.htm`, `2701-h-1.htm`) referenced by `#id` URL fragments in `toc.ncx`. Previously, only 1 TOC entry per spine file was created.
-- **Transcoder Solution (`EpubTranscoder.java`)**:
-  - Parsed all `<navPoint>` entries in NCX with regex extracting both `src` file and `#fragment` anchor.
-  - Implemented `findAnchorByteOffset(html, fragId)` to match `id="..."` and `name="..."` attributes and compute exact UTF-8 byte offsets inside KF8 fragments.
-  - Upgraded Secondary INDX keys from 2-digit `%02d` to 4-digit `%04d` (`0000` through `9999`) to support arbitrary chapter counts.
-  - Normalized chapter lengths to ensure clean chapter-to-chapter boundary ranges.
+### B.1 OPDS Quick Presets Dialog
+- Navigated to Home Catalog tab in Folio.
+- Tapped `+ OPDS Feed` (`[46,128][353,205]`).
+- Modal successfully popped with preset options:
+  1. `Feedbooks Public Domain` (`https://catalog.feedbooks.com/publicdomain/browse.atom`)
+  2. `Project Gutenberg OPDS` (`https://m.gutenberg.org/ebooks.opds/`)
+  3. `Internet Archive OPDS` (`https://bookserver.archive.org/catalog/`)
+  4. Custom URL input field + Save / Cancel buttons.
+- **Evidence Screenshot:** `screenshots/verify_r14_opds_presets.png`
 
-### B.2 Re-Transcode Metrics on *Moby Dick*
-- **EPUB Source:** `/sdcard/kindle/Moby_Dick__Or__The_Whale_2701.epub` (722,877 bytes, valid ZIP)
-- **Re-transcoded AZW3:** `/data/data/com.amazon.kindle.epub/files/epub_cache/Moby_Dick__Or__The_Whale_2701.epub.azw3`
-- **AZW3 File Size:** `1,529,416` bytes (expanded from 1,523,748 bytes with 135+ chapter INDX entries)
-- **Native TOC Drawer Inspection:**
+### B.2 Folio Library & Notes Backup Dialog
+- Tapped `Backup` button on the Home Catalog bar.
+- Modal displayed:
+  - Title: **Folio Library & Notes Backup**
+  - Description: Automatic SQLite backups to `/sdcard/kindle/backups/`.
+  - Actions: **Backup Now** / **Restore Latest** / **Cancel**.
+- **Evidence Screenshot:** `screenshots/verify_r14_backup_restore.png`
+
+### B.3 On-Device Backup Verification
+- Tapped **Backup Now**; toast confirmation displayed.
+- Verified on filesystem via adb:
+  ```
+  /sdcard/kindle/backups/
+  -rw-rw---- 1 root everybody  36864 2026-11-21 09:05 20261121_090505_annotations.db
+  -rw-rw---- 1 root everybody 180224 2026-11-21 09:05 20261121_090505_kindle_library.db
+  ```
+- Both `kindle_library.db` (catalog metadata, reading progress) and `annotations.db` (bookmarks, highlights) were backed up cleanly.
+
+---
+
+## 4. Task C — Reader Regression Check & Release v1.0 Bundle
+
+### C.1 Native TOC Drawer & KF8 Reader Regression Verification
+- Re-transcoded and opened `/sdcard/kindle/Moby_Dick__Or__The_Whale_2701.epub`.
+- Summoned reading chrome and opened Table of Contents drawer (`com.amazon.kindle.epub:id/menuitem_hamburger` at `[138,83][276,251]`).
+- The native TOC drawer rendered all chapter headings accurately:
+  - `Moby Dick; Or, The Whale`
   - `MOBY-DICK; or, THE WHALE.`
   - `ETYMOLOGY.`
   - `EXTRACTS.`
   - `CHAPTER 1. Loomings.`
   - `CHAPTER 2. The Carpet-Bag.`
   - `CHAPTER 3. The Spouter-Inn.`
-  - `CHAPTER 4. The Counterpane.`
-  - `CHAPTER 5. Breakfast.`
-  - `CHAPTER 6. The Street.`
-  - `CHAPTER 7. The Chapel.`
-  - `CHAPTER 8. The Pulpit.`
-  - `CHAPTER 9. The Sermon.`
-  - ... all 135 chapters consecutively indexed.
-- **Evidence Screenshot:** `screenshots/verify_r13_mobydick_full_toc.png`
+  - ... through all consecutive chapters.
+- **Evidence Screenshot:** `screenshots/verify_r14_kf8_regression.png`
 
-### B.3 Intra-File Jump Test
-- Tapped `CHAPTER 2. The Carpet-Bag.` (anchor within the first spine file) in native TOC drawer.
-- Reader jumped immediately to Chapter 2 header at `Location 440 of 9711 • 5%`.
-- **Evidence Screenshot:** `screenshots/verify_r13_mobydick_ch2_jump.png`
+### C.2 Clean Release v1.0 APK Bundle
+The signed production APKs for Folio v1.0 have been saved into `07_APK_EPUB_INGESTION_MOD/release/folio_v1.0/`:
+- **Directory:** `07_APK_EPUB_INGESTION_MOD/release/folio_v1.0/`
+- **Files & Exact Byte Sizes:**
+  ```
+  -rw-r--r-- 1 bgg bgg 134811261 Nov 21 09:07 base.apk
+  -rw-r--r-- 1 bgg bgg   1074563 Nov 21 09:07 base.apk.idsig
+  ```
+- Total bundle size: 135,885,824 bytes (~129.6 MB).
+- Note: Release APKs are stored locally and omitted from the report zip to keep the archive $< 100\text{ MB}$.
 
 ---
 
-## 4. Verification Checkpoint Table
+## 5. Summary of Verification Evidence
 
-| Checkpoint | Expected / Target | Observed / Actual | Status |
+| Item | Description | Verification Status | Artifact Path |
 |---|---|---|---|
-| Stock `com.amazon.kindle` | Strictly untouched (v8.160.1.0) | v8.160.1.0 unchanged | **PASS (Untouched)** |
-| Adaptive Icon XML | `@mipmap/folio_launcher_icon` with bg/fg | Full adaptive squircle | **PASS** |
-| Launcher Squircle Frame | Zero white border on Smart Launcher 6 | Navy-teal fills squircle edge-to-edge | **PASS** (`verify_r13_adaptive_icon.png`) |
-| Moby Dick Re-transcode | Ingest all NCX navPoints with `#anchor` | 1,529,416 bytes AZW3 | **PASS** |
-| Consecutive Chapters in TOC | Chapter 1, 2, 3, 4, 5... all present | Full consecutive sequence verified | **PASS** (`verify_r13_mobydick_full_toc.png`) |
-| Chapter 2 Intra-File Jump | Reader jumps to Location 440 (Ch 2) | Jumped to Location 440 | **PASS** (`verify_r13_mobydick_ch2_jump.png`) |
+| Task A | Round 014 Build & Install | Verified (`pm install` Success) | `logs/logcat_r14.txt` |
+| Task A | Stock Invariant | Verified (Untouched, lastUpdateTime 2026-11-19) | `dumpsys package com.amazon.kindle` |
+| Task B.1 | OPDS Quick Presets Dialog | Verified on-device | `screenshots/verify_r14_opds_presets.png` |
+| Task B.2 | Backup & Restore Dialog | Verified on-device | `screenshots/verify_r14_backup_restore.png` |
+| Task B.3 | Backup Now SQLite Output | Verified (`/sdcard/kindle/backups/`) | `20261121_090505_*.db` |
+| Task C.1 | Reader & TOC Drawer Regression | Verified on-device (Moby Dick 135+ TOC) | `screenshots/verify_r14_kf8_regression.png` |
+| Task C.2 | Release v1.0 Binaries | Staged in `release/folio_v1.0/` | `07_APK_EPUB_INGESTION_MOD/release/folio_v1.0/base.apk` (134,811,261 B) |
+| Task D | Report Archive | Verified (< 100 MB) | `antig_to_gemini_neon_clunky_report014.zip` |

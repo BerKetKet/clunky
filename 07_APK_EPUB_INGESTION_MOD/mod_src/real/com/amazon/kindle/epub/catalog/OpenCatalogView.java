@@ -107,7 +107,7 @@ public final class OpenCatalogView {
         backupBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                backupLocalDatabases(ctx);
+                showBackupRestoreDialog(ctx);
             }
         });
         headerRow.addView(backupBtn);
@@ -262,12 +262,47 @@ public final class OpenCatalogView {
             final Button opdsBtn,
             final Runnable doSearch
     ) {
+        LinearLayout layout = new LinearLayout(ctx);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(40, 24, 40, 12);
+
+        TextView presetLabel = new TextView(ctx);
+        presetLabel.setText("Quick OPDS Catalogs:");
+        presetLabel.setTextSize(14f);
+        presetLabel.setTypeface(null, Typeface.BOLD);
+        layout.addView(presetLabel);
+
         final EditText input = new EditText(ctx);
         input.setHint("https://example.org/opds.xml");
         input.setText(prefs.getString(KEY_CUSTOM_OPDS, ""));
+
+        final String[][] presets = new String[][]{
+            {"Feedbooks Public Domain", "https://catalog.feedbooks.com/publicdomain/browse/top.atom"},
+            {"Project Gutenberg OPDS", "https://m.gutenberg.org/ebooks.opds/"},
+            {"Internet Archive OPDS", "https://bookserver.archive.org/catalog/"}
+        };
+        for (final String[] p : presets) {
+            Button b = new Button(ctx);
+            b.setText(p[0]);
+            b.setAllCaps(false);
+            b.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    input.setText(p[1]);
+                }
+            });
+            layout.addView(b);
+        }
+
+        TextView customLabel = new TextView(ctx);
+        customLabel.setText("\nOr enter any OPDS 1.2 feed URL:");
+        customLabel.setTextSize(13f);
+        layout.addView(customLabel);
+        layout.addView(input);
+
         new AlertDialog.Builder(ctx)
-                .setTitle("Add OPDS Feed URL")
-                .setView(input)
+                .setTitle("OPDS Catalog Feed")
+                .setView(layout)
                 .setPositiveButton("Save & Browse", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int which) {
@@ -280,7 +315,7 @@ public final class OpenCatalogView {
                             } else {
                                 sources.add(opds);
                             }
-                            opdsBtn.setText("Custom OPDS");
+                            opdsBtn.setText("OPDS Feed");
                             activeIdx[0] = 1;
                             doSearch.run();
                         }
@@ -399,6 +434,56 @@ public final class OpenCatalogView {
                 });
             }
         }).start();
+    }
+
+    private static void showBackupRestoreDialog(final Context ctx) {
+        new AlertDialog.Builder(ctx)
+                .setTitle("Folio Library & Notes Backup")
+                .setMessage("Back up or restore your local Folio library metadata, reading progress, and highlights/notes (/sdcard/kindle/backups/).")
+                .setPositiveButton("Backup Now", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int which) {
+                        backupLocalDatabases(ctx);
+                    }
+                })
+                .setNeutralButton("Restore Latest", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int which) {
+                        restoreLatestDatabases(ctx);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private static void restoreLatestDatabases(Context ctx) {
+        try {
+            File backupDir = new File("/sdcard/kindle/backups");
+            File[] files = backupDir.listFiles();
+            if (files == null || files.length == 0) {
+                Toast.makeText(ctx, "No backups found in /sdcard/kindle/backups/", Toast.LENGTH_LONG).show();
+                return;
+            }
+            File dbDir = new File(ctx.getApplicationInfo().dataDir, "databases");
+            int restored = 0;
+            for (String dbName : new String[]{"kindle_library.db", "annotations.db"}) {
+                File latest = null;
+                for (File f : files) {
+                    if (f.isFile() && f.getName().endsWith("_" + dbName)) {
+                        if (latest == null || f.getName().compareTo(latest.getName()) > 0) {
+                            latest = f;
+                        }
+                    }
+                }
+                if (latest != null) {
+                    copyFile(latest, new File(dbDir, dbName));
+                    restored++;
+                }
+            }
+            Toast.makeText(ctx, "Restored " + restored + " DB(s). Restart Folio to apply.", Toast.LENGTH_LONG).show();
+        } catch (Throwable t) {
+            Toast.makeText(ctx, "Restore error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     private static void backupLocalDatabases(Context ctx) {

@@ -215,6 +215,7 @@ public final class EpubTranscoder {
         String coverId = null;
         String coverHref = null;
         String ncxPath = null;
+        String navPath = null;
 
         Map<String, String> manifestIdToPath = new HashMap<String, String>();
         List<String> spinePaths = new ArrayList<String>();
@@ -247,6 +248,7 @@ public final class EpubTranscoder {
                     String resolved = resolveRelPath(opfDir, href);
                     manifestIdToPath.put(id, resolved);
                     if (props != null && props.contains("cover-image")) coverHref = resolved;
+                    if (props != null && (props.equals("nav") || props.contains(" nav") || props.contains("nav "))) navPath = resolved;
                     if ("application/x-dtbncx+xml".equalsIgnoreCase(mtype) || resolved.toLowerCase(Locale.US).endsWith(".ncx")) {
                         ncxPath = resolved;
                     }
@@ -290,6 +292,38 @@ public final class EpubTranscoder {
                         fragId = src.substring(hash + 1);
                     }
                     String resolved = resolveRelPath(ncxDir, filePart);
+                    List<NavAnchor> list = fileToNavAnchors.get(resolved);
+                    if (list == null) {
+                        list = new ArrayList<NavAnchor>();
+                        fileToNavAnchors.put(resolved, list);
+                    }
+                    list.add(new NavAnchor(lbl, fragId));
+                }
+            }
+        }
+
+        // 2b. EPUB3 nav.xhtml fallback if NCX was absent or yielded no entries
+        if (fileToNavAnchors.isEmpty() && navPath != null && zipEntries.containsKey(navPath)) {
+            String navXml = new String(zipEntries.get(navPath), UTF8);
+            String navDir = getDirName(navPath);
+            String tocSection = navXml;
+            Matcher navTocM = Pattern.compile("<nav\\b[^>]*epub:type=[\"'][^\"']*toc[^\"']*[\"'][^>]*>(.*?)</nav>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE).matcher(navXml);
+            if (navTocM.find()) {
+                tocSection = navTocM.group(1);
+            }
+            Matcher aTocM = Pattern.compile("<a\\b[^>]+href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE).matcher(tocSection);
+            while (aTocM.find()) {
+                String src = aTocM.group(1);
+                String lbl = unescapeXml(aTocM.group(2).replaceAll("<[^>]+>", " ")).replaceAll("\\s+", " ").trim();
+                if (!lbl.isEmpty() && src != null && !src.isEmpty()) {
+                    String filePart = src;
+                    String fragId = "";
+                    int hash = src.indexOf('#');
+                    if (hash >= 0) {
+                        filePart = src.substring(0, hash);
+                        fragId = src.substring(hash + 1);
+                    }
+                    String resolved = filePart.isEmpty() ? navPath : resolveRelPath(navDir, filePart);
                     List<NavAnchor> list = fileToNavAnchors.get(resolved);
                     if (list == null) {
                         list = new ArrayList<NavAnchor>();
@@ -379,7 +413,7 @@ public final class EpubTranscoder {
                 htmlBaos.write(skelBytes);
                 int skelLen = skelBytes.length;
 
-                String body = extractAndNormalizeBody(rawHtml, getDirName(hp), imgRecMap, spineIndexMap, true);
+                String body = extractAndNormalizeBody(rawHtml, getDirName(hp), i, imgRecMap, spineIndexMap, true);
                 String fragHtml = (body == null || body.isEmpty()) ? "<p>&#160;</p>" : body;
                 byte[] fragBytes = fragHtml.getBytes(UTF8);
                 int fragStart = htmlBaos.size();
@@ -413,7 +447,7 @@ public final class EpubTranscoder {
                     htmlBaos.write("<mbp:pagebreak/>".getBytes(UTF8));
                 }
                 int chapStart = htmlBaos.size();
-                String body = extractAndNormalizeBody(rawHtml, getDirName(hp), imgRecMap, spineIndexMap, false);
+                String body = extractAndNormalizeBody(rawHtml, getDirName(hp), i, imgRecMap, spineIndexMap, false);
                 byte[] bodyBytes = body.getBytes(UTF8);
                 htmlBaos.write(bodyBytes);
                 int bodyLen = bodyBytes.length;
@@ -1115,6 +1149,17 @@ public final class EpubTranscoder {
         return new String(c);
     }
 
+    private static String toBase32Ten(int val) {
+        final String alpha = "0123456789ABCDEFGHIJKLMNOPQRSTUV";
+        char[] c = new char[10];
+        long v = Math.max(0L, (long) val);
+        for (int i = 9; i >= 0; i--) {
+            c[i] = alpha.charAt((int) (v & 31L));
+            v >>>= 5;
+        }
+        return new String(c);
+    }
+
     private static void writeVwiForward(ByteArrayOutputStream out, int val) {
         byte[] tmp = new byte[5];
         int n = 0;
@@ -1158,7 +1203,7 @@ public final class EpubTranscoder {
         return raw;
     }
 
-    private static String extractAndNormalizeBody(String rawHtml, String htmlDir, Map<String, Integer> imgRecMap, Map<String, Integer> spineIndexMap, boolean kf8Mode) {
+    private static String extractAndNormalizeBody(String rawHtml, String htmlDir, int currentSpineIdx, Map<String, Integer> imgRecMap, Map<String, Integer> spineIndexMap, boolean kf8Mode) {
         String s = rawHtml;
         int bIdx = indexOfIgnoreCase(s, "<body");
         if (bIdx >= 0) {
@@ -1207,20 +1252,32 @@ public final class EpubTranscoder {
                     String lowerH = href.toLowerCase(Locale.US);
                     if (!lowerH.startsWith("http://") && !lowerH.startsWith("https://") && !lowerH.startsWith("mailto:") && !lowerH.startsWith("kindle:")) {
                         String filePart = href;
+                        String fragId = "";
                         int hIdx = filePart.indexOf('#');
-                        if (hIdx >= 0) filePart = filePart.substring(0, hIdx);
-                        if (!filePart.isEmpty()) {
+                        if (hIdx >= 0) {
+                            fragId = filePart.substring(hIdx + 1);
+                            filePart = filePart.substring(0, hIdx);
+                        }
+                        Integer fidx = null;
+                        int offBytes = 0;
+                        if (filePart.isEmpty() && !fragId.isEmpty() && currentSpineIdx >= 0) {
+                            fidx = Integer.valueOf(currentSpineIdx);
+                            offBytes = findAnchorByteOffset(s, fragId);
+                        } else if (!filePart.isEmpty()) {
                             String resolved = resolveRelPath(htmlDir, filePart);
-                            Integer fidx = spineIndexMap.get(resolved);
+                            fidx = spineIndexMap.get(resolved);
                             if (fidx == null) fidx = spineIndexMap.get(resolved.toLowerCase(Locale.US));
                             if (fidx == null) fidx = spineIndexMap.get(getBaseName(filePart));
                             if (fidx == null) fidx = spineIndexMap.get(getBaseName(filePart).toLowerCase(Locale.US));
-                            if (fidx != null) {
-                                String kf8Href = "kindle:pos:fid:" + toBase32Four(fidx.intValue()) + ":off:0000000000";
-                                String replacedTag = tag.replaceFirst("(?i)href\\s*=\\s*(\"[^\"]*\"|'[^']*')", "href=\"" + kf8Href + "\"");
-                                aM.appendReplacement(aSb, Matcher.quoteReplacement(replacedTag));
-                                continue;
+                            if (fidx != null && fidx.intValue() == currentSpineIdx && !fragId.isEmpty()) {
+                                offBytes = findAnchorByteOffset(s, fragId);
                             }
+                        }
+                        if (fidx != null) {
+                            String kf8Href = "kindle:pos:fid:" + toBase32Four(fidx.intValue()) + ":off:" + toBase32Ten(offBytes);
+                            String replacedTag = tag.replaceFirst("(?i)href\\s*=\\s*(\"[^\"]*\"|'[^']*')", "href=\"" + kf8Href + "\"");
+                            aM.appendReplacement(aSb, Matcher.quoteReplacement(replacedTag));
+                            continue;
                         }
                     }
                 }
