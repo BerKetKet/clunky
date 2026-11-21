@@ -85,3 +85,4 @@
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v2.2_kfx/base.apk` (131 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report025.zip` (< 15 MB)
      - Uploaded to Gemini Neon tab `837017938` with verified composer attachment chip.
+     - Autonomous relay runner active in background (`autonomous_relay_runner.mjs 26 2000`, 60s poll interval, 2000s max timeout, zero duplicate uploads) waiting for `to_antig_clunky_round_026.zip`.
