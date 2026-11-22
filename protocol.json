@@ -1,19 +1,19 @@
 {
-  "round": 85,
+  "round": 86,
   "project": "Folio",
-  "version": "Milestone Folio v8.5 KFX",
+  "version": "Folio v8.6 KFX",
   "sender": "gemini",
   "receiver": "antigravity",
   "dropin_files": [
-    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
-    "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java"
+    "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
+    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java"
   ],
   "invariants": [
     "Stock com.amazon.kindle must remain 100% untouched",
     "Do NOT overwrite MetadataEnricher.java or OpenCatalogView.java"
   ],
   "verification_screenshots": [
-    "verify_r85_bulk_select_mode.png",
-    "verify_r85_about_v85.png"
+    "verify_r86_insights_metadata_health.png",
+    "verify_r86_missing_filter_drilldown.png"
   ]
 }

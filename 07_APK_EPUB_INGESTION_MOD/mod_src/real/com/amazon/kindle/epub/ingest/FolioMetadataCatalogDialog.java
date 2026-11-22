@@ -380,6 +380,11 @@ public final class FolioMetadataCatalogDialog {
                 }
                 List<String> chipList = new ArrayList<>();
                 chipList.add("All");
+                if ("MISSING_COVER".equalsIgnoreCase(selectedGenre[0])
+                        || "MISSING_GENRES".equalsIgnoreCase(selectedGenre[0])
+                        || "MISSING_SYNOPSIS".equalsIgnoreCase(selectedGenre[0])) {
+                    chipList.add(selectedGenre[0]);
+                }
                 if (favCount > 0) chipList.add("Favorites");
                 if (notesCount > 0) chipList.add("Notes");
                 for (String shName : shelfCounts.keySet()) chipList.add("SHELF:" + shName);
@@ -396,22 +401,29 @@ public final class FolioMetadataCatalogDialog {
                     boolean isFavChip = "Favorites".equalsIgnoreCase(g);
                     boolean isNotesChip = "Notes".equalsIgnoreCase(g);
                     boolean isShelfChip = g.startsWith("SHELF:");
+                    boolean isAuditChip = "MISSING_COVER".equalsIgnoreCase(g)
+                            || "MISSING_GENRES".equalsIgnoreCase(g)
+                            || "MISSING_SYNOPSIS".equalsIgnoreCase(g);
                     boolean isStatusChip = "Reading".equalsIgnoreCase(g)
                             || "Finished".equalsIgnoreCase(g)
                             || "Unread".equalsIgnoreCase(g);
-                    String labelText = isShelfChip ? g.substring(6) : g;
+                    String labelText = isShelfChip ? g.substring(6)
+                            : ("MISSING_COVER".equalsIgnoreCase(g) ? "Missing Cover"
+                            : ("MISSING_GENRES".equalsIgnoreCase(g) ? "Missing Genres"
+                            : ("MISSING_SYNOPSIS".equalsIgnoreCase(g) ? "Missing Synopsis" : g)));
                     int gCount;
                     if ("All".equalsIgnoreCase(g)) gCount = allBooks.size();
                     else if (isFavChip) gCount = favCount;
                     else if (isNotesChip) gCount = notesCount;
                     else if (isShelfChip) gCount = shelfCounts.containsKey(labelText) ? shelfCounts.get(labelText) : 0;
+                    else if (isAuditChip) gCount = countAuditMatches(allBooks, g);
                     else if ("Reading".equalsIgnoreCase(g)) gCount = readingCount;
                     else if ("Finished".equalsIgnoreCase(g)) gCount = finishedCount;
                     else if ("Unread".equalsIgnoreCase(g)) gCount = unreadCount;
                     else gCount = countBooksInGenre(allBooks, g);
 
                     TextView chip = new TextView(ctx);
-                    String chipPrefix = isFavChip ? "★ " : (isNotesChip ? "📝 " : (isShelfChip ? "🏷 " : ""));
+                    String chipPrefix = isFavChip ? "★ " : (isNotesChip ? "📝 " : (isShelfChip ? "🏷 " : (isAuditChip ? "🩺 " : "")));
                     chip.setText(chipPrefix + labelText + " (" + gCount + ")");
                     chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                     chip.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
@@ -456,6 +468,10 @@ public final class FolioMetadataCatalogDialog {
                         if (getProgress(progressMap, rec.kfxPath) < 100) continue;
                     } else if ("Unread".equalsIgnoreCase(selectedGenre[0])) {
                         if (getProgress(progressMap, rec.kfxPath) > 0) continue;
+                    } else if ("MISSING_COVER".equalsIgnoreCase(selectedGenre[0])
+                            || "MISSING_GENRES".equalsIgnoreCase(selectedGenre[0])
+                            || "MISSING_SYNOPSIS".equalsIgnoreCase(selectedGenre[0])) {
+                        if (!matchesAuditFilter(rec, selectedGenre[0])) continue;
                     } else {
                         if (!rec.hasGenre(selectedGenre[0])) continue;
                     }
@@ -2339,6 +2355,33 @@ public final class FolioMetadataCatalogDialog {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private static boolean matchesAuditFilter(FolioMetadataDb.BookRecord rec, String auditKey) {
+        if ("MISSING_COVER".equalsIgnoreCase(auditKey)) {
+            if (rec.kfxPath == null || rec.kfxPath.isEmpty()) return true;
+            File cov = new File(rec.kfxPath + ".cover.jpg");
+            return !cov.exists() || cov.length() < 64;
+        }
+        if ("MISSING_GENRES".equalsIgnoreCase(auditKey)) {
+            if (rec.genres == null || rec.genres.trim().isEmpty()) return true;
+            for (String g : rec.genres.split(",")) {
+                if (!g.trim().isEmpty()) return false;
+            }
+            return true;
+        }
+        if ("MISSING_SYNOPSIS".equalsIgnoreCase(auditKey)) {
+            return rec.description == null || rec.description.trim().isEmpty();
+        }
+        return false;
+    }
+
+    private static int countAuditMatches(List<FolioMetadataDb.BookRecord> all, String auditKey) {
+        int n = 0;
+        for (FolioMetadataDb.BookRecord r : all) {
+            if (matchesAuditFilter(r, auditKey)) n++;
+        }
+        return n;
     }
 
     private static void setBookReadState(Context ctx, String kfxPath, boolean finished) {

@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v8.5 KFX");
+        badgeTv.setText("Folio v8.6 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1301,6 +1301,7 @@ public final class FolioMoreView {
         final java.util.Map<String, Integer> pubFreq = new java.util.HashMap<>();
         final java.util.Map<String, String> pubLabel = new java.util.HashMap<>();
         int favs = 0, noted = 0, shelved = 0, ratedCount = 0, ratingSum = 0;
+        int missingCover = 0, missingGenre = 0, missingDesc = 0;
 
         for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : all) {
             String aDisp = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
@@ -1309,6 +1310,20 @@ public final class FolioMoreView {
                 authorFreq.put(ak, (authorFreq.containsKey(ak) ? authorFreq.get(ak) : 0) + 1);
                 if (!authorLabel.containsKey(ak)) authorLabel.put(ak, aDisp);
             }
+            boolean hasCov = false;
+            if (r.kfxPath != null && !r.kfxPath.isEmpty()) {
+                File covF = new File(r.kfxPath + ".cover.jpg");
+                hasCov = covF.exists() && covF.length() >= 64;
+            }
+            if (!hasCov) missingCover++;
+            if (r.description == null || r.description.trim().isEmpty()) missingDesc++;
+            boolean hasCleanG = false;
+            if (r.genres != null && !r.genres.isEmpty()) {
+                for (String gCheck : r.genres.split(",")) {
+                    if (!gCheck.trim().isEmpty()) { hasCleanG = true; break; }
+                }
+            }
+            if (!hasCleanG) missingGenre++;
             if (r.genres != null && !r.genres.isEmpty()) {
                 java.util.Set<String> seenG = new java.util.HashSet<>();
                 for (String g : r.genres.split(",")) {
@@ -1487,6 +1502,71 @@ public final class FolioMoreView {
         }
         content.addView(legendRow);
 
+        // Section 0b: Metadata Health & Quick-Fix Audit (1-tap drill-down into incomplete books)
+        int totalFields = Math.max(1, all.size() * 3);
+        int completeFields = Math.max(0, totalFields - missingCover - missingGenre - missingDesc);
+        int healthPct = Math.round(100f * completeFields / totalFields);
+
+        TextView hHdr = new TextView(ctx);
+        hHdr.setText("METADATA HEALTH — " + healthPct + "% COMPLETE"
+                + ((missingCover + missingGenre + missingDesc > 0) ? " (TAP TO FIX)" : ""));
+        hHdr.setTextColor(healthPct >= 85 ? 0xFF34D399 : 0xFFFBBF24);
+        hHdr.setTextSize(11);
+        hHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        hHdr.setPadding(0, 0, 0, dp(d, 8));
+        content.addView(hHdr);
+
+        LinearLayout healthRow = new LinearLayout(ctx);
+        healthRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams hrLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hrLp.bottomMargin = dp(d, 14);
+        healthRow.setLayoutParams(hrLp);
+
+        final int fMissCov = missingCover;
+        final int fMissGen = missingGenre;
+        final int fMissDesc = missingDesc;
+
+        healthRow.addView(makeHealthBadge(ctx, d,
+                fMissCov == 0 ? "✓ Covers" : "No Cover",
+                fMissCov == 0 ? "100%" : (fMissCov + " ›"),
+                fMissCov == 0 ? 0xFF34D399 : 0xFFF87171,
+                fMissCov == 0 ? 0xFF122B24 : 0xFF2B181E,
+                true,
+                fMissCov > 0 ? new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "MISSING_COVER");
+                    }
+                } : null));
+
+        healthRow.addView(makeHealthBadge(ctx, d,
+                fMissGen == 0 ? "✓ Genres" : "No Genre",
+                fMissGen == 0 ? "100%" : (fMissGen + " ›"),
+                fMissGen == 0 ? 0xFF34D399 : 0xFF38BDF8,
+                fMissGen == 0 ? 0xFF122B24 : 0xFF152638,
+                true,
+                fMissGen > 0 ? new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "MISSING_GENRES");
+                    }
+                } : null));
+
+        healthRow.addView(makeHealthBadge(ctx, d,
+                fMissDesc == 0 ? "✓ Synopsis" : "No Synopsis",
+                fMissDesc == 0 ? "100%" : (fMissDesc + " ›"),
+                fMissDesc == 0 ? 0xFF34D399 : 0xFFFBBF24,
+                fMissDesc == 0 ? 0xFF122B24 : 0xFF2E2414,
+                false,
+                fMissDesc > 0 ? new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "MISSING_SYNOPSIS");
+                    }
+                } : null));
+        content.addView(healthRow);
+
         // Section 1: Top Genres Bar Chart (tap any bar to filter catalog)
         TextView gHdr = new TextView(ctx);
         gHdr.setText("TOP GENRES (TAP TO FILTER)");
@@ -1594,6 +1674,41 @@ public final class FolioMoreView {
                 .setView(root)
                 .setPositiveButton("Close", null)
                 .show();
+    }
+
+    private static View makeHealthBadge(
+            Context ctx, float d, String label, String value, int accentColor, int bgColor,
+            boolean rightGap, View.OnClickListener listener) {
+        LinearLayout tile = new LinearLayout(ctx);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setGravity(Gravity.CENTER);
+        tile.setPadding(dp(d, 6), dp(d, 8), dp(d, 6), dp(d, 8));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(bgColor);
+        bg.setCornerRadius(dp(d, 8));
+        bg.setStroke(dp(d, 1), accentColor & 0x66FFFFFF | 0x44000000);
+        tile.setBackground(bg);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        if (rightGap) lp.rightMargin = dp(d, 6);
+        tile.setLayoutParams(lp);
+
+        TextView valTv = new TextView(ctx);
+        valTv.setText(value);
+        valTv.setTextColor(accentColor);
+        valTv.setTextSize(13.5f);
+        valTv.setTypeface(Typeface.DEFAULT_BOLD);
+        tile.addView(valTv);
+
+        TextView lblTv = new TextView(ctx);
+        lblTv.setText(label);
+        lblTv.setTextColor(0xFFCBD5E1);
+        lblTv.setTextSize(10.5f);
+        lblTv.setSingleLine(true);
+        tile.addView(lblTv);
+
+        if (listener != null) tile.setOnClickListener(listener);
+        return tile;
     }
 
     private static View makeInsightBarRow(Context ctx, float d, String label, int count, int maxCount,
@@ -1813,7 +1928,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v8.5 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v8.6 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
