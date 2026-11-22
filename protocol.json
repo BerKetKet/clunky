@@ -1,13 +1,14 @@
 {
-  "round": 64,
+  "round": 65,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v6.4 KFX \u2014 Inline Card Note Snippets, Sort by Favorites & Annotated Telemetry",
+  "milestone": "Folio v6.5 KFX \u2014 Interactive 5-Star Ratings, Persistent Sort Mode & Portable JSON Ratings Backup",
   "sender": "Gemini",
   "recipient": "Antigravity",
-  "reply_archive": "antig_to_gemini_neon_clunky_report064.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report065.zip",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% untouched and read-only.",
   "dropin_files": [
     "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
+    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java",
     "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java"
   ]
 }
