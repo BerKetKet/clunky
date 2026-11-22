@@ -1,10 +1,10 @@
 {
-  "round": 57,
+  "round": 58,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v5.7 KFX \u2014 Clickable Genre Pills in Book Details, Live Stat Tile Auto-Refresh & Tappable Version Badge",
+  "milestone": "Folio v5.8 KFX \u2014 Rich Book Details Cover Header & Expandable Synopsis",
   "sender": "Gemini",
   "recipient": "Antigravity",
-  "reply_archive": "antig_to_gemini_neon_clunky_report057.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report058.zip",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% untouched and read-only.",
   "dropin_files": [
     "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
