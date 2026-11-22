@@ -1028,3 +1028,25 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.3_kfx/base.apk` (132 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report093.zip`
+
+
+---
+
+# Round 094: Bulk Queue Action & Grid-View Up Next Badge (Folio v9.4 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v9.4 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 094 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMetadataCatalogDialog.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Upgraded bottom Multi-Select Bulk Action Bar to a 5-pill single-row layout (`Shelf`, `+Genre`, `📌Queue`, `★Fav`, `✓Done`).
+     - Added 1-tap batch queue / unqueue capability across all selected volumes.
+     - Added violet `📌 Up Next` badge to queued books in 3-column Cover Art Grid view.
+     - Bumped version to `Folio v9.4 KFX (Enhanced Typesetting)`.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.4_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `verify_r94_bulk_queue_grid_badge.png`: Proves 3-column Grid view displaying violet `📌 Up Next` badge on *Animal farm: a fairy story* and the 5-pill Bulk Action Bar (`Shelf`, `+Genre`, `📌Queue`, `★Fav`, `✓Done`).
+     - `verify_r94_about_v94.png`: Proves About Folio dialog displaying `Version: Folio v9.4 KFX (Enhanced Typesetting)` and live stats.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.4_kfx/base.apk` (132 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report094.zip`
