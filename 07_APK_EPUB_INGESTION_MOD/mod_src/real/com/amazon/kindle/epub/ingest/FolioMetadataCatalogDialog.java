@@ -88,6 +88,22 @@ public final class FolioMetadataCatalogDialog {
         eyebrow.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         topRow.addView(eyebrow);
 
+        final TextView btnAuthors = new TextView(ctx);
+        btnAuthors.setText("👤");
+        btnAuthors.setTextColor(Color.parseColor("#E2E8F0"));
+        btnAuthors.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        btnAuthors.setPadding(dp(ctx, 8), dp(ctx, 4), dp(ctx, 8), dp(ctx, 4));
+        GradientDrawable authBg = new GradientDrawable();
+        authBg.setColor(Color.parseColor("#1E2433"));
+        authBg.setCornerRadius(dp(ctx, 14));
+        authBg.setStroke(dp(ctx, 1), Color.parseColor("#334155"));
+        btnAuthors.setBackground(authBg);
+        LinearLayout.LayoutParams authLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        authLp.setMargins(0, 0, dp(ctx, 6), 0);
+        btnAuthors.setLayoutParams(authLp);
+        topRow.addView(btnAuthors);
+
         final TextView btnRandom = new TextView(ctx);
         btnRandom.setText("🎲");
         btnRandom.setTextColor(Color.parseColor("#E2E8F0"));
@@ -370,6 +386,12 @@ public final class FolioMetadataCatalogDialog {
                 }
             }
         };
+
+        btnAuthors.setOnClickListener(v -> showAuthorsDirectoryDialog(ctx, allBooks, author -> {
+            selectedGenre[0] = "All";
+            searchBox.setText(author);
+            searchBox.setSelection(author.length());
+        }));
 
         btnRandom.setOnClickListener(v -> {
             List<FolioMetadataDb.BookRecord> pool = new ArrayList<>();
@@ -1400,6 +1422,93 @@ public final class FolioMetadataCatalogDialog {
             else ed.putString(kfxPath, clean);
             ed.apply();
         } catch (Throwable ignored) {}
+    }
+
+    private static void showAuthorsDirectoryDialog(final Context ctx,
+                                                   final List<FolioMetadataDb.BookRecord> allBooks,
+                                                   final AuthorFilterCallback onPick) {
+        final Map<String, Integer> counts = new HashMap<>();
+        final Map<String, String> labels = new HashMap<>();
+        for (FolioMetadataDb.BookRecord r : allBooks) {
+            String disp = formatAuthorForDisplay(r.author);
+            if (disp.isEmpty()) disp = "Unknown Author";
+            String key = disp.toLowerCase(Locale.ROOT);
+            counts.put(key, (counts.containsKey(key) ? counts.get(key) : 0) + 1);
+            if (!labels.containsKey(key)) labels.put(key, disp);
+        }
+        List<String> keys = new ArrayList<>(counts.keySet());
+        Collections.sort(keys, (a, b) -> {
+            int ca = counts.get(a);
+            int cb = counts.get(b);
+            if (ca != cb) return Integer.compare(cb, ca);
+            return a.compareTo(b);
+        });
+
+        LinearLayout wrap = new LinearLayout(ctx);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setBackgroundColor(Color.parseColor("#11131A"));
+        wrap.setPadding(dp(ctx, 18), dp(ctx, 16), dp(ctx, 18), dp(ctx, 10));
+
+        TextView hdr = new TextView(ctx);
+        hdr.setText("Authors Directory (" + keys.size() + ")");
+        hdr.setTextColor(Color.WHITE);
+        hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        hdr.setTypeface(Typeface.DEFAULT_BOLD);
+        hdr.setPadding(0, 0, 0, dp(ctx, 10));
+        wrap.addView(hdr);
+
+        ScrollView sv = new ScrollView(ctx);
+        sv.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 360)));
+        LinearLayout list = new LinearLayout(ctx);
+        list.setOrientation(LinearLayout.VERTICAL);
+        sv.addView(list);
+        wrap.addView(sv);
+
+        final AlertDialog[] dlgRef = new AlertDialog[1];
+        for (String k : keys) {
+            final String name = labels.get(k);
+            int n = counts.get(k);
+            LinearLayout row = new LinearLayout(ctx);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10));
+            GradientDrawable rBg = new GradientDrawable();
+            rBg.setColor(Color.parseColor("#1A1F2E"));
+            rBg.setCornerRadius(dp(ctx, 10));
+            rBg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
+            row.setBackground(rBg);
+            LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            rLp.setMargins(0, 0, 0, dp(ctx, 8));
+            row.setLayoutParams(rLp);
+
+            TextView nameTv = new TextView(ctx);
+            nameTv.setText(name);
+            nameTv.setTextColor(Color.WHITE);
+            nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            nameTv.setTypeface(Typeface.DEFAULT_BOLD);
+            nameTv.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            row.addView(nameTv);
+
+            TextView cntTv = new TextView(ctx);
+            cntTv.setText(n + (n == 1 ? " book ›" : " books ›"));
+            cntTv.setTextColor(Color.parseColor("#F59E0B"));
+            cntTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            cntTv.setTypeface(Typeface.DEFAULT_BOLD);
+            row.addView(cntTv);
+
+            row.setOnClickListener(v -> {
+                if (dlgRef[0] != null) dlgRef[0].dismiss();
+                if (onPick != null) onPick.onFilterByAuthor(name);
+            });
+            list.addView(row);
+        }
+
+        dlgRef[0] = new AlertDialog.Builder(ctx)
+                .setView(wrap)
+                .setPositiveButton("Close", null)
+                .show();
     }
 
     private static void showShelfPickerDialog(final Context ctx, final FolioMetadataDb.BookRecord rec,
