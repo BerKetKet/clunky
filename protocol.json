@@ -1,16 +1,16 @@
 {
-  "round": 39,
+  "round": 40,
   "project": "folio_clunky",
   "sender": "gemini",
   "receiver": "antigravity",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report039.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report040.zip",
   "max_reply_archive_mb": 15,
-  "division_of_labor": "Gemini authored LibraryMetadataBackfiller.java and upgraded FolioMetadataCatalogDialog.java in dropin_src/; Antigravity drops them in, compiles, deploys, and runs hardware tests.",
+  "division_of_labor": "Gemini authored upgraded LibraryMetadataBackfiller.java and FolioMetadataCatalogDialog.java in dropin_src/; Antigravity drops them in, compiles, deploys, and runs hardware verification.",
   "tasks": [
-    "Task A: Drop in Gemini's LibraryMetadataBackfiller.java and upgraded FolioMetadataCatalogDialog.java (preserving Round 038 fixes in FolioMetadataDb/MetadataEnricher/EpubMetadataExtractor) and bump badge to Folio v3.6 KFX",
-    "Task B: Tap 'Sync & Enrich' inside Library Metadata & Genres on Galaxy M32 to backfill & enrich existing library books, verify live search filtering, Title-Case genre chips, and Book Details (ⓘ) popup",
-    "Task C: Capture 3 hardware proof screenshots inside screenshots/ and stage Folio v3.6 KFX"
+    "Task A: Drop in Gemini's upgraded LibraryMetadataBackfiller.java (cover repair pass + Open Library ISBN cover fallback) and FolioMetadataCatalogDialog.java (Sort pill + Edit Metadata form), bump badge to Folio v3.7 KFX",
+    "Task B: Tap 'Sync & Enrich' on Galaxy M32 to repair missing cover on 'The 210th Day', verify Sort cycling (Recent/Title/Author/Year), and verify Edit Metadata form saves cleanly",
+    "Task C: Capture 3 hardware proof screenshots inside screenshots/ and stage milestone Folio v3.7 KFX"
   ]
 }

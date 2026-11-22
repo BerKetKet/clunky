@@ -1,35 +1,42 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v3.6 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 039 complete:
-  1. **Full-Library Metadata Backfill (Task A & B)**:
-     - Integrated `LibraryMetadataBackfiller.java` and upgraded `FolioMetadataCatalogDialog.java`.
-     - Tapped `Sync & Enrich` in the catalog dialog; scanned existing local books from `kindle_library.db` (`KindleContent` joined with `LocalContent`).
-     - Enriched missing authors, pub dates, publishers, ISBNs, and genre subjects via Open Library Search API with HTTP 200 for all queries.
-     - All 21 library books indexed into `folio_metadata.db` (including Aeschylus, Aristotle, Cicero, Herodotus, Hesiod, Homer, Julius Caesar, Pliny, Plutarch, Sallust, Seneca, Sophocles, Tacitus, Xenophon, Rashomon, The 210th Day, Island, Brave New World).
-  2. **Title-Cased Genre Chips & Subject Normalization (Task A & B)**:
-     - Upgraded genre chips to Title Case (`19th Century Fiction`, `Modern Fiction`, `Literary Criticism`, `Shipwrecks`, `Journalists`, `Utopias`), filtering verbose or excessively long subjects (`> 24 chars`).
-  3. **Live Real-Time Search Filtering (Task B)**:
-     - Real-time text search filter (`searchBox`) dynamically matches across title, author, genres, publisher, and ISBN. Searching `"Huxley"` instantly isolates `Island` and `Brave New World`.
-  4. **Rich Book Details (`ⓘ`) Popup (Task B)**:
-     - Tapping `ⓘ` on any book card opens the dark Book Details dialog showing title, author, pub date, publisher, ISBN, genres, language, Open Library key, synopsis, and a direct `Read Now` action.
-     - Tapping `Read Now` launches `StandAloneBookReaderActivity` (`KRIFDocViewer`) in 0ms.
-  5. **Visual Verification & Milestone Release Staging (Task C)**:
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v3.7 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 040 complete:
+  1. **Cover Auto-Repair (Task A & B)**:
+     - Upgraded `LibraryMetadataBackfiller.java` with Pass 2 missing-cover sweep.
+     - Automatically resolved missing cover for *The 210th Day* (ISBN `0804833206`) via Open Library Covers API with 302 cross-host redirect handling to Archive.org.
+     - Downloaded 17.8 KB genuine cover to `files/folio_covers/FOLIO_F5C88D207A8D.jpg` and updated `books_metadata` row; verified zero blank gray boxes on hardware.
+  2. **Catalog Sort Controls (Task A & B)**:
+     - Added `Sort` button cycling through `Recent`, `Title A-Z`, `Author A-Z`, and `Year`.
+     - Verified instantaneous re-ordering across all 21 library books.
+  3. **Edit Metadata Form (Task B)**:
+     - Tapped `ⓘ` on book card → tapped `EDIT METADATA`. Dark edit form opens with pre-populated fields (`Title`, `Author`, `Published Date / Year`, `Publisher`, `Genres`, `ISBN`).
+     - `Save` updates SQLite database cleanly and refreshes catalog dialog.
+  4. **Visual Verification & Milestone Release Staging (Task C)**:
      - Captured 3 hardware proof screenshots on Galaxy M32:
-       * `screenshots/verify_r39_metadata_catalog_synced.png` (371 KB)
-       * `screenshots/verify_r39_metadata_search_filtered.png` (301 KB)
-       * `screenshots/verify_r39_book_details_popup.png` (214 KB)
+       * `screenshots/verify_r40_covers_fixed_and_sorted.png` (420 KB)
+       * `screenshots/verify_r40_edit_metadata_dialog.png` (129 KB)
+       * `screenshots/verify_r40_about_v37.png` (288 KB)
      - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
-     - Staged signed Folio v3.6 KFX release APK (131 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v3.6_kfx/base.apk`.
-  6. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     - Staged signed Folio v3.7 KFX release APK (131 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v3.7_kfx/base.apk`.
+  5. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
      "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
 - **Installed Packages**:
   - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only, v8.160.1.0, `lastUpdateTime=2026-11-19 21:59:23`)
-  - Clone: `com.amazon.kindle.epub` ("Folio v3.6 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, full-library `Sync & Enrich` metadata backfiller, real-time search filtering, Title-Cased genre chips, rich Book Details popup with 0ms reader launch, duplicate import guard with "Open Existing Copy" vs "Re-Import & Replace", "Library Metadata & Genres" browser dialog, persistent `folio_metadata.db`, Open Library metadata enrichment, live OPDS/Atom feed download, heavy omnibus stress-tested up to 23 MB / 1,450 sections, CSS text-transform uppercase/lowercase/capitalize, font-variant small-caps, RTL Arabic/Hebrew direction and right alignment, multi-level nested lists, native tables with thead/colspan/rowspan, malformed asset resilience, full HTML4/HTML5 entity decoding, store-free library search, zero-hyphenation code blocks, proportional sup/sub, `$270` cover container, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, dynamic hardware metadata, KRIFDocViewer Enhanced Typesetting)
+  - Clone: `com.amazon.kindle.epub` ("Folio v3.7 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, missing-cover auto-repair with Open Library Covers API + 302 redirect following, catalog sort controls Recent/Title/Author/Year, in-app editable metadata dialog with live persistence, full-library `Sync & Enrich` metadata backfiller, real-time search filtering, Title-Cased genre chips, rich Book Details popup with 0ms reader launch, duplicate import guard with "Open Existing Copy" vs "Re-Import & Replace", "Library Metadata & Genres" browser dialog, persistent `folio_metadata.db`, Open Library metadata enrichment, live OPDS/Atom feed download, heavy omnibus stress-tested up to 23 MB / 1,450 sections, CSS text-transform uppercase/lowercase/capitalize, font-variant small-caps, RTL Arabic/Hebrew direction and right alignment, multi-level nested lists, native tables with thead/colspan/rowspan, malformed asset resilience, full HTML4/HTML5 entity decoding, store-free library search, zero-hyphenation code blocks, proportional sup/sub, `$270` cover container, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, dynamic hardware metadata, KRIFDocViewer Enhanced Typesetting)
 
-## Verification Evidence (Round 039)
-1. `screenshots/verify_r39_metadata_catalog_synced.png`: Catalog dialog after `Sync & Enrich` showing `Library Metadata & Genres (21)`, Title-Cased genre chips (`19th Century Fiction`, `Modern Fiction`, `Literary Criticism`), search bar, and enriched book cards.
+## Verification Evidence (Round 040)
+1. `screenshots/verify_r40_covers_fixed_and_sorted.png`: Catalog dialog after `Sync & Enrich` proving *The 210th Day* has a real cover thumbnail and the new `Sort: Recent` pill is active.
+2. `screenshots/verify_r40_edit_metadata_dialog.png`: Dark **Edit Book Metadata** form opened from Book Details with pre-filled fields (`Title`, `Author`, `Published Date / Year`, `Publisher`, `Genres`, `ISBN`) and `SAVE` / `CANCEL` actions.
+3. `screenshots/verify_r40_about_v37.png`: Control Center **About Folio** dialog showing `Version: Folio v3.7 KFX (Enhanced Typesetting)` and live engine stats.
+4. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+5. `dumpsys package com.amazon.kindle.epub`: Folio v3.7 KFX deployed (`lastUpdateTime=2026-11-22 17:53:17`).
+
+---
+
+# Round 039: Full-Library Metadata Backfill & Search (Folio v3.6)
+1. `screenshots/verify_r39_metadata_catalog_synced.png`: Catalog dialog after `Sync & Enrich` showing `Library Metadata & Genres (21)`, Title-Cased genre chips, search bar, and enriched book cards.
 2. `screenshots/verify_r39_metadata_search_filtered.png`: Live real-time search filter active with query `"Huxley"`, filtering display strictly to matching cards.
 3. `screenshots/verify_r39_book_details_popup.png`: Tapping `ⓘ` on `Island` showing dark Book Details dialog with full metadata, Open Library work key, and `READ NOW` / `CLOSE` actions.
 4. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
