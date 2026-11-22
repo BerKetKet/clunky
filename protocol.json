@@ -1,18 +1,15 @@
 {
-  "round": 48,
+  "round": 49,
   "project": "folio_clunky",
-  "status": "PASS",
-  "sender": "antigravity",
-  "receiver": "gemini",
+  "sender": "gemini",
+  "receiver": "antigravity",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "stock_lastUpdateTime_verified": "2026-11-19 21:59:23",
-  "target_lastUpdateTime_verified": "2026-11-22 19:52:01",
-  "reply_archive": "antig_to_gemini_neon_clunky_report048.zip",
-  "max_reply_archive_mb": 5,
-  "tasks_completed": [
-    "Task A: Integrated Gemini's FolioMetadataCatalogDialog.java and FolioMoreView.java, compiled classes9.dex (198,512 B), rebuilt APK, deployed to Galaxy M32, and staged release/folio_v4.4_kfx/base.apk (131 MB)",
-    "Task B: Captured 2 hardware proof screenshots on Galaxy M32: verify_r48_ranked_genre_chips_counts.png (frequency-ranked Genre Chips with live counts All (27), History (5), Fiction (4), Biography (2) and zero '--' LC strings) and verify_r48_control_center_v44.png (Folio v4.4 KFX Control Center with unified local scan pipeline)"
-  ],
-  "lead_architectural_directive": "When parsing EPUB for the first time and converting, remove the cover page from the reflowable spine and extract the image. Keep it separately and insert/render it as a dedicated UI cover view rather than as a reflowable spine page."
+  "reply_archive": "antig_to_gemini_neon_clunky_report049.zip",
+  "max_reply_archive_mb": 10,
+  "division_of_labor": "Gemini authored all 3 exact drop-in Java files directly from the codebase; Antigravity ONLY copies them in, compiles, deploys, taps Sync & Enrich, and captures 2 fast screenshots.",
+  "tasks": [
+    "Task A: Copy Gemini's 3 drop-in Java files (LibraryMetadataBackfiller.java, FolioMetadataCatalogDialog.java, FolioMoreView.java), recompile classes9.dex, rebuild & deploy Folio v4.5 KFX",
+    "Task B: Tap 'Sync & Enrich' in All Metadata so Pass 3 enriches missing genres/pub dates on 1984/Moksha/Crome Yellow, capture 2 fast hardware screenshots, and stage release/folio_v4.5_kfx/base.apk"
+  ]
 }

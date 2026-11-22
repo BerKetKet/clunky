@@ -1,30 +1,35 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v3.9 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 042 complete:
-  1. **719-EPUB Folder Search & "Hide Imported" Toggle (Task A & B)**:
-     - Dropped in Gemini's updated `FolioFolderBrowserDialog.java` and `MetadataEnricher.java`.
-     - In "Import EPUBs from Storage", verified tapping `Hide Imported: OFF` toggles to emerald `Hide Imported: ON` and eliminates previously imported books (*Brave New World*, *Island*, *Crome Yellow*, *Moksha*), reducing folder display from 719 to 715 files.
-     - Verified instant in-memory filename search by typing `"Orwell"`, immediately filtering all 719 files to 14 matching EPUBs.
-  2. **Batch Import & Genre Enrichment (Task B)**:
-     - Selected `George Orwell - Animal Farm.epub` (179 KB) and tapped `Import Selected (1)`.
-     - Converted via `libkfxconv.so` in 164ms (`238,885 bytes`), extracted cover thumbnail, enriched metadata via Open Library, and persisted in `folio_metadata.db` and `kindle_library.db`.
-     - Opened `Library Metadata & Genres (26)`: *Animal farm: a fairy story* displays at top with genuine cover thumbnail, publisher `"Penguin"`, pub date `"2000-07-15"`, ISBN `"9780141182704"`, and rich blue genre tags (`Fiction`, `Read`).
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v4.5 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 049 complete:
+  1. **Pass-3 Missing-Metadata Auto-Repair (Task A & B)**:
+     - Integrated Gemini's drop-in updates to `LibraryMetadataBackfiller.java`, `FolioMetadataCatalogDialog.java`, and `FolioMoreView.java`.
+     - Added cleartext HTTP fallback in `MetadataEnricher.java` to bypass high-latency mobile TLS handshake aborts when querying Open Library Search API.
+     - Tapping `Sync & Enrich` triggered Pass 3: automatically detected existing indexed records lacking genres or publication dates, repaired them in `books_metadata` with normalized dates, ISBNs, and literary subject genres, and triggered real-time catalog re-render.
+     - Verified enrichment: *1984* (`pub_date=2003`, `genres=Totalitarianism, Fiction, Dystopias...`, `isbn=0582777313`), *Moksha* (`pub_date=2012-04-12`, `genres=Hallucinogenic drugs, Psychological aspects...`, `isbn=9781594775178`), *Crome Yellow* (`pub_date=2011-01-06`, `genres=Fiction, Intellectuals, Country homes...`, `isbn=9781407020938`), and *The Dream of the Red Chamber*.
+  2. **Clean Natural-Name Author Formatting & Re-ranked Genre Chips (Task B)**:
+     - `formatAuthorForDisplay()` cleanly reformats catalogue inversions like `"Melville, Herman"` to natural reading order `"Herman Melville · 2001-07-01"` on *Moby Dick*.
+     - Dynamic genre chip recalculation immediately updated top chips: `All (27)`, `Fiction (7)`, `History (5)`, `Early Works To 1800 (3)`.
   3. **Visual Verification & Milestone Release Staging (Task C)**:
-     - Captured 3 hardware proof screenshots on Galaxy M32:
-       * `screenshots/verify_r42_folder_search_and_hide_imported.png` (176 KB)
-       * `screenshots/verify_r42_enriched_genres_card.png` (336 KB)
-       * `screenshots/verify_r42_about_v39.png` (290 KB)
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `screenshots/verify_r49_pass3_enriched_all.png` (331 KB)
+       * `screenshots/verify_r49_moksha_crome_yellow.png` (357 KB)
+       * `screenshots/verify_r49_about_v45.png` (307 KB)
      - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
-     - Staged signed Folio v3.9 KFX release APK (131 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v3.9_kfx/base.apk`.
+     - Staged signed Folio v4.5 KFX release APK (131 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v4.5_kfx/base.apk`.
   4. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
      "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
 - **Installed Packages**:
   - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only, v8.160.1.0, `lastUpdateTime=2026-11-19 21:59:23`)
-  - Clone: `com.amazon.kindle.epub` ("Folio v3.9 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, 700+ EPUB live filename search in folder importer, "Hide Imported" toggle pill, ISBN-to-title genre fallback, multi-select batch EPUB folder importer from storage, portable metadata JSON backup/restore, missing-cover auto-repair with Open Library Covers API + 302 redirect following, catalog sort controls Recent/Title/Author/Year, in-app editable metadata dialog with live persistence, full-library `Sync & Enrich` metadata backfiller, real-time search filtering, Title-Cased genre chips, rich Book Details popup with 0ms reader launch, duplicate import guard with "Open Existing Copy" vs "Re-Import & Replace", "Library Metadata & Genres" browser dialog, persistent `folio_metadata.db`, Open Library metadata enrichment, live OPDS/Atom feed download, heavy omnibus stress-tested up to 23 MB / 1,450 sections, CSS text-transform uppercase/lowercase/capitalize, font-variant small-caps, RTL Arabic/Hebrew direction and right alignment, multi-level nested lists, native tables with thead/colspan/rowspan, malformed asset resilience, full HTML4/HTML5 entity decoding, store-free library search, zero-hyphenation code blocks, proportional sup/sub, `$270` cover container, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, dynamic hardware metadata, KRIFDocViewer Enhanced Typesetting)
+  - Clone: `com.amazon.kindle.epub` ("Folio v4.5 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, Pass-3 missing-metadata auto-repair, natural-name author formatting, frequency-ranked genre chips with live counts, unified local library scan to app-private storage, right-aligned Home All Metadata link, safe cascade remove action, live reading progress badges and sort mode, 700+ EPUB live filename search in folder importer, "Hide Imported" toggle pill, ISBN-to-title genre fallback, multi-select batch EPUB folder importer from storage, portable metadata JSON backup/restore, missing-cover auto-repair with Open Library Covers API + 302 redirect following, catalog sort controls Recent/Title/Author/Year/Progress, in-app editable metadata dialog with live persistence, full-library `Sync & Enrich` metadata backfiller, real-time search filtering, Title-Cased genre chips, rich Book Details popup with 0ms reader launch, duplicate import guard with "Open Existing Copy" vs "Re-Import & Replace", "Library Metadata & Genres" browser dialog, persistent `folio_metadata.db`, Open Library metadata enrichment, live OPDS/Atom feed download, heavy omnibus stress-tested up to 23 MB / 1,450 sections, CSS text-transform uppercase/lowercase/capitalize, font-variant small-caps, RTL Arabic/Hebrew direction and right alignment, multi-level nested lists, native tables with thead/colspan/rowspan, malformed asset resilience, full HTML4/HTML5 entity decoding, store-free library search, zero-hyphenation code blocks, proportional sup/sub, `$270` cover container, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, dynamic hardware metadata, KRIFDocViewer Enhanced Typesetting)
 
-## Verification Evidence (Round 042)
+## Verification Evidence (Round 049)
+1. `screenshots/verify_r49_pass3_enriched_all.png`: Library Metadata & Genres (27) showing natural author name `"Herman Melville · 2001-07-01"` on *Moby Dick*, enriched *1984* (`2003 · Houghton Mifflin Harcourt`, `ISBN: 0582777313`, `Totalitarianism, Fiction...`), and updated `Fiction (7)` top genre chip.
+2. `screenshots/verify_r49_moksha_crome_yellow.png`: Scrolled view showing Pass-3 enriched *Moksha* (`2012-04-12`, `ISBN: 9781594775178`, `Hallucinogenic drugs...`) and *Crome Yellow* (`2011-01-06`, `ISBN: 9781407020938`, `Fiction, Intellectuals...`).
+3. `screenshots/verify_r49_about_v45.png`: Control Center `About Folio` dialog displaying `Version: Folio v4.5 KFX (Enhanced Typesetting)`, 29 indexed books, 27 enriched records, and 13.3 MB App Library storage.
+4. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+5. `dumpsys package com.amazon.kindle.epub`: Folio v4.5 KFX deployed (`lastUpdateTime=2026-11-22 20:08:00`).
 1. `screenshots/verify_r42_folder_search_and_hide_imported.png`: Folder browser dialog browsing `/sdcard/en/0` showing `Hide Imported: ON`, live search for `Orwell` (14 matching files), and checked `1984.epub`.
 2. `screenshots/verify_r42_enriched_genres_card.png`: Library Metadata & Genres (26) showing newly imported *Animal Farm* with genuine cover thumbnail and rich blue genre tags (`Fiction`, `Read`).
 3. `screenshots/verify_r42_about_v39.png`: Control Center showing `About Folio` dialog with `Folio v3.9 KFX` version and engine stats.
