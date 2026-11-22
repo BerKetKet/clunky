@@ -198,7 +198,13 @@ public final class FolioMetadataCatalogDialog {
 
         final String[] selectedGenre = new String[] { (initialFilter != null && !initialFilter.trim().isEmpty()) ? initialFilter.trim() : "All" };
         final String[] queryText = new String[] { "" };
-        final int[] sortIdx = new int[] { 0 };
+        int savedSort = 0;
+        try {
+            savedSort = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .getInt("catalog_sort_idx", 0);
+            if (savedSort < 0 || savedSort >= SORT_MODES.length) savedSort = 0;
+        } catch (Throwable ignored) {}
+        final int[] sortIdx = new int[] { savedSort };
 
         final Runnable[] renderRef = new Runnable[1];
         renderRef[0] = new Runnable() {
@@ -323,6 +329,10 @@ public final class FolioMetadataCatalogDialog {
 
         btnSort.setOnClickListener(v -> {
             sortIdx[0] = (sortIdx[0] + 1) % SORT_MODES.length;
+            try {
+                ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                        .edit().putInt("catalog_sort_idx", sortIdx[0]).apply();
+            } catch (Throwable ignored) {}
             renderRef[0].run();
         });
 
@@ -563,6 +573,19 @@ public final class FolioMetadataCatalogDialog {
             isbnTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             isbnTv.setPadding(0, dp(ctx, 2), 0, 0);
             col.addView(isbnTv);
+        }
+
+        int cardRating = getRating(ctx, rec.kfxPath);
+        if (cardRating > 0) {
+            StringBuilder stars = new StringBuilder();
+            for (int s = 0; s < 5; s++) stars.append(s < cardRating ? "★" : "☆");
+            TextView rateTv = new TextView(ctx);
+            rateTv.setText(stars.toString() + "  " + cardRating + "/5");
+            rateTv.setTextColor(Color.parseColor("#FBBF24"));
+            rateTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            rateTv.setTypeface(Typeface.DEFAULT_BOLD);
+            rateTv.setPadding(0, dp(ctx, 2), 0, 0);
+            col.addView(rateTv);
         }
 
         String cardNote = getNote(ctx, rec.kfxPath);
@@ -846,6 +869,49 @@ public final class FolioMetadataCatalogDialog {
         });
         actionPillRow.addView(favBtn);
         box.addView(actionPillRow);
+
+        // Interactive 1-5 Star Rating Bar
+        LinearLayout rateRow = new LinearLayout(ctx);
+        rateRow.setOrientation(LinearLayout.HORIZONTAL);
+        rateRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams rrLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rrLp.setMargins(0, dp(ctx, 12), 0, dp(ctx, 0));
+        rateRow.setLayoutParams(rrLp);
+
+        TextView rateLbl = new TextView(ctx);
+        rateLbl.setText("Your Rating:");
+        rateLbl.setTextColor(Color.parseColor("#94A3B8"));
+        rateLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        rateLbl.setTypeface(Typeface.DEFAULT_BOLD);
+        rateLbl.setPadding(0, 0, dp(ctx, 8), 0);
+        rateRow.addView(rateLbl);
+
+        final int[] curRating = new int[] { getRating(ctx, rec.kfxPath) };
+        final TextView[] starViews = new TextView[5];
+        final Runnable paintStars = () -> {
+            for (int si = 0; si < 5; si++) {
+                boolean filled = si < curRating[0];
+                starViews[si].setText(filled ? "★" : "☆");
+                starViews[si].setTextColor(Color.parseColor(filled ? "#FBBF24" : "#475569"));
+            }
+        };
+        for (int si = 0; si < 5; si++) {
+            final int starVal = si + 1;
+            TextView st = new TextView(ctx);
+            st.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+            st.setPadding(dp(ctx, 4), dp(ctx, 2), dp(ctx, 4), dp(ctx, 2));
+            st.setOnClickListener(v -> {
+                curRating[0] = (curRating[0] == starVal) ? 0 : starVal;
+                setRating(ctx, rec.kfxPath, curRating[0]);
+                paintStars.run();
+                if (onMetadataEdited != null) onMetadataEdited.run();
+            });
+            starViews[si] = st;
+            rateRow.addView(st);
+        }
+        paintStars.run();
+        box.addView(rateRow);
 
         // Personal Reading Note card / "+ Add Note" button
         final String existingNote = getNote(ctx, rec.kfxPath);
@@ -1148,6 +1214,25 @@ public final class FolioMetadataCatalogDialog {
             }
         } catch (Throwable ignored) {}
         return map;
+    }
+
+    public static int getRating(Context ctx, String kfxPath) {
+        if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return 0;
+        try {
+            int r = ctx.getSharedPreferences("folio_ratings", Context.MODE_PRIVATE).getInt(kfxPath, 0);
+            return (r >= 0 && r <= 5) ? r : 0;
+        } catch (Throwable ignored) { return 0; }
+    }
+
+    public static void setRating(Context ctx, String kfxPath, int stars) {
+        if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return;
+        try {
+            android.content.SharedPreferences.Editor ed =
+                    ctx.getSharedPreferences("folio_ratings", Context.MODE_PRIVATE).edit();
+            if (stars <= 0) ed.remove(kfxPath);
+            else ed.putInt(kfxPath, Math.min(5, stars));
+            ed.apply();
+        } catch (Throwable ignored) {}
     }
 
     public static String getNote(Context ctx, String kfxPath) {
