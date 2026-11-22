@@ -649,3 +649,26 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.0_kfx/base.apk` (132 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report080.zip`
+
+
+---
+
+# Round 081: Uncropped FIT_CENTER Grid Covers, Uniform Card Alignment & Mini Progress Bars (Folio v8.1 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.1 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 081 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMetadataCatalogDialog.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Switched grid cover scaling to `ScaleType.FIT_CENTER` mounted on `#0D1017` dark mat (height 132dp) preventing cropping of tall cover art.
+     - Enforced `minLines(2)` and `maxLines(2)` on tile titles so all cards maintain uniform pixel-aligned bottom borders.
+     - Added sleek 3dp horizontal progress mini-bars directly under each cover (emerald for `✓ Done`, sky blue for in-progress `X%`).
+     - Bumped version badge to `Folio v8.1 KFX (Enhanced Typesetting)`.
+     - Built `classes9.dex` (267,404 B), fast-rebuilt APK, signed, and deployed to Galaxy M32 (`lastUpdateTime=2026-11-23 00:19:32`).
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.1_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `screenshots/verify_r81_grid_uncropped_aligned.png`: Proves uncropped *Moby Dick* and *Moksha* covers, uniform card bottom alignment, and emerald progress bar under *Moby Dick*.
+     - `screenshots/verify_r81_grid_reading_bars.png`: Proves filtered `Reading (5 of 27)` grid view displaying sky blue progress mini-bars under all 5 in-progress covers (*The 210th Day* 4%, *Sophocles* 2%, *Aristotle* 8%, *Island*, *Brave New World*).
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.1_kfx/base.apk` (132 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report081.zip`

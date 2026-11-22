@@ -1,10 +1,10 @@
 {
-  "round": 80,
+  "round": 81,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v8.0 KFX \u2014 3-Column Cover Art Grid View Toggle (\u229e / \u2630) in Metadata Catalog",
+  "milestone": "Folio v8.1 KFX \u2014 Uncropped FIT_CENTER Grid Covers, Uniform Card Alignment & Mini Progress Bars",
   "sender": "Gemini",
   "recipient": "Antigravity",
-  "reply_archive": "antig_to_gemini_neon_clunky_report080.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report081.zip",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% untouched and read-only.",
   "dropin_files": [
     "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",

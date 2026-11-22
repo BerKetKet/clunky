@@ -1,50 +1,67 @@
-# Folio Milestone Release Report: 3-Column Cover Art Grid View Toggle (⊞ / ☰) in Metadata Catalog (Round 080)
+# Folio Milestone Release Report: Uncropped FIT_CENTER Grid Covers, Uniform Card Alignment & Mini Progress Bars (Round 081)
 
 **Date:** 2026-11-23  
-**Target Package:** `com.amazon.kindle.epub` (Milestone Folio v8.0 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v8.1 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v8.0_kfx/base.apk` (132 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v8.1_kfx/base.apk` (132 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Milestone Round 080, Folio advanced to **Milestone Folio v8.0 KFX**. Gemini pre-authored drop-in Java updates for `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`. Antigravity integrated both files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 267,104 B), built, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **Interactive 3-Column Cover Art Grid View (`FolioMetadataCatalogDialog.java`)**: Added a persistent `⊞` / `☰` view-mode toggle pill in the catalog top bar. Tapping it switches cleanly between the rich List view and a 3-column Cover Art Grid showcasing extracted `.cover.jpg` covers, 2-line titles, compact status/rating badges (`✓ Done`, `X%`, `★ 5/5`, `Unread`), and `ⓘ` details shortcuts.
-2. **Persistent View Mode Memory (`FolioMetadataCatalogDialog.java`)**: The user's preferred catalog view mode (`catalog_grid_mode`) is saved and restored automatically via `SharedPreferences("folio_ui_prefs")`.
-3. **Control Center Version Bump (`FolioMoreView.java`)**: Bumped Control Center badge and About Folio dialog string to **`Milestone Folio v8.0 KFX (Enhanced Typesetting)`**.
-4. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
+In Round 081, Folio advanced to **Folio v8.1 KFX**. Gemini pre-authored drop-in Java updates for `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`. Antigravity integrated both files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 267,404 B), built, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **Uncropped `FIT_CENTER` Cover Art (`FolioMetadataCatalogDialog.java`)**: Switched cover image scaling in 3-column Cover Art Grid mode from `CENTER_CROP` to `ScaleType.FIT_CENTER` mounted on `#0D1017` dark matte container (height 132dp). Tall covers such as *Moby Dick* and *Moksha* display full cover art with zero cropped title lettering.
+2. **Uniform 2-Line Title Card Alignment (`FolioMetadataCatalogDialog.java`)**: Enforced `setMinLines(2)` and `setMaxLines(2)` with `TextUtils.TruncateAt.END` on tile titles. All 3 cards in every row now share identical vertical heights and pixel-aligned bottom borders.
+3. **Reading Progress Mini-Bars (`FolioMetadataCatalogDialog.java`)**: Added a sleek 3dp horizontal reading progress mini-bar directly beneath each cover image (emerald `#34D399` for `✓ Done`, sky blue `#38BDF8` proportional fill for in-progress `X%`).
+4. **Control Center Version Bump (`FolioMoreView.java`)**: Bumped Control Center badge and About Folio dialog string to **`Folio v8.1 KFX (Enhanced Typesetting)`**.
+5. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Milestone Folio v8.0 KFX
+## 2. Integrated Features in Folio v8.1 KFX
 
-### A. 3-Column Cover Art Grid Mode (`FolioMetadataCatalogDialog.java`)
-- Maintains persistent grid state:
+### A. Fit-Center Covers & Uniform Height Alignment (`FolioMetadataCatalogDialog.java`)
+- Cover image view configuration:
   ```java
-  boolean savedGrid = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
-          .getBoolean("catalog_grid_mode", false);
-  final boolean[] gridMode = new boolean[] { savedGrid };
+  ImageView cover = new ImageView(ctx);
+  cover.setLayoutParams(new LinearLayout.LayoutParams(
+          LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 132)));
+  cover.setScaleType(ImageView.ScaleType.FIT_CENTER);
+  cover.setBackgroundColor(Color.parseColor("#0D1017"));
   ```
-- Renders top-bar view mode toggle pill (`⊞` when in List mode, `☰` when in Grid mode):
+- Two-line uniform title bounds:
   ```java
-  btnViewMode.setOnClickListener(v -> {
-      gridMode[0] = !gridMode[0];
-      btnViewMode.setText(gridMode[0] ? "☰" : "⊞");
-      ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
-              .edit().putBoolean("catalog_grid_mode", gridMode[0]).apply();
-      renderList();
-  });
+  tTv.setMinLines(2);
+  tTv.setMaxLines(2);
+  tTv.setEllipsize(TextUtils.TruncateAt.END);
   ```
-- Constructs balanced 3-column rows using horizontal `LinearLayout` wrappers with `weight=1f` per card:
-  - Extracted cover art (`.cover.jpg`) loaded via `BitmapFactory.decodeFile()`.
-  - 2-line title with ellipsis (`TextUtils.TruncateAt.END`).
-  - Compact status pill (`✓ Done` emerald, `X% read` sky blue, `Unread` slate) and star rating (`★ 5/5` amber).
-  - Inline `ⓘ` details button for immediate book inspection and editing.
 
-### B. Version Bump (`FolioMoreView.java`)
-- Bumped Control Center badge and About Folio dialog string to **`Milestone Folio v8.0 KFX (Enhanced Typesetting)`**.
+### B. Proportional Reading Progress Mini-Bars (`FolioMetadataCatalogDialog.java`)
+- 3dp track rendered under cover:
+  ```java
+  int pct = getProgress(progressMap, rec.kfxPath);
+  LinearLayout miniTrack = new LinearLayout(ctx);
+  miniTrack.setOrientation(LinearLayout.HORIZONTAL);
+  miniTrack.setBackgroundColor(Color.parseColor("#242938"));
+  LinearLayout.LayoutParams mtLp = new LinearLayout.LayoutParams(
+          LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 3));
+  mtLp.setMargins(0, dp(ctx, 4), 0, 0);
+  miniTrack.setLayoutParams(mtLp);
+  if (pct > 0) {
+      float ratio = Math.max(0.08f, Math.min(1f, pct / 100f));
+      View mFill = new View(ctx);
+      mFill.setBackgroundColor(Color.parseColor(pct >= 100 ? "#34D399" : "#38BDF8"));
+      mFill.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, ratio));
+      miniTrack.addView(mFill);
+      View mRest = new View(ctx);
+      mRest.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, Math.max(0f, 1f - ratio)));
+      miniTrack.addView(mRest);
+  }
+  ```
+
+### C. Version Bump (`FolioMoreView.java`)
+- Bumped Control Center badge and About Folio dialog string to **`Folio v8.1 KFX (Enhanced Typesetting)`**.
 
 ---
 
@@ -52,8 +69,8 @@ In Milestone Round 080, Folio advanced to **Milestone Folio v8.0 KFX**. Gemini p
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **3-Column Cover Art Grid** | All Metadata › (Grid Mode) | `screenshots/verify_r80_catalog_cover_grid_view.png` | **VERIFIED**: Tapped `⊞` in catalog top bar; verified 3-column grid displaying covers, titles, status pills (`✓ Done`, `Unread`), rating badges (`★ 5/5`), `ⓘ` buttons, and `☰` toggle pill. |
-| **Milestone Folio v8.0 KFX Badge** | More Tab (Control Center) | `screenshots/verify_r80_control_center_v80.png` | **VERIFIED**: Opened More tab; verified amber `Folio v8.0 KFX` milestone badge and offline tools header. |
+| **Uncropped Grid Covers & Aligned Cards** | All Metadata › (Grid View) | `screenshots/verify_r81_grid_uncropped_aligned.png` | **VERIFIED**: Opened All Metadata in persistent Grid Mode; verified full uncropped covers for *Moby Dick* and *Moksha*, identical 2-line title alignment across all 3 columns, and emerald progress mini-bar under *Moby Dick*. |
+| **Reading Mini-Bars** | All Metadata › (Reading Filter) | `screenshots/verify_r81_grid_reading_bars.png` | **VERIFIED**: Tapped `Reading (5)` chip; verified filtered view showing 5 in-progress covers (*The 210th Day* 4%, *Sophocles* 2%, *Aristotle* 8%, *Island*, *Brave New World*) with sky blue progress mini-bars directly under covers. |
 | **Stock Kindle Invariant** | Android OS PackageManager | CLI `dumpsys package com.amazon.kindle` | **VERIFIED**: `lastUpdateTime=2026-11-19 21:59:23` completely untouched. |
 
 ---
