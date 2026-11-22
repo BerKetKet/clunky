@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v7.5 KFX");
+        badgeTv.setText("Folio v7.6 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -778,6 +778,7 @@ public final class FolioMoreView {
         final java.util.Map<String, String> authorLabel = new java.util.HashMap<>();
         final java.util.Map<String, Integer> genreFreq = new java.util.HashMap<>();
         final java.util.Map<String, String> genreLabel = new java.util.HashMap<>();
+        final java.util.Map<String, Integer> shelfFreq = new java.util.HashMap<>();
         int favs = 0, noted = 0, shelved = 0, ratedCount = 0, ratingSum = 0;
 
         for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : all) {
@@ -807,7 +808,11 @@ public final class FolioMoreView {
             }
             if (com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath)) favs++;
             if (!com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getNote(ctx, r.kfxPath).isEmpty()) noted++;
-            if (!com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getShelf(ctx, r.kfxPath).isEmpty()) shelved++;
+            String shName = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getShelf(ctx, r.kfxPath);
+            if (!shName.isEmpty()) {
+                shelved++;
+                shelfFreq.put(shName, (shelfFreq.containsKey(shName) ? shelfFreq.get(shName) : 0) + 1);
+            }
             int st = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath);
             if (st > 0) { ratedCount++; ratingSum += st; }
         }
@@ -848,15 +853,19 @@ public final class FolioMoreView {
         summaryTv.setPadding(0, 0, 0, dp(d, 14));
         root.addView(summaryTv);
 
+        final AlertDialog[] insightDlgRef = new AlertDialog[1];
+
         ScrollView sv = new ScrollView(ctx);
+        sv.setVerticalScrollBarEnabled(false);
         sv.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 360)));
         LinearLayout content = new LinearLayout(ctx);
         content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(0, 0, dp(d, 4), 0);
 
-        // Section 1: Top Genres Bar Chart
+        // Section 1: Top Genres Bar Chart (tap any bar to filter catalog)
         TextView gHdr = new TextView(ctx);
-        gHdr.setText("TOP GENRES");
+        gHdr.setText("TOP GENRES (TAP TO FILTER)");
         gHdr.setTextColor(0xFF60A5FA);
         gHdr.setTextSize(11);
         gHdr.setTypeface(Typeface.DEFAULT_BOLD);
@@ -866,12 +875,19 @@ public final class FolioMoreView {
         int maxG = topGenres.isEmpty() ? 1 : Math.max(1, genreFreq.get(topGenres.get(0)));
         for (int i = 0; i < Math.min(5, topGenres.size()); i++) {
             String k = topGenres.get(i);
-            content.addView(makeInsightBarRow(ctx, d, genreLabel.get(k), genreFreq.get(k), maxG, 0xFF60A5FA));
+            final String gName = genreLabel.get(k);
+            content.addView(makeInsightBarRow(ctx, d, gName, genreFreq.get(k), maxG, 0xFF60A5FA,
+                    new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
+                            com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, gName);
+                        }
+                    }));
         }
 
-        // Section 2: Top Authors Bar Chart
+        // Section 2: Top Authors Bar Chart (tap any bar to filter catalog)
         TextView aHdr = new TextView(ctx);
-        aHdr.setText("TOP AUTHORS");
+        aHdr.setText("TOP AUTHORS (TAP TO FILTER)");
         aHdr.setTextColor(0xFFF59E0B);
         aHdr.setTextSize(11);
         aHdr.setTypeface(Typeface.DEFAULT_BOLD);
@@ -881,19 +897,54 @@ public final class FolioMoreView {
         int maxA = topAuthors.isEmpty() ? 1 : Math.max(1, authorFreq.get(topAuthors.get(0)));
         for (int i = 0; i < Math.min(5, topAuthors.size()); i++) {
             String k = topAuthors.get(i);
-            content.addView(makeInsightBarRow(ctx, d, authorLabel.get(k), authorFreq.get(k), maxA, 0xFFF59E0B));
+            final String aName = authorLabel.get(k);
+            content.addView(makeInsightBarRow(ctx, d, aName, authorFreq.get(k), maxA, 0xFFF59E0B,
+                    new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
+                            com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.showWithSearch(ctx, aName);
+                        }
+                    }));
+        }
+
+        // Section 3: Custom Shelves Bar Chart (when shelves exist)
+        if (!shelfFreq.isEmpty()) {
+            java.util.List<String> topShelves = new java.util.ArrayList<>(shelfFreq.keySet());
+            java.util.Collections.sort(topShelves, (a, b) -> {
+                int cmp = Integer.compare(shelfFreq.get(b), shelfFreq.get(a));
+                return cmp != 0 ? cmp : a.compareTo(b);
+            });
+            TextView sHdr = new TextView(ctx);
+            sHdr.setText("CUSTOM SHELVES (TAP TO FILTER)");
+            sHdr.setTextColor(0xFFA5B4FC);
+            sHdr.setTextSize(11);
+            sHdr.setTypeface(Typeface.DEFAULT_BOLD);
+            sHdr.setPadding(0, dp(d, 14), 0, dp(d, 8));
+            content.addView(sHdr);
+
+            int maxS = Math.max(1, shelfFreq.get(topShelves.get(0)));
+            for (final String sh : topShelves) {
+                content.addView(makeInsightBarRow(ctx, d, "🏷 " + sh, shelfFreq.get(sh), maxS, 0xFF818CF8,
+                        new View.OnClickListener() {
+                            @Override public void onClick(View v) {
+                                if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
+                                com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "SHELF:" + sh);
+                            }
+                        }));
+            }
         }
 
         sv.addView(content);
         root.addView(sv);
 
-        new AlertDialog.Builder(ctx)
+        insightDlgRef[0] = new AlertDialog.Builder(ctx)
                 .setView(root)
                 .setPositiveButton("Close", null)
                 .show();
     }
 
-    private static View makeInsightBarRow(Context ctx, float d, String label, int count, int maxCount, int barColor) {
+    private static View makeInsightBarRow(Context ctx, float d, String label, int count, int maxCount,
+                                          int barColor, View.OnClickListener onClick) {
         LinearLayout box = new LinearLayout(ctx);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(0, 0, 0, dp(d, 9));
@@ -942,6 +993,7 @@ public final class FolioMoreView {
         track.addView(rest);
 
         box.addView(track);
+        if (onClick != null) box.setOnClickListener(onClick);
         return box;
     }
 
@@ -1108,7 +1160,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v7.5 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v7.6 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

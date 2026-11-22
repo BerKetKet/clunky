@@ -62,7 +62,15 @@ public final class FolioMetadataCatalogDialog {
         show(ctx, initialFilter, null);
     }
 
+    public static void showWithSearch(final Context ctx, final String initialQuery) {
+        show(ctx, "All", initialQuery, null);
+    }
+
     public static void show(final Context ctx, final String initialFilter, final Runnable onDismiss) {
+        show(ctx, initialFilter, "", onDismiss);
+    }
+
+    public static void show(final Context ctx, final String initialFilter, final String initialQuery, final Runnable onDismiss) {
         final Handler mainHandler = new Handler(Looper.getMainLooper());
         final List<FolioMetadataDb.BookRecord> allBooks = new ArrayList<>();
         final List<String> genres = new ArrayList<>();
@@ -230,7 +238,8 @@ public final class FolioMetadataCatalogDialog {
         }
 
         final String[] selectedGenre = new String[] { (initialFilter != null && !initialFilter.trim().isEmpty()) ? initialFilter.trim() : "All" };
-        final String[] queryText = new String[] { "" };
+        final String initQ = initialQuery != null ? initialQuery.trim() : "";
+        final String[] queryText = new String[] { initQ };
         int savedSort = 0;
         try {
             savedSort = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
@@ -464,6 +473,11 @@ public final class FolioMetadataCatalogDialog {
             });
         });
 
+        if (!initQ.isEmpty()) {
+            searchBox.setText(initQ);
+            searchBox.setSelection(initQ.length());
+            btnClearSearch.setVisibility(View.VISIBLE);
+        }
         renderRef[0].run();
         dialog.show();
     }
