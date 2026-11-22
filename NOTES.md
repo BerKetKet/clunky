@@ -343,3 +343,24 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.1_kfx/base.apk` (131 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report045.zip` (~1.5 MB)
+
+
+---
+
+# Round 046: Home "All Metadata ›" Link & Clean Library Book Removal (Folio v4.2 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v4.2 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 046 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `OpenCatalogView.java` with teal `All Metadata ›` link beside `Continue Reading` header on Home.
+     - Implemented `🗑 Remove from Folio Library` action in `FolioMetadataCatalogDialog.java` Book Details dialog with confirmation dialog and safe cascade deletion across `folio_metadata.db`, `kindle_library.db`, and app-private storage, preserving external storage files.
+     - Bumped version badge to `Folio v4.2 KFX` in `FolioMoreView.java`.
+     - Built `classes9.dex` (195,312 B), rebuilt APK with apktool, signed, and deployed to Galaxy M32.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.2_kfx/base.apk` (131 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `screenshots/verify_r46_home_all_metadata_link.png`: Proves Home tab displays `Continue Reading` with teal `All Metadata ›` link cleanly aligned on the right.
+     - `screenshots/verify_r46_book_details_remove_action.png`: Proves Book Details (`ⓘ`) dialog displays red `🗑 Remove from Folio Library` action button.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.2_kfx/base.apk` (131 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report046.zip` (~1.4 MB)
