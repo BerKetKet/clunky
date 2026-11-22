@@ -1,6 +1,31 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Milestone Folio v8.5 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 085 complete:
+  1. **Catalog Multi-Select & Bulk Actions (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`.
+     - In `FolioMetadataCatalogDialog.java`, added compact `☑ Select` toggle pill beside catalog header, switching to `✕ Done` with `#4F46E5` fill and `#818CF8` border when active.
+     - Implemented dynamic card selection highlighting: tapping any book in List or 3-column Grid view highlights it with `2dp #818CF8` indigo border and `#1E2642` background.
+     - Added floating bottom Bulk Action Bar with dynamic selection counter (`N books selected`), `Select All / Clear All` toggle, and three 1-tap bulk actions:
+       * `🏷 Shelf`: bulk assign or clear custom shelves across all selected books.
+       * `★ Fav`: bulk favorite or unfavorite across all selected books.
+       * `✓ Finished`: bulk mark finished or unread, automatically syncing reading progress and status into `kindle_library.db`.
+     - In `FolioMoreView.java`, widened Continue Reading carousel cards to `196dp` for improved title and author framing.
+     - Bumped badge and About Folio string to `Folio v8.5 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Milestone Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `screenshots/verify_r85_bulk_select_mode.png` (617 KB) — Metadata Catalog in 3-column Grid view with `☑ Select` active (`✕ Done`), 3 books selected (*1984*, *Moby Dick*, *Animal Farm*) with indigo selection borders, and bottom Bulk Action Bar showing `3 books selected`, `Select All (27)`, `🏷 Shelf`, `★ Fav`, and `✓ Finished`.
+       * `screenshots/verify_r85_about_v85.png` (324 KB) — About Folio modal showing `Version: Folio v8.5 KFX (Enhanced Typesetting)` and live stats.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Milestone Folio v8.5 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v8.5_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 085)
+1. `screenshots/verify_r85_bulk_select_mode.png`: Metadata Catalog in 3-column Grid view with `☑ Select` active, 3 books selected with indigo selection borders, and bottom Bulk Action Bar.
+2. `screenshots/verify_r85_about_v85.png`: About Folio modal confirming `Version: Folio v8.5 KFX (Enhanced Typesetting)`.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v8.5 KFX deployed (`lastUpdateTime=2026-11-23 00:48:01`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v7.8 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 078 complete:
   1. **Folder Importer Load More (+60) Pagination & Last-Folder Persistence (Task A & B)**:
      - Integrated Gemini's drop-in updates to `FolioFolderBrowserDialog.java` and `FolioMoreView.java`.
