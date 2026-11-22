@@ -232,12 +232,14 @@ public final class FolioMetadataCatalogDialog {
 
                 int readingCount = 0;
                 int finishedCount = 0;
+                int unreadCount = 0;
                 int favCount = 0;
                 int notesCount = 0;
                 for (FolioMetadataDb.BookRecord rec : allBooks) {
                     int p = getProgress(progressMap, rec.kfxPath);
                     if (p >= 100) finishedCount++;
                     else if (p > 0) readingCount++;
+                    else unreadCount++;
                     if (isFavorite(ctx, rec.kfxPath)) favCount++;
                     if (!getNote(ctx, rec.kfxPath).isEmpty()) notesCount++;
                 }
@@ -247,6 +249,7 @@ public final class FolioMetadataCatalogDialog {
                 if (notesCount > 0) chipList.add("Notes");
                 if (readingCount > 0) chipList.add("Reading");
                 if (finishedCount > 0) chipList.add("Finished");
+                if (unreadCount > 0) chipList.add("Unread");
                 for (String g : genres) {
                     if (!"All".equalsIgnoreCase(g)) chipList.add(g);
                 }
@@ -256,13 +259,16 @@ public final class FolioMetadataCatalogDialog {
                     boolean active = g.equalsIgnoreCase(selectedGenre[0]);
                     boolean isFavChip = "Favorites".equalsIgnoreCase(g);
                     boolean isNotesChip = "Notes".equalsIgnoreCase(g);
-                    boolean isStatusChip = "Reading".equalsIgnoreCase(g) || "Finished".equalsIgnoreCase(g);
+                    boolean isStatusChip = "Reading".equalsIgnoreCase(g)
+                            || "Finished".equalsIgnoreCase(g)
+                            || "Unread".equalsIgnoreCase(g);
                     int gCount;
                     if ("All".equalsIgnoreCase(g)) gCount = allBooks.size();
                     else if (isFavChip) gCount = favCount;
                     else if (isNotesChip) gCount = notesCount;
                     else if ("Reading".equalsIgnoreCase(g)) gCount = readingCount;
                     else if ("Finished".equalsIgnoreCase(g)) gCount = finishedCount;
+                    else if ("Unread".equalsIgnoreCase(g)) gCount = unreadCount;
                     else gCount = countBooksInGenre(allBooks, g);
 
                     TextView chip = new TextView(ctx);
@@ -302,6 +308,8 @@ public final class FolioMetadataCatalogDialog {
                         if (p <= 0 || p >= 100) continue;
                     } else if ("Finished".equalsIgnoreCase(selectedGenre[0])) {
                         if (getProgress(progressMap, rec.kfxPath) < 100) continue;
+                    } else if ("Unread".equalsIgnoreCase(selectedGenre[0])) {
+                        if (getProgress(progressMap, rec.kfxPath) > 0) continue;
                     } else {
                         if (!rec.hasGenre(selectedGenre[0])) continue;
                     }
@@ -1003,12 +1011,17 @@ public final class FolioMetadataCatalogDialog {
         }));
         box.addView(noteBox);
 
+        LinearLayout footerActionRow = new LinearLayout(ctx);
+        footerActionRow.setOrientation(LinearLayout.HORIZONTAL);
+        footerActionRow.setGravity(Gravity.CENTER_VERTICAL);
+        footerActionRow.setPadding(0, dp(ctx, 14), 0, dp(ctx, 4));
+
         TextView removeBtn = new TextView(ctx);
         removeBtn.setText("Remove from Folio Library");
         removeBtn.setTextColor(Color.parseColor("#F87171"));
         removeBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         removeBtn.setTypeface(Typeface.DEFAULT_BOLD);
-        removeBtn.setPadding(0, dp(ctx, 14), 0, dp(ctx, 4));
+        removeBtn.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         removeBtn.setOnClickListener(v -> {
             new AlertDialog.Builder(ctx)
                     .setTitle("Remove Book")
@@ -1022,7 +1035,40 @@ public final class FolioMetadataCatalogDialog {
                     .setNegativeButton("Cancel", null)
                     .show();
         });
-        box.addView(removeBtn);
+        footerActionRow.addView(removeBtn);
+
+        TextView copyBtn = new TextView(ctx);
+        copyBtn.setText("📋 Copy Info");
+        copyBtn.setTextColor(Color.parseColor("#94A3B8"));
+        copyBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        copyBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        copyBtn.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
+        GradientDrawable copyBg = new GradientDrawable();
+        copyBg.setColor(Color.parseColor("#1E2433"));
+        copyBg.setCornerRadius(dp(ctx, 10));
+        copyBtn.setBackground(copyBg);
+        copyBtn.setOnClickListener(v -> {
+            StringBuilder clip = new StringBuilder();
+            clip.append(rec.title);
+            if (!displayAuthor.isEmpty()) clip.append(" — ").append(displayAuthor);
+            if (!cleanDetailDate.isEmpty()) clip.append(" (").append(cleanDetailDate).append(")");
+            if (!rec.publisher.isEmpty()) clip.append("\nPublisher: ").append(rec.publisher);
+            if (!rec.isbn.isEmpty()) clip.append("\nISBN: ").append(rec.isbn);
+            int rStars = getRating(ctx, rec.kfxPath);
+            if (rStars > 0) clip.append("\nRating: ").append(rStars).append("/5");
+            String nTxt = getNote(ctx, rec.kfxPath);
+            if (!nTxt.isEmpty()) clip.append("\nNote: ").append(nTxt);
+            try {
+                android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                        ctx.getSystemService(Context.CLIPBOARD_SERVICE);
+                if (cm != null) {
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Folio Book Info", clip.toString()));
+                    Toast.makeText(ctx, "Copied book info to clipboard", Toast.LENGTH_SHORT).show();
+                }
+            } catch (Throwable ignored) {}
+        });
+        footerActionRow.addView(copyBtn);
+        box.addView(footerActionRow);
 
         ScrollView detailSv = new ScrollView(ctx);
         detailSv.addView(box);
