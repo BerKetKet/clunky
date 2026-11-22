@@ -188,11 +188,16 @@ public final class FolioMetadataBackup {
                 return Long.compare(b.addedAt, a.addedAt);
             });
 
-            int favs = 0, rated = 0, noted = 0;
+            java.util.Map<String, Integer> progMap = FolioMetadataCatalogDialog.loadProgressMap(ctx);
+            int favs = 0, rated = 0, noted = 0, reading = 0, finished = 0;
             for (FolioMetadataDb.BookRecord r : all) {
                 if (FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath)) favs++;
                 if (FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath) > 0) rated++;
                 if (!FolioMetadataCatalogDialog.getNote(ctx, r.kfxPath).isEmpty()) noted++;
+                Integer pv = (r.kfxPath != null) ? progMap.get(r.kfxPath) : null;
+                int p = pv != null ? pv : 0;
+                if (p >= 100) finished++;
+                else if (p > 0) reading++;
             }
 
             String dateStr = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
@@ -200,6 +205,8 @@ public final class FolioMetadataBackup {
             StringBuilder md = new StringBuilder();
             md.append("# Folio Reading Log (").append(dateStr).append(")\n\n");
             md.append("**Library:** ").append(all.size()).append(" books · ")
+              .append(reading).append(" reading · ")
+              .append(finished).append(" finished · ")
               .append(favs).append(" favorited · ")
               .append(rated).append(" rated · ")
               .append(noted).append(" annotated\n\n");
@@ -209,13 +216,21 @@ public final class FolioMetadataBackup {
                 int stars = FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath);
                 String note = FolioMetadataCatalogDialog.getNote(ctx, r.kfxPath);
                 String yr = EpubMetadataExtractor.normalizePubDate(r.pubDate);
+                String cleanAuthor = FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
+                Integer pv = (r.kfxPath != null) ? progMap.get(r.kfxPath) : null;
+                int pct = pv != null ? pv : 0;
 
                 md.append("## ");
                 if (isFav) md.append("★ ");
                 md.append(r.title != null ? r.title : "Untitled").append("\n");
-                md.append("- **Author:** ").append(r.author != null ? r.author : "Unknown");
+                md.append("- **Author:** ").append(!cleanAuthor.isEmpty() ? cleanAuthor : "Unknown");
                 if (!yr.isEmpty()) md.append(" (").append(yr).append(")");
                 md.append("\n");
+                if (pct >= 100) {
+                    md.append("- **Status:** ✓ Finished\n");
+                } else if (pct > 0) {
+                    md.append("- **Status:** ").append(pct).append("% read\n");
+                }
                 if (stars > 0) {
                     md.append("- **Rating:** ");
                     for (int s = 0; s < 5; s++) md.append(s < stars ? "★" : "☆");

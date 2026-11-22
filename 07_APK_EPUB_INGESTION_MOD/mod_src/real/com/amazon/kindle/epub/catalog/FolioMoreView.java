@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v6.8 KFX");
+        badgeTv.setText("Folio v6.9 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -605,6 +605,17 @@ public final class FolioMoreView {
                 .setTitle("Reading Log (.md)")
                 .setView(box)
                 .setPositiveButton("Close", null)
+                .setNegativeButton("Share", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            Intent share = new Intent(Intent.ACTION_SEND);
+                            share.setType("text/plain");
+                            share.putExtra(Intent.EXTRA_SUBJECT, "Folio Reading Log");
+                            share.putExtra(Intent.EXTRA_TEXT, md);
+                            ctx.startActivity(Intent.createChooser(share, "Share Folio Reading Log"));
+                        } catch (Throwable ignored) {}
+                    }
+                })
                 .setNeutralButton("Copy Markdown", new DialogInterface.OnClickListener() {
                     @Override public void onClick(DialogInterface dialog, int which) {
                         try {
@@ -682,7 +693,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v6.8 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v6.9 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

@@ -1281,7 +1281,7 @@ public final class FolioMetadataCatalogDialog {
         } catch (Throwable ignored) {}
     }
 
-    private static Map<String, Integer> loadProgressMap(Context ctx) {
+    public static Map<String, Integer> loadProgressMap(Context ctx) {
         Map<String, Integer> map = new HashMap<>();
         try {
             File kdbFile = ctx.getDatabasePath("kindle_library.db");
@@ -1531,7 +1531,7 @@ public final class FolioMetadataCatalogDialog {
         return n;
     }
 
-    private static String formatAuthorForDisplay(String raw) {
+    public static String formatAuthorForDisplay(String raw) {
         if (raw == null) return "";
         String a = raw.trim();
         if (!a.contains(";") && a.contains(",")) {
