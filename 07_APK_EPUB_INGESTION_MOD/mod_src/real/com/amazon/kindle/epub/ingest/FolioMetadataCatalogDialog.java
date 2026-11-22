@@ -500,7 +500,8 @@ public final class FolioMetadataCatalogDialog {
         col.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView title = new TextView(ctx);
-        title.setText((isFavorite(ctx, rec.kfxPath) ? "★ " : "") + rec.title);
+        String prefix = (isFavorite(ctx, rec.kfxPath) ? "★ " : "") + (!getNote(ctx, rec.kfxPath).isEmpty() ? "📝 " : "");
+        title.setText(prefix + rec.title);
         title.setTextColor(Color.WHITE);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -819,6 +820,43 @@ public final class FolioMetadataCatalogDialog {
         actionPillRow.addView(favBtn);
         box.addView(actionPillRow);
 
+        // Personal Reading Note card / "+ Add Note" button
+        final String existingNote = getNote(ctx, rec.kfxPath);
+        LinearLayout noteBox = new LinearLayout(ctx);
+        noteBox.setOrientation(LinearLayout.VERTICAL);
+        noteBox.setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10));
+        GradientDrawable noteBg = new GradientDrawable();
+        noteBg.setColor(Color.parseColor("#1A1F2E"));
+        noteBg.setCornerRadius(dp(ctx, 10));
+        noteBg.setStroke(dp(ctx, 1), Color.parseColor(existingNote.isEmpty() ? "#2A3142" : "#66F59E0B"));
+        noteBox.setBackground(noteBg);
+        LinearLayout.LayoutParams noteLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        noteLp.setMargins(0, dp(ctx, 12), 0, dp(ctx, 2));
+        noteBox.setLayoutParams(noteLp);
+
+        TextView noteHdr = new TextView(ctx);
+        noteHdr.setText(existingNote.isEmpty() ? "📝 Add a Personal Reading Note ›" : "📝 Personal Note (tap to edit)");
+        noteHdr.setTextColor(Color.parseColor(existingNote.isEmpty() ? "#94A3B8" : "#F59E0B"));
+        noteHdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        noteHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        noteBox.addView(noteHdr);
+
+        if (!existingNote.isEmpty()) {
+            TextView noteBody = new TextView(ctx);
+            noteBody.setText(existingNote);
+            noteBody.setTextColor(Color.parseColor("#E2E8F0"));
+            noteBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            noteBody.setPadding(0, dp(ctx, 4), 0, 0);
+            noteBox.addView(noteBody);
+        }
+
+        noteBox.setOnClickListener(v -> showEditNoteDialog(ctx, rec, existingNote, () -> {
+            if (detailDlgRef[0] != null) detailDlgRef[0].dismiss();
+            if (onMetadataEdited != null) onMetadataEdited.run();
+        }));
+        box.addView(noteBox);
+
         TextView removeBtn = new TextView(ctx);
         removeBtn.setText("Remove from Folio Library");
         removeBtn.setTextColor(Color.parseColor("#F87171"));
@@ -1083,6 +1121,76 @@ public final class FolioMetadataCatalogDialog {
             }
         } catch (Throwable ignored) {}
         return map;
+    }
+
+    public static String getNote(Context ctx, String kfxPath) {
+        if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return "";
+        try {
+            String n = ctx.getSharedPreferences("folio_notes", Context.MODE_PRIVATE).getString(kfxPath, "");
+            return n != null ? n.trim() : "";
+        } catch (Throwable ignored) { return ""; }
+    }
+
+    public static void setNote(Context ctx, String kfxPath, String note) {
+        if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return;
+        try {
+            android.content.SharedPreferences.Editor ed =
+                    ctx.getSharedPreferences("folio_notes", Context.MODE_PRIVATE).edit();
+            String clean = note != null ? note.trim() : "";
+            if (clean.isEmpty()) ed.remove(kfxPath);
+            else ed.putString(kfxPath, clean);
+            ed.apply();
+        } catch (Throwable ignored) {}
+    }
+
+    private static void showEditNoteDialog(final Context ctx, final FolioMetadataDb.BookRecord rec,
+                                           final String currentNote, final Runnable onSaved) {
+        LinearLayout wrap = new LinearLayout(ctx);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setBackgroundColor(Color.parseColor("#161922"));
+        wrap.setPadding(dp(ctx, 18), dp(ctx, 16), dp(ctx, 18), dp(ctx, 10));
+
+        TextView hdr = new TextView(ctx);
+        hdr.setText("Personal Note · " + rec.title);
+        hdr.setTextColor(Color.WHITE);
+        hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        hdr.setTypeface(Typeface.DEFAULT_BOLD);
+        hdr.setPadding(0, 0, 0, dp(ctx, 10));
+        wrap.addView(hdr);
+
+        final EditText et = new EditText(ctx);
+        et.setText(currentNote);
+        et.setHint("Write your thoughts, quotes, or reading reminders...");
+        et.setHintTextColor(Color.parseColor("#64748B"));
+        et.setTextColor(Color.WHITE);
+        et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        et.setMinLines(3);
+        et.setMaxLines(8);
+        et.setGravity(Gravity.TOP | Gravity.START);
+        et.setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10));
+        GradientDrawable etBg = new GradientDrawable();
+        etBg.setColor(Color.parseColor("#1A1F2E"));
+        etBg.setCornerRadius(dp(ctx, 10));
+        etBg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
+        et.setBackground(etBg);
+        wrap.addView(et);
+
+        AlertDialog.Builder b = new AlertDialog.Builder(ctx)
+                .setView(wrap)
+                .setPositiveButton("Save Note", (d, w) -> {
+                    setNote(ctx, rec.kfxPath, et.getText().toString());
+                    Toast.makeText(ctx, "Saved personal note", Toast.LENGTH_SHORT).show();
+                    if (onSaved != null) onSaved.run();
+                })
+                .setNegativeButton("Cancel", null);
+        if (!currentNote.isEmpty()) {
+            b.setNeutralButton("Clear Note", (d, w) -> {
+                setNote(ctx, rec.kfxPath, "");
+                Toast.makeText(ctx, "Cleared personal note", Toast.LENGTH_SHORT).show();
+                if (onSaved != null) onSaved.run();
+            });
+        }
+        b.show();
     }
 
     public static boolean isFavorite(Context ctx, String kfxPath) {

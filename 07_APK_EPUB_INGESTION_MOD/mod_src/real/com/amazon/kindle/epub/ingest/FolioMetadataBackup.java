@@ -62,6 +62,8 @@ public final class FolioMetadataBackup {
                 obj.put("description", r.description);
                 obj.put("open_library_key", r.openLibraryKey);
                 obj.put("is_favorite", FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath));
+                String pNote = FolioMetadataCatalogDialog.getNote(ctx, r.kfxPath);
+                if (!pNote.isEmpty()) obj.put("personal_note", pNote);
                 arr.put(obj);
             }
             root.put("books", arr);
@@ -139,6 +141,10 @@ public final class FolioMetadataBackup {
                         meta);
                 if (obj.optBoolean("is_favorite", false)) {
                     FolioMetadataCatalogDialog.setFavorite(ctx, kfxPath, true);
+                }
+                String pNote = obj.optString("personal_note", "");
+                if (!pNote.isEmpty()) {
+                    FolioMetadataCatalogDialog.setNote(ctx, kfxPath, pNote);
                 }
                 restored++;
             }
