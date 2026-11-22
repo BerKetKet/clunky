@@ -182,13 +182,42 @@ public final class FolioMetadataCatalogDialog {
         topRow.addView(btnSync);
         root.addView(topRow);
 
+        LinearLayout headingRow = new LinearLayout(ctx);
+        headingRow.setOrientation(LinearLayout.HORIZONTAL);
+        headingRow.setGravity(Gravity.CENTER_VERTICAL);
+        headingRow.setPadding(0, dp(ctx, 4), 0, dp(ctx, 10));
+
         final TextView heading = new TextView(ctx);
         heading.setText("Library Metadata & Genres (" + allBooks.size() + ")");
         heading.setTextColor(Color.WHITE);
-        heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         heading.setTypeface(Typeface.DEFAULT_BOLD);
-        heading.setPadding(0, dp(ctx, 4), 0, dp(ctx, 10));
-        root.addView(heading);
+        heading.setSingleLine(true);
+        heading.setEllipsize(TextUtils.TruncateAt.END);
+        heading.setLayoutParams(new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        headingRow.addView(heading);
+
+        final boolean[] selectMode = new boolean[] { false };
+        final java.util.Set<String> selectedPaths = new java.util.LinkedHashSet<>();
+
+        final TextView btnSelect = new TextView(ctx);
+        btnSelect.setText("☑ Select");
+        btnSelect.setTextColor(Color.parseColor("#CBD5E1"));
+        btnSelect.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        btnSelect.setTypeface(Typeface.DEFAULT_BOLD);
+        btnSelect.setPadding(dp(ctx, 9), dp(ctx, 4), dp(ctx, 9), dp(ctx, 4));
+        final GradientDrawable selBtnBg = new GradientDrawable();
+        selBtnBg.setColor(Color.parseColor("#1E2433"));
+        selBtnBg.setCornerRadius(dp(ctx, 12));
+        selBtnBg.setStroke(dp(ctx, 1), Color.parseColor("#334155"));
+        btnSelect.setBackground(selBtnBg);
+        LinearLayout.LayoutParams selLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        selLp.setMargins(dp(ctx, 6), 0, 0, 0);
+        btnSelect.setLayoutParams(selLp);
+        headingRow.addView(btnSelect);
+        root.addView(headingRow);
 
         // Search box + inline Clear (✕) button
         LinearLayout searchRow = new LinearLayout(ctx);
@@ -245,13 +274,64 @@ public final class FolioMetadataCatalogDialog {
         root.addView(divider);
 
         // Book cards container
-        ScrollView listScroll = new ScrollView(ctx);
+        final ScrollView listScroll = new ScrollView(ctx);
         listScroll.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 390)));
         final LinearLayout cardsContainer = new LinearLayout(ctx);
         cardsContainer.setOrientation(LinearLayout.VERTICAL);
         listScroll.addView(cardsContainer);
         root.addView(listScroll);
+
+        // Bulk Action Bar (shown only when Multi-Select Mode is active)
+        final LinearLayout bulkBar = new LinearLayout(ctx);
+        bulkBar.setOrientation(LinearLayout.VERTICAL);
+        bulkBar.setPadding(dp(ctx, 10), dp(ctx, 8), dp(ctx, 10), dp(ctx, 8));
+        GradientDrawable bulkBg = new GradientDrawable();
+        bulkBg.setColor(Color.parseColor("#161B29"));
+        bulkBg.setCornerRadius(dp(ctx, 10));
+        bulkBg.setStroke(dp(ctx, 1), Color.parseColor("#3B4563"));
+        bulkBar.setBackground(bulkBg);
+        LinearLayout.LayoutParams bulkLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        bulkLp.setMargins(0, dp(ctx, 8), 0, 0);
+        bulkBar.setLayoutParams(bulkLp);
+        bulkBar.setVisibility(View.GONE);
+
+        LinearLayout bulkTopRow = new LinearLayout(ctx);
+        bulkTopRow.setOrientation(LinearLayout.HORIZONTAL);
+        bulkTopRow.setGravity(Gravity.CENTER_VERTICAL);
+        bulkTopRow.setPadding(0, 0, 0, dp(ctx, 7));
+
+        final TextView bulkCountTv = new TextView(ctx);
+        bulkCountTv.setText("0 selected — tap books to select");
+        bulkCountTv.setTextColor(Color.parseColor("#C7D2FE"));
+        bulkCountTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        bulkCountTv.setTypeface(Typeface.DEFAULT_BOLD);
+        bulkCountTv.setLayoutParams(new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        bulkTopRow.addView(bulkCountTv);
+
+        final TextView btnSelectAll = new TextView(ctx);
+        btnSelectAll.setText("Select All");
+        btnSelectAll.setTextColor(Color.parseColor("#38BDF8"));
+        btnSelectAll.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        btnSelectAll.setTypeface(Typeface.DEFAULT_BOLD);
+        btnSelectAll.setPadding(dp(ctx, 8), dp(ctx, 3), dp(ctx, 4), dp(ctx, 3));
+        bulkTopRow.addView(btnSelectAll);
+        bulkBar.addView(bulkTopRow);
+
+        LinearLayout bulkBtnsRow = new LinearLayout(ctx);
+        bulkBtnsRow.setOrientation(LinearLayout.HORIZONTAL);
+        bulkBtnsRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        final TextView btnBulkShelf = makeBulkActionPill(ctx, "🏷 Shelf", "#312E81", "#C7D2FE", "#4F46E5");
+        final TextView btnBulkFav = makeBulkActionPill(ctx, "★ Fav", "#3B2A14", "#FBBF24", "#784F1D");
+        final TextView btnBulkDone = makeBulkActionPill(ctx, "✓ Finished", "#123328", "#34D399", "#1E664E");
+        bulkBtnsRow.addView(btnBulkShelf);
+        bulkBtnsRow.addView(btnBulkFav);
+        bulkBtnsRow.addView(btnBulkDone);
+        bulkBar.addView(bulkBtnsRow);
+        root.addView(bulkBar);
 
         final AlertDialog dialog = new AlertDialog.Builder(ctx)
                 .setView(root)
@@ -414,8 +494,13 @@ public final class FolioMetadataCatalogDialog {
                         gRow.setLayoutParams(grLp);
                         for (int c = 0; c < 3; c++) {
                             if (i + c < filtered.size()) {
-                                gRow.addView(buildGridTile(ctx, filtered.get(i + c), progressMap,
-                                        dialog, onRefreshAll, onAuthorFilter, c < 2));
+                                final FolioMetadataDb.BookRecord gRec = filtered.get(i + c);
+                                View gTile = buildGridTile(ctx, gRec, progressMap,
+                                        dialog, onRefreshAll, onAuthorFilter, c < 2);
+                                if (selectMode[0]) {
+                                    applyBulkSelectionUi(ctx, gTile, gRec, selectedPaths, bulkCountTv, btnSelectAll, lastFiltered, renderRef[0]);
+                                }
+                                gRow.addView(gTile);
                             } else {
                                 View spacer = new View(ctx);
                                 LinearLayout.LayoutParams spLp = new LinearLayout.LayoutParams(0, 1, 1f);
@@ -428,7 +513,11 @@ public final class FolioMetadataCatalogDialog {
                     }
                 } else {
                     for (final FolioMetadataDb.BookRecord rec : filtered) {
-                        cardsContainer.addView(buildBookCard(ctx, rec, progressMap, dialog, onRefreshAll, onAuthorFilter));
+                        View cardV = buildBookCard(ctx, rec, progressMap, dialog, onRefreshAll, onAuthorFilter);
+                        if (selectMode[0]) {
+                            applyBulkSelectionUi(ctx, cardV, rec, selectedPaths, bulkCountTv, btnSelectAll, lastFiltered, renderRef[0]);
+                        }
+                        cardsContainer.addView(cardV);
                     }
                 }
 
@@ -538,6 +627,115 @@ public final class FolioMetadataCatalogDialog {
             searchBox.setSelection(initQ.length());
             btnClearSearch.setVisibility(View.VISIBLE);
         }
+        final Runnable updateBulkBarHeader = () -> {
+            int nSel = selectedPaths.size();
+            bulkCountTv.setText(nSel == 0
+                    ? "0 selected — tap books to select"
+                    : nSel + (nSel == 1 ? " book selected" : " books selected"));
+            boolean allVisSelected = !lastFiltered.isEmpty() && nSel >= lastFiltered.size();
+            btnSelectAll.setText(allVisSelected ? "Clear All" : "Select All (" + lastFiltered.size() + ")");
+        };
+
+        btnSelect.setOnClickListener(v -> {
+            selectMode[0] = !selectMode[0];
+            selectedPaths.clear();
+            if (selectMode[0]) {
+                btnSelect.setText("✕ Done");
+                btnSelect.setTextColor(Color.WHITE);
+                selBtnBg.setColor(Color.parseColor("#4F46E5"));
+                selBtnBg.setStroke(dp(ctx, 1), Color.parseColor("#818CF8"));
+                bulkBar.setVisibility(View.VISIBLE);
+                listScroll.getLayoutParams().height = dp(ctx, 316);
+                listScroll.requestLayout();
+                updateBulkBarHeader.run();
+            } else {
+                btnSelect.setText("☑ Select");
+                btnSelect.setTextColor(Color.parseColor("#CBD5E1"));
+                selBtnBg.setColor(Color.parseColor("#1E2433"));
+                selBtnBg.setStroke(dp(ctx, 1), Color.parseColor("#334155"));
+                bulkBar.setVisibility(View.GONE);
+                listScroll.getLayoutParams().height = dp(ctx, 390);
+                listScroll.requestLayout();
+            }
+            renderRef[0].run();
+        });
+
+        btnSelectAll.setOnClickListener(v -> {
+            if (!lastFiltered.isEmpty() && selectedPaths.size() >= lastFiltered.size()) {
+                selectedPaths.clear();
+            } else {
+                for (FolioMetadataDb.BookRecord r : lastFiltered) {
+                    if (r.kfxPath != null && !r.kfxPath.isEmpty()) selectedPaths.add(r.kfxPath);
+                }
+            }
+            updateBulkBarHeader.run();
+            renderRef[0].run();
+        });
+
+        btnBulkShelf.setOnClickListener(v -> {
+            if (selectedPaths.isEmpty()) {
+                Toast.makeText(ctx, "Select at least one book first", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            showBulkShelfPicker(ctx, new ArrayList<>(selectedPaths), () -> {
+                selectedPaths.clear();
+                updateBulkBarHeader.run();
+                loadFromDb(ctx, allBooks, genres);
+                progressMap.clear();
+                progressMap.putAll(loadProgressMap(ctx));
+                renderRef[0].run();
+            });
+        });
+
+        btnBulkFav.setOnClickListener(v -> {
+            if (selectedPaths.isEmpty()) {
+                Toast.makeText(ctx, "Select at least one book first", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            boolean allFav = true;
+            for (String p : selectedPaths) {
+                if (!isFavorite(ctx, p)) { allFav = false; break; }
+            }
+            boolean nextFav = !allFav;
+            int count = 0;
+            for (String p : selectedPaths) {
+                setFavorite(ctx, p, nextFav);
+                count++;
+            }
+            Toast.makeText(ctx,
+                    (nextFav ? "★ Favorited " : "☆ Unfavorited ") + count + (count == 1 ? " book" : " books"),
+                    Toast.LENGTH_SHORT).show();
+            selectedPaths.clear();
+            updateBulkBarHeader.run();
+            renderRef[0].run();
+        });
+
+        btnBulkDone.setOnClickListener(v -> {
+            if (selectedPaths.isEmpty()) {
+                Toast.makeText(ctx, "Select at least one book first", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            boolean allDone = true;
+            for (String p : selectedPaths) {
+                if (getProgress(progressMap, p) < 100) { allDone = false; break; }
+            }
+            boolean nextDone = !allDone;
+            int count = 0;
+            for (String p : selectedPaths) {
+                setBookReadState(ctx, p, nextDone);
+                count++;
+            }
+            Toast.makeText(ctx,
+                    (nextDone ? "✓ Marked " : "↺ Marked ") + count
+                            + (count == 1 ? " book " : " books ") + (nextDone ? "Finished" : "Unread"),
+                    Toast.LENGTH_SHORT).show();
+            selectedPaths.clear();
+            updateBulkBarHeader.run();
+            progressMap.clear();
+            progressMap.putAll(loadProgressMap(ctx));
+            renderRef[0].run();
+        });
+
         renderRef[0].run();
         dialog.show();
     }
@@ -1998,6 +2196,149 @@ public final class FolioMetadataCatalogDialog {
             }
             return n;
         } catch (Throwable ignored) { return 0; }
+    }
+
+    private static TextView makeBulkActionPill(Context ctx, String label, String bgHex, String textHex, String strokeHex) {
+        TextView tv = new TextView(ctx);
+        tv.setText(label);
+        tv.setTextColor(Color.parseColor(textHex));
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        tv.setTypeface(Typeface.DEFAULT_BOLD);
+        tv.setGravity(Gravity.CENTER);
+        tv.setPadding(dp(ctx, 8), dp(ctx, 7), dp(ctx, 8), dp(ctx, 7));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Color.parseColor(bgHex));
+        bg.setCornerRadius(dp(ctx, 8));
+        bg.setStroke(dp(ctx, 1), Color.parseColor(strokeHex));
+        tv.setBackground(bg);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(dp(ctx, 3), 0, dp(ctx, 3), 0);
+        tv.setLayoutParams(lp);
+        return tv;
+    }
+
+    private static void applyBulkSelectionUi(
+            final Context ctx,
+            final View cardView,
+            final FolioMetadataDb.BookRecord rec,
+            final java.util.Set<String> selectedPaths,
+            final TextView bulkCountTv,
+            final TextView btnSelectAll,
+            final List<FolioMetadataDb.BookRecord> lastFiltered,
+            final Runnable rerender) {
+        final boolean isSel = rec.kfxPath != null && selectedPaths.contains(rec.kfxPath);
+        GradientDrawable selBg = new GradientDrawable();
+        selBg.setColor(Color.parseColor(isSel ? "#1E2642" : "#1A1F2E"));
+        selBg.setCornerRadius(dp(ctx, 10));
+        selBg.setStroke(dp(ctx, isSel ? 2 : 1), Color.parseColor(isSel ? "#818CF8" : "#2A3142"));
+        cardView.setBackground(selBg);
+        cardView.setOnClickListener(v -> {
+            if (rec.kfxPath == null || rec.kfxPath.isEmpty()) return;
+            if (selectedPaths.contains(rec.kfxPath)) {
+                selectedPaths.remove(rec.kfxPath);
+            } else {
+                selectedPaths.add(rec.kfxPath);
+            }
+            int nSel = selectedPaths.size();
+            bulkCountTv.setText(nSel == 0
+                    ? "0 selected — tap books to select"
+                    : nSel + (nSel == 1 ? " book selected" : " books selected"));
+            boolean allVisSelected = !lastFiltered.isEmpty() && nSel >= lastFiltered.size();
+            btnSelectAll.setText(allVisSelected ? "Clear All" : "Select All (" + lastFiltered.size() + ")");
+            rerender.run();
+        });
+    }
+
+    private static void showBulkShelfPicker(final Context ctx, final List<String> paths, final Runnable onDone) {
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(ctx, 18), dp(ctx, 14), dp(ctx, 18), dp(ctx, 8));
+        box.setBackgroundColor(Color.parseColor("#11131A"));
+
+        TextView titleTv = new TextView(ctx);
+        titleTv.setText("🏷 Assign Shelf (" + paths.size() + (paths.size() == 1 ? " book)" : " books)"));
+        titleTv.setTextColor(Color.WHITE);
+        titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        titleTv.setTypeface(Typeface.DEFAULT_BOLD);
+        titleTv.setPadding(0, 0, 0, dp(ctx, 10));
+        box.addView(titleTv);
+
+        final AlertDialog[] dlgRef = new AlertDialog[1];
+
+        java.util.LinkedHashSet<String> choices = new java.util.LinkedHashSet<>();
+        try {
+            Map<String, ?> existing = ctx.getSharedPreferences("folio_shelves", Context.MODE_PRIVATE).getAll();
+            if (existing != null) {
+                for (Object val : existing.values()) {
+                    if (val instanceof String && !((String) val).trim().isEmpty()) {
+                        choices.add(((String) val).trim());
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        String[] presets = new String[] { "Classics", "Sci-Fi", "Philosophy", "History", "To Read" };
+        for (String p : presets) choices.add(p);
+
+        HorizontalScrollView hsv = new HorizontalScrollView(ctx);
+        hsv.setHorizontalScrollBarEnabled(false);
+        LinearLayout presetRow = new LinearLayout(ctx);
+        presetRow.setOrientation(LinearLayout.HORIZONTAL);
+        for (final String sh : choices) {
+            TextView pill = new TextView(ctx);
+            pill.setText("🏷 " + sh);
+            pill.setTextColor(Color.parseColor("#C7D2FE"));
+            pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            pill.setTypeface(Typeface.DEFAULT_BOLD);
+            pill.setPadding(dp(ctx, 11), dp(ctx, 6), dp(ctx, 11), dp(ctx, 6));
+            GradientDrawable pBg = new GradientDrawable();
+            pBg.setColor(Color.parseColor("#1E2438"));
+            pBg.setCornerRadius(dp(ctx, 14));
+            pBg.setStroke(dp(ctx, 1), Color.parseColor("#4F46E5"));
+            pill.setBackground(pBg);
+            LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            pLp.setMargins(0, 0, dp(ctx, 6), 0);
+            pill.setLayoutParams(pLp);
+            pill.setOnClickListener(v -> {
+                for (String kfx : paths) setShelf(ctx, kfx, sh);
+                Toast.makeText(ctx, "Added " + paths.size() + " book(s) to shelf: " + sh, Toast.LENGTH_SHORT).show();
+                if (dlgRef[0] != null) dlgRef[0].dismiss();
+                onDone.run();
+            });
+            presetRow.addView(pill);
+        }
+        hsv.addView(presetRow);
+        LinearLayout.LayoutParams hsvLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        hsvLp.setMargins(0, 0, 0, dp(ctx, 12));
+        hsv.setLayoutParams(hsvLp);
+        box.addView(hsv);
+
+        final EditText customInput = new EditText(ctx);
+        customInput.setHint("Or type a custom shelf name...");
+        customInput.setHintTextColor(Color.parseColor("#64748B"));
+        customInput.setTextColor(Color.WHITE);
+        customInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        customInput.setSingleLine(true);
+        box.addView(customInput);
+
+        dlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setView(box)
+                .setPositiveButton("Apply Custom", (d, w) -> {
+                    String val = customInput.getText().toString().trim();
+                    if (val.isEmpty()) return;
+                    for (String kfx : paths) setShelf(ctx, kfx, val);
+                    Toast.makeText(ctx, "Added " + paths.size() + " book(s) to shelf: " + val, Toast.LENGTH_SHORT).show();
+                    onDone.run();
+                })
+                .setNeutralButton("Clear Shelf", (d, w) -> {
+                    for (String kfx : paths) setShelf(ctx, kfx, "");
+                    Toast.makeText(ctx, "Cleared shelf from " + paths.size() + " book(s)", Toast.LENGTH_SHORT).show();
+                    onDone.run();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private static void setBookReadState(Context ctx, String kfxPath, boolean finished) {
