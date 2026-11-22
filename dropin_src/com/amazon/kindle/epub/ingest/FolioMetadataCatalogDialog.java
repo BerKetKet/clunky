@@ -1592,6 +1592,118 @@ public final class FolioMetadataCatalogDialog {
         }));
         box.addView(noteBox);
 
+        // "More by [Author]" interactive sibling book strip
+        String curAuthorClean = formatAuthorForDisplay(rec.author);
+        if (!curAuthorClean.isEmpty() && !"Unknown Author".equalsIgnoreCase(curAuthorClean)) {
+            List<FolioMetadataDb.BookRecord> siblings = new ArrayList<>();
+            FolioMetadataDb sibDb = new FolioMetadataDb(ctx);
+            try {
+                for (FolioMetadataDb.BookRecord cand : sibDb.getAllBooks()) {
+                    if (cand.id == rec.id) continue;
+                    if (curAuthorClean.equalsIgnoreCase(formatAuthorForDisplay(cand.author))) {
+                        siblings.add(cand);
+                    }
+                }
+            } catch (Throwable ignored) {
+            } finally {
+                sibDb.close();
+            }
+            if (!siblings.isEmpty()) {
+                Map<String, Integer> sibProgMap = loadProgressMap(ctx);
+                TextView sibHdr = new TextView(ctx);
+                sibHdr.setText("MORE BY " + curAuthorClean.toUpperCase(Locale.ROOT) + " (" + siblings.size() + ")");
+                sibHdr.setTextColor(Color.parseColor("#F59E0B"));
+                sibHdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+                sibHdr.setTypeface(Typeface.DEFAULT_BOLD);
+                sibHdr.setPadding(0, dp(ctx, 14), 0, dp(ctx, 6));
+                box.addView(sibHdr);
+
+                HorizontalScrollView sibScroll = new HorizontalScrollView(ctx);
+                sibScroll.setHorizontalScrollBarEnabled(false);
+                LinearLayout sibRow = new LinearLayout(ctx);
+                sibRow.setOrientation(LinearLayout.HORIZONTAL);
+
+                int sibLimit = Math.min(siblings.size(), 8);
+                for (int si = 0; si < sibLimit; si++) {
+                    final FolioMetadataDb.BookRecord sib = siblings.get(si);
+                    final int sPct = getProgress(sibProgMap, sib.kfxPath);
+
+                    LinearLayout sCard = new LinearLayout(ctx);
+                    sCard.setOrientation(LinearLayout.HORIZONTAL);
+                    sCard.setGravity(Gravity.CENTER_VERTICAL);
+                    sCard.setPadding(dp(ctx, 8), dp(ctx, 8), dp(ctx, 10), dp(ctx, 8));
+                    GradientDrawable sBg = new GradientDrawable();
+                    sBg.setColor(Color.parseColor("#1A1F2E"));
+                    sBg.setCornerRadius(dp(ctx, 9));
+                    sBg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
+                    sCard.setBackground(sBg);
+                    LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
+                            dp(ctx, 172), LinearLayout.LayoutParams.WRAP_CONTENT);
+                    if (si < sibLimit - 1) scLp.setMargins(0, 0, dp(ctx, 8), 0);
+                    sCard.setLayoutParams(scLp);
+
+                    ImageView sCov = new ImageView(ctx);
+                    sCov.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    sCov.setBackgroundColor(Color.parseColor("#0D1017"));
+                    LinearLayout.LayoutParams sivLp = new LinearLayout.LayoutParams(dp(ctx, 32), dp(ctx, 46));
+                    sivLp.setMargins(0, 0, dp(ctx, 8), 0);
+                    sCov.setLayoutParams(sivLp);
+                    if (sib.kfxPath != null && !sib.kfxPath.isEmpty()) {
+                        File scf = new File(sib.kfxPath + ".cover.jpg");
+                        if (scf.exists() && scf.length() >= 64) {
+                            BitmapFactory.Options sopts = new BitmapFactory.Options();
+                            sopts.inSampleSize = 4;
+                            Bitmap sbm = BitmapFactory.decodeFile(scf.getAbsolutePath(), sopts);
+                            if (sbm != null) sCov.setImageBitmap(sbm);
+                        }
+                    }
+                    sCard.addView(sCov);
+
+                    LinearLayout sMeta = new LinearLayout(ctx);
+                    sMeta.setOrientation(LinearLayout.VERTICAL);
+                    sMeta.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+                    TextView stTv = new TextView(ctx);
+                    stTv.setText(sib.title != null && !sib.title.isEmpty() ? sib.title : "Untitled");
+                    stTv.setTextColor(Color.WHITE);
+                    stTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+                    stTv.setTypeface(Typeface.DEFAULT_BOLD);
+                    stTv.setMaxLines(2);
+                    stTv.setEllipsize(TextUtils.TruncateAt.END);
+                    sMeta.addView(stTv);
+
+                    TextView sbTv = new TextView(ctx);
+                    if (sPct >= 100) {
+                        sbTv.setText("✓ Done ›");
+                        sbTv.setTextColor(Color.parseColor("#34D399"));
+                    } else if (sPct > 0) {
+                        sbTv.setText(sPct + "% read ›");
+                        sbTv.setTextColor(Color.parseColor("#38BDF8"));
+                    } else if (isInQueue(ctx, sib.kfxPath)) {
+                        sbTv.setText("📌 Up Next ›");
+                        sbTv.setTextColor(Color.parseColor("#C084FC"));
+                    } else {
+                        int sYr = parseBookYear(sib.pubDate);
+                        sbTv.setText(sYr > 0 ? (sYr + " · View ›") : "View Details ›");
+                        sbTv.setTextColor(Color.parseColor("#94A3B8"));
+                    }
+                    sbTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+                    sbTv.setTypeface(Typeface.DEFAULT_BOLD);
+                    sbTv.setPadding(0, dp(ctx, 2), 0, 0);
+                    sMeta.addView(sbTv);
+                    sCard.addView(sMeta);
+
+                    sCard.setOnClickListener(v -> {
+                        if (detailDlgRef[0] != null) detailDlgRef[0].dismiss();
+                        showBookDetailDialog(ctx, sib, sPct, parentDialog, onMetadataEdited, onAuthorFilter);
+                    });
+                    sibRow.addView(sCard);
+                }
+                sibScroll.addView(sibRow);
+                box.addView(sibScroll);
+            }
+        }
+
         LinearLayout footerActionRow = new LinearLayout(ctx);
         footerActionRow.setOrientation(LinearLayout.HORIZONTAL);
         footerActionRow.setGravity(Gravity.CENTER_VERTICAL);
