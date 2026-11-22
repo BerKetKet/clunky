@@ -325,9 +325,11 @@ public final class FolioMetadataCatalogDialog {
         bulkBtnsRow.setGravity(Gravity.CENTER_VERTICAL);
 
         final TextView btnBulkShelf = makeBulkActionPill(ctx, "🏷 Shelf", "#312E81", "#C7D2FE", "#4F46E5");
+        final TextView btnBulkGenre = makeBulkActionPill(ctx, "+ Genre", "#152638", "#38BDF8", "#1E4E75");
         final TextView btnBulkFav = makeBulkActionPill(ctx, "★ Fav", "#3B2A14", "#FBBF24", "#784F1D");
-        final TextView btnBulkDone = makeBulkActionPill(ctx, "✓ Finished", "#123328", "#34D399", "#1E664E");
+        final TextView btnBulkDone = makeBulkActionPill(ctx, "✓ Done", "#123328", "#34D399", "#1E664E");
         bulkBtnsRow.addView(btnBulkShelf);
+        bulkBtnsRow.addView(btnBulkGenre);
         bulkBtnsRow.addView(btnBulkFav);
         bulkBtnsRow.addView(btnBulkDone);
         bulkBar.addView(bulkBtnsRow);
@@ -694,6 +696,26 @@ public final class FolioMetadataCatalogDialog {
                 return;
             }
             showBulkShelfPicker(ctx, new ArrayList<>(selectedPaths), () -> {
+                selectedPaths.clear();
+                updateBulkBarHeader.run();
+                loadFromDb(ctx, allBooks, genres);
+                progressMap.clear();
+                progressMap.putAll(loadProgressMap(ctx));
+                renderRef[0].run();
+            });
+        });
+
+        btnBulkGenre.setOnClickListener(v -> {
+            if (selectedPaths.isEmpty()) {
+                Toast.makeText(ctx, "Select at least one book first", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            List<FolioMetadataDb.BookRecord> selRecs = new ArrayList<>();
+            for (FolioMetadataDb.BookRecord r : allBooks) {
+                if (r.kfxPath != null && selectedPaths.contains(r.kfxPath)) selRecs.add(r);
+            }
+            if (selRecs.isEmpty()) return;
+            showBulkGenrePicker(ctx, selRecs, genres, () -> {
                 selectedPaths.clear();
                 updateBulkBarHeader.run();
                 loadFromDb(ctx, allBooks, genres);
@@ -2355,6 +2377,142 @@ public final class FolioMetadataCatalogDialog {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private static void showBulkGenrePicker(
+            final Context ctx,
+            final List<FolioMetadataDb.BookRecord> recs,
+            final List<String> existingGenres,
+            final Runnable onDone) {
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(ctx, 18), dp(ctx, 14), dp(ctx, 18), dp(ctx, 8));
+        box.setBackgroundColor(Color.parseColor("#11131A"));
+
+        TextView titleTv = new TextView(ctx);
+        titleTv.setText("🏷 Add Genre (" + recs.size() + (recs.size() == 1 ? " book)" : " books)"));
+        titleTv.setTextColor(Color.WHITE);
+        titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        titleTv.setTypeface(Typeface.DEFAULT_BOLD);
+        titleTv.setPadding(0, 0, 0, dp(ctx, 4));
+        box.addView(titleTv);
+
+        TextView subTv = new TextView(ctx);
+        subTv.setText("Merges cleanly with existing genres (duplicates skipped)");
+        subTv.setTextColor(Color.parseColor("#94A3B8"));
+        subTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        subTv.setPadding(0, 0, 0, dp(ctx, 10));
+        box.addView(subTv);
+
+        final AlertDialog[] dlgRef = new AlertDialog[1];
+
+        java.util.LinkedHashSet<String> choices = new java.util.LinkedHashSet<>();
+        if (existingGenres != null) {
+            for (String g : existingGenres) {
+                if (g != null && !g.trim().isEmpty() && !"All".equalsIgnoreCase(g.trim())) {
+                    choices.add(g.trim());
+                }
+            }
+        }
+        String[] defaults = new String[] { "Fiction", "History", "Philosophy", "Rome", "Biography", "Science Fiction", "Classics" };
+        for (String d : defaults) choices.add(d);
+
+        HorizontalScrollView hsv = new HorizontalScrollView(ctx);
+        hsv.setHorizontalScrollBarEnabled(false);
+        LinearLayout chipRow = new LinearLayout(ctx);
+        chipRow.setOrientation(LinearLayout.HORIZONTAL);
+        int shown = 0;
+        for (final String gName : choices) {
+            if (shown++ >= 14) break;
+            TextView pill = new TextView(ctx);
+            pill.setText("+ " + gName);
+            pill.setTextColor(Color.parseColor("#38BDF8"));
+            pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            pill.setTypeface(Typeface.DEFAULT_BOLD);
+            pill.setPadding(dp(ctx, 11), dp(ctx, 6), dp(ctx, 11), dp(ctx, 6));
+            GradientDrawable pBg = new GradientDrawable();
+            pBg.setColor(Color.parseColor("#152638"));
+            pBg.setCornerRadius(dp(ctx, 14));
+            pBg.setStroke(dp(ctx, 1), Color.parseColor("#1E4E75"));
+            pill.setBackground(pBg);
+            LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            pLp.setMargins(0, 0, dp(ctx, 6), 0);
+            pill.setLayoutParams(pLp);
+            pill.setOnClickListener(v -> {
+                int updated = applyBulkGenreMerge(ctx, recs, gName);
+                Toast.makeText(ctx, "Added \"" + gName + "\" to " + updated + (updated == 1 ? " book" : " books"), Toast.LENGTH_SHORT).show();
+                if (dlgRef[0] != null) dlgRef[0].dismiss();
+                onDone.run();
+            });
+            chipRow.addView(pill);
+        }
+        hsv.addView(chipRow);
+        LinearLayout.LayoutParams hsvLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        hsvLp.setMargins(0, 0, 0, dp(ctx, 12));
+        hsv.setLayoutParams(hsvLp);
+        box.addView(hsv);
+
+        final EditText customInput = new EditText(ctx);
+        customInput.setHint("Or type genre(s), comma-separated...");
+        customInput.setHintTextColor(Color.parseColor("#64748B"));
+        customInput.setTextColor(Color.WHITE);
+        customInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        customInput.setSingleLine(true);
+        box.addView(customInput);
+
+        dlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setView(box)
+                .setPositiveButton("Apply Genre", (d, w) -> {
+                    String val = customInput.getText().toString().trim();
+                    if (val.isEmpty()) return;
+                    int updated = applyBulkGenreMerge(ctx, recs, val);
+                    Toast.makeText(ctx, "Added \"" + val + "\" to " + updated + (updated == 1 ? " book" : " books"), Toast.LENGTH_SHORT).show();
+                    onDone.run();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private static int applyBulkGenreMerge(Context ctx, List<FolioMetadataDb.BookRecord> recs, String toAddCsv) {
+        if (recs == null || recs.isEmpty() || toAddCsv == null || toAddCsv.trim().isEmpty()) return 0;
+        List<String> incoming = new ArrayList<>();
+        for (String part : toAddCsv.split(",")) {
+            String p = part.trim();
+            if (!p.isEmpty()) incoming.add(p);
+        }
+        if (incoming.isEmpty()) return 0;
+        int count = 0;
+        FolioMetadataDb db = new FolioMetadataDb(ctx);
+        try {
+            android.database.sqlite.SQLiteDatabase wdb = db.getWritableDatabase();
+            for (FolioMetadataDb.BookRecord r : recs) {
+                java.util.LinkedHashMap<String, String> merged = new java.util.LinkedHashMap<>();
+                if (r.genres != null && !r.genres.trim().isEmpty()) {
+                    for (String ex : r.genres.split(",")) {
+                        String e = ex.trim();
+                        if (!e.isEmpty()) merged.put(e.toLowerCase(Locale.ROOT), e);
+                    }
+                }
+                for (String inc : incoming) {
+                    String k = inc.toLowerCase(Locale.ROOT);
+                    if (!merged.containsKey(k)) merged.put(k, inc);
+                }
+                StringBuilder sb = new StringBuilder();
+                for (String val : merged.values()) {
+                    if (sb.length() > 0) sb.append(", ");
+                    sb.append(val);
+                }
+                ContentValues cv = new ContentValues();
+                cv.put("genres", sb.toString());
+                wdb.update("books_metadata", cv, "id = ?", new String[] { String.valueOf(r.id) });
+                count++;
+            }
+        } finally {
+            db.close();
+        }
+        return count;
     }
 
     private static boolean matchesAuditFilter(FolioMetadataDb.BookRecord rec, String auditKey) {
