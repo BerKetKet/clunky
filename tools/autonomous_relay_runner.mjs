@@ -84,11 +84,14 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
       console.log(`[Monitor] Click result: ${clickRes}`);
 
       // Wait for file in ~/Downloads
-      const targetZip = path.join(DOWNLOAD_DIR, `${targetLabel}.zip`);
-      console.log(`[Monitor] Waiting for file: ${targetZip}...`);
-      for (let w = 0; w < 20; w++) {
+      console.log(`[Monitor] Waiting for file matching ${targetLabel}*.zip in ${DOWNLOAD_DIR}...`);
+      for (let w = 0; w < 25; w++) {
         await sleep(1000);
-        if (fs.existsSync(targetZip)) {
+        const matches = fs.readdirSync(DOWNLOAD_DIR)
+          .filter(f => f.startsWith(targetLabel) && f.endsWith('.zip'))
+          .sort((a, b) => fs.statSync(path.join(DOWNLOAD_DIR, b)).mtimeMs - fs.statSync(path.join(DOWNLOAD_DIR, a)).mtimeMs);
+        if (matches.length > 0) {
+          const targetZip = path.join(DOWNLOAD_DIR, matches[0]);
           console.log(`[Monitor] Downloaded ${targetZip} (${fs.statSync(targetZip).size} bytes)!`);
           const destZip = path.join(WORKDIR, `${targetLabel}.zip`);
           fs.copyFileSync(targetZip, destZip);

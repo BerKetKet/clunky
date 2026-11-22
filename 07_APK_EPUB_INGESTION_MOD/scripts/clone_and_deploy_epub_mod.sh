@@ -202,18 +202,21 @@ RELEASE_V22="${MOD_ROOT}/release/folio_v2.2_kfx"
 RELEASE_V23="${MOD_ROOT}/release/folio_v2.3_kfx"
 RELEASE_V24="${MOD_ROOT}/release/folio_v2.4_kfx"
 RELEASE_V25="${MOD_ROOT}/release/folio_v2.5_kfx"
-mkdir -p "${RELEASE_V22}" "${RELEASE_V23}" "${RELEASE_V24}" "${RELEASE_V25}"
+RELEASE_V26="${MOD_ROOT}/release/folio_v2.6_kfx"
+mkdir -p "${RELEASE_V22}" "${RELEASE_V23}" "${RELEASE_V24}" "${RELEASE_V25}" "${RELEASE_V26}"
 cp "${WORK_DIR}/signed_splits/base.apk" "${RELEASE_V22}/base.apk"
 cp "${WORK_DIR}/signed_splits/base.apk" "${RELEASE_V23}/base.apk"
 cp "${WORK_DIR}/signed_splits/base.apk" "${RELEASE_V24}/base.apk"
 cp "${WORK_DIR}/signed_splits/base.apk" "${RELEASE_V25}/base.apk"
+cp "${WORK_DIR}/signed_splits/base.apk" "${RELEASE_V26}/base.apk"
 if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
     cp "${WORK_DIR}/signed_splits/base.apk.idsig" "${RELEASE_V22}/base.apk.idsig"
     cp "${WORK_DIR}/signed_splits/base.apk.idsig" "${RELEASE_V23}/base.apk.idsig"
     cp "${WORK_DIR}/signed_splits/base.apk.idsig" "${RELEASE_V24}/base.apk.idsig"
     cp "${WORK_DIR}/signed_splits/base.apk.idsig" "${RELEASE_V25}/base.apk.idsig"
+    cp "${WORK_DIR}/signed_splits/base.apk.idsig" "${RELEASE_V26}/base.apk.idsig"
 fi
-echo "Staged Folio v2.5 in ${RELEASE_V25}/base.apk"
+echo "Staged Folio v2.6 in ${RELEASE_V26}/base.apk"
 
 for f in "${WORK_DIR}/orig_splits/"*.apk; do
     bn="$(basename "$f")"

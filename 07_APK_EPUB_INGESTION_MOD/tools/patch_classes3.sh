@@ -94,6 +94,42 @@ if ratarget in racontent:
     with open(reader_act_smali, "w", encoding="utf-8") as f:
         f.write(racontent)
     print("Successfully patched ReaderActivity.smali with CoverOverlayView.showForCurrentBookForced(p0)")
+
+import os
+more_smali = "${TMP_DIR}/com/amazon/kindle/setting/layout/MoreItemsFragment.smali"
+if os.path.exists(more_smali):
+    with open(more_smali, "r", encoding="utf-8") as f:
+        mcontent = f.read()
+    mtarget = """    invoke-interface {p1, p0}, Lsw/j;->c(Lsw/e;)V
+
+    return-object v0"""
+    mreplace = """    invoke-interface {p1, p0}, Lsw/j;->c(Lsw/e;)V
+
+    invoke-static {v0}, Lcom/amazon/kindle/epub/catalog/FolioMoreView;->wrap(Landroid/view/View;)Landroid/view/View;
+
+    move-result-object v0
+
+    return-object v0"""
+    if mtarget in mcontent:
+        mcontent = mcontent.replace(mtarget, mreplace, 1)
+        with open(more_smali, "w", encoding="utf-8") as f:
+            f.write(mcontent)
+        print("Successfully patched MoreItemsFragment.smali with FolioMoreView.wrap(v0)")
+    elif "FolioMoreView;->wrap" in mcontent:
+        print("MoreItemsFragment.smali already patched with FolioMoreView.wrap(v0)")
+    else:
+        print("WARNING: Target snippet not found in MoreItemsFragment.smali, trying fallback pattern")
+        if "return-object v0\n.end method" in mcontent:
+            mcontent = mcontent.replace("return-object v0\n.end method", "invoke-static {v0}, Lcom/amazon/kindle/epub/catalog/FolioMoreView;->wrap(Landroid/view/View;)Landroid/view/View;\n\n    move-result-object v0\n\n    return-object v0\n.end method", 1)
+            with open(more_smali, "w", encoding="utf-8") as f:
+                f.write(mcontent)
+            print("Successfully patched MoreItemsFragment.smali with FolioMoreView.wrap via fallback")
+        else:
+            print("ERROR: Could not patch MoreItemsFragment.smali", file=sys.stderr)
+            sys.exit(1)
+else:
+    print("ERROR: MoreItemsFragment.smali not found!", file=sys.stderr)
+    sys.exit(1)
 PYEOF
 
 echo "Reassembling patched classes3.dex..."

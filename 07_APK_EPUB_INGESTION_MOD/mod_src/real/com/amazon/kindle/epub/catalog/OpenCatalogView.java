@@ -981,7 +981,7 @@ public final class OpenCatalogView {
         }).start();
     }
 
-    private static void showBackupRestoreDialog(final Context ctx) {
+    public static void showBackupRestoreDialog(final Context ctx) {
         new AlertDialog.Builder(ctx)
                 .setTitle("Folio Library & Notes Backup")
                 .setMessage("Back up or restore your local Folio library metadata, reading progress, and highlights/notes (/sdcard/kindle/backups/).")

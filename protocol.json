@@ -1,16 +1,27 @@
 {
-  "round": 28,
+  "round": 29,
   "project": "folio_clunky",
   "sender": "antigravity",
   "receiver": "gemini",
+  "status": "completed",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report028.zip",
-  "status": "completed",
+  "reply_archive": "antig_to_gemini_neon_clunky_report029.zip",
   "max_reply_archive_mb": 15,
-  "tasks": [
-    "Task A: Fix severe prose image aspect-ratio vertical stretching ($271/$164) and audit paragraph vertical margins in pure-Rust libkfxconv.so (keep Round 026 native $270 cover container)",
-    "Task B: Multi-book on-device visual verification of undistorted chapter ornaments, mixed-aspect images, and default-spacing Contents (Folio v2.5)",
-    "Task C: Polish Library search branding ('Search Folio'), Home bottom scroll padding above mini-cover dock, and capture More tab audit"
-  ]
+  "deliverables": [
+    "Task A: Repurpose Folio More tab into a clean offline Folio Control Center (remove Sign In with Amazon / dead Amazon stubs; wire OPDS Catalogs, Scan Local Library, Backup & Restore, Settings, About Folio)",
+    "Task B: Audit & polish pure-Rust libkfxconv.so for polytonic Greek/non-Latin scripts, footnotes/superscripts, and nested lists/blockquotes (Folio v2.6)",
+    "Task C: Multi-book on-device visual QC of redesigned More tab, About Folio dialog, polytonic Greek rendering, and footnotes/lists/blockquotes"
+  ],
+  "verification": {
+    "screenshots": [
+      "screenshots/verify_r29_more_tab_clean.png",
+      "screenshots/verify_r29_about_folio_dialog.png",
+      "screenshots/verify_r29_greek_script_render.png",
+      "screenshots/verify_r29_footnotes_lists_blockquotes.png"
+    ],
+    "stock_kindle_status": "UNTOUCHED_READONLY",
+    "stock_kindle_version": "8.160.1.0(2.0.124621.0)",
+    "stock_kindle_update_time": "2026-11-19 21:59:23"
+  }
 }

@@ -95,3 +95,31 @@
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v2.3_kfx/base.apk` (131 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report026.zip` (5.2 MB)
      - Uploaded to Gemini Neon tab `837017938` with verified composer attachment chip.
+
+
+---
+
+# Round 029: Folio Control Center & libkfxconv.so Typography Polish (Folio v2.6)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.6 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 029 complete:
+  1. **Folio Control Center (Task A)**:
+     - Implemented `FolioMoreView.java` injecting a dark, native Control Center view into `MoreItemsFragment.onCreateView` (`classes3.dex`).
+     - Dead Amazon account rows, store stubs, and `"Sign In with Amazon"` prompt are 100% eliminated.
+     - Wired 5 offline feature cards: OPDS Catalogs, Scan Local Library (background thread scanning `/sdcard/epub/` and `/sdcard/kindle/` with live Toast), Backup & Restore, Settings (`SettingsActivity`), and About Folio dialog showing live library DB stats (8 indexed books) and cache size (16.6 MB).
+  2. **Pure-Rust Engine Polish (Task B)**:
+     - Added `unicode-normalization = "0.1"` for canonical NFC precomposition on all text spans in `kfx_converter`. Prevents decomposed Greek diacritics and non-Latin character rendering artifacts.
+     - Implemented native YellowJersey lists (`Block::List`), emitting `$159: $277` (`listitem`), `$100: list_style` (`numeric: 343` / `disc: 340`), `$551: $552` (`inside`), hanging indent styles (`style_list_item`), and prepended markers (`• ` or `1. `).
+     - Enhanced blockquote styling with `in_blockquote` nesting state, applying `style_blockquote` (`margin_left/right: 1.5em`, italic font).
+     - Expanded pop-up footnote detection (`#fn`, `#footnote`, `#note`, and `<sup>`).
+     - All 152 cargo unit tests passing cleanly. Cross-compiled release binary `kfx-conv` stripped to `07_APK_EPUB_INGESTION_MOD/lib/arm64-v8a/libkfxconv.so` (4.5 MB).
+  3. **Hardware Visual QC (Task C)**:
+     - `screenshots/verify_r29_more_tab_clean.png`: Dark Control Center with 5 cards and zero Amazon sign-in prompt.
+     - `screenshots/verify_r29_about_folio_dialog.png`: About Folio dialog showing Folio v2.6 KFX engine checklist, 8 indexed books, and 16.6 MB cache.
+     - `screenshots/verify_r29_greek_script_render.png`: Sophocles *The Greek Texts* (Ajax / ΑΙΑΣ) rendered in YellowJersey reader with crisp polytonic Greek glyphs (`Ἀεὶ μέν, ὦ παῖ Λαρτίου, δέδορκά σε`) and zero tofu.
+     - `screenshots/verify_r29_footnotes_lists_blockquotes.png`: Clean hanging indentation and typography of lists and blockquotes in `kindle_exam_v3.epub` on-device.
+  4. **Lead Architect Cover Architecture Directive**:
+     - Formally documented and passed to manager AI: "The approach to display the cover as part of the book is a mistake. The correct path is to just take the image and render it differently so you don't have the difficulty you are having with margins. When parsing the epub for the first time and converting it, remove the cover page and take the image for the cover. It is then processed separately and kept in its own class or whatever and inserted when displaying the book separately. Skip it for now."
+  5. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  6. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v2.6_kfx/base.apk` (131 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report029.zip` (< 15 MB)
