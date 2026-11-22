@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v8.3 KFX");
+        badgeTv.setText("Folio v8.4 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -115,6 +115,7 @@ public final class FolioMoreView {
         final TextView[] goalStatusRef = new TextView[1];
         final View[] goalFillRef = new View[1];
         final View[] goalTrackRef = new View[1];
+        final LinearLayout[] continueHostRef = new LinearLayout[1];
         final Runnable refreshStats = new Runnable() {
             @Override public void run() {
                 int[] s = readQuickStats(ctx);
@@ -123,6 +124,9 @@ public final class FolioMoreView {
                 if (statNums[2] != null) statNums[2].setText(String.valueOf(s[2]));
                 if (statNums[3] != null) statNums[3].setText(String.valueOf(s[3]));
                 updateGoalCard(ctx, s[2], goalStatusRef[0], goalFillRef[0], goalTrackRef[0]);
+                if (continueHostRef[0] != null) {
+                    populateContinueReadingStrip(ctx, d, continueHostRef[0], this);
+                }
             }
         };
 
@@ -238,6 +242,13 @@ public final class FolioMoreView {
             }
         });
         container.addView(goalCard);
+
+        // 1d. Continue Reading Quick-Resume Carousel (in-progress books with standalone cover thumbnails)
+        LinearLayout continueHost = new LinearLayout(ctx);
+        continueHost.setOrientation(LinearLayout.VERTICAL);
+        continueHostRef[0] = continueHost;
+        populateContinueReadingStrip(ctx, d, continueHost, refreshStats);
+        container.addView(continueHost);
 
         // 2. Action Cards
         // Card: Library Metadata & Genres
@@ -774,6 +785,238 @@ public final class FolioMoreView {
                 });
             }
         }).start();
+    }
+
+    private static void populateContinueReadingStrip(
+            final Context ctx, final float d, final LinearLayout host, final Runnable onCatalogDismiss) {
+        host.removeAllViews();
+        final java.util.Map<String, Integer> progMap =
+                com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.loadProgressMap(ctx);
+        if (progMap == null || progMap.isEmpty()) {
+            host.setVisibility(View.GONE);
+            return;
+        }
+
+        final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> all = new java.util.ArrayList<>();
+        com.amazon.kindle.epub.ingest.FolioMetadataDb mdb = new com.amazon.kindle.epub.ingest.FolioMetadataDb(ctx);
+        try {
+            all.addAll(mdb.getAllBooks());
+        } catch (Throwable ignored) {
+        } finally {
+            mdb.close();
+        }
+
+        final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> inProgress = new java.util.ArrayList<>();
+        for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : all) {
+            if (r.kfxPath == null || r.kfxPath.isEmpty()) continue;
+            Integer p = progMap.get(r.kfxPath);
+            if (p != null && p > 0 && p < 100) {
+                inProgress.add(r);
+            }
+        }
+
+        if (inProgress.isEmpty()) {
+            host.setVisibility(View.GONE);
+            return;
+        }
+        host.setVisibility(View.VISIBLE);
+
+        java.util.Collections.sort(inProgress, new java.util.Comparator<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord>() {
+            @Override
+            public int compare(com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord a,
+                               com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord b) {
+                int pa = progMap.containsKey(a.kfxPath) ? progMap.get(a.kfxPath) : 0;
+                int pb = progMap.containsKey(b.kfxPath) ? progMap.get(b.kfxPath) : 0;
+                int cmp = Integer.compare(pb, pa);
+                if (cmp != 0) return cmp;
+                String ta = a.title != null ? a.title : "";
+                String tb = b.title != null ? b.title : "";
+                return ta.compareToIgnoreCase(tb);
+            }
+        });
+
+        LinearLayout wrapper = new LinearLayout(ctx);
+        wrapper.setOrientation(LinearLayout.VERTICAL);
+        wrapper.setPadding(dp(d, 14), dp(d, 12), dp(d, 14), dp(d, 12));
+        GradientDrawable wBg = new GradientDrawable();
+        wBg.setColor(0xFF1A1F2E);
+        wBg.setCornerRadius(dp(d, 12));
+        wBg.setStroke(dp(d, 1), 0xFF2A3142);
+        wrapper.setBackground(wBg);
+        LinearLayout.LayoutParams wLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        wLp.bottomMargin = dp(d, 16);
+        wrapper.setLayoutParams(wLp);
+
+        LinearLayout hdr = new LinearLayout(ctx);
+        hdr.setOrientation(LinearLayout.HORIZONTAL);
+        hdr.setGravity(Gravity.CENTER_VERTICAL);
+        hdr.setPadding(0, 0, 0, dp(d, 10));
+
+        TextView hdrTitle = new TextView(ctx);
+        hdrTitle.setText("📖 Continue Reading");
+        hdrTitle.setTextColor(TEXT_PRIMARY);
+        hdrTitle.setTextSize(13);
+        hdrTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        hdrTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        hdr.addView(hdrTitle);
+
+        TextView seeAll = new TextView(ctx);
+        seeAll.setText("See All (" + inProgress.size() + ") ›");
+        seeAll.setTextColor(0xFF5EEAD4);
+        seeAll.setTextSize(12);
+        seeAll.setTypeface(Typeface.DEFAULT_BOLD);
+        seeAll.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Reading", onCatalogDismiss);
+            }
+        });
+        hdr.addView(seeAll);
+        wrapper.addView(hdr);
+
+        android.widget.HorizontalScrollView hsv = new android.widget.HorizontalScrollView(ctx);
+        hsv.setHorizontalScrollBarEnabled(false);
+        LinearLayout strip = new LinearLayout(ctx);
+        strip.setOrientation(LinearLayout.HORIZONTAL);
+
+        int limit = Math.min(inProgress.size(), 8);
+        for (int i = 0; i < limit; i++) {
+            final com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec = inProgress.get(i);
+            final int pct = progMap.containsKey(rec.kfxPath) ? progMap.get(rec.kfxPath) : 0;
+
+            LinearLayout card = new LinearLayout(ctx);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dp(d, 10), dp(d, 10), dp(d, 10), dp(d, 9));
+            GradientDrawable cBg = new GradientDrawable();
+            cBg.setColor(0xFF121620);
+            cBg.setCornerRadius(dp(d, 10));
+            cBg.setStroke(dp(d, 1), 0xFF273043);
+            card.setBackground(cBg);
+            LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
+                    dp(d, 186), ViewGroup.LayoutParams.WRAP_CONTENT);
+            if (i < limit - 1) cLp.rightMargin = dp(d, 10);
+            card.setLayoutParams(cLp);
+
+            LinearLayout topRow = new LinearLayout(ctx);
+            topRow.setOrientation(LinearLayout.HORIZONTAL);
+            topRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            // Dedicated standalone cover thumbnail (FIT_CENTER on dark matte)
+            android.widget.ImageView covIv = new android.widget.ImageView(ctx);
+            covIv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+            covIv.setBackgroundColor(0xFF0D1017);
+            LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(d, 38), dp(d, 54));
+            ivLp.rightMargin = dp(d, 9);
+            covIv.setLayoutParams(ivLp);
+            android.graphics.Bitmap bmp = decodeMiniCover(rec.kfxPath, dp(d, 48));
+            if (bmp != null) {
+                covIv.setImageBitmap(bmp);
+            } else {
+                covIv.setBackgroundColor(0xFF1F2636);
+            }
+            topRow.addView(covIv);
+
+            LinearLayout metaCol = new LinearLayout(ctx);
+            metaCol.setOrientation(LinearLayout.VERTICAL);
+            metaCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView tTv = new TextView(ctx);
+            tTv.setText(rec.title != null && !rec.title.isEmpty() ? rec.title : "Untitled");
+            tTv.setTextColor(TEXT_PRIMARY);
+            tTv.setTextSize(12);
+            tTv.setTypeface(Typeface.DEFAULT_BOLD);
+            tTv.setMinLines(2);
+            tTv.setMaxLines(2);
+            tTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            metaCol.addView(tTv);
+
+            String authorDisp = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(rec.author);
+            TextView aTv = new TextView(ctx);
+            aTv.setText(!authorDisp.isEmpty() ? authorDisp : "Unknown Author");
+            aTv.setTextColor(0xFF94A3B8);
+            aTv.setTextSize(10.5f);
+            aTv.setSingleLine(true);
+            aTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            aTv.setPadding(0, dp(d, 2), 0, dp(d, 2));
+            metaCol.addView(aTv);
+
+            TextView pTv = new TextView(ctx);
+            pTv.setText(pct + "% read · Resume ›");
+            pTv.setTextColor(ACCENT_TEAL);
+            pTv.setTextSize(10.5f);
+            pTv.setTypeface(Typeface.DEFAULT_BOLD);
+            pTv.setSingleLine(true);
+            metaCol.addView(pTv);
+
+            topRow.addView(metaCol);
+            card.addView(topRow);
+
+            // Sleek 3dp progress mini-bar
+            LinearLayout track = new LinearLayout(ctx);
+            track.setOrientation(LinearLayout.HORIZONTAL);
+            GradientDrawable trBg = new GradientDrawable();
+            trBg.setColor(0xFF232A3A);
+            trBg.setCornerRadius(dp(d, 2));
+            track.setBackground(trBg);
+            LinearLayout.LayoutParams trLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 3));
+            trLp.topMargin = dp(d, 8);
+            track.setLayoutParams(trLp);
+
+            float frac = Math.max(0.04f, Math.min(1f, pct / 100f));
+            View fill = new View(ctx);
+            GradientDrawable flBg = new GradientDrawable();
+            flBg.setColor(ACCENT_TEAL);
+            flBg.setCornerRadius(dp(d, 2));
+            fill.setBackground(flBg);
+            fill.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, frac));
+            track.addView(fill);
+
+            View rest = new View(ctx);
+            rest.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f - frac));
+            track.addView(rest);
+            card.addView(track);
+
+            card.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    File f = new File(rec.kfxPath);
+                    if (f.exists()) {
+                        com.amazon.kindle.epub.ingest.ExternalEpubActivity.launchKfxReader(ctx, f);
+                    } else {
+                        Toast.makeText(ctx, "Book file not found", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+
+            strip.addView(card);
+        }
+
+        hsv.addView(strip);
+        wrapper.addView(hsv);
+        host.addView(wrapper);
+    }
+
+    private static android.graphics.Bitmap decodeMiniCover(String kfxPath, int targetPx) {
+        if (kfxPath == null || kfxPath.isEmpty()) return null;
+        try {
+            File cov = new File(kfxPath + ".cover.jpg");
+            if (!cov.exists() || cov.length() < 64) return null;
+            android.graphics.BitmapFactory.Options opts = new android.graphics.BitmapFactory.Options();
+            opts.inJustDecodeBounds = true;
+            android.graphics.BitmapFactory.decodeFile(cov.getAbsolutePath(), opts);
+            int sample = 1;
+            int minDim = Math.min(opts.outWidth, opts.outHeight);
+            while (minDim / (sample * 2) >= Math.max(48, targetPx)) {
+                sample *= 2;
+            }
+            opts.inJustDecodeBounds = false;
+            opts.inSampleSize = sample;
+            return android.graphics.BitmapFactory.decodeFile(cov.getAbsolutePath(), opts);
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 
     private static void showManageShelvesDialog(final Context ctx) {
@@ -1570,7 +1813,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v8.3 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v8.4 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
