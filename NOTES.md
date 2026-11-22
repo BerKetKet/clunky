@@ -1,7 +1,37 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.9 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 032 complete:
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v3.0 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 033 complete:
+  1. **Complete HTML4/HTML5 Entity Decoding in `libkfxconv.so` (Task A)**:
+     - Pure-Rust entity decoder in `kfx_converter/src/epub/entities.rs`: Comprehensive compile-time lookup for all 2,125 standard W3C HTML5 named entities, plus decimal (`&#8594;`) and hexadecimal (`&#x2192;`) numeric character references. Linear pass `O(N)` with zero allocation when `&` is absent.
+     - Fixed literal `&rarr;` leak caught in Round 032 visual QC. Decodes `&rarr;` → `→`, `&times;` → `×`, `&plusmn;` → `±`, `&hellip;` → `…`, `&eacute;` → `é`, `&Omega;` → `Ω`, `&#8594;` → `→`, `&#x2192;` → `→` with zero raw entity leaks.
+     - Added unit tests in `src/epub/entities.rs` and `src/packager/tests.rs`; all 204 cargo tests pass.
+     - Cross-compiled stripped ARM64 `libkfxconv.so` (4.6 MB) and updated version badge in `FolioMoreView.java` to `Folio v3.0 KFX`.
+  2. **In-Book Full-Text Search & Bookmarks/Notebook QC (Task B)**:
+     - Executed live in-book search for `"Creon"` inside `Delphi Complete Works of Sophocles` in `KRIFDocViewer`. Returns **297 matching locations with rich snippets** under `BOOK (297)`. Tapping match jumps cleanly to `ANTIGONE` Location 509.
+     - Added bookmark at Location 509. Opened in-reader **Annotations / Notebook** view: saved bookmark with rich text snippet displays cleanly with **zero Whispersync error popups and zero crashes**.
+  3. **Visual Verification & Milestone Release Staging (Task C)**:
+     - 4 hardware proof screenshots captured on Samsung Galaxy M32 (`verify_r33_html_entities_decoded.png`, `verify_r33_in_book_search.png`, `verify_r33_bookmarks_notebook.png`, `verify_r33_about_v30.png`).
+     - Safety Invariant: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v3.0 KFX APK (131 MB) and stripped native library (4.6 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v3.0_kfx/`.
+  4. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page and take the image for the cover. It is then processed separately and kept in its own class and inserted when displaying the book separately."
+- **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
+- **Installed Packages**:
+  - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only, v8.160.1.0, `lastUpdateTime=2026-11-19 21:59:23`)
+  - Clone: `com.amazon.kindle.epub` ("Folio v3.0 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, full HTML4/HTML5 entity decoding, store-free library search, zero-hyphenation code blocks, proportional sup/sub, `$270` cover container, native table support, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, dynamic hardware metadata, KRIFDocViewer Enhanced Typesetting)
+
+## Verification Evidence (Round 033)
+1. `screenshots/verify_r33_html_entities_decoded.png`: Rendered KFX page proving `2H₂ + O₂ → 2H₂O` (real `→` arrow, zero literal `&rarr;`) plus decoded `&times;`, `&plusmn;`, `&hellip;`, `&mdash;`, `&eacute;`, `&Omega;`, and `&#x2192;`.
+2. `screenshots/verify_r33_in_book_search.png`: Live in-book search results for `"Creon"` inside Sophocles showing `BOOK (297)` with snippets and location markers.
+3. `screenshots/verify_r33_bookmarks_notebook.png`: Saved bookmark/highlight visible inside the in-reader Notebook view with zero sync error dialogs.
+4. `screenshots/verify_r33_about_v30.png`: Control Center **About Folio** dialog showing milestone `Version: 3.0 KFX (Enhanced Typesetting)`.
+5. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+6. `dumpsys package com.amazon.kindle.epub`: Folio v3.0 KFX deployed (`lastUpdateTime=2026-11-22 13:26:58`).
+
+---
+
+# Round 032: Zero-Hyphenation Code Blocks, Sup/Sub Polish & Store-Free Library Search (Folio v2.9)
   1. **Zero-Hyphenation Code Blocks & Proportional Sup/Sub (Task A)**:
      - Pure-Rust schema parity in `libkfxconv.so`: Emitted YellowJersey `$127: $349` (`hyphens: none`) on `style_pre` and `style_code`. Variable names, keywords, and long identifiers wrap cleanly on word boundaries with zero hyphens.
      - Polished `<sup>` and `<sub>` styling: Kept proportional `0.75em` (`$16`) and baseline styles (`$44: $370` super, `$44: $371` sub), and completely removed numeric baseline shift (`$31`). Fixed awkward line spacing and vertical line collisions.

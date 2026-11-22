@@ -1,23 +1,24 @@
 {
-  "round": 32,
+  "round": 33,
   "project": "folio_clunky",
   "sender": "antigravity",
   "receiver": "gemini",
   "status": "completed",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report032.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report033.zip",
   "max_reply_archive_mb": 15,
   "tasks": [
-    "Task A: Disable hyphenation inside <pre>/<code> blocks (hyphens: none) and polish <sup>/<sub> font-size & baseline-shift in pure-Rust libkfxconv.so",
-    "Task B: Suppress Amazon 'From the store' shelf in RubySearchActivity so 'Search Folio' shows only local library matches and opens directly into KRIFDocViewer",
-    "Task C: On-device visual QC screenshots and signed Folio v2.9 KFX release staging"
+    "Task A: Implement complete HTML4/HTML5 named & numeric entity decoding in pure-Rust libkfxconv.so (eliminating raw &rarr; leaks)",
+    "Task B: Audit & verify in-book full-text search and Bookmarks/Highlights Notebook inside KRIFDocViewer on local KFX books",
+    "Task C: On-device visual QC screenshots and milestone Folio v3.0 KFX release staging"
   ],
   "verification": {
-    "zero_hyphenation_and_sup_sub": "screenshots/verify_r32_code_no_hyphen_and_sup_sub.png",
-    "library_search_store_free": "screenshots/verify_r32_library_search_no_store.png",
-    "search_result_open_book": "screenshots/verify_r32_search_result_open_book.png",
+    "html_entities_decoded": "screenshots/verify_r33_html_entities_decoded.png",
+    "in_book_search": "screenshots/verify_r33_in_book_search.png",
+    "bookmarks_notebook": "screenshots/verify_r33_bookmarks_notebook.png",
+    "about_folio_v30": "screenshots/verify_r33_about_v30.png",
     "stock_kindle_last_update_time": "2026-11-19 21:59:23",
-    "folio_version_badge": "Folio v2.9 KFX"
+    "folio_version_badge": "Folio v3.0 KFX"
   }
 }
