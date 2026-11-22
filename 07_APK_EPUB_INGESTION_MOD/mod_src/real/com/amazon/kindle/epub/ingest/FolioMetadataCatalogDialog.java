@@ -174,18 +174,39 @@ public final class FolioMetadataCatalogDialog {
                 heading.setText("Library Metadata & Genres (" + allBooks.size() + ")");
                 btnSort.setText("Sort: " + SORT_MODES[sortIdx[0]]);
 
+                int readingCount = 0;
+                int finishedCount = 0;
+                for (FolioMetadataDb.BookRecord rec : allBooks) {
+                    int p = getProgress(progressMap, rec.kfxPath);
+                    if (p >= 100) finishedCount++;
+                    else if (p > 0) readingCount++;
+                }
+                List<String> chipList = new ArrayList<>();
+                chipList.add("All");
+                if (readingCount > 0) chipList.add("Reading");
+                if (finishedCount > 0) chipList.add("Finished");
+                for (String g : genres) {
+                    if (!"All".equalsIgnoreCase(g)) chipList.add(g);
+                }
+
                 chipRow.removeAllViews();
-                for (final String g : genres) {
+                for (final String g : chipList) {
                     boolean active = g.equalsIgnoreCase(selectedGenre[0]);
-                    int gCount = "All".equalsIgnoreCase(g) ? allBooks.size() : countBooksInGenre(allBooks, g);
+                    boolean isStatusChip = "Reading".equalsIgnoreCase(g) || "Finished".equalsIgnoreCase(g);
+                    int gCount;
+                    if ("All".equalsIgnoreCase(g)) gCount = allBooks.size();
+                    else if ("Reading".equalsIgnoreCase(g)) gCount = readingCount;
+                    else if ("Finished".equalsIgnoreCase(g)) gCount = finishedCount;
+                    else gCount = countBooksInGenre(allBooks, g);
+
                     TextView chip = new TextView(ctx);
                     chip.setText(g + " (" + gCount + ")");
                     chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                     chip.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-                    chip.setTextColor(Color.parseColor(active ? "#111827" : "#CBD5E1"));
+                    chip.setTextColor(Color.parseColor(active ? "#111827" : (isStatusChip ? "#5EEAD4" : "#CBD5E1")));
                     chip.setPadding(dp(ctx, 12), dp(ctx, 6), dp(ctx, 12), dp(ctx, 6));
                     GradientDrawable bg = new GradientDrawable();
-                    bg.setColor(Color.parseColor(active ? "#F59E0B" : "#1E2433"));
+                    bg.setColor(Color.parseColor(active ? (isStatusChip ? "#14B8A6" : "#F59E0B") : "#1E2433"));
                     bg.setCornerRadius(dp(ctx, 16));
                     chip.setBackground(bg);
                     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -202,7 +223,14 @@ public final class FolioMetadataCatalogDialog {
                 List<FolioMetadataDb.BookRecord> filtered = new ArrayList<>();
                 String q = queryText[0].trim().toLowerCase(Locale.ROOT);
                 for (FolioMetadataDb.BookRecord rec : allBooks) {
-                    if (!rec.hasGenre(selectedGenre[0])) continue;
+                    if ("Reading".equalsIgnoreCase(selectedGenre[0])) {
+                        int p = getProgress(progressMap, rec.kfxPath);
+                        if (p <= 0 || p >= 100) continue;
+                    } else if ("Finished".equalsIgnoreCase(selectedGenre[0])) {
+                        if (getProgress(progressMap, rec.kfxPath) < 100) continue;
+                    } else {
+                        if (!rec.hasGenre(selectedGenre[0])) continue;
+                    }
                     if (!q.isEmpty() && !matchesQuery(rec, q)) continue;
                     filtered.add(rec);
                 }

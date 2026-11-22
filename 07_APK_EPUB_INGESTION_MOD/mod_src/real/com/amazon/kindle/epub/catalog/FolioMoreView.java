@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v5.0 KFX");
+        badgeTv.setText("Folio v5.1 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -444,7 +444,9 @@ public final class FolioMoreView {
                         c.close();
                     }
                     try {
-                        Cursor cFin = db.rawQuery("SELECT COUNT(*) FROM KindleContent WHERE READ_STATE > 0", null);
+                        Cursor cFin = db.rawQuery(
+                                "SELECT COUNT(*) FROM KindleContent k LEFT JOIN UserContent u ON u.KEY = k.ID "
+                                + "WHERE UPPER(COALESCE(k.READ_STATE, '')) = 'READ' OR COALESCE(u.READING_PROGRESS, 0) >= 100", null);
                         if (cFin != null) {
                             if (cFin.moveToFirst()) booksFinished = cFin.getInt(0);
                             cFin.close();
@@ -453,7 +455,8 @@ public final class FolioMoreView {
                     try {
                         Cursor cProg = db.rawQuery(
                                 "SELECT COUNT(*) FROM UserContent u JOIN KindleContent k ON u.KEY = k.ID "
-                                + "WHERE u.READING_PROGRESS > 0 AND (k.READ_STATE IS NULL OR k.READ_STATE = 0)", null);
+                                + "WHERE COALESCE(u.READING_PROGRESS, 0) > 0 AND COALESCE(u.READING_PROGRESS, 0) < 100 "
+                                + "AND UPPER(COALESCE(k.READ_STATE, '')) != 'READ'", null);
                         if (cProg != null) {
                             if (cProg.moveToFirst()) booksInProgress = cProg.getInt(0);
                             cProg.close();
@@ -487,7 +490,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v5.0 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v5.1 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
