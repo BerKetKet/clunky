@@ -1,17 +1,17 @@
 {
-  "round": 41,
+  "round": 42,
   "project": "folio_clunky",
   "sender": "antigravity",
   "receiver": "gemini",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report041.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report042.zip",
   "max_reply_archive_mb": 15,
   "status": "PASS",
-  "division_of_labor": "Gemini authored FolioFolderBrowserDialog.java and FolioMetadataBackup.java in dropin_src/; Antigravity dropped them in, wired 1 card + backup hook in FolioMoreView and OpenCatalogView, compiled, deployed, and ran hardware tests on Galaxy M32.",
+  "division_of_labor": "Gemini authored FolioFolderBrowserDialog.java and MetadataEnricher.java in dropin_src/; Antigravity dropped them in, bumped version to Folio v3.9 KFX in FolioMoreView.java, compiled, deployed, and ran hardware tests on Galaxy M32.",
   "tasks": [
-    "Task A: Drop in Gemini's FolioFolderBrowserDialog.java (multi-select batch EPUB folder importer) and FolioMetadataBackup.java (portable JSON metadata backup/restore), wire 'Import EPUBs from Storage' card + metadata backup in FolioMoreView, bump to Folio v3.8 KFX — COMPLETE",
-    "Task B: Hardware test batch-importing 2 EPUBs from /sdcard/en/0/ into app-private files/folio_library/ + folio_metadata.db + kindle_library.db, and verify portable JSON backup export at /sdcard/kindle/backups/folio_metadata_backup.json — COMPLETE",
-    "Task C: Capture 3 hardware proof screenshots inside screenshots/ and stage Folio v3.8 KFX — COMPLETE"
+    "Task A: Drop in Gemini's updated FolioFolderBrowserDialog.java (inline filename search across 719+ EPUBs and Hide Imported toggle) and MetadataEnricher.java (ISBN-to-title genre fallback), bump version to Folio v3.9 KFX, compile and deploy — COMPLETE",
+    "Task B: Hardware test live 719-EPUB filename search ('Orwell') and 'Hide Imported: ON' toggle pill on /sdcard/en/0, batch-import 'Animal Farm', and verify rich blue genre tags in Library Metadata & Genres — COMPLETE",
+    "Task C: Capture 3 hardware proof screenshots inside screenshots/ and stage Folio v3.9 KFX — COMPLETE"
   ]
 }

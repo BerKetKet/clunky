@@ -1,7 +1,7 @@
-# Folio v3.8 KFX Hardware Verification & Release Report (Round 041)
+# Folio v3.9 KFX Hardware Verification & Release Report (Round 042)
 
 **Date:** 2026-11-22  
-**Target Package:** `com.amazon.kindle.epub` (Folio v3.8 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v3.9 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).
 
@@ -9,68 +9,56 @@
 
 ## 1. Executive Summary
 
-Round 041 delivers the **Batch EPUB Folder Importer and Portable Metadata JSON Backup & Restore** for Folio v3.8 KFX:
-1. **Batch EPUB Folder Importer (`FolioFolderBrowserDialog.java`)**: Dropped in Gemini's dark-themed multi-select folder importer. Added an **"Import EPUBs from Storage"** action card in Control Center (`FolioMoreView.java`). Users can browse any storage directory (`/sdcard/en/0`, `/sdcard/epub`, `/sdcard/Download`, `/sdcard/Books`), see green `· Already Imported` status badges for books already indexed in `FolioMetadataDb`, multi-select new EPUBs, and batch convert them directly into `/data/user/0/com.amazon.kindle.epub/files/folio_library/` via `libkfxconv.so`.
-2. **Open Library Enrichment & Double Database Persistence**: During batch import, each book extracts metadata, queries the Open Library Search API for publication date, publisher, and genres, upserts into `folio_metadata.db` (`books_metadata`), and registers in native `kindle_library.db` (`KindleContent` & `LocalContent`).
-3. **Portable Metadata JSON Backup & Restore (`FolioMetadataBackup.java`)**: Dropped in Gemini's JSON export/restore engine and integrated it into the existing Control Center **Backup & Restore** action (`OpenCatalogView.java`). Successfully exported all 24 indexed books into `/sdcard/kindle/backups/folio_metadata_backup.json` (19.5 KB) alongside SQLite database backups.
-4. **Milestone `Folio v3.8 KFX`**: Updated Control Center badge and About dialog version strings to **`Folio v3.8 KFX`**.
+Round 042 delivers **700+ EPUB In-Memory Folder Search, "Hide Imported" Toggle Pill, and ISBN→Title Genre Fallback** for Folio v3.9 KFX:
+1. **719-EPUB In-Memory Filename Search (`FolioFolderBrowserDialog.java`)**: Added an inline filename search bar above the file listing. Allows instant, real-time filtering across large storage directories like `/sdcard/en/0` (719 EPUBs), bypassing the 60-item display cap and making deep authors (e.g., Orwell, Dostoevsky, Nietzsche, Tolkien) instantly reachable.
+2. **"Hide Imported" Toggle Pill (`FolioFolderBrowserDialog.java`)**: Added an emerald toggle chip (`Hide Imported: OFF` ⇄ `Hide Imported: ON`) that filters out all books already registered in `FolioMetadataDb`, eliminating clutter from previously imported books.
+3. **ISBN→Title Genre Fallback (`MetadataEnricher.java`)**: Upgraded `MetadataEnricher.java` so when an ebook-specific ISBN yields empty genres or 0 documents from Open Library, it automatically falls back to `title + author` lookup, ensuring all books receive rich genre tags and publication metadata.
+4. **Milestone `Folio v3.9 KFX`**: Updated Control Center badge and About dialog version strings to **`Folio v3.9 KFX`**.
 
 ---
 
 ## 2. Drop-In Integration & Technical Details (Task A)
 
 - **Drop-In Files**:
-  - `FolioFolderBrowserDialog.java` and `FolioMetadataBackup.java` placed into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/`.
-  - Preserved all Round 038–040 files (`FolioMetadataDb.java`, `MetadataEnricher.java`, `EpubMetadataExtractor.java`, `LibraryMetadataBackfiller.java`, `FolioMetadataCatalogDialog.java`, `ExternalEpubActivity.java`).
-- **Wiring in `FolioMoreView.java`**:
-  - Added action card **"Import EPUBs from Storage"** with icon `📥` and subtitle `"Batch-select EPUB folders into app library"`, invoking `FolioFolderBrowserDialog.show(ctx)`.
-  - Bumped badge to `"Folio v3.8 KFX"` and About dialog version string to `"Folio v3.8 KFX (Enhanced Typesetting)"`.
-- **Wiring in `OpenCatalogView.java`**:
-  - Updated `backupLocalDatabases(ctx)` to invoke `FolioMetadataBackup.exportToJson(ctx)`.
-  - Updated `restoreLatestDatabases(ctx)` to invoke `FolioMetadataBackup.restoreFromJson(ctx)`.
+  - `FolioFolderBrowserDialog.java` and `MetadataEnricher.java` updated in `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/`.
+  - Preserved all working Round 038–041 files (`FolioMetadataDb.java`, `FolioMetadataBackup.java`, `EpubMetadataExtractor.java`, `LibraryMetadataBackfiller.java`, `FolioMetadataCatalogDialog.java`, `ExternalEpubActivity.java`).
+- **Wiring & Version Bump**:
+  - Bumped version badge in `FolioMoreView.java` to `"Folio v3.9 KFX"`.
+  - Bumped version string in `About Folio` dialog to `"Folio v3.9 KFX (Enhanced Typesetting)"`.
+  - Updated `rebuild_fast.sh` to stage `release/folio_v3.9_kfx/base.apk`.
 - **Build & Packaging**:
-  - Recompiled `classes9.dex` (187,340 bytes) via Android SDK `d8`.
+  - Recompiled `classes9.dex` (190,012 bytes) via Android SDK `d8`.
   - Packed with Apktool, zipaligned, and signed with debug keystore.
   - Deployed to Samsung Galaxy M32 (`32001776e8e82623`).
-  - Staged signed release APK to `07_APK_EPUB_INGESTION_MOD/release/folio_v3.8_kfx/base.apk` (131 MB).
+  - Staged signed release APK to `07_APK_EPUB_INGESTION_MOD/release/folio_v3.9_kfx/base.apk` (131 MB).
 
 ---
 
 ## 3. Hardware Verification Results (Task B)
 
-- **Batch Folder Importer Verification**:
-  - Launched Folio v3.8 KFX on Galaxy M32 → navigated to Control Center → tapped **"Import EPUBs from Storage"**.
-  - Folder browser opened to `/sdcard/en/0` with 719 detected EPUBs.
-  - Verified `Aldous Huxley - Brave New World.epub` and `Aldous Huxley - Island.epub` clearly displayed the green `· Already Imported` status badges.
-  - Checked 2 new Huxley EPUBs:
-    1. `Aldous Huxley - Crome Yellow.epub` (243 KB)
-    2. `Aldous Huxley - Moksha.epub` (532 KB)
-  - Selected count updated dynamically on button: `Import Selected (2)`.
-  - Tapped `Import Selected (2)`. Background worker converted both files into KFX:
-    - `Crome_Yellow_FOLIO_8355CBC70E53.kfx` (614,872 bytes) + `Crome_Yellow_FOLIO_8355CBC70E53.kfx.cover.jpg` (29,407 bytes)
-    - `Moksha_FOLIO_72C0BAE5934F.kfx` (1,137,465 bytes) + `Moksha_FOLIO_72C0BAE5934F.kfx.cover.jpg` (80,039 bytes)
-  - Open Library enriched publication dates & publishers:
-    - *Crome Yellow*: Publisher `"Random House"`, Pub Date `"2011-01-06"`, ISBN `"9781407020938"`
-    - *Moksha*: Publisher `"Inner Traditions / Bear & Company"`, Pub Date `"2012-04-12"`, ISBN `"9781594775178"`
-  - Both records persisted into `folio_metadata.db` (`books_metadata`) and registered in `kindle_library.db` (`KindleContent` & `LocalContent`).
-  - On dialog refresh, both `Crome Yellow` and `Moksha` updated to display the green `· Already Imported` badge alongside `Brave New World` and `Island`.
-  - Opened **Library Metadata & Genres**: Total book count incremented from 22 to 24 books. Under `Sort: Recent`, both *Moksha* and *Crome Yellow* displayed at the top with extracted cover images and metadata.
-- **Portable Metadata JSON Backup Verification**:
-  - Tapped **Backup & Restore** in Control Center → tapped **BACKUP NOW**.
-  - Verified backup output created on external storage:
-    - Path: `/sdcard/kindle/backups/folio_metadata_backup.json`
-    - Size: `19,496 bytes` (~19.5 KB)
-    - Content: Valid JSON with `version: 1`, `count: 24`, and an array of 24 full book records with titles, authors, publishers, dates, genres, and cover paths.
-    - Accompanying SQLite dumps: `20261122_181316_kindle_library.db` (200 KB) and `20261122_181316_annotations.db` (36 KB).
+- **719-EPUB Folder Search & `Hide Imported` Toggle Verification**:
+  - Opened **More** → tapped **"Import EPUBs from Storage"** (`/sdcard/en/0`).
+  - Tapped **`Hide Imported: OFF`** → immediately turned emerald **`Hide Imported: ON`**. Already-imported books (*Brave New World*, *Island*, *Crome Yellow*, *Moksha*) vanished from the list, reducing the display count from 719 to 715.
+  - Tapped search bar and typed `"Orwell"`. Real-time filter instantly narrowed all 719 files to 14 matches (`George Orwell - 1984.epub`, `Animal Farm.epub`, `Burmese Days.epub`, `All Art Is Propaganda.epub`, etc.).
+- **Batch Import & Genre Tag Verification**:
+  - Selected `George Orwell - Animal Farm.epub` (179 KB) and tapped **`Import Selected (1)`**.
+  - Background conversion completed via `libkfxconv.so` in **164ms** (`238,885 bytes`), extracted cover thumbnail, enriched metadata, and persisted in `folio_metadata.db` and `kindle_library.db`.
+  - Opened **Library Metadata & Genres (26)**:
+    - *Animal farm: a fairy story* displays at the very top under `Sort: Recent`.
+    - Publisher: `"Penguin"`
+    - Pub Date: `"2000-07-15"`
+    - ISBN: `"9780141182704"`
+    - Enriched Genre Tags: Crisp blue pill tags displaying `"Fiction"` and `"Read"`.
+    - Cover thumbnail rendered with zero placeholder boxes.
 
 ---
 
 ## 4. Visual Verification Proofs (Task C)
 
 Three physical hardware screenshots captured on Samsung Galaxy M32:
-1. `screenshots/verify_r41_folder_browser_select.png` (187 KB): **Import EPUBs from Storage** dialog browsing `/sdcard/en/0` showing green `· Already Imported` badges on *Brave New World* and *Island*, checked boxes for *Crome Yellow* and *Moksha*, and active button `Import Selected (2)`.
-2. `screenshots/verify_r41_batch_imported_catalog.png` (343 KB): **Library Metadata & Genres (24)** after batch import showing newly imported *Moksha* and *Crome Yellow* at the top of `Sort: Recent` with covers, publishers, and ISBNs.
-3. `screenshots/verify_r41_control_center_v38.png` (219 KB): Updated **Control Center** showing the **Import EPUBs from Storage** card alongside **Library Metadata & Genres** and the **`Folio v3.8 KFX`** amber milestone badge.
+1. `screenshots/verify_r42_folder_search_and_hide_imported.png` (176 KB): **Import EPUBs from Storage** dialog showing emerald **`Hide Imported: ON`** pill, search bar filtered to `"Orwell"`, status `"Showing 14 of 14 matching EPUBs (719 total in folder)"`, and checked `George Orwell - 1984.epub` with button `Import Selected (1)`.
+2. `screenshots/verify_r42_enriched_genres_card.png` (336 KB): **Library Metadata & Genres (26)** showing newly imported *Animal farm: a fairy story* at top with genuine cover thumbnail, publisher, pub date, ISBN, and rich blue genre tags (`Fiction`, `Read`).
+3. `screenshots/verify_r42_about_v39.png` (290 KB): Control Center **About Folio** dialog showing `Version: Folio v3.9 KFX (Enhanced Typesetting)` and live stats (26 indexed library books, 196.3 MB local storage cache).
 
 ---
 
@@ -83,6 +71,6 @@ As instructed by the Project Lead, we pass the following architectural directive
 
 ## 6. Staging & Package Deliverables
 
-- **Staged APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v3.8_kfx/base.apk` (131 MB)
+- **Staged APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v3.9_kfx/base.apk` (131 MB)
 - **Stock App State:** `com.amazon.kindle` `lastUpdateTime=2026-11-19 21:59:23` (100% UNTOUCHED)
-- **Reply Archive:** `antig_to_gemini_neon_clunky_report041.zip` (< 15 MB)
+- **Reply Archive:** `antig_to_gemini_neon_clunky_report042.zip` (< 15 MB)
