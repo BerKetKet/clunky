@@ -171,11 +171,23 @@ public final class OpenCatalogView {
         brand.setTypeface(Typeface.SERIF, Typeface.BOLD);
         headerRow.addView(brand, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
+        TextView importPill = makePill(ctx, d, "Import", BG_SURFACE, 0xFF34D399);
+        importPill.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                com.amazon.kindle.epub.ingest.FolioFolderBrowserDialog.show(ctx);
+            }
+        });
+        headerRow.addView(importPill);
+
+        View gap0 = new View(ctx);
+        headerRow.addView(gap0, new LinearLayout.LayoutParams(dp(d, 6), 1));
+
         TextView opdsPill = makePill(ctx, d, sources.size() > 1 ? "OPDS" : "+ OPDS", BG_SURFACE, TEXT_PRIMARY);
         headerRow.addView(opdsPill);
 
         View gap = new View(ctx);
-        headerRow.addView(gap, new LinearLayout.LayoutParams(dp(d, 8), 1));
+        headerRow.addView(gap, new LinearLayout.LayoutParams(dp(d, 6), 1));
 
         TextView backupPill = makePill(ctx, d, "Backup", BG_SURFACE, ACCENT_AMBER);
         headerRow.addView(backupPill);
@@ -1153,9 +1165,27 @@ public final class OpenCatalogView {
                         throw (lastErr != null) ? lastErr : new java.io.IOException("All download mirrors failed");
                     }
 
-                    final File kfxFile = new File(outDir, safeName + "_" + book.id + ".kfx");
+                    File appLibDir = new File(ctx.getFilesDir(), "folio_library");
+                    if (!appLibDir.exists()) appLibDir.mkdirs();
+                    final File kfxFile = new File(appLibDir, safeName + "_" + book.id + ".kfx");
                     boolean kfxOk = com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubFile, kfxFile);
                     if (kfxOk) {
+                        try {
+                            com.amazon.kindle.epub.ingest.EpubMetadataExtractor.BookMeta meta =
+                                    com.amazon.kindle.epub.ingest.EpubMetadataExtractor.extract(epubFile, epubFile.getName());
+                            if (book.title != null && !book.title.trim().isEmpty()) meta.title = book.title.trim();
+                            if (book.author != null && !book.author.trim().isEmpty()) meta.author = book.author.trim();
+                            com.amazon.kindle.epub.ingest.MetadataEnricher.enrichInPlace(meta);
+                            String bKey = com.amazon.kindle.epub.ingest.FolioMetadataDb.computeBookKey(meta.title, epubFile.length());
+                            File coverSidecar = new File(kfxFile.getAbsolutePath() + ".cover.jpg");
+                            com.amazon.kindle.epub.ingest.FolioMetadataDb mdb =
+                                    new com.amazon.kindle.epub.ingest.FolioMetadataDb(ctx);
+                            try {
+                                mdb.upsertBook(bKey, kfxFile, coverSidecar, epubFile.getName(), meta);
+                            } finally {
+                                mdb.close();
+                            }
+                        } catch (Throwable ignored) {}
                         registerDownloadedBook(ctx, book.title, book.author, kfxFile);
                     }
 
@@ -1202,7 +1232,7 @@ public final class OpenCatalogView {
                 db.execSQL(
                     "INSERT OR REPLACE INTO KindleContent (" +
                     "ID, STATE, ARCHIVABLE, HAS_READ_ALONG, TYPE, KEPT, CONTENT_TYPE, TITLE, AUTHOR, HAS_XRAY, DICTIONARY_TYPE, TITLE_ORDER, AUTHOR_ORDER, AUTHOR_ORDER_REVERSED, READ_STATE, READ_STATE_ORIGIN, HAS_LOADED_COVER, IS_HIDDEN, IS_HIDDEN_BY_USER" +
-                    ") VALUES (?, 'LOCAL', 0, 0, 'BT_EBOOK', 0, 'application/x-kfx-ebook', ?, ?, 0, 'NONE', -1, -1, -1, 'UNREAD', 'OTHER', 1, 0, 0)",
+                    ") VALUES (?, 'LOCAL', 0, 0, 'BT_EBOOK_PDOC', 0, 'application/x-kfx-ebook', ?, ?, 0, 'NONE', -1, -1, -1, 'UNREAD', 'OTHER', 1, 0, 0)",
                     new Object[]{key, title, author}
                 );
                 db.execSQL(
