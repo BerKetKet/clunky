@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v7.1 KFX");
+        badgeTv.setText("Folio v7.2 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -760,15 +760,49 @@ public final class FolioMoreView {
         box.setBackgroundColor(0xFF161922);
         box.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
-        TextView pathTv = new TextView(ctx);
+        LinearLayout topExportRow = new LinearLayout(ctx);
+        topExportRow.setOrientation(LinearLayout.HORIZONTAL);
+        topExportRow.setGravity(Gravity.CENTER_VERTICAL);
+        topExportRow.setPadding(0, 0, 0, dp(d, 10));
+
+        final TextView pathTv = new TextView(ctx);
         pathTv.setText(outFile != null
-                ? "Saved to: " + outFile.getAbsolutePath()
+                ? "Saved: " + outFile.getAbsolutePath()
                 : "Markdown preview ready");
         pathTv.setTextColor(0xFF34D399);
-        pathTv.setTextSize(12);
+        pathTv.setTextSize(11);
         pathTv.setTypeface(Typeface.DEFAULT_BOLD);
-        pathTv.setPadding(0, 0, 0, dp(d, 10));
-        box.addView(pathTv);
+        pathTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        topExportRow.addView(pathTv);
+
+        TextView csvBtn = new TextView(ctx);
+        csvBtn.setText("📊 Export CSV");
+        csvBtn.setTextColor(0xFFF59E0B);
+        csvBtn.setTextSize(11);
+        csvBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        csvBtn.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
+        GradientDrawable csvBg = new GradientDrawable();
+        csvBg.setColor(0xFF282216);
+        csvBg.setCornerRadius(dp(d, 10));
+        csvBg.setStroke(dp(d, 1), 0x66F59E0B);
+        csvBtn.setBackground(csvBg);
+        LinearLayout.LayoutParams csvLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        csvLp.leftMargin = dp(d, 8);
+        csvBtn.setLayoutParams(csvLp);
+        csvBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                File csvFile = com.amazon.kindle.epub.ingest.FolioMetadataBackup.exportLibraryCsv(ctx);
+                if (csvFile != null) {
+                    pathTv.setText("Saved CSV: " + csvFile.getAbsolutePath());
+                    Toast.makeText(ctx, "Exported CSV to " + csvFile.getName(), Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(ctx, "CSV export failed", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        topExportRow.addView(csvBtn);
+        box.addView(topExportRow);
 
         ScrollView sv = new ScrollView(ctx);
         sv.setLayoutParams(new LinearLayout.LayoutParams(
@@ -879,7 +913,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v7.1 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v7.2 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

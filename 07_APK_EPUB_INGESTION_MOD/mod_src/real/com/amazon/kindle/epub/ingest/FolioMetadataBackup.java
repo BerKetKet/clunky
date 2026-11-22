@@ -44,6 +44,9 @@ public final class FolioMetadataBackup {
             root.put("version", 2);
             root.put("exported_at", System.currentTimeMillis());
             root.put("count", all.size());
+            int goalTarget = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .getInt("reading_goal_target", 12);
+            root.put("reading_goal_target", goalTarget);
 
             JSONArray arr = new JSONArray();
             for (FolioMetadataDb.BookRecord r : all) {
@@ -107,6 +110,11 @@ public final class FolioMetadataBackup {
             }
 
             JSONObject root = new JSONObject(sb.toString());
+            int restoredGoal = root.optInt("reading_goal_target", 0);
+            if (restoredGoal > 0) {
+                ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                        .edit().putInt("reading_goal_target", restoredGoal).apply();
+            }
             JSONArray arr = root.optJSONArray("books");
             if (arr == null) return 0;
 
@@ -210,12 +218,20 @@ public final class FolioMetadataBackup {
                     .format(new java.util.Date());
             StringBuilder md = new StringBuilder();
             md.append("# Folio Reading Log (").append(dateStr).append(")\n\n");
+            int goalTarget = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .getInt("reading_goal_target", 12);
+            if (goalTarget <= 0) goalTarget = 12;
+            int goalPct = Math.min(100, Math.round((finished * 100f) / goalTarget));
+            int yrNow = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
             md.append("**Library:** ").append(all.size()).append(" books · ")
               .append(reading).append(" reading · ")
               .append(finished).append(" finished · ")
               .append(favs).append(" favorited · ")
               .append(rated).append(" rated · ")
-              .append(noted).append(" annotated\n\n");
+              .append(noted).append(" annotated\n");
+            md.append("**").append(yrNow).append(" Reading Goal:** ")
+              .append(finished).append(" / ").append(goalTarget)
+              .append(" books finished (").append(goalPct).append("%)\n\n");
 
             for (FolioMetadataDb.BookRecord r : all) {
                 boolean isFav = FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath);
@@ -279,6 +295,72 @@ public final class FolioMetadataBackup {
         } catch (Throwable t) {
             Log.e(TAG, "Reading log export failed", t);
             return null;
+        }
+    }
+
+    public static File getCsvFile(Context ctx) {
+        File extDir = new File(BACKUP_DIR);
+        if (extDir.exists() || extDir.mkdirs()) {
+            return new File(extDir, "folio_library.csv");
+        }
+        File fallback = new File(ctx.getFilesDir(), "backups");
+        if (!fallback.exists()) fallback.mkdirs();
+        return new File(fallback, "folio_library.csv");
+    }
+
+    private static String csvEsc(String v) {
+        if (v == null) return "";
+        String clean = v.replace("\r\n", " ").replace("\n", " ").trim();
+        if (clean.contains(",") || clean.contains("\"")) {
+            return "\"" + clean.replace("\"", "\"\"") + "\"";
+        }
+        return clean;
+    }
+
+    public static File exportLibraryCsv(Context ctx) {
+        FolioMetadataDb db = new FolioMetadataDb(ctx);
+        try {
+            List<FolioMetadataDb.BookRecord> all = db.getAllBooks();
+            java.util.Map<String, Integer> progMap = FolioMetadataCatalogDialog.loadProgressMap(ctx);
+            StringBuilder csv = new StringBuilder();
+            csv.append("Title,Author,Year,Publisher,ISBN,Status,Shelf,Rating,Favorite,Note\n");
+            for (FolioMetadataDb.BookRecord r : all) {
+                String cleanAuthor = FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
+                String yr = EpubMetadataExtractor.normalizePubDate(r.pubDate);
+                Integer pv = (r.kfxPath != null) ? progMap.get(r.kfxPath) : null;
+                int pct = pv != null ? pv : 0;
+                String status = pct >= 100 ? "Finished" : (pct > 0 ? pct + "%" : "Unread");
+                String shelf = FolioMetadataCatalogDialog.getShelf(ctx, r.kfxPath);
+                int rating = FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath);
+                boolean fav = FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath);
+                String note = FolioMetadataCatalogDialog.getNote(ctx, r.kfxPath);
+
+                csv.append(csvEsc(r.title)).append(",")
+                   .append(csvEsc(cleanAuthor)).append(",")
+                   .append(csvEsc(yr)).append(",")
+                   .append(csvEsc(r.publisher)).append(",")
+                   .append(csvEsc(r.isbn)).append(",")
+                   .append(csvEsc(status)).append(",")
+                   .append(csvEsc(shelf)).append(",")
+                   .append(rating > 0 ? rating : "").append(",")
+                   .append(fav ? "Yes" : "").append(",")
+                   .append(csvEsc(note)).append("\n");
+            }
+            File out = getCsvFile(ctx);
+            FileOutputStream fos = new FileOutputStream(out);
+            try {
+                fos.write(csv.toString().getBytes(StandardCharsets.UTF_8));
+                fos.flush();
+            } finally {
+                fos.close();
+            }
+            Log.i(TAG, "Exported CSV library (" + all.size() + " rows) to " + out.getAbsolutePath());
+            return out;
+        } catch (Throwable t) {
+            Log.e(TAG, "CSV export failed", t);
+            return null;
+        } finally {
+            db.close();
         }
     }
 }
