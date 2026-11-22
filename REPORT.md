@@ -1,45 +1,44 @@
-# Folio Milestone Release Report: Pass-3 Missing-Metadata Auto-Repair & Clean Author Formatting (Round 049)
+# Folio Milestone Release Report: Deduplicated Genre Display, Clean Chips & Live Reading Stats (Round 050)
 
 **Date:** 2026-11-22  
-**Target Package:** `com.amazon.kindle.epub` (Folio v4.5 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v5.0 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v4.5_kfx/base.apk` (131 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v5.0_kfx/base.apk` (131 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 049, Folio reached **Folio v4.5 KFX**. Gemini authored the drop-in updates for `LibraryMetadataBackfiller.java`, `FolioMetadataCatalogDialog.java`, and `FolioMoreView.java`. Antigravity integrated all drop-in files, resolved high-latency mobile TLS handshake aborts by adding cleartext HTTP fallback in `MetadataEnricher.java`, compiled Dalvik DEX (`classes9.dex`, 200,500 B), rebuilt, aligned, signed, and deployed the build to the Samsung Galaxy M32 hardware. Tapping `Sync & Enrich` successfully triggered Pass 3 metadata auto-repair across the local catalog, populating missing publication dates, ISBNs, and genres for *1984*, *Moksha*, and *Crome Yellow*, while cleanly formatting *Moby Dick*'s author byline as `"Herman Melville"`.
+In Round 050, Folio achieved its major milestone release: **Folio v5.0 KFX**. Gemini delivered pre-authored drop-in updates for `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`. Antigravity integrated both drop-ins (while strictly preserving Round 049's resilient HTTP fallback in `MetadataEnricher.java`), compiled `classes9.dex` (201,684 B), built, aligned, signed, and deployed the build to the Samsung Galaxy M32 hardware. Hardware verification confirmed clean literary Genre Chips at the top of the catalog, case-insensitive deduplicated Title-Cased genre tags on book cards, and live reading progress statistics (`0 in progress · 29 finished`) in the Control Center About Folio dialog.
 
 ---
 
-## 2. Integrated Features in Folio v4.5 KFX
+## 2. Integrated Features in Folio v5.0 KFX
 
-### A. Pass 3 Missing-Metadata Auto-Repair (`LibraryMetadataBackfiller.java`)
-- Pass 3 inspects existing indexed records in `folio_metadata.db` that lack genres or pub_date.
-- Invokes `MetadataEnricher.enrichInPlace()` via Open Library Search API with mobile network resiliency (HTTP fallback).
-- Updates `books_metadata` in-place and triggers catalog UI re-render and genre frequency re-ranking upon completion.
-- Successfully enriched:
-  - **1984**: `pub_date=2003`, `genres=Totalitarianism, Fiction, Totalitarianism -- Fiction, Dystopias, Textbooks for foreign speakers`, `isbn=0582777313`
-  - **Moksha**: `pub_date=2012-04-12`, `genres=Hallucinogenic drugs, Psychological aspects of Hallucinogenic drugs, Hallucinogenic drugs and religious experience, Collected works, Psychological aspects`, `isbn=9781594775178`
-  - **Crome Yellow**: `pub_date=2011-01-06`, `genres=Fiction, Intellectuals, Country homes, England, fiction, Fiction, humorous`, `isbn=9781407020938`
-  - **The Dream of the Red Chamber**: `pub_date=2011`, `genres=Chinese fiction, Translations into English, China, fiction, Fiction, Fiction`, `isbn=9780804840965`
-
-### B. Clean Natural-Name Author Formatting (`FolioMetadataCatalogDialog.java`)
-- `formatAuthorForDisplay()` parses last-name-first strings (e.g., `"Melville, Herman"`) into natural reading order (`"Herman Melville"`).
-- Preserves multi-author semicolons and prevents awkward catalogue inversions across metadata cards.
-- *Moby Dick* verified displaying `"Herman Melville · 2001-07-01"`.
-
-### C. Dynamic Genre Chip Re-Ranking
-- Top genre chips dynamically recalculate upon Pass 3 completion:
+### A. Clean Literary Genre Chips (`FolioMetadataCatalogDialog.java`)
+- `isCatalogMetaTag()` filters out bibliographic and catalog meta-tags (`early works`, `translations into`, `textbooks for`, `protected daisy`, `accessible book`, `in library`, etc.).
+- Frequency ranking surfaces high-signal literary categories across the local library:
   - `All (27)`
-  - `Fiction (7)` (elevated from 4 after backfill)
+  - `Fiction (7)`
   - `History (5)`
-  - `Early Works To 1800 (3)`
+  - `Rome (3)`
+  - `Biography (2)`
+
+### B. Case-Insensitive Deduplicated Title-Case Genres
+- `cleanGenresForDisplay()` parses raw metadata tags, eliminates compound `--` Library of Congress noise, deduplicates entries case-insensitively, and formats output in clean Title Case.
+- **The Dream of the Red Chamber**: Displays `Chinese Fiction, China, Fiction` (eliminating prior repetitive `fiction, Fiction, Fiction` clutter and meta-tags).
+- **Crome Yellow**: Displays `Fiction, Intellectuals, Country Homes, England, Humorous`.
+- **Moby Dick**: Displays `Sea Stories, Psychological Fiction, Adventure Stories, Ahab`.
+
+### C. Live Reading Progress Stats (`FolioMoreView.java`)
+- `showAboutDialog()` queries `kindle_library.db` for active reading state counts:
+  - `READ_STATE > 0` for finished books.
+  - `READING_PROGRESS > 0 AND READ_STATE = 0` for books currently in progress.
+- Renders `• Reading Progress: 0 in progress · 29 finished` directly in the About Folio dialog alongside library book counts and storage breakdowns.
 
 ### D. Version Bump & Telemetry
-- Bumped Control Center badge and About Folio dialog to **`Folio v4.5 KFX`**.
+- Bumped Control Center badge and About Folio dialog to **`Folio v5.0 KFX (Enhanced Typesetting)`**.
 
 ---
 
@@ -47,10 +46,9 @@ In Round 049, Folio reached **Folio v4.5 KFX**. Gemini authored the drop-in upda
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Pass 3 Metadata & Author Formatting** | Home → All Metadata › | `screenshots/verify_r49_pass3_enriched_all.png` | **PASS** — *Moby Dick* displays `"Herman Melville · 2001-07-01"`; *1984* displays `"George Orwell · 2003 · Houghton Mifflin Harcourt"`, ISBN `0582777313`, and enriched genres `Totalitarianism, Fiction, Dystopias...`; `Fiction (7)` chip reflects updated count. |
-| **Backfilled Moksha & Crome Yellow** | Home → All Metadata › (Scrolled) | `screenshots/verify_r49_moksha_crome_yellow.png` | **PASS** — *Moksha* displays `2012-04-12`, ISBN `9781594775178`, and Hallucinogenic drugs/Psychological aspects genres; *Crome Yellow* displays `2011-01-06`, ISBN `9781407020938`, and Fiction/Intellectuals/Country homes genres. |
-| **Folio v4.5 KFX Control Center & About** | More Tab → About Folio | `screenshots/verify_r49_about_v45.png` | **PASS** — Displays `Version: Folio v4.5 KFX (Enhanced Typesetting)`, 29 indexed books, 27 enriched records, and 13.3 MB App Library storage. |
-| **Stock Package Safety Invariant** | Android Package Manager | `lastUpdateTime=2026-11-19 21:59:23` | **PASS** — Stock `com.amazon.kindle` remains 100% untouched and pristine. |
+| **Deduplicated Genres & Clean Chips** | Home → All Metadata › | `screenshots/verify_r50_clean_genres_and_chips.png` | **PASS** — Top chips display clean literary taxonomy (`All (27)`, `Fiction (7)`, `History (5)`, `Rome (3)`, `Biography (2)` with zero meta-tags). *Crome Yellow* and *The Dream of the Red Chamber* cards display deduplicated Title-Cased genres without duplicate spam. |
+| **Folio v5.0 KFX About & Reading Stats** | More Tab → About Folio | `screenshots/verify_r50_about_v50_reading_stats.png` | **PASS** — About Folio displays `Version: Folio v5.0 KFX (Enhanced Typesetting)` and live `Reading Progress: 0 in progress · 29 finished` alongside storage statistics. |
+| **Stock Package Safety Invariant** | Android Package Manager | `lastUpdateTime=2026-11-19 21:59:23` | **PASS** — Stock `com.amazon.kindle` remains 100% untouched, intact, and read-only. |
 
 ---
 
@@ -63,11 +61,10 @@ As instructed by the Project Lead, the following architectural directive is reaf
 
 ## 5. Artifacts and Deliverables
 
-- `antig_to_gemini_neon_clunky_report049.zip`:
+- `antig_to_gemini_neon_clunky_report050.zip`:
   - `REPORT.md`
-  - `INSTRUCTIONS_ROUND_049.md`
+  - `INSTRUCTIONS_ROUND_050.md`
   - `protocol.json`
-  - `screenshots/verify_r49_pass3_enriched_all.png`
-  - `screenshots/verify_r49_moksha_crome_yellow.png`
-  - `screenshots/verify_r49_about_v45.png`
-- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.5_kfx/base.apk` (131 MB)
+  - `screenshots/verify_r50_clean_genres_and_chips.png`
+  - `screenshots/verify_r50_about_v50_reading_stats.png`
+- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v5.0_kfx/base.apk` (131 MB)

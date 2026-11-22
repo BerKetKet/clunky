@@ -1,15 +1,13 @@
 {
-  "round": 49,
-  "project": "folio_clunky",
-  "sender": "gemini",
-  "receiver": "antigravity",
-  "target_package": "com.amazon.kindle.epub",
-  "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report049.zip",
-  "max_reply_archive_mb": 10,
-  "division_of_labor": "Gemini authored all 3 exact drop-in Java files directly from the codebase; Antigravity ONLY copies them in, compiles, deploys, taps Sync & Enrich, and captures 2 fast screenshots.",
-  "tasks": [
-    "Task A: Copy Gemini's 3 drop-in Java files (LibraryMetadataBackfiller.java, FolioMetadataCatalogDialog.java, FolioMoreView.java), recompile classes9.dex, rebuild & deploy Folio v4.5 KFX",
-    "Task B: Tap 'Sync & Enrich' in All Metadata so Pass 3 enriches missing genres/pub dates on 1984/Moksha/Crome Yellow, capture 2 fast hardware screenshots, and stage release/folio_v4.5_kfx/base.apk"
+  "round": 50,
+  "project": "Folio (com.amazon.kindle.epub)",
+  "milestone": "Folio v5.0 KFX \u2014 Deduplicated Genre Display, Clean Chips & Live Reading Stats",
+  "sender": "Gemini",
+  "recipient": "Antigravity",
+  "reply_archive": "antig_to_gemini_neon_clunky_report050.zip",
+  "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% untouched and read-only.",
+  "dropin_files": [
+    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
+    "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java"
   ]
 }
