@@ -1,5 +1,6 @@
 package com.amazon.kindle.epub.ingest;
 
+import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -70,19 +71,41 @@ public final class MetadataEnricher {
                 }
             } catch (Throwable ignored) {}
         }
+
+        // Attempt 3: Fallback to title only if genres or pubDate still missing
+        if ((meta.genres.isEmpty() || EpubMetadataExtractor.isBlank(meta.pubDate))
+                && !EpubMetadataExtractor.isBlank(meta.title)) {
+            try {
+                String q = "title=" + URLEncoder.encode(meta.title.trim(), "UTF-8");
+                JSONObject doc = queryFirstDoc(q);
+                if (doc != null) {
+                    applyDoc(meta, doc);
+                }
+            } catch (Throwable ignored) {}
+        }
+
+        Log.i("FolioEnricher", "Enriched [" + meta.title + "] -> pubDate=" + meta.pubDate
+                + ", genres=" + meta.genres + ", openLibraryKey=" + meta.openLibraryKey);
     }
 
     private static JSONObject queryFirstDoc(String queryParams) {
+        String base = "&fields=key,title,author_name,first_publish_year,subject,publisher,isbn&limit=1";
+        // Try HTTPS first (quick 4s timeout)
+        JSONObject doc = fetchUrl("https://openlibrary.org/search.json?" + queryParams + base, 4000);
+        if (doc != null) return doc;
+        // Fallback to HTTP (5s timeout) if mobile TLS handshake fails/aborts
+        return fetchUrl("http://openlibrary.org/search.json?" + queryParams + base, 5000);
+    }
+
+    private static JSONObject fetchUrl(String urlStr, int timeoutMs) {
         HttpURLConnection conn = null;
         try {
-            String urlStr = "https://openlibrary.org/search.json?" + queryParams
-                    + "&fields=key,title,author_name,first_publish_year,subject,publisher,isbn&limit=1";
             URL url = new URL(urlStr);
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
-            conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
-            conn.setReadTimeout(READ_TIMEOUT_MS);
-            conn.setRequestProperty("User-Agent", "FolioReader/3.9 (Android; Local-First EPUB)");
+            conn.setConnectTimeout(timeoutMs);
+            conn.setReadTimeout(timeoutMs);
+            conn.setRequestProperty("User-Agent", "FolioReader/4.5 (Android; Local-First EPUB)");
             conn.setRequestProperty("Accept", "application/json");
 
             if (conn.getResponseCode() != 200) return null;
@@ -98,7 +121,7 @@ public final class MetadataEnricher {
             JSONArray docs = root.optJSONArray("docs");
             if (docs == null || docs.length() == 0) return null;
             return docs.getJSONObject(0);
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
             return null;
         } finally {
             if (conn != null) {

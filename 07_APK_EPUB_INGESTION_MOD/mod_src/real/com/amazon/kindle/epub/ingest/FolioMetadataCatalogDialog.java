@@ -420,7 +420,7 @@ public final class FolioMetadataCatalogDialog {
         title.setEllipsize(TextUtils.TruncateAt.END);
         col.addView(title);
 
-        StringBuilder byline = new StringBuilder(rec.author);
+        StringBuilder byline = new StringBuilder(formatAuthorForDisplay(rec.author));
         String cleanDate = EpubMetadataExtractor.normalizePubDate(rec.pubDate);
         if (!cleanDate.isEmpty()) byline.append(" · ").append(cleanDate);
         if (!rec.publisher.isEmpty()) byline.append(" · ").append(rec.publisher);
@@ -500,7 +500,7 @@ public final class FolioMetadataCatalogDialog {
         box.addView(title);
 
         TextView sub = new TextView(ctx);
-        sub.setText(rec.author);
+        sub.setText(formatAuthorForDisplay(rec.author));
         sub.setTextColor(Color.parseColor("#F59E0B"));
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         sub.setPadding(0, dp(ctx, 4), 0, dp(ctx, 10));
@@ -771,6 +771,20 @@ public final class FolioMetadataCatalogDialog {
             if (r.hasGenre(genre)) n++;
         }
         return n;
+    }
+
+    private static String formatAuthorForDisplay(String raw) {
+        if (raw == null) return "";
+        String a = raw.trim();
+        if (!a.contains(";") && a.contains(",")) {
+            String[] parts = a.split(",");
+            if (parts.length == 2 && !parts[0].trim().isEmpty() && !parts[1].trim().isEmpty()
+                    && parts[0].trim().split("\\s+").length <= 2
+                    && parts[1].trim().split("\\s+").length <= 2) {
+                return parts[1].trim() + " " + parts[0].trim();
+            }
+        }
+        return a;
     }
 
     private static int dp(Context ctx, int v) {

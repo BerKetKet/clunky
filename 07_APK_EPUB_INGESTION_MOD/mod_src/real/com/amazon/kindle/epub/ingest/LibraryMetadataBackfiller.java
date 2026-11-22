@@ -72,7 +72,17 @@ public final class LibraryMetadataBackfiller {
                         }
                     }
 
-                    int totalWork = todo.size() + missingCovers.size();
+                    // Pass 3: Collect existing records missing genres or pub_date
+                    List<FolioMetadataDb.BookRecord> missingMeta = new ArrayList<>();
+                    for (FolioMetadataDb.BookRecord r : existingRecords) {
+                        boolean noGenres = r.genres == null || r.genres.trim().isEmpty();
+                        boolean noDate = r.pubDate == null || r.pubDate.trim().isEmpty();
+                        if (noGenres || noDate) {
+                            missingMeta.add(r);
+                        }
+                    }
+
+                    int totalWork = todo.size() + missingCovers.size() + missingMeta.size();
                     int done = 0;
 
                     for (Candidate c : todo) {
@@ -114,6 +124,57 @@ public final class LibraryMetadataBackfiller {
                         if (repaired != null && repaired.exists() && repaired.length() > 512) {
                             ContentValues cv = new ContentValues();
                             cv.put("cover_path", repaired.getAbsolutePath());
+                            metaDb.getWritableDatabase().update(
+                                    "books_metadata", cv, "id = ?", new String[] { String.valueOf(r.id) });
+                            added++;
+                        }
+                    }
+
+                    for (FolioMetadataDb.BookRecord r : missingMeta) {
+                        done++;
+                        if (listener != null) {
+                            listener.onProgress(done, totalWork, r.title);
+                        }
+                        EpubMetadataExtractor.BookMeta meta = new EpubMetadataExtractor.BookMeta();
+                        meta.title = cleanTitleForLookup(r.title);
+                        meta.author = cleanAuthorForLookup(r.author, meta.title);
+                        meta.isbn = r.isbn != null ? r.isbn : "";
+                        meta.pubDate = r.pubDate != null ? r.pubDate : "";
+                        meta.publisher = r.publisher != null ? r.publisher : "";
+                        meta.openLibraryKey = r.openLibraryKey != null ? r.openLibraryKey : "";
+                        if (r.genres != null && !r.genres.trim().isEmpty()) {
+                            for (String g : r.genres.split(",")) {
+                                String c = g.trim();
+                                if (!c.isEmpty() && !EpubMetadataExtractor.isNoiseTag(c)) meta.genres.add(c);
+                            }
+                        }
+
+                        MetadataEnricher.enrichInPlace(meta);
+
+                        ContentValues cv = new ContentValues();
+                        boolean changed = false;
+                        if ((r.genres == null || r.genres.trim().isEmpty()) && !meta.genres.isEmpty()) {
+                            cv.put("genres", meta.genresCsv());
+                            changed = true;
+                        }
+                        if ((r.pubDate == null || r.pubDate.trim().isEmpty()) && !EpubMetadataExtractor.isBlank(meta.pubDate)) {
+                            cv.put("pub_date", EpubMetadataExtractor.normalizePubDate(meta.pubDate));
+                            changed = true;
+                        }
+                        if ((r.publisher == null || r.publisher.trim().isEmpty()) && !EpubMetadataExtractor.isBlank(meta.publisher)) {
+                            cv.put("publisher", meta.publisher);
+                            changed = true;
+                        }
+                        if ((r.isbn == null || r.isbn.trim().isEmpty()) && !EpubMetadataExtractor.isBlank(meta.isbn)) {
+                            cv.put("isbn", meta.isbn);
+                            changed = true;
+                        }
+                        if ((r.openLibraryKey == null || r.openLibraryKey.trim().isEmpty()) && !EpubMetadataExtractor.isBlank(meta.openLibraryKey)) {
+                            cv.put("open_library_key", meta.openLibraryKey);
+                            changed = true;
+                        }
+                        if (changed) {
+                            Log.i(TAG, "Pass 3 updated [" + r.title + "]: " + cv);
                             metaDb.getWritableDatabase().update(
                                     "books_metadata", cv, "id = ?", new String[] { String.valueOf(r.id) });
                             added++;
