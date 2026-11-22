@@ -54,6 +54,10 @@ public final class FolioMetadataCatalogDialog {
     private FolioMetadataCatalogDialog() {}
 
     public static void show(final Context ctx) {
+        show(ctx, "All");
+    }
+
+    public static void show(final Context ctx, final String initialFilter) {
         final Handler mainHandler = new Handler(Looper.getMainLooper());
         final List<FolioMetadataDb.BookRecord> allBooks = new ArrayList<>();
         final List<String> genres = new ArrayList<>();
@@ -185,7 +189,7 @@ public final class FolioMetadataCatalogDialog {
                 .setPositiveButton("Close", null)
                 .create();
 
-        final String[] selectedGenre = new String[] { "All" };
+        final String[] selectedGenre = new String[] { (initialFilter != null && !initialFilter.trim().isEmpty()) ? initialFilter.trim() : "All" };
         final String[] queryText = new String[] { "" };
         final int[] sortIdx = new int[] { 0 };
 

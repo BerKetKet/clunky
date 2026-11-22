@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v5.5 KFX");
+        badgeTv.setText("Folio v5.6 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -104,8 +104,37 @@ public final class FolioMoreView {
         subTv.setText("Offline Reader & Library Tools");
         subTv.setTextSize(13);
         subTv.setTextColor(TEXT_MUTED);
-        subTv.setPadding(0, 0, 0, dp(d, 22));
+        subTv.setPadding(0, 0, 0, dp(d, 14));
         container.addView(subTv);
+
+        // 1b. Live Reading Stats Strip (1-tap deep-links into Catalog filters)
+        int[] stats = readQuickStats(ctx);
+        LinearLayout statsRow = new LinearLayout(ctx);
+        statsRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams srLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        srLp.bottomMargin = dp(d, 16);
+        statsRow.setLayoutParams(srLp);
+
+        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[0]), "BOOKS", 0xFFF59E0B, true,
+                new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "All");
+                    }
+                }));
+        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[1]), "READING", 0xFF5EEAD4, true,
+                new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Reading");
+                    }
+                }));
+        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[2]), "FINISHED", 0xFF34D399, false,
+                new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Finished");
+                    }
+                }));
+        container.addView(statsRow);
 
         // 2. Action Cards
         // Card: Library Metadata & Genres
@@ -200,6 +229,73 @@ public final class FolioMoreView {
         ));
 
         return scroll;
+    }
+
+    private static int[] readQuickStats(Context ctx) {
+        int indexed = 0, reading = 0, finished = 0;
+        try {
+            File dbFile = new File(ctx.getApplicationInfo().dataDir, "databases/kindle_library.db");
+            if (dbFile.exists()) {
+                SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
+                try {
+                    Cursor c1 = db.rawQuery("SELECT COUNT(*) FROM KindleContent WHERE TITLE IS NOT NULL AND TITLE != ''", null);
+                    if (c1 != null) { if (c1.moveToFirst()) indexed = c1.getInt(0); c1.close(); }
+                    try {
+                        Cursor c2 = db.rawQuery(
+                                "SELECT COUNT(*) FROM UserContent u JOIN KindleContent k ON u.KEY = k.ID "
+                                + "WHERE COALESCE(u.READING_PROGRESS, 0) > 0 AND COALESCE(u.READING_PROGRESS, 0) < 100 "
+                                + "AND UPPER(COALESCE(k.READ_STATE, '')) != 'READ'", null);
+                        if (c2 != null) { if (c2.moveToFirst()) reading = c2.getInt(0); c2.close(); }
+                    } catch (Throwable ignored) {}
+                    try {
+                        Cursor c3 = db.rawQuery(
+                                "SELECT COUNT(*) FROM KindleContent k LEFT JOIN UserContent u ON u.KEY = k.ID "
+                                + "WHERE UPPER(COALESCE(k.READ_STATE, '')) = 'READ' OR COALESCE(u.READING_PROGRESS, 0) >= 100", null);
+                        if (c3 != null) { if (c3.moveToFirst()) finished = c3.getInt(0); c3.close(); }
+                    } catch (Throwable ignored) {}
+                } finally {
+                    db.close();
+                }
+            }
+        } catch (Throwable ignored) {}
+        return new int[] { indexed, reading, finished };
+    }
+
+    private static View makeStatTile(Context ctx, float d, String count, String label,
+                                     int accentColor, boolean addRightGap, View.OnClickListener listener) {
+        LinearLayout tile = new LinearLayout(ctx);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setGravity(Gravity.CENTER);
+        tile.setPadding(dp(d, 10), dp(d, 12), dp(d, 10), dp(d, 12));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF1A1F2E);
+        bg.setCornerRadius(dp(d, 12));
+        bg.setStroke(dp(d, 1), 0xFF2A3142);
+        tile.setBackground(bg);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        if (addRightGap) lp.rightMargin = dp(d, 10);
+        tile.setLayoutParams(lp);
+
+        TextView numTv = new TextView(ctx);
+        numTv.setText(count);
+        numTv.setTextSize(20);
+        numTv.setTextColor(accentColor);
+        numTv.setTypeface(Typeface.DEFAULT_BOLD);
+        numTv.setGravity(Gravity.CENTER);
+        tile.addView(numTv);
+
+        TextView lblTv = new TextView(ctx);
+        lblTv.setText(label);
+        lblTv.setTextSize(10);
+        lblTv.setTextColor(TEXT_MUTED);
+        lblTv.setTypeface(Typeface.DEFAULT_BOLD);
+        lblTv.setGravity(Gravity.CENTER);
+        lblTv.setPadding(0, dp(d, 2), 0, 0);
+        tile.addView(lblTv);
+
+        tile.setOnClickListener(listener);
+        return tile;
     }
 
     private static View makeActionCard(
@@ -490,7 +586,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v5.5 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v5.6 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
