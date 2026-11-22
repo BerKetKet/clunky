@@ -3,7 +3,6 @@ package com.amazon.kindle.epub.ingest;
 import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -14,7 +13,6 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -31,7 +29,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Set;
 
@@ -46,7 +46,7 @@ import java.util.Set;
  */
 public final class FolioMetadataCatalogDialog {
 
-    private static final String[] SORT_MODES = new String[] { "Recent", "Title", "Author", "Year" };
+    private static final String[] SORT_MODES = new String[] { "Recent", "Title", "Author", "Year", "Progress" };
 
     private FolioMetadataCatalogDialog() {}
 
@@ -55,6 +55,7 @@ public final class FolioMetadataCatalogDialog {
         final List<FolioMetadataDb.BookRecord> allBooks = new ArrayList<>();
         final List<String> genres = new ArrayList<>();
 
+        final Map<String, Integer> progressMap = loadProgressMap(ctx);
         loadFromDb(ctx, allBooks, genres);
 
         final LinearLayout root = new LinearLayout(ctx);
@@ -205,11 +206,11 @@ public final class FolioMetadataCatalogDialog {
                     filtered.add(rec);
                 }
 
-                sortBooks(filtered, sortIdx[0]);
+                sortBooks(filtered, sortIdx[0], progressMap);
 
                 cardsContainer.removeAllViews();
                 for (final FolioMetadataDb.BookRecord rec : filtered) {
-                    cardsContainer.addView(buildBookCard(ctx, rec, dialog, () -> {
+                    cardsContainer.addView(buildBookCard(ctx, rec, progressMap, dialog, () -> {
                         loadFromDb(ctx, allBooks, genres);
                         renderRef[0].run();
                     }));
@@ -272,7 +273,7 @@ public final class FolioMetadataCatalogDialog {
         dialog.show();
     }
 
-    private static void sortBooks(List<FolioMetadataDb.BookRecord> list, final int mode) {
+    private static void sortBooks(List<FolioMetadataDb.BookRecord> list, final int mode, final Map<String, Integer> progressMap) {
         Collections.sort(list, new Comparator<FolioMetadataDb.BookRecord>() {
             @Override
             public int compare(FolioMetadataDb.BookRecord a, FolioMetadataDb.BookRecord b) {
@@ -285,6 +286,11 @@ public final class FolioMetadataCatalogDialog {
                     int yb = parseYear(b.pubDate);
                     if (ya == yb) return safeLower(a.title).compareTo(safeLower(b.title));
                     return Integer.compare(ya, yb);
+                } else if (mode == 4) { // Progress (highest % first)
+                    int pa = getProgress(progressMap, a.kfxPath);
+                    int pb = getProgress(progressMap, b.kfxPath);
+                    if (pa != pb) return Integer.compare(pb, pa);
+                    return safeLower(a.title).compareTo(safeLower(b.title));
                 }
                 // Default 0: Recent (descending addedAt)
                 return Long.compare(b.addedAt, a.addedAt);
@@ -353,6 +359,7 @@ public final class FolioMetadataCatalogDialog {
     }
 
     private static View buildBookCard(final Context ctx, final FolioMetadataDb.BookRecord rec,
+                                      final Map<String, Integer> progressMap,
                                       final AlertDialog parentDialog, final Runnable onMetadataEdited) {
         LinearLayout card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.HORIZONTAL);
@@ -408,14 +415,26 @@ public final class FolioMetadataCatalogDialog {
         metaLine.setPadding(0, dp(ctx, 2), 0, dp(ctx, 4));
         col.addView(metaLine);
 
-        if (!rec.genres.isEmpty()) {
+        String displayGenres = cleanGenresForDisplay(rec.genres);
+        if (!displayGenres.isEmpty()) {
             TextView genresTv = new TextView(ctx);
-            genresTv.setText(rec.genres);
+            genresTv.setText(displayGenres);
             genresTv.setTextColor(Color.parseColor("#60A5FA"));
             genresTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             genresTv.setMaxLines(2);
             genresTv.setEllipsize(TextUtils.TruncateAt.END);
             col.addView(genresTv);
+        }
+
+        int pct = getProgress(progressMap, rec.kfxPath);
+        if (pct > 0) {
+            TextView progTv = new TextView(ctx);
+            progTv.setText(pct >= 100 ? "✓ Finished" : (pct + "% read"));
+            progTv.setTextColor(Color.parseColor(pct >= 100 ? "#34D399" : "#38BDF8"));
+            progTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            progTv.setTypeface(Typeface.DEFAULT_BOLD);
+            progTv.setPadding(0, dp(ctx, 3), 0, 0);
+            col.addView(progTv);
         }
 
         if (!rec.isbn.isEmpty()) {
@@ -476,8 +495,12 @@ public final class FolioMetadataCatalogDialog {
         if (!cleanDetailDate.isEmpty()) details.append("Published: ").append(cleanDetailDate).append("\n");
         if (!rec.publisher.isEmpty()) details.append("Publisher: ").append(rec.publisher).append("\n");
         if (!rec.isbn.isEmpty()) details.append("ISBN: ").append(rec.isbn).append("\n");
-        if (!rec.genres.isEmpty()) details.append("Genres: ").append(rec.genres).append("\n");
-        if (!rec.language.isEmpty()) details.append("Language: ").append(rec.language).append("\n");
+        String cleanDetGenres = cleanGenresForDisplay(rec.genres);
+        if (!cleanDetGenres.isEmpty()) details.append("Genres: ").append(cleanDetGenres).append("\n");
+        if (!rec.language.isEmpty() && !"und".equalsIgnoreCase(rec.language.trim())
+                && !"undetermined".equalsIgnoreCase(rec.language.trim())) {
+            details.append("Language: ").append(rec.language).append("\n");
+        }
         if (!rec.openLibraryKey.isEmpty()) details.append("Open Library: ").append(rec.openLibraryKey).append("\n");
 
         TextView metaTv = new TextView(ctx);
@@ -496,20 +519,22 @@ public final class FolioMetadataCatalogDialog {
             box.addView(descTv);
         }
 
+        final AlertDialog[] detailDlgRef = new AlertDialog[1];
+
         TextView removeBtn = new TextView(ctx);
-        removeBtn.setText("🗑 Remove from Folio Library");
-        removeBtn.setTextColor(Color.parseColor("#EF4444"));
+        removeBtn.setText("Remove from Folio Library");
+        removeBtn.setTextColor(Color.parseColor("#F87171"));
         removeBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         removeBtn.setTypeface(Typeface.DEFAULT_BOLD);
-        removeBtn.setPadding(0, dp(ctx, 16), 0, dp(ctx, 4));
+        removeBtn.setPadding(0, dp(ctx, 14), 0, dp(ctx, 4));
         removeBtn.setOnClickListener(v -> {
             new AlertDialog.Builder(ctx)
-                    .setTitle("Remove from Library?")
-                    .setMessage("Remove \"" + rec.title + "\" from Folio Library?\n\nOriginal files on storage will not be deleted.")
-                    .setPositiveButton("Remove", (diag, which) -> {
+                    .setTitle("Remove Book")
+                    .setMessage("Remove \"" + rec.title + "\" from Folio Library?\n\nOriginal EPUB files on external storage are never deleted.")
+                    .setPositiveButton("Remove", (cd, cw) -> {
                         removeBookFromLibrary(ctx, rec);
-                        Toast.makeText(ctx, "Removed \"" + rec.title + "\" from Folio", Toast.LENGTH_SHORT).show();
-                        if (parentDialog != null) parentDialog.dismiss();
+                        if (detailDlgRef[0] != null) detailDlgRef[0].dismiss();
+                        Toast.makeText(ctx, "Removed \"" + rec.title + "\" from library", Toast.LENGTH_SHORT).show();
                         if (onMetadataEdited != null) onMetadataEdited.run();
                     })
                     .setNegativeButton("Cancel", null)
@@ -520,7 +545,7 @@ public final class FolioMetadataCatalogDialog {
         ScrollView detailSv = new ScrollView(ctx);
         detailSv.addView(box);
 
-        new AlertDialog.Builder(ctx)
+        detailDlgRef[0] = new AlertDialog.Builder(ctx)
                 .setView(detailSv)
                 .setPositiveButton("Read Now", (d, w) -> {
                     File f = new File(rec.kfxPath);
@@ -606,48 +631,122 @@ public final class FolioMetadataCatalogDialog {
         return et;
     }
 
-    private static void removeBookFromLibrary(final Context ctx, final FolioMetadataDb.BookRecord rec) {
+    private static void removeBookFromLibrary(Context ctx, FolioMetadataDb.BookRecord rec) {
+        FolioMetadataDb mdb = new FolioMetadataDb(ctx);
         try {
-            FolioMetadataDb db = new FolioMetadataDb(ctx);
-            try {
-                db.getWritableDatabase().delete("books_metadata", "id = ?", new String[] { String.valueOf(rec.id) });
-            } finally {
-                db.close();
-            }
-        } catch (Throwable t) {
-            Log.e("FolioCatalog", "Failed to delete from folio_metadata.db", t);
+            mdb.getWritableDatabase().delete("books_metadata", "id = ?",
+                    new String[] { String.valueOf(rec.id) });
+        } catch (Throwable ignored) {
+        } finally {
+            mdb.close();
         }
 
         try {
-            File klDbFile = new File("/data/data/com.amazon.kindle.epub/databases/kindle_library.db");
-            if (klDbFile.exists()) {
-                SQLiteDatabase kldb = SQLiteDatabase.openDatabase(klDbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+            File kdbFile = ctx.getDatabasePath("kindle_library.db");
+            if (kdbFile != null && kdbFile.exists() && rec.kfxPath != null && !rec.kfxPath.isEmpty()) {
+                android.database.sqlite.SQLiteDatabase kdb =
+                        android.database.sqlite.SQLiteDatabase.openDatabase(
+                                kdbFile.getAbsolutePath(), null,
+                                android.database.sqlite.SQLiteDatabase.OPEN_READWRITE);
                 try {
-                    if (rec.kfxPath != null && !rec.kfxPath.isEmpty()) {
-                        kldb.delete("LocalContent", "FILE_PATH = ?", new String[] { rec.kfxPath });
+                    android.database.Cursor c = kdb.rawQuery(
+                            "SELECT KEY FROM LocalContent WHERE FILE_PATH = ?",
+                            new String[] { rec.kfxPath });
+                    List<String> keys = new ArrayList<>();
+                    if (c != null) {
+                        while (c.moveToNext()) keys.add(c.getString(0));
+                        c.close();
                     }
-                    if (rec.bookKey != null && !rec.bookKey.isEmpty()) {
-                        kldb.delete("KindleContent", "KEY = ? OR CONTENT_ID = ?", new String[] { rec.bookKey, rec.bookKey });
-                        kldb.delete("UserContent", "KEY = ?", new String[] { rec.bookKey });
+                    kdb.beginTransaction();
+                    try {
+                        kdb.delete("LocalContent", "FILE_PATH = ?", new String[] { rec.kfxPath });
+                        for (String key : keys) {
+                            kdb.delete("KindleContent", "ID = ?", new String[] { key });
+                            kdb.delete("UserContent", "KEY = ?", new String[] { key });
+                        }
+                        kdb.setTransactionSuccessful();
+                    } finally {
+                        kdb.endTransaction();
                     }
                 } finally {
-                    kldb.close();
+                    kdb.close();
                 }
             }
-        } catch (Throwable t) {
-            Log.e("FolioCatalog", "Failed to delete from kindle_library.db", t);
-        }
+        } catch (Throwable ignored) {}
 
         try {
-            if (rec.kfxPath != null && rec.kfxPath.contains("files/folio_library")) {
-                File kfxFile = new File(rec.kfxPath);
-                if (kfxFile.exists()) kfxFile.delete();
-            }
-            if (rec.coverPath != null && rec.coverPath.contains("files/folio_covers")) {
-                File coverFile = new File(rec.coverPath);
-                if (coverFile.exists()) coverFile.delete();
+            File appLib = new File(ctx.getFilesDir(), "folio_library").getCanonicalFile();
+            if (rec.kfxPath != null && !rec.kfxPath.isEmpty()) {
+                File kfx = new File(rec.kfxPath).getCanonicalFile();
+                if (kfx.getPath().startsWith(appLib.getPath())) {
+                    kfx.delete();
+                    File cov = new File(kfx.getAbsolutePath() + ".cover.jpg");
+                    if (cov.exists()) cov.delete();
+                    String sdrPath = kfx.getAbsolutePath().replaceAll("\\.kfx$", ".sdr");
+                    File sdr = new File(sdrPath);
+                    if (sdr.exists() && sdr.isDirectory()) {
+                        File[] kids = sdr.listFiles();
+                        if (kids != null) {
+                            for (File kf : kids) kf.delete();
+                        }
+                        sdr.delete();
+                    }
+                }
             }
         } catch (Throwable ignored) {}
+    }
+
+    private static Map<String, Integer> loadProgressMap(Context ctx) {
+        Map<String, Integer> map = new HashMap<>();
+        try {
+            File kdbFile = ctx.getDatabasePath("kindle_library.db");
+            if (kdbFile == null || !kdbFile.exists()) return map;
+            android.database.sqlite.SQLiteDatabase kdb =
+                    android.database.sqlite.SQLiteDatabase.openDatabase(
+                            kdbFile.getAbsolutePath(), null,
+                            android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
+            android.database.Cursor c = null;
+            try {
+                c = kdb.rawQuery(
+                        "SELECT l.FILE_PATH, COALESCE(u.READING_PROGRESS, 0), COALESCE(k.READ_STATE, 'UNREAD') "
+                        + "FROM LocalContent l "
+                        + "LEFT JOIN UserContent u ON u.KEY = l.KEY "
+                        + "LEFT JOIN KindleContent k ON k.ID = l.KEY "
+                        + "WHERE l.FILE_PATH IS NOT NULL", null);
+                while (c.moveToNext()) {
+                    String path = c.getString(0);
+                    int prog = c.getInt(1);
+                    String state = c.getString(2);
+                    if ("READ".equalsIgnoreCase(state)) prog = 100;
+                    if (path != null && prog > 0) {
+                        map.put(path, Math.min(100, prog));
+                    }
+                }
+            } finally {
+                if (c != null) c.close();
+                kdb.close();
+            }
+        } catch (Throwable ignored) {}
+        return map;
+    }
+
+    private static int getProgress(Map<String, Integer> map, String kfxPath) {
+        if (map == null || kfxPath == null) return 0;
+        Integer v = map.get(kfxPath);
+        return v != null ? v : 0;
+    }
+
+    private static String cleanGenresForDisplay(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (String part : raw.split(",")) {
+            String c = part.trim();
+            if (!c.isEmpty() && !EpubMetadataExtractor.isNoiseTag(c)) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     private static int dp(Context ctx, int v) {
