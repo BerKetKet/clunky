@@ -36,9 +36,11 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
 
     const evalScript = `(() => {
       const isGenerating = !!document.querySelector('button[aria-label*="Stop" i]');
+      const scroller = document.querySelector('infinite-scroller.chat-history');
+      if (scroller) scroller.scrollTop = scroller.scrollHeight;
       
-      // Look for any button or link matching target round
-      const candidates = Array.from(document.querySelectorAll('button, a')).map(b => ({
+      // Look for any button, a, or chip matching target round
+      const candidates = Array.from(document.querySelectorAll('button, a, div.chip-lr, [aria-label*="round_${roundTag}" i]')).map(b => ({
         aria: b.getAttribute('aria-label') || '',
         text: b.innerText || ''
       }));
@@ -46,7 +48,8 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
       const hasTarget = candidates.some(c => 
         (c.aria && c.aria.toLowerCase().includes("${targetLabel}".toLowerCase())) ||
         (c.text && c.text.toLowerCase().includes("${targetLabel}".toLowerCase())) ||
-        (c.aria && c.aria.toLowerCase().includes("round_${roundTag}".toLowerCase()))
+        (c.aria && c.aria.toLowerCase().includes("round_${roundTag}".toLowerCase())) ||
+        (c.text && c.text.toLowerCase().includes("round_${roundTag}".toLowerCase()))
       );
       
       const msgEls = document.querySelectorAll('message-content, model-response, .model-response-text');
@@ -67,15 +70,18 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
     if (state.hasTarget) {
       console.log(`\n[Monitor @ ${elapsedSec}s] Found target ${targetLabel}! Triggering download...`);
       const clickScript = `(() => {
-        const btn = Array.from(document.querySelectorAll('button, a')).find(b => {
+        let el = Array.from(document.querySelectorAll('button, a, div.chip-lr, [aria-label*="round_${roundTag}" i]')).find(b => {
           const aria = b.getAttribute('aria-label') || '';
           const text = b.innerText || '';
           return aria.toLowerCase().includes("${targetLabel}".toLowerCase()) ||
                  text.toLowerCase().includes("${targetLabel}".toLowerCase()) ||
-                 aria.toLowerCase().includes("round_${roundTag}".toLowerCase());
+                 aria.toLowerCase().includes("round_${roundTag}".toLowerCase()) ||
+                 text.toLowerCase().includes("round_${roundTag}".toLowerCase());
         });
-        if (btn) {
-          btn.click();
+        if (el) {
+          const innerBtn = el.tagName === 'BUTTON' ? el : el.querySelector('button');
+          const target = innerBtn || el;
+          target.click();
           return 'clicked';
         }
         return 'not_found';
