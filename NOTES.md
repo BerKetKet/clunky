@@ -298,3 +298,25 @@
   6. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v2.6_kfx/base.apk` (131 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report029.zip` (< 15 MB)
+
+
+---
+
+# Round 044: Milestone Folio v4.0 KFX Polish
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v4.0 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 044 complete:
+  1. **Drop-in Source Integration (Task A)**:
+     - Integrated `EpubMetadataExtractor.java`, `FolioMetadataCatalogDialog.java`, and `FolioMoreView.java` from `dropin_src/`.
+     - `normalizePubDate()`: Strips raw ISO timestamps (`2000-07-15 00:00:00+01:00` → `2000-07-15`) dynamically across list cards and Book Details popups.
+     - `isNoiseTag()`: Strips Calibre reading status tags (`Read`, `Unread`, `To Read`, `Ebook`, `Calibre`, `General`) from EPUB extraction and genre chips bar.
+     - Upgraded **About Folio** with live file-tree measurements (App Library Storage: 11.1 MB, Legacy `/sdcard/kindle`: 203.0 MB, Temp Open-Once Cache: 1.3 MB) and one-tap `CLEAR TEMP CACHE` button.
+     - Built `classes9.dex` (191,888 B), rebuilt APK with apktool, signed, and deployed to Galaxy M32.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.0_kfx/base.apk` (131 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `screenshots/verify_r44_clean_dates_and_genres.png`: Proves *Animal Farm* shows clean `2000-07-15` date without timestamp, and `"Read"` is cleanly absent from the genre filter chips bar.
+     - `screenshots/verify_r44_about_v40_storage_and_clear_cache.png`: Proves About Folio shows `Folio v4.0 KFX`, live App Library Storage (11.1 MB), Temp Cache (1.3 MB), and the new `CLEAR TEMP CACHE` button.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.0_kfx/base.apk` (131 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report044.zip` (< 1.5 MB)

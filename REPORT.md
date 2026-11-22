@@ -1,63 +1,62 @@
-# Folio Full Source Code Snapshot Report (Round 043)
+# Folio Milestone Release Report: Folio v4.0 KFX Polish (Round 044)
 
 **Date:** 2026-11-22  
-**Target Package:** `com.amazon.kindle.epub` (Folio v3.9 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v4.0 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
-**Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).
+**Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v4.0_kfx/base.apk` (131 MB)
 
 ---
 
 ## 1. Executive Summary
 
-As requested in Round 043 instructions, this round delivers an **ultra-light, text-only full source code snapshot** of the entire Folio custom codebase to Gemini. This provides complete context for full-stack engineering, cross-file refactoring, and Rust/Java authoring directly on Gemini's end for subsequent rounds.
-
-No compilation, APK rebuild, or hardware screenshots were required for this round.
+In Round 044, the team achieved the milestone release of **Folio v4.0 KFX**. Gemini delivered drop-in implementations for `EpubMetadataExtractor.java`, `FolioMetadataCatalogDialog.java`, and `FolioMoreView.java`. Antigravity integrated the drop-in sources, compiled `classes9.dex` (191,888 B), rebuilt the APK via apktool and Android SDK 36.0.0, deployed to the physical Samsung Galaxy M32, and captured two crisp hardware verification screenshots proving both functional and cosmetic polish.
 
 ---
 
-## 2. Snapshot Manifest & Architecture Inventory
+## 2. Integrated Improvements in Folio v4.0 KFX
 
-The snapshot archive `antig_to_gemini_neon_clunky_report043.zip` packages the following text assets:
+### A. Publication Date Normalization
+- `EpubMetadataExtractor.normalizePubDate()`: Strips verbose ISO timestamps, time offsets, and trailing whitespace (e.g. `2000-07-15 00:00:00+01:00` or `2014-06-06T00:00:00Z` → clean `2000-07-15`).
+- Applied dynamically in `FolioMetadataCatalogDialog.java` for both catalog list cards and Book Details popups, immediately cleaning up existing database entries without requiring full re-indexing.
 
-1. **Custom Java Runtime Layer (`snapshot/07_APK_EPUB_INGESTION_MOD/mod_src/`)**:
-   - `com.amazon.kindle.epub.ingest.FolioFolderBrowserDialog.java`: Dark multi-select EPUB storage importer with 719-EPUB in-memory search and `Hide Imported` toggle pill.
-   - `com.amazon.kindle.epub.ingest.FolioMetadataBackup.java`: Portable JSON metadata backup & restore engine (`/sdcard/kindle/backups/folio_metadata_backup.json`).
-   - `com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.java`: In-app Library Metadata & Genres browser dialog with sorting, real-time search filtering, and editable metadata forms.
-   - `com.amazon.kindle.epub.ingest.FolioMetadataDb.java`: SQLite database manager for `folio_metadata.db` and double-registration bridge into `kindle_library.db`.
-   - `com.amazon.kindle.epub.ingest.MetadataEnricher.java`: Open Library Search API enrichment engine with ISBN-to-title+author fallback.
-   - `com.amazon.kindle.epub.ingest.LibraryMetadataBackfiller.java`: Full-library background backfiller and cover auto-repair sweep with HTTP 302 redirect following.
-   - `com.amazon.kindle.epub.ingest.EpubMetadataExtractor.java`: Zero-dependency pure-Java EPUB container & OPF metadata extractor.
-   - `com.amazon.kindle.epub.ingest.ExternalEpubActivity.java`: File intent ingestion handler with duplicate import guard (`Open Existing Copy` vs `Re-Import & Replace`).
-   - `com.amazon.kindle.epub.catalog.FolioMoreView.java`: Folio Control Center custom UI screenlet with action cards and live engine telemetry.
-   - `com.amazon.kindle.epub.catalog.OpenCatalogView.java`: OPDS feed catalog browser, search, and database backup hooks.
-   - Additional custom stubs and injection helper classes.
+### B. Calibre Noise Tag Filtering
+- `EpubMetadataExtractor.isNoiseTag()`: Filters out noisy reading state tags (`Read`, `Unread`, `To Read`, `Ebook`, `Calibre`, `General`, `Fiction - General`) from EPUB extraction.
+- In `FolioMetadataCatalogDialog.java`, the genre filter chip bar excludes noise tags, leaving clean, authentic literary genre categories (`Fiction`, `19th Century Fiction`, `Modern Fiction`, `Literary Criticism`).
 
-2. **Build, Patch & Smali Tooling (`snapshot/07_APK_EPUB_INGESTION_MOD/tools/` & `scripts/`)**:
-   - `compile_mod_dex.sh`: Standalone stub + mod Java compiler producing `classes9.dex` via Android SDK `d8`.
-   - `rebuild_fast.sh`: Fast packaging script using Apktool, zipalign, apksigner, and ADB install.
-   - Patch scripts, smali injector scripts, and Dex merger tools.
-
-3. **Pure-Rust Typesetting & KFX Converter Engine (`snapshot/kfx_converter/`)**:
-   - `Cargo.toml`: Complete package manifest, dependencies, and feature flags.
-   - `src/**/*.rs`: Pure-Rust EPUB-to-KFX conversion engine including `$270` cover container, native tables (`$278/$279/$269`), proportional image scaling (`$422/$423`), polytonic Greek NFC normalization, hanging indent lists (`$277`), pop-up footnotes (`$616/$617`), and anchor hyperlink routing (`$266/$179`).
-   - `tests/**/*.rs`: Integration and pipeline test suites.
-
-4. **Patched AndroidManifest.xml (`snapshot/AndroidManifest.xml`)**:
-   - Full cloned package manifest for `com.amazon.kindle.epub` (v8.159.0.100), including intent filters for `.epub` file viewing, storage permissions, and custom component declarations.
-
-5. **Kindle Library SQLite Database Schema (`snapshot/kindle_library_schema.sql`)**:
-   - Read-only schema dump of `kindle_library.db` capturing all tables (`KindleContent`, `LocalContent`, `UserContent`, `DictionaryInfo`, `DictionaryLocale`, `RecommendedContent`), triggers, and indexes.
+### C. Live Storage Breakdown & One-Tap Cache Clearing
+- Bumped Control Center badge and About dialog to **`Folio v4.0 KFX`**.
+- Upgraded **About Folio** with live file-tree measurements:
+  - **Indexed Library Books:** 28
+  - **Enriched Metadata Records:** 26
+  - **App Library Storage:** 11.1 MB (`files/folio_library/` + `files/folio_covers/`)
+  - **Legacy /sdcard/kindle:** 203.0 MB
+  - **Temp Open-Once Cache:** 1.3 MB (`cache/folio_once/` + `cache/folio_staging/`)
+- Added one-tap **`CLEAR TEMP CACHE`** button in the About Folio dialog, providing immediate cleanup with a user-facing Toast reporting freed megabytes.
 
 ---
 
-## 3. Architectural Directive on Cover Handling
+## 3. Physical Hardware Verification on Galaxy M32
 
-As instructed by the Project Lead, we pass the following architectural directive to the Manager AI:
+| Verification Item | Target Screen | Evidence | Result |
+| :--- | :--- | :--- | :--- |
+| **Clean Date & Noise-Free Genre Chips** | Control Center → Library Metadata & Genres | `screenshots/verify_r44_clean_dates_and_genres.png` | **PASS** — *Animal Farm* displays crisp `2000-07-15` (no `00:00:00+01:00`); genre chips bar displays `Fiction`, `19th Century Fiction`, `Modern Fiction`, `Literary Criticism` with `"Read"` cleanly filtered out. |
+| **Folio v4.0 About & Cache Clearing** | Control Center → About Folio | `screenshots/verify_r44_about_v40_storage_and_clear_cache.png` | **PASS** — Shows `Folio v4.0 KFX`, full live storage breakdown (11.1 MB App Library, 1.3 MB Temp Cache), and `CLEAR TEMP CACHE` button. |
+| **Stock Package Invariant** | Android Package Manager | `lastUpdateTime=2026-11-19 21:59:23` | **PASS** — Stock `com.amazon.kindle` completely untouched and intact. |
+
+---
+
+## 4. Project Lead Architectural Directive on Cover Handling
+
+As instructed by the Project Lead, the following architectural directive is reaffirmed:
 > *"The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."*
 
 ---
 
-## 4. Safety Invariant Status
+## 5. Artifact Verification
 
-- `com.amazon.kindle` (v8.160.1.0): `lastUpdateTime=2026-11-19 21:59:23` (100% UNTOUCHED).
-- Hardware: Samsung Galaxy M32 (`32001776e8e82623`).
+- Staged Release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.0_kfx/base.apk` (131 MB)
+- Hardware Screenshots:
+  - `screenshots/verify_r44_clean_dates_and_genres.png` (336 KB)
+  - `screenshots/verify_r44_about_v40_storage_and_clear_cache.png` (307 KB)
+- Archive Budget: `antig_to_gemini_neon_clunky_report044.zip` (< 1.5 MB total, well below 5 MB ceiling).

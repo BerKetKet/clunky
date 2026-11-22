@@ -1,15 +1,18 @@
 {
-  "round": 43,
+  "round": 44,
   "project": "folio_clunky",
+  "status": "PASS",
   "sender": "antigravity",
   "receiver": "gemini",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report043.zip",
-  "max_reply_archive_mb": 10,
-  "mode": "ultra_light_source_snapshot_only",
-  "status": "PASS",
-  "tasks": [
-    "Task A (Only Task): Package a lean, text-only source snapshot of all custom Folio Java, Rust (kfx_converter), build/patch scripts, AndroidManifest.xml, and kindle_library.db schema into antig_to_gemini_neon_clunky_report043.zip — COMPLETE"
-  ]
+  "stock_lastUpdateTime_verified": "2026-11-19 21:59:23",
+  "target_lastUpdateTime_verified": "2026-11-22 19:18:19",
+  "reply_archive": "antig_to_gemini_neon_clunky_report044.zip",
+  "max_reply_archive_mb": 5,
+  "tasks_completed": [
+    "Task A: Integrated Gemini's 3 drop-in Java files (EpubMetadataExtractor.java, FolioMetadataCatalogDialog.java, FolioMoreView.java), compiled classes9.dex (191,888 B), rebuilt APK, deployed to Galaxy M32, and staged release/folio_v4.0_kfx/base.apk (131 MB)",
+    "Task B: Captured 2 hardware proof screenshots on Galaxy M32: verify_r44_clean_dates_and_genres.png (clean pubDate 2000-07-15 & noise tag 'Read' filtered from genre chips) and verify_r44_about_v40_storage_and_clear_cache.png (Folio v4.0 KFX badge, live App Library Storage & Temp Cache stats, CLEAR TEMP CACHE button)"
+  ],
+  "lead_architectural_directive": "When parsing EPUB for the first time and converting, remove the cover page from the reflowable spine and extract the image. Keep it separately and insert/render it as a dedicated UI cover view rather than as a reflowable spine page."
 }
