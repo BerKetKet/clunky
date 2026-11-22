@@ -1,6 +1,28 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.6 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 086 complete:
+  1. **Metadata Health Audit & 1-Tap Quick-Fix Filters (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java` and `FolioMetadataCatalogDialog.java`.
+     - In `FolioMoreView.java`, added `METADATA HEALTH — 70% COMPLETE (TAP TO FIX)` section inside `📊 Library Insights` directly below `READING STATUS`.
+     - Built three live health audit tiles: Covers (`1 › No Cover`), Genres (`2 › No Genre`), and Synopsis (`21 › No Synopsis`) with emerald styling for 100% and alert badges for gaps.
+     - In `FolioMetadataCatalogDialog.java`, added support for `MISSING_COVER`, `MISSING_GENRES`, and `MISSING_SYNOPSIS` deep-links, badged with dedicated `🩺 Missing ... (N)` active chips.
+     - Verified 1-tap tile click on `2 › No Genre` dismisses Insights and opens catalog filtered to `Library Metadata & Genres (2 of 27)` with `🩺 Missing Genres (2)` chip.
+     - Bumped badge and About Folio string to `Folio v8.6 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Milestone Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `screenshots/verify_r86_insights_metadata_health.png` (174 KB) — Library Insights modal showing `METADATA HEALTH — 70% COMPLETE (TAP TO FIX)` section with 3 audit tiles directly under `READING STATUS`.
+       * `screenshots/verify_r86_missing_filter_drilldown.png` (406 KB) — Metadata Catalog dialog filtered to 2 books needing genres with active `🩺 Missing Genres (2)` chip.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v8.6 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v8.6_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 086)
+1. `screenshots/verify_r86_insights_metadata_health.png`: Library Insights modal showing `METADATA HEALTH — 70% COMPLETE (TAP TO FIX)` with 3 audit tiles.
+2. `screenshots/verify_r86_missing_filter_drilldown.png`: Metadata Catalog filtered to 2 books with active `🩺 Missing Genres (2)` chip.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v8.6 KFX deployed (`lastUpdateTime=2026-11-23 00:57:13`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Milestone Folio v8.5 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 085 complete:
   1. **Catalog Multi-Select & Bulk Actions (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`.
