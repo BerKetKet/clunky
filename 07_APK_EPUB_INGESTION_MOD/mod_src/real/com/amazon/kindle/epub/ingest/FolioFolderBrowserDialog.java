@@ -7,7 +7,9 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -22,7 +24,6 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -30,10 +31,11 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Dark-themed multi-select EPUB folder importer allowing users to browse any
- * device storage folder (e.g. /sdcard/en/0, /sdcard/epub, /sdcard/Download),
- * see which EPUBs are already imported, select books, and batch-convert them
- * into Folio's app-private files/folio_library/ with Open Library enrichment.
+ * Dark-themed multi-select EPUB folder importer with:
+ *   - Quick folder chips (/sdcard/en/0, /sdcard/epub, /sdcard/Download, /sdcard/Books)
+ *   - Instant in-memory filename search across large 700+ EPUB folders
+ *   - "Hide Imported" toggle pill to focus only on new books
+ *   - Batch KFX conversion into app-private files/folio_library/ + Open Library enrichment
  */
 public final class FolioFolderBrowserDialog {
 
@@ -50,18 +52,37 @@ public final class FolioFolderBrowserDialog {
     public static void show(final Context ctx) {
         final Handler mainHandler = new Handler(Looper.getMainLooper());
         final Set<String> importedSourceNames = loadImportedSources(ctx);
+        final List<File> allEpubsInDir = new ArrayList<>();
+        final List<File> selectedFiles = new ArrayList<>();
+        final boolean[] hideImported = new boolean[] { false };
+        final String[] filterQuery = new String[] { "" };
 
         final LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.parseColor("#11131A"));
         root.setPadding(dp(ctx, 18), dp(ctx, 16), dp(ctx, 18), dp(ctx, 12));
 
+        // Top row: Eyebrow + Hide Imported toggle
+        LinearLayout topRow = new LinearLayout(ctx);
+        topRow.setOrientation(LinearLayout.HORIZONTAL);
+        topRow.setGravity(Gravity.CENTER_VERTICAL);
+
         TextView eyebrow = new TextView(ctx);
         eyebrow.setText("BATCH EPUB IMPORTER");
         eyebrow.setTextColor(Color.parseColor("#F59E0B"));
         eyebrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         eyebrow.setTypeface(Typeface.DEFAULT_BOLD);
-        root.addView(eyebrow);
+        eyebrow.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        topRow.addView(eyebrow);
+
+        final TextView btnHideImported = new TextView(ctx);
+        btnHideImported.setText("Hide Imported: OFF");
+        btnHideImported.setTextColor(Color.parseColor("#CBD5E1"));
+        btnHideImported.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        btnHideImported.setTypeface(Typeface.DEFAULT_BOLD);
+        btnHideImported.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
+        topRow.addView(btnHideImported);
+        root.addView(topRow);
 
         TextView heading = new TextView(ctx);
         heading.setText("Import EPUBs from Storage");
@@ -71,7 +92,7 @@ public final class FolioFolderBrowserDialog {
         heading.setPadding(0, dp(ctx, 4), 0, dp(ctx, 10));
         root.addView(heading);
 
-        // Path bar + Go button
+        // Path bar + Open button
         LinearLayout pathRow = new LinearLayout(ctx);
         pathRow.setOrientation(LinearLayout.HORIZONTAL);
         pathRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -82,11 +103,7 @@ public final class FolioFolderBrowserDialog {
         etPath.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         etPath.setSingleLine(true);
         etPath.setPadding(dp(ctx, 10), dp(ctx, 8), dp(ctx, 10), dp(ctx, 8));
-        GradientDrawable pathBg = new GradientDrawable();
-        pathBg.setColor(Color.parseColor("#1A1F2E"));
-        pathBg.setCornerRadius(dp(ctx, 8));
-        pathBg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
-        etPath.setBackground(pathBg);
+        etPath.setBackground(makeInputBg(ctx));
         etPath.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         pathRow.addView(etPath);
 
@@ -112,7 +129,7 @@ public final class FolioFolderBrowserDialog {
         chipScroll.setHorizontalScrollBarEnabled(false);
         LinearLayout.LayoutParams csLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        csLp.setMargins(0, dp(ctx, 10), 0, dp(ctx, 8));
+        csLp.setMargins(0, dp(ctx, 8), 0, dp(ctx, 8));
         chipScroll.setLayoutParams(csLp);
 
         LinearLayout chipRow = new LinearLayout(ctx);
@@ -120,22 +137,37 @@ public final class FolioFolderBrowserDialog {
         chipScroll.addView(chipRow);
         root.addView(chipScroll);
 
+        // Inline filename search bar (filters ALL EPUBs in directory, e.g. 719+)
+        final EditText etFilter = new EditText(ctx);
+        etFilter.setHint("Search EPUB filenames in this folder...");
+        etFilter.setHintTextColor(Color.parseColor("#64748B"));
+        etFilter.setTextColor(Color.WHITE);
+        etFilter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        etFilter.setSingleLine(true);
+        etFilter.setPadding(dp(ctx, 10), dp(ctx, 8), dp(ctx, 10), dp(ctx, 8));
+        etFilter.setBackground(makeInputBg(ctx));
+        LinearLayout.LayoutParams fLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        fLp.setMargins(0, 0, 0, dp(ctx, 8));
+        etFilter.setLayoutParams(fLp);
+        root.addView(etFilter);
+
         final TextView statusTv = new TextView(ctx);
         statusTv.setTextColor(Color.parseColor("#94A3B8"));
         statusTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        statusTv.setPadding(0, 0, 0, dp(ctx, 8));
+        statusTv.setPadding(0, 0, 0, dp(ctx, 6));
         root.addView(statusTv);
 
         // File list container
         ScrollView listScroll = new ScrollView(ctx);
         listScroll.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 320)));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 290)));
         final LinearLayout listContainer = new LinearLayout(ctx);
         listContainer.setOrientation(LinearLayout.VERTICAL);
         listScroll.addView(listContainer);
         root.addView(listScroll);
 
-        // Action row: Import Selected button
+        // Import Selected button
         final TextView btnImport = new TextView(ctx);
         btnImport.setText("Import Selected (0)");
         btnImport.setGravity(Gravity.CENTER);
@@ -158,43 +190,36 @@ public final class FolioFolderBrowserDialog {
                 .setNegativeButton("Close", null)
                 .create();
 
-        final List<File> selectedFiles = new ArrayList<>();
-
         final Runnable updateImportLabel = () ->
                 btnImport.setText("Import Selected (" + selectedFiles.size() + ")");
 
-        final Runnable[] loadDirRef = new Runnable[1];
-        loadDirRef[0] = () -> {
-            selectedFiles.clear();
-            updateImportLabel.run();
+        final Runnable styleHideToggle = () -> {
+            btnHideImported.setText(hideImported[0] ? "Hide Imported: ON" : "Hide Imported: OFF");
+            btnHideImported.setTextColor(Color.parseColor(hideImported[0] ? "#111827" : "#CBD5E1"));
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(Color.parseColor(hideImported[0] ? "#34D399" : "#1E2433"));
+            bg.setCornerRadius(dp(ctx, 14));
+            btnHideImported.setBackground(bg);
+        };
+        styleHideToggle.run();
+
+        final Runnable renderList = () -> {
             listContainer.removeAllViews();
-
-            String dirPath = etPath.getText().toString().trim();
-            File dir = new File(dirPath);
-            if (!dir.exists() || !dir.isDirectory()) {
-                statusTv.setText("Folder not found: " + dirPath);
-                return;
-            }
-            File[] children = dir.listFiles();
-            if (children == null) {
-                statusTv.setText("Cannot read folder (check storage permission): " + dirPath);
-                return;
+            String q = filterQuery[0].trim().toLowerCase(Locale.ROOT);
+            List<File> matched = new ArrayList<>();
+            for (File f : allEpubsInDir) {
+                String lower = f.getName().toLowerCase(Locale.ROOT);
+                if (hideImported[0] && importedSourceNames.contains(lower)) continue;
+                if (!q.isEmpty() && !lower.contains(q)) continue;
+                matched.add(f);
             }
 
-            List<File> epubs = new ArrayList<>();
-            for (File f : children) {
-                if (f.isFile() && f.getName().toLowerCase(Locale.ROOT).endsWith(".epub")) {
-                    epubs.add(f);
-                }
-            }
-            epubs.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
-
-            int cap = Math.min(epubs.size(), 60);
-            statusTv.setText("Found " + epubs.size() + " EPUBs in " + dirPath
-                    + (epubs.size() > cap ? " (showing first " + cap + ")" : ""));
+            int cap = Math.min(matched.size(), 60);
+            statusTv.setText("Showing " + cap + " of " + matched.size() + " matching EPUBs ("
+                    + allEpubsInDir.size() + " total in folder)");
 
             for (int i = 0; i < cap; i++) {
-                final File epub = epubs.get(i);
+                final File epub = matched.get(i);
                 final boolean already = importedSourceNames.contains(epub.getName().toLowerCase(Locale.ROOT));
 
                 LinearLayout row = new LinearLayout(ctx);
@@ -211,7 +236,7 @@ public final class FolioFolderBrowserDialog {
                 row.setLayoutParams(rlp);
 
                 final CheckBox cb = new CheckBox(ctx);
-                cb.setChecked(false);
+                cb.setChecked(selectedFiles.contains(epub));
                 cb.setOnCheckedChangeListener((buttonView, isChecked) -> {
                     if (isChecked) {
                         if (!selectedFiles.contains(epub)) selectedFiles.add(epub);
@@ -248,6 +273,33 @@ public final class FolioFolderBrowserDialog {
             }
         };
 
+        final Runnable loadDir = () -> {
+            selectedFiles.clear();
+            allEpubsInDir.clear();
+            updateImportLabel.run();
+
+            String dirPath = etPath.getText().toString().trim();
+            File dir = new File(dirPath);
+            if (!dir.exists() || !dir.isDirectory()) {
+                listContainer.removeAllViews();
+                statusTv.setText("Folder not found: " + dirPath);
+                return;
+            }
+            File[] children = dir.listFiles();
+            if (children == null) {
+                listContainer.removeAllViews();
+                statusTv.setText("Cannot read folder: " + dirPath);
+                return;
+            }
+            for (File f : children) {
+                if (f.isFile() && f.getName().toLowerCase(Locale.ROOT).endsWith(".epub")) {
+                    allEpubsInDir.add(f);
+                }
+            }
+            allEpubsInDir.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
+            renderList.run();
+        };
+
         for (final String qd : QUICK_DIRS) {
             TextView chip = new TextView(ctx);
             chip.setText(qd.replace("/sdcard/", ""));
@@ -264,12 +316,27 @@ public final class FolioFolderBrowserDialog {
             chip.setLayoutParams(clp);
             chip.setOnClickListener(v -> {
                 etPath.setText(qd);
-                loadDirRef[0].run();
+                loadDir.run();
             });
             chipRow.addView(chip);
         }
 
-        btnGo.setOnClickListener(v -> loadDirRef[0].run());
+        btnHideImported.setOnClickListener(v -> {
+            hideImported[0] = !hideImported[0];
+            styleHideToggle.run();
+            renderList.run();
+        });
+
+        etFilter.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterQuery[0] = s != null ? s.toString() : "";
+                renderList.run();
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        btnGo.setOnClickListener(v -> loadDir.run());
 
         btnImport.setOnClickListener(v -> {
             if (selectedFiles.isEmpty()) {
@@ -322,16 +389,26 @@ public final class FolioFolderBrowserDialog {
                 final int finalOk = okCount;
                 mainHandler.post(() -> {
                     btnImport.setEnabled(true);
+                    selectedFiles.clear();
+                    updateImportLabel.run();
                     Toast.makeText(ctx,
                             "Imported " + finalOk + " of " + batch.size() + " EPUBs to Folio Library",
                             Toast.LENGTH_LONG).show();
-                    loadDirRef[0].run();
+                    renderList.run();
                 });
             }, "folio-batch-import").start();
         });
 
-        loadDirRef[0].run();
+        loadDir.run();
         dialog.show();
+    }
+
+    private static GradientDrawable makeInputBg(Context ctx) {
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Color.parseColor("#1A1F2E"));
+        bg.setCornerRadius(dp(ctx, 8));
+        bg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
+        return bg;
     }
 
     private static Set<String> loadImportedSources(Context ctx) {
