@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v2.7 KFX");
+        badgeTv.setText("Folio v2.8 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -408,11 +408,23 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: 2.7 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: 2.8 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
-        sb.append("Hardware: ").append(android.os.Build.MANUFACTURER).append(" ").append(android.os.Build.MODEL)
-                .append(" (").append(arch).append(")\n\n");
+        String mfg = android.os.Build.MANUFACTURER;
+        String model = android.os.Build.MODEL;
+        String rel = android.os.Build.VERSION.RELEASE;
+        boolean hasMfg = mfg != null && !mfg.trim().isEmpty() && !mfg.equalsIgnoreCase("unknown");
+        boolean modelHasMfg = hasMfg && model != null && model.toLowerCase().contains(mfg.toLowerCase());
+        StringBuilder hw = new StringBuilder();
+        if (hasMfg && !modelHasMfg) {
+            hw.append(mfg).append(" ");
+        }
+        if (model != null) {
+            hw.append(model);
+        }
+        hw.append(" · Android ").append(rel != null ? rel : "?").append(" (").append(arch).append(")");
+        sb.append("Hardware: ").append(hw.toString()).append("\n\n");
 
         sb.append("Pure-Rust Engine (libkfxconv.so):\n");
         sb.append("• Standalone $270 Cover Container (#000000, 0% margin)\n");
@@ -421,8 +433,9 @@ public final class FolioMoreView {
         sb.append("• Unicode NFC Polytonic Greek & Non-Latin Normalization\n");
         sb.append("• Native YellowJersey Lists ($277) with Hanging Indents\n");
         sb.append("• Enhanced Blockquote Spacing & Italic Typography\n");
-        sb.append("• Native $266 Anchor Links & $179 Hyperlink Navigation\n");
-        sb.append("• Native Pop-up Footnotes & Enhanced Typesetting\n\n");
+        sb.append("• Native Pop-up Footnotes ($616/$617, $615/$281)\n");
+        sb.append("• Rich Code Blocks (<pre>/<code>), <hr/> Rules & Inlines\n");
+        sb.append("• Native $266 Anchor Links & $179 Hyperlink Navigation\n\n");
 
         sb.append("Live Library & Cache Stats:\n");
         sb.append("• Indexed Library Books: ").append(indexedBooks).append("\n");

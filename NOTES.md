@@ -1,6 +1,46 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.8 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 031 complete:
+  1. **Real Native KFX Pop-Up Footnotes (Task A)**:
+     - Pure-Rust schema parity: Link span in `$142 style_events` emits `$179 link_to` and `$616: $617` (`yj.display: yj.note`). Target footnote entry in `$259 storyline` emits `$615: $281` (`yj.classification: footnote`).
+     - Anchor entity `$266` resolves `$183 position` pointing to target footnote story entry EID (`$155`) with offset 0.
+     - Cleaned up Fragment `$597 auxiliary_data` to stock `IS_TARGET_SECTION` metadata only, eliminating non-standard `$617` note arrays.
+     - Fixed anchor leak bug in `xhtml.rs`: consumed anchor with `anchor.take()` on span flush; reset `current_anchor` and `current_block_id` on block close.
+     - Verified in `KRIFDocViewer`: tapping footnote link navigates to footnote text with top "Back to Location" affordance with zero soft keyboard / zero Add Note editor.
+  2. **Rich Formatting Audit (Task B)**:
+     - Monospace code blocks (`<pre>`, `<code>`): Preserves whitespace and newlines verbatim, font family `$11: "monospace"`, left alignment `$34: 59`, text indent `$36: 0.0rem`, top/bottom margin `$48: 1.2rem`.
+     - Horizontal rules (`<hr/>`): Emits YellowJersey `$596 horizontal_rule` story elements with `style_hr`.
+     - Inlines: `<sup>`/`<sub>` baseline styles (`$44: $370/$371`) and baseline shift (`$31`), `<s>`/`<del>` strikethrough (`$27: $328`), and `<u>` underline (`$23: $328`).
+     - Added comprehensive unit tests in `src/packager/tests.rs`; all 211 tests pass cleanly.
+  3. **Clean Hardware Label, Live Library Search & Visual Verification (Task C)**:
+     - In `FolioMoreView.java`: Filtered out `"unknown"` (case-insensitive) or blank `Build.MANUFACTURER`. Cleanly formatted as `Build.MODEL + " · Android " + Build.VERSION.RELEASE + " (" + arch + ")"`. Updated badge to `Folio v2.8 KFX`.
+     - Live Library Search: Verified query `"Sophocles"` triggers `RubySearchActivity` and filters local KFX library books cleanly (`In your library (1)`). Zero crashes or Amazon store dead ends.
+     - Verified on Samsung Galaxy M32: 4 required proof screenshots captured and verified.
+     - Safety Invariant: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Cover Architecture Mandate**: Project Lead architectural directive formally documented and passed to manager AI.
+- **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
+- **Installed Packages**:
+  - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only, v8.160.1.0, `lastUpdateTime=2026-11-19 21:59:23`)
+  - Clone: `com.amazon.kindle.epub` ("Folio v2.8 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, `$270` cover container, native table support, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, dynamic hardware metadata, KRIFDocViewer Enhanced Typesetting)
+
+## Verification Evidence (Round 031)
+1. `screenshots/verify_r31_real_footnote_popup.png`: Native pop-up footnote navigation in `KRIFDocViewer` without keyboard or Add Note modal.
+2. `screenshots/verify_r31_code_hr_rich_formatting.png`: Rendered `<pre>/<code>` monospace block, `<hr/>` divider, `<sup>/<sub>`, and `<s>/<u>` formatting.
+3. `screenshots/verify_r31_about_clean_hardware.png`: About Folio dialog showing `Folio v2.8 KFX` and clean hardware string without `"unknown"`.
+4. `screenshots/verify_r31_library_search_results.png`: Live `"Search Folio"` query filtering local books cleanly in Library tab.
+5. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+6. `dumpsys package com.amazon.kindle.epub`: Folio v2.8 KFX deployed (`lastUpdateTime=2026-11-22 11:21:33`).
+
+## Next Steps
+1. Package `antig_to_gemini_neon_clunky_report031.zip` (< 15 MB).
+2. Relay report zip to Gemini Neon tab via Chrome bridge, verifying attachment preview chip before sending.
+3. Launch autonomous relay runner with 2000s timeout and 60s polling interval to await Round 032 instructions.
+
+---
+
+# Round 030: Subtle Visual Polish, Multi-Book Stress Test & Interactive Flow QC (Folio v2.7)
+
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.7 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 030 complete:
   1. **Converter & UI Micro-Polish (Task A)**:
      - Pure-Rust Link Coalescing: Contiguous text spans sharing the same `href` coalesce into a single `$179 link_to` event in `kfx_converter/src/packager/storylines.rs`. Stripped pseudo-classes (`:link`, `:visited`, etc.) in `kfx_converter/src/css.rs` so stylesheet rules cascade cleanly onto nested inline tags. Unit test: `test_r30_nested_inline_tags_in_link` passes.

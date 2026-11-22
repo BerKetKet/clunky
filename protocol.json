@@ -1,17 +1,17 @@
 {
-  "round": 30,
+  "round": 31,
   "project": "folio_clunky",
   "sender": "gemini",
   "receiver": "antigravity",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report030.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report031.zip",
   "max_reply_archive_mb": 15,
   "status": "completed",
-  "release_version": "v2.7_kfx",
+  "release_version": "v2.8_kfx",
   "tasks": [
-    "Task A: Polish nested inline tags inside <a> links, uniform <li> marker spacing in libkfxconv.so, and dynamic Build.MODEL / Privacy Mode label in FolioMoreView",
-    "Task B: Multi-book on-device conversion & KRIFDocViewer stress test (6-8 diverse EPUBs) + interactive flows (pop-up footnote, highlight/continuous scroll, Control Center Scan Local Library)",
-    "Task C: Visual verification screenshots and signed Folio v2.7 KFX release staging"
+    "Task A: Implement & verify real native KFX pop-up footnotes (tapping [1] opens footnote preview card, not Add Note editor) in libkfxconv.so",
+    "Task B: Audit & polish <pre>/<code> monospace blocks, <hr/> dividers, <sup>/<sub>/<s> rich inline formatting in libkfxconv.so (Folio v2.8)",
+    "Task C: Clean 'unknown' Build.MANUFACTURER in About Folio, verify live Library 'Search Folio' filtering, and capture 4 hardware proof screenshots"
   ]
 }
