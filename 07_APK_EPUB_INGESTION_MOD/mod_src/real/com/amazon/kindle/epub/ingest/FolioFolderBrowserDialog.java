@@ -171,11 +171,35 @@ public final class FolioFolderBrowserDialog {
 
         root.addView(filterRow);
 
+        LinearLayout statusRow = new LinearLayout(ctx);
+        statusRow.setOrientation(LinearLayout.HORIZONTAL);
+        statusRow.setGravity(Gravity.CENTER_VERTICAL);
+        statusRow.setPadding(0, 0, 0, dp(ctx, 6));
+
         final TextView statusTv = new TextView(ctx);
         statusTv.setTextColor(Color.parseColor("#94A3B8"));
         statusTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        statusTv.setPadding(0, 0, 0, dp(ctx, 6));
-        root.addView(statusTv);
+        statusTv.setLayoutParams(new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        statusRow.addView(statusTv);
+
+        final TextView btnSelectBatch = new TextView(ctx);
+        btnSelectBatch.setText("Select New");
+        btnSelectBatch.setTextColor(Color.parseColor("#5EEAD4"));
+        btnSelectBatch.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        btnSelectBatch.setTypeface(Typeface.DEFAULT_BOLD);
+        btnSelectBatch.setPadding(dp(ctx, 10), dp(ctx, 4), dp(ctx, 10), dp(ctx, 4));
+        GradientDrawable batchBg = new GradientDrawable();
+        batchBg.setColor(Color.parseColor("#1E2433"));
+        batchBg.setCornerRadius(dp(ctx, 12));
+        btnSelectBatch.setBackground(batchBg);
+        LinearLayout.LayoutParams batchLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        batchLp.setMargins(dp(ctx, 8), 0, 0, 0);
+        btnSelectBatch.setLayoutParams(batchLp);
+        statusRow.addView(btnSelectBatch);
+
+        root.addView(statusRow);
 
         // File list container
         ScrollView listScroll = new ScrollView(ctx);
@@ -209,8 +233,18 @@ public final class FolioFolderBrowserDialog {
                 .setNegativeButton("Close", null)
                 .create();
 
-        final Runnable updateImportLabel = () ->
-                btnImport.setText("Import Selected (" + selectedFiles.size() + ")");
+        final List<File> currentVisible = new ArrayList<>();
+        final Runnable updateImportLabel = () -> {
+            int nSel = selectedFiles.size();
+            btnImport.setText("Import Selected (" + nSel + ")");
+            if (nSel > 0) {
+                btnSelectBatch.setText("Clear (" + nSel + ")");
+                btnSelectBatch.setTextColor(Color.parseColor("#F59E0B"));
+            } else {
+                btnSelectBatch.setText("Select New");
+                btnSelectBatch.setTextColor(Color.parseColor("#5EEAD4"));
+            }
+        };
 
         final Runnable styleHideToggle = () -> {
             btnHideImported.setText(hideImported[0] ? "Hide Imported: ON" : "Hide Imported: OFF");
@@ -234,6 +268,8 @@ public final class FolioFolderBrowserDialog {
             }
 
             int cap = Math.min(matched.size(), 60);
+            currentVisible.clear();
+            for (int k = 0; k < cap; k++) currentVisible.add(matched.get(k));
             statusTv.setText("Showing " + cap + " of " + matched.size() + " matching EPUBs ("
                     + allEpubsInDir.size() + " total in folder)");
 
@@ -343,6 +379,28 @@ public final class FolioFolderBrowserDialog {
         btnHideImported.setOnClickListener(v -> {
             hideImported[0] = !hideImported[0];
             styleHideToggle.run();
+            renderList.run();
+        });
+
+        btnSelectBatch.setOnClickListener(v -> {
+            if (!selectedFiles.isEmpty()) {
+                selectedFiles.clear();
+            } else {
+                int added = 0;
+                for (File f : currentVisible) {
+                    if (added >= 25) break;
+                    if (!importedSourceNames.contains(f.getName().toLowerCase(Locale.ROOT))) {
+                        if (!selectedFiles.contains(f)) {
+                            selectedFiles.add(f);
+                            added++;
+                        }
+                    }
+                }
+                if (added == 0) {
+                    Toast.makeText(ctx, "All visible EPUBs are already imported", Toast.LENGTH_SHORT).show();
+                }
+            }
+            updateImportLabel.run();
             renderList.run();
         });
 
