@@ -716,3 +716,26 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.3_kfx/base.apk` (132 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report083.zip`
+
+
+---
+
+# Round 084: Continue Reading Quick-Resume Carousel (Folio v8.4 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.4 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 084 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMoreView.java` from `dropin_src/`.
+     - Added `📖 Continue Reading` horizontal card carousel directly below `🎯 2026 Reading Goal` on Control Center.
+     - Displays in-progress books sorted descending by progress with `See All (5) ›` deep link, standalone cover art thumbnails, 2-line titles, authors, `X% read · Resume ›` labels, and 3dp sky-blue progress bars.
+     - Tapping any card launches book directly into KFX reader.
+     - Bumped version badge to `Folio v8.4 KFX (Enhanced Typesetting)`.
+     - Built `classes9.dex` (278,892 B), fast-rebuilt APK, signed, and deployed to Galaxy M32 (`lastUpdateTime=2026-11-23 00:41:17`).
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.4_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `screenshots/verify_r84_continue_reading.png`: Proves Control Center top displays `Folio v8.4 KFX` badge, 4-tile stats strip, `🎯 2026 Reading Goal`, and the new `📖 Continue Reading` horizontal carousel with covers (*Brave New World* 9%, *Aristotle* 8%, etc.), progress bars, and `See All (5) ›`.
+     - `screenshots/verify_r84_about_v84.png`: Proves About Folio dialog displaying `Version: Folio v8.4 KFX (Enhanced Typesetting)` and live stats.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.4_kfx/base.apk` (132 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report084.zip`
