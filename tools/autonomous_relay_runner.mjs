@@ -25,32 +25,42 @@ function runCli(cmd, input) {
 async function waitForRound(roundNum, maxWaitSec = 2000) {
   const roundTag = String(roundNum).padStart(3, '0');
   const targetLabel = `to_antig_clunky_round_${roundTag}`;
+  const targetLabelShort = `to_antig_clunky_round_${roundNum}`;
   console.log(`[Monitor] Watching for Round ${roundTag} (target: ${targetLabel}, max wait: ${maxWaitSec}s, polling: every 60s)...`);
 
   const startTime = Date.now();
   let checkCount = 0;
 
-  // First check if target zip is ALREADY in ~/Downloads from user or previous click
-  const existingMatches = fs.readdirSync(DOWNLOAD_DIR)
-    .filter(f => f.startsWith(targetLabel) && f.endsWith('.zip'))
-    .sort((a, b) => fs.statSync(path.join(DOWNLOAD_DIR, b)).mtimeMs - fs.statSync(path.join(DOWNLOAD_DIR, a)).mtimeMs);
-  if (existingMatches.length > 0) {
-    const mtime = fs.statSync(path.join(DOWNLOAD_DIR, existingMatches[0])).mtimeMs;
-    // If downloaded within the last 30 minutes, accept it
-    if ((Date.now() - mtime) < 1800000) {
-      const targetZip = path.join(DOWNLOAD_DIR, existingMatches[0]);
-      console.log(`[Monitor] Found existing recently downloaded target: ${targetZip}!`);
-      const destZip = path.join(WORKDIR, `${targetLabel}.zip`);
-      fs.copyFileSync(targetZip, destZip);
-      execSync(`unzip -o ${destZip} -d ${WORKDIR}`, { stdio: 'inherit' });
-      console.log(`[Monitor] Staged and extracted ${destZip}!`);
-      return { success: true, round: roundNum, zip: destZip };
+  function checkDownloads() {
+    const existingMatches = fs.readdirSync(DOWNLOAD_DIR)
+      .filter(f => (f.startsWith(targetLabel) || f.startsWith(targetLabelShort)) && f.endsWith('.zip'))
+      .sort((a, b) => fs.statSync(path.join(DOWNLOAD_DIR, b)).mtimeMs - fs.statSync(path.join(DOWNLOAD_DIR, a)).mtimeMs);
+    if (existingMatches.length > 0) {
+      const mtime = fs.statSync(path.join(DOWNLOAD_DIR, existingMatches[0])).mtimeMs;
+      // If downloaded within the last 45 minutes, accept it
+      if ((Date.now() - mtime) < 2700000) {
+        const targetZip = path.join(DOWNLOAD_DIR, existingMatches[0]);
+        console.log(`[Monitor] Found existing target in downloads: ${targetZip}!`);
+        const destZip = path.join(WORKDIR, `${targetLabel}.zip`);
+        fs.copyFileSync(targetZip, destZip);
+        execSync(`unzip -o ${destZip} -d ${WORKDIR}`, { stdio: 'inherit' });
+        console.log(`[Monitor] Staged and extracted ${destZip}!`);
+        return { success: true, round: roundNum, zip: destZip };
+      }
     }
+    return null;
   }
+
+  const initialCheck = checkDownloads();
+  if (initialCheck) return initialCheck;
 
   while ((Date.now() - startTime) < (maxWaitSec * 1000)) {
     checkCount++;
     const elapsedSec = Math.round((Date.now() - startTime) / 1000);
+
+    // Check downloads folder first on every iteration
+    const dlFolderCheck = checkDownloads();
+    if (dlFolderCheck) return dlFolderCheck;
 
     const evalScript = `(() => {
       const isGenerating = !!document.querySelector('button[aria-label*="Stop" i]');
@@ -59,19 +69,21 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
 
       // 1. Check direct download button
       const dlBtn = document.querySelector('button[aria-label*="Download ${targetLabel}" i]') ||
-                    document.querySelector('button[aria-label*="${targetLabel}" i]');
+                    document.querySelector('button[aria-label*="${targetLabel}" i]') ||
+                    document.querySelector('button[aria-label*="Download ${targetLabelShort}" i]') ||
+                    document.querySelector('button[aria-label*="${targetLabelShort}" i]');
 
       // 2. Check candidate containers
-      const candidates = Array.from(document.querySelectorAll('button, a, div.chip-lr, generated-file, [aria-label*="round_${roundTag}" i]')).map(b => ({
+      const candidates = Array.from(document.querySelectorAll('button, a, div.chip-lr, generated-file, [aria-label*="round_${roundTag}" i], [aria-label*="round_${roundNum}" i]')).map(b => ({
         aria: b.getAttribute('aria-label') || '',
         text: b.innerText || ''
       }));
 
       const hasTarget = !!dlBtn || candidates.some(c => 
-        (c.aria && c.aria.toLowerCase().includes("${targetLabel}".toLowerCase())) ||
-        (c.text && c.text.toLowerCase().includes("${targetLabel}".toLowerCase())) ||
-        (c.aria && c.aria.toLowerCase().includes("round_${roundTag}".toLowerCase())) ||
-        (c.text && c.text.toLowerCase().includes("round_${roundTag}".toLowerCase()))
+        (c.aria && (c.aria.toLowerCase().includes("${targetLabel}".toLowerCase()) || c.aria.toLowerCase().includes("${targetLabelShort}".toLowerCase()))) ||
+        (c.text && (c.text.toLowerCase().includes("${targetLabel}".toLowerCase()) || c.text.toLowerCase().includes("${targetLabelShort}".toLowerCase()))) ||
+        (c.aria && (c.aria.toLowerCase().includes("round_${roundTag}".toLowerCase()) || c.aria.toLowerCase().includes("round_${roundNum}".toLowerCase()))) ||
+        (c.text && (c.text.toLowerCase().includes("round_${roundTag}".toLowerCase()) || c.text.toLowerCase().includes("round_${roundNum}".toLowerCase())))
       );
 
       const msgEls = document.querySelectorAll('message-content, model-response, .model-response-text');
@@ -94,18 +106,22 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
       const clickScript = `(() => {
         // Try exact download button first
         const dlBtn = document.querySelector('button[aria-label*="Download ${targetLabel}" i]') ||
-                      document.querySelector('button[aria-label*="${targetLabel}" i]');
+                      document.querySelector('button[aria-label*="${targetLabel}" i]') ||
+                      document.querySelector('button[aria-label*="Download ${targetLabelShort}" i]') ||
+                      document.querySelector('button[aria-label*="${targetLabelShort}" i]');
         if (dlBtn) {
           dlBtn.click();
           return 'clicked_dl_button';
         }
 
         // Fallback to container or inner button
-        let el = Array.from(document.querySelectorAll('button, a, div.chip-lr, generated-file, [aria-label*="round_${roundTag}" i]')).find(b => {
+        let el = Array.from(document.querySelectorAll('button, a, div.chip-lr, generated-file, [aria-label*="round_${roundTag}" i], [aria-label*="round_${roundNum}" i]')).find(b => {
           const aria = b.getAttribute('aria-label') || '';
           const text = b.innerText || '';
           return aria.toLowerCase().includes("${targetLabel}".toLowerCase()) ||
                  text.toLowerCase().includes("${targetLabel}".toLowerCase()) ||
+                 aria.toLowerCase().includes("${targetLabelShort}".toLowerCase()) ||
+                 text.toLowerCase().includes("${targetLabelShort}".toLowerCase()) ||
                  aria.toLowerCase().includes("round_${roundTag}".toLowerCase()) ||
                  text.toLowerCase().includes("round_${roundTag}".toLowerCase());
         });
@@ -125,7 +141,7 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
       for (let w = 0; w < 30; w++) {
         await sleep(1000);
         const matches = fs.readdirSync(DOWNLOAD_DIR)
-          .filter(f => f.startsWith(targetLabel) && f.endsWith('.zip'))
+          .filter(f => (f.startsWith(targetLabel) || f.startsWith(targetLabelShort)) && f.endsWith('.zip'))
           .sort((a, b) => fs.statSync(path.join(DOWNLOAD_DIR, b)).mtimeMs - fs.statSync(path.join(DOWNLOAD_DIR, a)).mtimeMs);
         if (matches.length > 0) {
           const targetZip = path.join(DOWNLOAD_DIR, matches[0]);
