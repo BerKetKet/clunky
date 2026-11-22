@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v9.8 KFX");
+        badgeTv.setText("Folio v9.9 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -520,18 +520,182 @@ public final class FolioMoreView {
     private static void showReadingGoalDialog(final Context ctx, final Runnable onSaved) {
         final float d = ctx.getResources().getDisplayMetrics().density;
         int cur = getReadingGoalTarget(ctx);
+        int yrNow = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+        int[] qs = readQuickStats(ctx);
+        int finCount = qs[2];
+        int pct = Math.min(100, Math.round((finCount * 100f) / Math.max(1, cur)));
+
+        // Gather completed books for Trophy Shelf
+        final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> finishedBooks = new java.util.ArrayList<>();
+        final java.util.Map<String, Integer> progMap =
+                com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.loadProgressMap(ctx);
+        com.amazon.kindle.epub.ingest.FolioMetadataDb mdb = new com.amazon.kindle.epub.ingest.FolioMetadataDb(ctx);
+        try {
+            for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : mdb.getAllBooks()) {
+                if (r.kfxPath == null) continue;
+                Integer p = progMap.get(r.kfxPath);
+                if (p != null && p >= 100) finishedBooks.add(r);
+            }
+        } catch (Throwable ignored) {
+        } finally {
+            mdb.close();
+        }
+        java.util.Collections.sort(finishedBooks, new java.util.Comparator<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord>() {
+            @Override
+            public int compare(com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord a,
+                               com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord b) {
+                String da = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getFinishedDate(ctx, a.kfxPath);
+                String db = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getFinishedDate(ctx, b.kfxPath);
+                int cmp = db.compareTo(da);
+                if (cmp != 0) return cmp;
+                return (a.title != null ? a.title : "").compareToIgnoreCase(b.title != null ? b.title : "");
+            }
+        });
+
         LinearLayout wrap = new LinearLayout(ctx);
         wrap.setOrientation(LinearLayout.VERTICAL);
-        wrap.setBackgroundColor(0xFF161922);
-        wrap.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
+        wrap.setBackgroundColor(0xFF11131A);
+        wrap.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
         TextView hdr = new TextView(ctx);
-        hdr.setText("Set Annual Reading Goal");
+        hdr.setText("🎯 " + yrNow + " Reading Goal");
         hdr.setTextColor(TEXT_PRIMARY);
-        hdr.setTextSize(16);
+        hdr.setTextSize(17);
         hdr.setTypeface(Typeface.DEFAULT_BOLD);
-        hdr.setPadding(0, 0, 0, dp(d, 10));
+        hdr.setPadding(0, 0, 0, dp(d, 3));
         wrap.addView(hdr);
+
+        TextView progSub = new TextView(ctx);
+        progSub.setText(finCount + " of " + cur + " books finished (" + pct + "%)");
+        progSub.setTextColor(0xFF34D399);
+        progSub.setTextSize(12.5f);
+        progSub.setTypeface(Typeface.DEFAULT_BOLD);
+        progSub.setPadding(0, 0, 0, dp(d, 8));
+        wrap.addView(progSub);
+
+        LinearLayout pTrack = new LinearLayout(ctx);
+        pTrack.setOrientation(LinearLayout.HORIZONTAL);
+        GradientDrawable ptBg = new GradientDrawable();
+        ptBg.setColor(0xFF242938);
+        ptBg.setCornerRadius(dp(d, 4));
+        pTrack.setBackground(ptBg);
+        LinearLayout.LayoutParams ptLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 6));
+        ptLp.bottomMargin = dp(d, 14);
+        pTrack.setLayoutParams(ptLp);
+
+        float frac = Math.max(0.03f, Math.min(1f, finCount / (float) Math.max(1, cur)));
+        View pFill = new View(ctx);
+        GradientDrawable pfBg = new GradientDrawable();
+        pfBg.setColor(0xFF34D399);
+        pfBg.setCornerRadius(dp(d, 4));
+        pFill.setBackground(pfBg);
+        pFill.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, frac));
+        pTrack.addView(pFill);
+        View pRest = new View(ctx);
+        pRest.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f - frac));
+        pTrack.addView(pRest);
+        wrap.addView(pTrack);
+
+        final AlertDialog[] goalDlgRef = new AlertDialog[1];
+
+        // Completed Books Trophy Shelf
+        if (!finishedBooks.isEmpty()) {
+            TextView trHdr = new TextView(ctx);
+            trHdr.setText("🏆 COMPLETED BOOKS (" + finishedBooks.size() + ")");
+            trHdr.setTextColor(0xFF34D399);
+            trHdr.setTextSize(10.5f);
+            trHdr.setTypeface(Typeface.DEFAULT_BOLD);
+            trHdr.setPadding(0, 0, 0, dp(d, 7));
+            wrap.addView(trHdr);
+
+            android.widget.HorizontalScrollView hsv = new android.widget.HorizontalScrollView(ctx);
+            hsv.setHorizontalScrollBarEnabled(false);
+            LinearLayout strip = new LinearLayout(ctx);
+            strip.setOrientation(LinearLayout.HORIZONTAL);
+            int limit = Math.min(finishedBooks.size(), 10);
+            for (int i = 0; i < limit; i++) {
+                final com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec = finishedBooks.get(i);
+                String finDt = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getFinishedDate(ctx, rec.kfxPath);
+                String aDisp = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(rec.author);
+
+                LinearLayout card = new LinearLayout(ctx);
+                card.setOrientation(LinearLayout.HORIZONTAL);
+                card.setGravity(Gravity.CENTER_VERTICAL);
+                card.setPadding(dp(d, 9), dp(d, 8), dp(d, 10), dp(d, 8));
+                GradientDrawable cBg = new GradientDrawable();
+                cBg.setColor(0xFF121C1B);
+                cBg.setCornerRadius(dp(d, 9));
+                cBg.setStroke(dp(d, 1), 0xFF1E5C47);
+                card.setBackground(cBg);
+                LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
+                        dp(d, 196), ViewGroup.LayoutParams.WRAP_CONTENT);
+                if (i < limit - 1) cLp.rightMargin = dp(d, 8);
+                card.setLayoutParams(cLp);
+
+                android.widget.ImageView covIv = new android.widget.ImageView(ctx);
+                covIv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+                covIv.setBackgroundColor(0xFF0D1017);
+                LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(d, 34), dp(d, 50));
+                ivLp.rightMargin = dp(d, 9);
+                covIv.setLayoutParams(ivLp);
+                android.graphics.Bitmap bmp = decodeMiniCover(rec.kfxPath, dp(d, 42));
+                if (bmp != null) covIv.setImageBitmap(bmp);
+                card.addView(covIv);
+
+                LinearLayout mc = new LinearLayout(ctx);
+                mc.setOrientation(LinearLayout.VERTICAL);
+                mc.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+                TextView tTv = new TextView(ctx);
+                tTv.setText(rec.title != null && !rec.title.isEmpty() ? rec.title : "Untitled");
+                tTv.setTextColor(TEXT_PRIMARY);
+                tTv.setTextSize(12);
+                tTv.setTypeface(Typeface.DEFAULT_BOLD);
+                tTv.setMaxLines(2);
+                tTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                mc.addView(tTv);
+
+                TextView aTv = new TextView(ctx);
+                aTv.setText(!aDisp.isEmpty() ? aDisp : "Unknown Author");
+                aTv.setTextColor(0xFF94A3B8);
+                aTv.setTextSize(10.5f);
+                aTv.setSingleLine(true);
+                aTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                mc.addView(aTv);
+
+                TextView dTv = new TextView(ctx);
+                dTv.setText(finDt.isEmpty() ? "✓ Finished" : ("✓ " + finDt));
+                dTv.setTextColor(0xFF34D399);
+                dTv.setTextSize(10.5f);
+                dTv.setTypeface(Typeface.DEFAULT_BOLD);
+                dTv.setPadding(0, dp(d, 2), 0, 0);
+                mc.addView(dTv);
+
+                card.addView(mc);
+                card.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        if (goalDlgRef[0] != null) goalDlgRef[0].dismiss();
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Finished", onSaved);
+                    }
+                });
+                strip.addView(card);
+            }
+            hsv.addView(strip);
+            LinearLayout.LayoutParams hsvLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            hsvLp.bottomMargin = dp(d, 14);
+            hsv.setLayoutParams(hsvLp);
+            wrap.addView(hsv);
+        }
+
+        TextView tgtLbl = new TextView(ctx);
+        tgtLbl.setText("ANNUAL TARGET (BOOKS)");
+        tgtLbl.setTextColor(0xFF94A3B8);
+        tgtLbl.setTextSize(10.5f);
+        tgtLbl.setTypeface(Typeface.DEFAULT_BOLD);
+        tgtLbl.setPadding(0, 0, 0, dp(d, 7));
+        wrap.addView(tgtLbl);
 
         final android.widget.EditText et = new android.widget.EditText(ctx);
         et.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
@@ -550,7 +714,7 @@ public final class FolioMoreView {
         presetRow.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams prLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        prLp.bottomMargin = dp(d, 12);
+        prLp.bottomMargin = dp(d, 10);
         presetRow.setLayoutParams(prLp);
 
         int[] presets = new int[] { 5, 12, 24, 36, 52 };
@@ -580,7 +744,7 @@ public final class FolioMoreView {
         wrap.addView(presetRow);
         wrap.addView(et);
 
-        new AlertDialog.Builder(ctx)
+        goalDlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setView(wrap)
                 .setPositiveButton("Save Goal", new DialogInterface.OnClickListener() {
                     @Override public void onClick(DialogInterface dialog, int which) {
@@ -2906,7 +3070,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v9.8 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v9.9 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
