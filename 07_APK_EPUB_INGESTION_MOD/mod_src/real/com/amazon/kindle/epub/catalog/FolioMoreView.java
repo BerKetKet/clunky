@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v5.9 KFX");
+        badgeTv.setText("Folio v6.0 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -604,7 +604,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v5.9 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v6.0 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
@@ -637,6 +637,8 @@ public final class FolioMoreView {
         sb.append("• Indexed Library Books: ").append(indexedBooks).append("\n");
         sb.append("• Enriched Metadata Records: ").append(metaRecords).append("\n");
         sb.append("• Reading Progress: ").append(booksInProgress).append(" in progress · ").append(booksFinished).append(" finished\n");
+        int favTotal = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.countFavorites(ctx);
+        sb.append("• Favorited Books: ").append(favTotal).append("\n");
         sb.append("• App Library Storage: ").append(String.format("%.1f", appLibMb)).append(" MB\n");
         sb.append("• Legacy /sdcard/kindle: ").append(String.format("%.1f", sdKindleMb)).append(" MB\n");
         sb.append("• Temp Open-Once Cache: ").append(String.format("%.1f", tempCacheMb)).append(" MB\n");

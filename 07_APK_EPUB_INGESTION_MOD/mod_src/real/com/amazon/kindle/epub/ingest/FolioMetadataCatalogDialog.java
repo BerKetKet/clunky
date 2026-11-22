@@ -209,13 +209,16 @@ public final class FolioMetadataCatalogDialog {
 
                 int readingCount = 0;
                 int finishedCount = 0;
+                int favCount = 0;
                 for (FolioMetadataDb.BookRecord rec : allBooks) {
                     int p = getProgress(progressMap, rec.kfxPath);
                     if (p >= 100) finishedCount++;
                     else if (p > 0) readingCount++;
+                    if (isFavorite(ctx, rec.kfxPath)) favCount++;
                 }
                 List<String> chipList = new ArrayList<>();
                 chipList.add("All");
+                if (favCount > 0) chipList.add("Favorites");
                 if (readingCount > 0) chipList.add("Reading");
                 if (finishedCount > 0) chipList.add("Finished");
                 for (String g : genres) {
@@ -225,21 +228,26 @@ public final class FolioMetadataCatalogDialog {
                 chipRow.removeAllViews();
                 for (final String g : chipList) {
                     boolean active = g.equalsIgnoreCase(selectedGenre[0]);
+                    boolean isFavChip = "Favorites".equalsIgnoreCase(g);
                     boolean isStatusChip = "Reading".equalsIgnoreCase(g) || "Finished".equalsIgnoreCase(g);
                     int gCount;
                     if ("All".equalsIgnoreCase(g)) gCount = allBooks.size();
+                    else if (isFavChip) gCount = favCount;
                     else if ("Reading".equalsIgnoreCase(g)) gCount = readingCount;
                     else if ("Finished".equalsIgnoreCase(g)) gCount = finishedCount;
                     else gCount = countBooksInGenre(allBooks, g);
 
                     TextView chip = new TextView(ctx);
-                    chip.setText(g + " (" + gCount + ")");
+                    chip.setText((isFavChip ? "★ " : "") + g + " (" + gCount + ")");
                     chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                     chip.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-                    chip.setTextColor(Color.parseColor(active ? "#111827" : (isStatusChip ? "#5EEAD4" : "#CBD5E1")));
+                    chip.setTextColor(Color.parseColor(active ? "#111827"
+                            : (isFavChip ? "#FBBF24" : (isStatusChip ? "#5EEAD4" : "#CBD5E1"))));
                     chip.setPadding(dp(ctx, 12), dp(ctx, 6), dp(ctx, 12), dp(ctx, 6));
                     GradientDrawable bg = new GradientDrawable();
-                    bg.setColor(Color.parseColor(active ? (isStatusChip ? "#14B8A6" : "#F59E0B") : "#1E2433"));
+                    bg.setColor(Color.parseColor(active
+                            ? (isFavChip ? "#FBBF24" : (isStatusChip ? "#14B8A6" : "#F59E0B"))
+                            : "#1E2433"));
                     bg.setCornerRadius(dp(ctx, 16));
                     chip.setBackground(bg);
                     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -256,7 +264,9 @@ public final class FolioMetadataCatalogDialog {
                 List<FolioMetadataDb.BookRecord> filtered = new ArrayList<>();
                 String q = queryText[0].trim().toLowerCase(Locale.ROOT);
                 for (FolioMetadataDb.BookRecord rec : allBooks) {
-                    if ("Reading".equalsIgnoreCase(selectedGenre[0])) {
+                    if ("Favorites".equalsIgnoreCase(selectedGenre[0])) {
+                        if (!isFavorite(ctx, rec.kfxPath)) continue;
+                    } else if ("Reading".equalsIgnoreCase(selectedGenre[0])) {
                         int p = getProgress(progressMap, rec.kfxPath);
                         if (p <= 0 || p >= 100) continue;
                     } else if ("Finished".equalsIgnoreCase(selectedGenre[0])) {
@@ -490,7 +500,7 @@ public final class FolioMetadataCatalogDialog {
         col.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView title = new TextView(ctx);
-        title.setText(rec.title);
+        title.setText((isFavorite(ctx, rec.kfxPath) ? "★ " : "") + rec.title);
         title.setTextColor(Color.WHITE);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -749,6 +759,14 @@ public final class FolioMetadataCatalogDialog {
             }
         }
 
+        LinearLayout actionPillRow = new LinearLayout(ctx);
+        actionPillRow.setOrientation(LinearLayout.HORIZONTAL);
+        actionPillRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams apLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        apLp.setMargins(0, dp(ctx, 14), 0, dp(ctx, 2));
+        actionPillRow.setLayoutParams(apLp);
+
         final boolean isFinished = currentProgress >= 100;
         TextView readToggleBtn = new TextView(ctx);
         readToggleBtn.setText(isFinished ? "↺ Mark as Unread" : "✓ Mark as Finished");
@@ -762,7 +780,7 @@ public final class FolioMetadataCatalogDialog {
         readToggleBtn.setBackground(toggleBg);
         LinearLayout.LayoutParams toggleLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        toggleLp.setMargins(0, dp(ctx, 14), 0, dp(ctx, 2));
+        toggleLp.setMargins(0, 0, dp(ctx, 8), 0);
         readToggleBtn.setLayoutParams(toggleLp);
         readToggleBtn.setOnClickListener(v -> {
             boolean targetFinished = !isFinished;
@@ -774,7 +792,32 @@ public final class FolioMetadataCatalogDialog {
                     Toast.LENGTH_SHORT).show();
             if (onMetadataEdited != null) onMetadataEdited.run();
         });
-        box.addView(readToggleBtn);
+        actionPillRow.addView(readToggleBtn);
+
+        final boolean isFav = isFavorite(ctx, rec.kfxPath);
+        TextView favBtn = new TextView(ctx);
+        favBtn.setText(isFav ? "★ Favorited" : "☆ Favorite");
+        favBtn.setTextColor(Color.parseColor(isFav ? "#FBBF24" : "#CBD5E1"));
+        favBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        favBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        favBtn.setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8));
+        GradientDrawable favBg = new GradientDrawable();
+        favBg.setColor(Color.parseColor(isFav ? "#282216" : "#1E2433"));
+        favBg.setCornerRadius(dp(ctx, 10));
+        if (isFav) favBg.setStroke(dp(ctx, 1), Color.parseColor("#66FBBF24"));
+        favBtn.setBackground(favBg);
+        favBtn.setOnClickListener(v -> {
+            boolean nextFav = !isFav;
+            setFavorite(ctx, rec.kfxPath, nextFav);
+            if (detailDlgRef[0] != null) detailDlgRef[0].dismiss();
+            Toast.makeText(ctx,
+                    (nextFav ? "Added \"" : "Removed \"") + rec.title
+                            + (nextFav ? "\" to Favorites" : "\" from Favorites"),
+                    Toast.LENGTH_SHORT).show();
+            if (onMetadataEdited != null) onMetadataEdited.run();
+        });
+        actionPillRow.addView(favBtn);
+        box.addView(actionPillRow);
 
         TextView removeBtn = new TextView(ctx);
         removeBtn.setText("Remove from Folio Library");
@@ -1040,6 +1083,36 @@ public final class FolioMetadataCatalogDialog {
             }
         } catch (Throwable ignored) {}
         return map;
+    }
+
+    public static boolean isFavorite(Context ctx, String kfxPath) {
+        if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return false;
+        try {
+            return ctx.getSharedPreferences("folio_favorites", Context.MODE_PRIVATE)
+                    .getBoolean(kfxPath, false);
+        } catch (Throwable ignored) { return false; }
+    }
+
+    public static void setFavorite(Context ctx, String kfxPath, boolean fav) {
+        if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return;
+        try {
+            android.content.SharedPreferences.Editor ed =
+                    ctx.getSharedPreferences("folio_favorites", Context.MODE_PRIVATE).edit();
+            if (fav) ed.putBoolean(kfxPath, true);
+            else ed.remove(kfxPath);
+            ed.apply();
+        } catch (Throwable ignored) {}
+    }
+
+    public static int countFavorites(Context ctx) {
+        if (ctx == null) return 0;
+        try {
+            int n = 0;
+            for (Object v : ctx.getSharedPreferences("folio_favorites", Context.MODE_PRIVATE).getAll().values()) {
+                if (Boolean.TRUE.equals(v)) n++;
+            }
+            return n;
+        } catch (Throwable ignored) { return 0; }
     }
 
     private static void setBookReadState(Context ctx, String kfxPath, boolean finished) {
