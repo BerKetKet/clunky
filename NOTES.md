@@ -1,6 +1,27 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v9.7 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 097 complete:
+  1. **Curated-Only Reading Log Toggle & Top-Placed Up Next Queue (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioMetadataBackup.java` and `FolioMoreView.java`.
+     - Added `✨ Scope: Curated Only` / `📚 Scope: All Books` toggle pill alongside `📊 Export CSV` in `Reading Log (.md)` modal.
+     - Defaults to Curated Only mode filtering markdown export strictly to engaged books (Finished, Reading, Favorited, Rated, Annotated, Shelved, Queued).
+     - Promoted `## 📌 Up Next Queue (N)` section to the prominent top of the Markdown log right below the Reading Goal summary.
+     - Bumped badge and About Folio string to `Folio v9.7 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Milestone Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r97_curated_reading_log.png` (218 KB) — Reading Log modal showing `✨ Scope: Curated Only` toggle pill, `# Folio Curated Reading Log`, and `## 📌 Up Next Queue (1)` at top of preview.
+       * `verify_r97_about_v97.png` (331 KB) — About Folio modal showing `Version: Folio v9.7 KFX (Enhanced Typesetting)` and live stats.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v9.7 KFX release APK (137 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v9.7_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 097)
+1. `verify_r97_curated_reading_log.png`: Reading Log modal with Curated Only toggle and top-placed Up Next Queue.
+2. `verify_r97_about_v97.png`: About Folio modal confirming `Version: Folio v9.7 KFX (Enhanced Typesetting)`.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v9.7 KFX deployed (`lastUpdateTime=2026-11-23 02:23:50`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v9.6 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 096 complete:
   1. **1-Tap Sort Picker Modal, Direction Toggle & Size/Queue Sorts (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`.
