@@ -627,3 +627,25 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v7.9_kfx/base.apk` (132 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report079.zip`
+
+
+---
+
+# Round 080: 3-Column Cover Art Grid View Toggle (Folio v8.0 KFX Milestone)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.0 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 080 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMetadataCatalogDialog.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Added persistent `⊞` / `☰` view-mode toggle pill in catalog top bar with `SharedPreferences("folio_ui_prefs", "catalog_grid_mode")` persistence.
+     - Implemented 3-column Cover Art Grid mode with extracted `.cover.jpg` art, 2-line titles, compact status badges (`✓ Done`, `X%`, `★ 5/5`, `Unread`), and `ⓘ` details buttons.
+     - Bumped version badge to `Milestone Folio v8.0 KFX (Enhanced Typesetting)`.
+     - Built `classes9.dex` (267,104 B), fast-rebuilt APK, signed, and deployed to Galaxy M32 (`lastUpdateTime=2026-11-23 00:13:19`).
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.0_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `screenshots/verify_r80_catalog_cover_grid_view.png`: Proves 3-column Cover Art Grid view displaying covers, titles, status badges (`★ 5/5`, `✓ Done`, `Unread`), `ⓘ` buttons, and `☰` toggle pill.
+     - `screenshots/verify_r80_control_center_v80.png`: Proves Control Center displays amber `Folio v8.0 KFX` milestone badge.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.0_kfx/base.apk` (132 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report080.zip`
