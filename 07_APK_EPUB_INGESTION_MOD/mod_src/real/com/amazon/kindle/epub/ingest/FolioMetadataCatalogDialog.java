@@ -177,8 +177,9 @@ public final class FolioMetadataCatalogDialog {
                 chipRow.removeAllViews();
                 for (final String g : genres) {
                     boolean active = g.equalsIgnoreCase(selectedGenre[0]);
+                    int gCount = "All".equalsIgnoreCase(g) ? allBooks.size() : countBooksInGenre(allBooks, g);
                     TextView chip = new TextView(ctx);
-                    chip.setText(g);
+                    chip.setText(g + " (" + gCount + ")");
                     chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                     chip.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                     chip.setTextColor(Color.parseColor(active ? "#111827" : "#CBD5E1"));
@@ -320,20 +321,35 @@ public final class FolioMetadataCatalogDialog {
         } finally {
             db.close();
         }
-        Set<String> cleanGenres = new LinkedHashSet<>();
-        cleanGenres.add("All");
+        final Map<String, Integer> freq = new HashMap<>();
+        final Map<String, String> display = new HashMap<>();
         for (FolioMetadataDb.BookRecord r : outBooks) {
             if (r.genres == null || r.genres.isEmpty()) continue;
+            Set<String> seenInBook = new LinkedHashSet<>();
             for (String g : r.genres.split(",")) {
                 String c = g.trim();
-                if (c.length() >= 3 && c.length() <= 24 && !EpubMetadataExtractor.isNoiseTag(c)) {
-                    cleanGenres.add(toTitleCase(c));
-                    if (cleanGenres.size() >= 12) break;
+                if (c.length() >= 3 && c.length() <= 22
+                        && !c.contains("--")
+                        && !EpubMetadataExtractor.isNoiseTag(c)) {
+                    String key = c.toLowerCase(Locale.ROOT);
+                    if (seenInBook.add(key)) {
+                        freq.put(key, (freq.containsKey(key) ? freq.get(key) : 0) + 1);
+                        if (!display.containsKey(key)) display.put(key, toTitleCase(c));
+                    }
                 }
             }
-            if (cleanGenres.size() >= 12) break;
         }
-        outGenres.addAll(cleanGenres);
+        List<String> sortedKeys = new ArrayList<>(freq.keySet());
+        Collections.sort(sortedKeys, (a, b) -> {
+            int ca = freq.get(a);
+            int cb = freq.get(b);
+            if (ca != cb) return Integer.compare(cb, ca);
+            return a.compareTo(b);
+        });
+        outGenres.add("All");
+        for (int i = 0; i < sortedKeys.size() && outGenres.size() < 12; i++) {
+            outGenres.add(display.get(sortedKeys.get(i)));
+        }
     }
 
     private static boolean matchesQuery(FolioMetadataDb.BookRecord r, String q) {
@@ -747,6 +763,14 @@ public final class FolioMetadataCatalogDialog {
             }
         }
         return sb.toString();
+    }
+
+    private static int countBooksInGenre(List<FolioMetadataDb.BookRecord> books, String genre) {
+        int n = 0;
+        for (FolioMetadataDb.BookRecord r : books) {
+            if (r.hasGenre(genre)) n++;
+        }
+        return n;
     }
 
     private static int dp(Context ctx, int v) {

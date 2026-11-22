@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v4.3 KFX");
+        badgeTv.setText("Folio v4.4 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -360,6 +360,8 @@ public final class FolioMoreView {
 
                 File epubDir = new File("/sdcard/epub");
                 File kindleDir = new File("/sdcard/kindle");
+                File appLibDir = new File(ctx.getFilesDir(), "folio_library");
+                if (!appLibDir.exists()) appLibDir.mkdirs();
 
                 if (epubDir.exists() && epubDir.isDirectory()) {
                     File[] epubs = epubDir.listFiles();
@@ -368,10 +370,27 @@ public final class FolioMoreView {
                             if (f.getName().toLowerCase().endsWith(".epub")) {
                                 epubCount++;
                                 String baseName = f.getName().substring(0, f.getName().lastIndexOf('.'));
-                                File targetKfx = new File(kindleDir, baseName + ".kfx");
-                                if (!targetKfx.exists()) {
-                                    if (EpubTranscoder.transcodeToKfx(f, targetKfx)) {
+                                File legacyKfx = new File(kindleDir, baseName + ".kfx");
+                                File appKfx = new File(appLibDir, baseName + ".kfx");
+                                if (!legacyKfx.exists() && !appKfx.exists()) {
+                                    if (EpubTranscoder.transcodeToKfx(f, appKfx)) {
                                         kfxConverted++;
+                                        try {
+                                            com.amazon.kindle.epub.ingest.EpubMetadataExtractor.BookMeta meta =
+                                                    com.amazon.kindle.epub.ingest.EpubMetadataExtractor.extract(f, f.getName());
+                                            com.amazon.kindle.epub.ingest.MetadataEnricher.enrichInPlace(meta);
+                                            String bKey = com.amazon.kindle.epub.ingest.FolioMetadataDb.computeBookKey(meta.title, f.length());
+                                            File cov = new File(appKfx.getAbsolutePath() + ".cover.jpg");
+                                            com.amazon.kindle.epub.ingest.FolioMetadataDb mdb =
+                                                    new com.amazon.kindle.epub.ingest.FolioMetadataDb(ctx);
+                                            try {
+                                                mdb.upsertBook(bKey, appKfx, cov, f.getName(), meta);
+                                            } finally {
+                                                mdb.close();
+                                            }
+                                            com.amazon.kindle.epub.ingest.FolioMetadataDb.registerInKindleLibraryDb(
+                                                    ctx, bKey, appKfx, cov, meta);
+                                        } catch (Throwable ignored) {}
                                     }
                                 }
                             }
@@ -447,7 +466,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v4.3 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v4.4 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
