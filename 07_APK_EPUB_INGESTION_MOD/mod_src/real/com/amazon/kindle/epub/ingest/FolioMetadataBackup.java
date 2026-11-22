@@ -41,7 +41,7 @@ public final class FolioMetadataBackup {
         try {
             List<FolioMetadataDb.BookRecord> all = db.getAllBooks();
             JSONObject root = new JSONObject();
-            root.put("version", 1);
+            root.put("version", 2);
             root.put("exported_at", System.currentTimeMillis());
             root.put("count", all.size());
 
@@ -61,6 +61,7 @@ public final class FolioMetadataBackup {
                 obj.put("isbn", r.isbn);
                 obj.put("description", r.description);
                 obj.put("open_library_key", r.openLibraryKey);
+                obj.put("is_favorite", FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath));
                 arr.put(obj);
             }
             root.put("books", arr);
@@ -136,6 +137,9 @@ public final class FolioMetadataBackup {
                         coverPath.isEmpty() ? null : new File(coverPath),
                         sourceName,
                         meta);
+                if (obj.optBoolean("is_favorite", false)) {
+                    FolioMetadataCatalogDialog.setFavorite(ctx, kfxPath, true);
+                }
                 restored++;
             }
             Log.i(TAG, "Restored " + restored + " metadata records from " + inFile.getAbsolutePath());

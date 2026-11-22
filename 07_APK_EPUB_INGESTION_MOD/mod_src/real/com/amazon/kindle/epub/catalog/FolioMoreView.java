@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v6.0 KFX");
+        badgeTv.setText("Folio v6.1 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -110,14 +110,15 @@ public final class FolioMoreView {
         subTv.setPadding(0, 0, 0, dp(d, 14));
         container.addView(subTv);
 
-        // 1b. Live Reading Stats Strip (1-tap deep-links + auto-refresh on dialog dismiss)
-        final TextView[] statNums = new TextView[3];
+        // 1b. Live 4-Tile Reading Stats Strip (1-tap deep-links + auto-refresh on dialog dismiss)
+        final TextView[] statNums = new TextView[4];
         final Runnable refreshStats = new Runnable() {
             @Override public void run() {
                 int[] s = readQuickStats(ctx);
                 if (statNums[0] != null) statNums[0].setText(String.valueOf(s[0]));
                 if (statNums[1] != null) statNums[1].setText(String.valueOf(s[1]));
                 if (statNums[2] != null) statNums[2].setText(String.valueOf(s[2]));
+                if (statNums[3] != null) statNums[3].setText(String.valueOf(s[3]));
             }
         };
 
@@ -143,11 +144,18 @@ public final class FolioMoreView {
                         com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Reading", refreshStats);
                     }
                 }));
-        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[2]), "FINISHED", 0xFF34D399, false,
+        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[2]), "FINISHED", 0xFF34D399, true,
                 statNums, 2,
                 new View.OnClickListener() {
                     @Override public void onClick(View v) {
                         com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Finished", refreshStats);
+                    }
+                }));
+        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[3]), "★ FAVS", 0xFFFBBF24, false,
+                statNums, 3,
+                new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Favorites", refreshStats);
                     }
                 }));
         container.addView(statsRow);
@@ -274,7 +282,8 @@ public final class FolioMoreView {
                 }
             }
         } catch (Throwable ignored) {}
-        return new int[] { indexed, reading, finished };
+        int favs = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.countFavorites(ctx);
+        return new int[] { indexed, reading, finished, favs };
     }
 
     private static View makeStatTile(Context ctx, float d, String count, String label,
@@ -283,7 +292,7 @@ public final class FolioMoreView {
         LinearLayout tile = new LinearLayout(ctx);
         tile.setOrientation(LinearLayout.VERTICAL);
         tile.setGravity(Gravity.CENTER);
-        tile.setPadding(dp(d, 10), dp(d, 12), dp(d, 10), dp(d, 12));
+        tile.setPadding(dp(d, 6), dp(d, 11), dp(d, 6), dp(d, 11));
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(0xFF1A1F2E);
         bg.setCornerRadius(dp(d, 12));
@@ -291,7 +300,7 @@ public final class FolioMoreView {
         tile.setBackground(bg);
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-        if (addRightGap) lp.rightMargin = dp(d, 10);
+        if (addRightGap) lp.rightMargin = dp(d, 8);
         tile.setLayoutParams(lp);
 
         TextView numTv = new TextView(ctx);
@@ -604,7 +613,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v6.0 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v6.1 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
