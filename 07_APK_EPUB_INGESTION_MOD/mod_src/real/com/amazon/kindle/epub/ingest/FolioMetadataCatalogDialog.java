@@ -28,6 +28,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.List;
@@ -235,6 +236,7 @@ public final class FolioMetadataCatalogDialog {
                 int unreadCount = 0;
                 int favCount = 0;
                 int notesCount = 0;
+                final Map<String, Integer> shelfCounts = new LinkedHashMap<>();
                 for (FolioMetadataDb.BookRecord rec : allBooks) {
                     int p = getProgress(progressMap, rec.kfxPath);
                     if (p >= 100) finishedCount++;
@@ -242,11 +244,16 @@ public final class FolioMetadataCatalogDialog {
                     else unreadCount++;
                     if (isFavorite(ctx, rec.kfxPath)) favCount++;
                     if (!getNote(ctx, rec.kfxPath).isEmpty()) notesCount++;
+                    String sh = getShelf(ctx, rec.kfxPath);
+                    if (!sh.isEmpty()) {
+                        shelfCounts.put(sh, (shelfCounts.containsKey(sh) ? shelfCounts.get(sh) : 0) + 1);
+                    }
                 }
                 List<String> chipList = new ArrayList<>();
                 chipList.add("All");
                 if (favCount > 0) chipList.add("Favorites");
                 if (notesCount > 0) chipList.add("Notes");
+                for (String shName : shelfCounts.keySet()) chipList.add("SHELF:" + shName);
                 if (readingCount > 0) chipList.add("Reading");
                 if (finishedCount > 0) chipList.add("Finished");
                 if (unreadCount > 0) chipList.add("Unread");
@@ -259,29 +266,36 @@ public final class FolioMetadataCatalogDialog {
                     boolean active = g.equalsIgnoreCase(selectedGenre[0]);
                     boolean isFavChip = "Favorites".equalsIgnoreCase(g);
                     boolean isNotesChip = "Notes".equalsIgnoreCase(g);
+                    boolean isShelfChip = g.startsWith("SHELF:");
                     boolean isStatusChip = "Reading".equalsIgnoreCase(g)
                             || "Finished".equalsIgnoreCase(g)
                             || "Unread".equalsIgnoreCase(g);
+                    String labelText = isShelfChip ? g.substring(6) : g;
                     int gCount;
                     if ("All".equalsIgnoreCase(g)) gCount = allBooks.size();
                     else if (isFavChip) gCount = favCount;
                     else if (isNotesChip) gCount = notesCount;
+                    else if (isShelfChip) gCount = shelfCounts.containsKey(labelText) ? shelfCounts.get(labelText) : 0;
                     else if ("Reading".equalsIgnoreCase(g)) gCount = readingCount;
                     else if ("Finished".equalsIgnoreCase(g)) gCount = finishedCount;
                     else if ("Unread".equalsIgnoreCase(g)) gCount = unreadCount;
                     else gCount = countBooksInGenre(allBooks, g);
 
                     TextView chip = new TextView(ctx);
-                    String chipPrefix = isFavChip ? "★ " : (isNotesChip ? "📝 " : "");
-                    chip.setText(chipPrefix + g + " (" + gCount + ")");
+                    String chipPrefix = isFavChip ? "★ " : (isNotesChip ? "📝 " : (isShelfChip ? "🏷 " : ""));
+                    chip.setText(chipPrefix + labelText + " (" + gCount + ")");
                     chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                     chip.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                     chip.setTextColor(Color.parseColor(active ? "#111827"
-                            : ((isFavChip || isNotesChip) ? "#FBBF24" : (isStatusChip ? "#5EEAD4" : "#CBD5E1"))));
+                            : ((isFavChip || isNotesChip) ? "#FBBF24"
+                            : (isShelfChip ? "#A5B4FC"
+                            : (isStatusChip ? "#5EEAD4" : "#CBD5E1")))));
                     chip.setPadding(dp(ctx, 12), dp(ctx, 6), dp(ctx, 12), dp(ctx, 6));
                     GradientDrawable bg = new GradientDrawable();
                     bg.setColor(Color.parseColor(active
-                            ? ((isFavChip || isNotesChip) ? "#FBBF24" : (isStatusChip ? "#14B8A6" : "#F59E0B"))
+                            ? ((isFavChip || isNotesChip) ? "#FBBF24"
+                            : (isShelfChip ? "#818CF8"
+                            : (isStatusChip ? "#14B8A6" : "#F59E0B")))
                             : "#1E2433"));
                     bg.setCornerRadius(dp(ctx, 16));
                     chip.setBackground(bg);
@@ -303,6 +317,9 @@ public final class FolioMetadataCatalogDialog {
                         if (!isFavorite(ctx, rec.kfxPath)) continue;
                     } else if ("Notes".equalsIgnoreCase(selectedGenre[0])) {
                         if (getNote(ctx, rec.kfxPath).isEmpty()) continue;
+                    } else if (selectedGenre[0].startsWith("SHELF:")) {
+                        String targetShelf = selectedGenre[0].substring(6);
+                        if (!targetShelf.equalsIgnoreCase(getShelf(ctx, rec.kfxPath))) continue;
                     } else if ("Reading".equalsIgnoreCase(selectedGenre[0])) {
                         int p = getProgress(progressMap, rec.kfxPath);
                         if (p <= 0 || p >= 100) continue;
@@ -526,7 +543,8 @@ public final class FolioMetadataCatalogDialog {
                 || contains(formatAuthorForDisplay(r.author), q)
                 || contains(r.genres, q)
                 || contains(r.publisher, q) || contains(r.isbn, q) || contains(r.pubDate, q)
-                || contains(getNote(ctx, r.kfxPath), q);
+                || contains(getNote(ctx, r.kfxPath), q)
+                || contains(getShelf(ctx, r.kfxPath), q);
     }
 
     private static boolean contains(String haystack, String needle) {
@@ -634,6 +652,17 @@ public final class FolioMetadataCatalogDialog {
             isbnTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             isbnTv.setPadding(0, dp(ctx, 2), 0, 0);
             col.addView(isbnTv);
+        }
+
+        String cardShelf = getShelf(ctx, rec.kfxPath);
+        if (!cardShelf.isEmpty()) {
+            TextView shelfTv = new TextView(ctx);
+            shelfTv.setText("🏷 " + cardShelf);
+            shelfTv.setTextColor(Color.parseColor("#A5B4FC"));
+            shelfTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            shelfTv.setTypeface(Typeface.DEFAULT_BOLD);
+            shelfTv.setPadding(0, dp(ctx, 2), 0, 0);
+            col.addView(shelfTv);
         }
 
         int cardRating = getRating(ctx, rec.kfxPath);
@@ -974,6 +1003,42 @@ public final class FolioMetadataCatalogDialog {
         paintStars.run();
         box.addView(rateRow);
 
+        // Custom Shelf / Collection Row
+        final String curShelf = getShelf(ctx, rec.kfxPath);
+        LinearLayout shelfRow = new LinearLayout(ctx);
+        shelfRow.setOrientation(LinearLayout.HORIZONTAL);
+        shelfRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams shLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        shLp.setMargins(0, dp(ctx, 8), 0, dp(ctx, 0));
+        shelfRow.setLayoutParams(shLp);
+
+        TextView shelfLbl = new TextView(ctx);
+        shelfLbl.setText("Shelf:");
+        shelfLbl.setTextColor(Color.parseColor("#94A3B8"));
+        shelfLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        shelfLbl.setTypeface(Typeface.DEFAULT_BOLD);
+        shelfLbl.setPadding(0, 0, dp(ctx, 8), 0);
+        shelfRow.addView(shelfLbl);
+
+        TextView shelfPill = new TextView(ctx);
+        shelfPill.setText(curShelf.isEmpty() ? "+ Assign Shelf ›" : "🏷 " + curShelf + "  ›");
+        shelfPill.setTextColor(Color.parseColor(curShelf.isEmpty() ? "#94A3B8" : "#A5B4FC"));
+        shelfPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        shelfPill.setTypeface(Typeface.DEFAULT_BOLD);
+        shelfPill.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
+        GradientDrawable shBg = new GradientDrawable();
+        shBg.setColor(Color.parseColor(curShelf.isEmpty() ? "#1E2433" : "#1E223B"));
+        shBg.setCornerRadius(dp(ctx, 12));
+        if (!curShelf.isEmpty()) shBg.setStroke(dp(ctx, 1), Color.parseColor("#66818CF8"));
+        shelfPill.setBackground(shBg);
+        shelfPill.setOnClickListener(v -> showShelfPickerDialog(ctx, rec, curShelf, () -> {
+            if (detailDlgRef[0] != null) detailDlgRef[0].dismiss();
+            if (onMetadataEdited != null) onMetadataEdited.run();
+        }));
+        shelfRow.addView(shelfPill);
+        box.addView(shelfRow);
+
         // Personal Reading Note card / "+ Add Note" button
         final String existingNote = getNote(ctx, rec.kfxPath);
         LinearLayout noteBox = new LinearLayout(ctx);
@@ -1313,6 +1378,113 @@ public final class FolioMetadataCatalogDialog {
             }
         } catch (Throwable ignored) {}
         return map;
+    }
+
+    public static String getShelf(Context ctx, String kfxPath) {
+        if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return "";
+        try {
+            String s = ctx.getSharedPreferences("folio_shelves", Context.MODE_PRIVATE).getString(kfxPath, "");
+            return s != null ? s.trim() : "";
+        } catch (Throwable ignored) { return ""; }
+    }
+
+    public static void setShelf(Context ctx, String kfxPath, String shelf) {
+        if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return;
+        try {
+            android.content.SharedPreferences.Editor ed =
+                    ctx.getSharedPreferences("folio_shelves", Context.MODE_PRIVATE).edit();
+            String clean = shelf != null ? shelf.trim() : "";
+            if (clean.isEmpty()) ed.remove(kfxPath);
+            else ed.putString(kfxPath, clean);
+            ed.apply();
+        } catch (Throwable ignored) {}
+    }
+
+    private static void showShelfPickerDialog(final Context ctx, final FolioMetadataDb.BookRecord rec,
+                                              final String currentShelf, final Runnable onSaved) {
+        final String[] presets = new String[] { "Classics", "Philosophy", "Sci-Fi", "History", "To Read", "Reference" };
+        LinearLayout wrap = new LinearLayout(ctx);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setBackgroundColor(Color.parseColor("#161922"));
+        wrap.setPadding(dp(ctx, 18), dp(ctx, 16), dp(ctx, 18), dp(ctx, 10));
+
+        TextView hdr = new TextView(ctx);
+        hdr.setText("Assign Shelf · " + rec.title);
+        hdr.setTextColor(Color.WHITE);
+        hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        hdr.setTypeface(Typeface.DEFAULT_BOLD);
+        hdr.setPadding(0, 0, 0, dp(ctx, 10));
+        wrap.addView(hdr);
+
+        final AlertDialog[] pickerRef = new AlertDialog[1];
+
+        HorizontalScrollView pScroll = new HorizontalScrollView(ctx);
+        pScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout pRow = new LinearLayout(ctx);
+        pRow.setOrientation(LinearLayout.HORIZONTAL);
+        for (final String preset : presets) {
+            boolean isCur = preset.equalsIgnoreCase(currentShelf);
+            TextView pill = new TextView(ctx);
+            pill.setText("🏷 " + preset);
+            pill.setTextColor(Color.parseColor(isCur ? "#111827" : "#A5B4FC"));
+            pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            pill.setTypeface(Typeface.DEFAULT_BOLD);
+            pill.setPadding(dp(ctx, 10), dp(ctx, 6), dp(ctx, 10), dp(ctx, 6));
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(Color.parseColor(isCur ? "#818CF8" : "#1E2433"));
+            bg.setCornerRadius(dp(ctx, 14));
+            pill.setBackground(bg);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(0, 0, dp(ctx, 6), 0);
+            pill.setLayoutParams(lp);
+            pill.setOnClickListener(v -> {
+                setShelf(ctx, rec.kfxPath, preset);
+                if (pickerRef[0] != null) pickerRef[0].dismiss();
+                Toast.makeText(ctx, "Added to shelf: " + preset, Toast.LENGTH_SHORT).show();
+                if (onSaved != null) onSaved.run();
+            });
+            pRow.addView(pill);
+        }
+        pScroll.addView(pRow);
+        LinearLayout.LayoutParams psLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        psLp.setMargins(0, 0, 0, dp(ctx, 12));
+        pScroll.setLayoutParams(psLp);
+        wrap.addView(pScroll);
+
+        final EditText et = new EditText(ctx);
+        et.setText(currentShelf);
+        et.setHint("Or type a custom shelf name...");
+        et.setHintTextColor(Color.parseColor("#64748B"));
+        et.setTextColor(Color.WHITE);
+        et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        et.setSingleLine(true);
+        et.setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10));
+        GradientDrawable etBg = new GradientDrawable();
+        etBg.setColor(Color.parseColor("#1A1F2E"));
+        etBg.setCornerRadius(dp(ctx, 10));
+        etBg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
+        et.setBackground(etBg);
+        wrap.addView(et);
+
+        AlertDialog.Builder b = new AlertDialog.Builder(ctx)
+                .setView(wrap)
+                .setPositiveButton("Save Shelf", (d, w) -> {
+                    String val = et.getText().toString().trim();
+                    setShelf(ctx, rec.kfxPath, val);
+                    Toast.makeText(ctx, val.isEmpty() ? "Removed from shelf" : "Saved shelf: " + val, Toast.LENGTH_SHORT).show();
+                    if (onSaved != null) onSaved.run();
+                })
+                .setNegativeButton("Cancel", null);
+        if (!currentShelf.isEmpty()) {
+            b.setNeutralButton("Remove Shelf", (d, w) -> {
+                setShelf(ctx, rec.kfxPath, "");
+                Toast.makeText(ctx, "Removed from shelf", Toast.LENGTH_SHORT).show();
+                if (onSaved != null) onSaved.run();
+            });
+        }
+        pickerRef[0] = b.show();
     }
 
     public static int getRating(Context ctx, String kfxPath) {

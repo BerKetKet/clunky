@@ -66,6 +66,8 @@ public final class FolioMetadataBackup {
                 if (!pNote.isEmpty()) obj.put("personal_note", pNote);
                 int sRate = FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath);
                 if (sRate > 0) obj.put("star_rating", sRate);
+                String shName = FolioMetadataCatalogDialog.getShelf(ctx, r.kfxPath);
+                if (!shName.isEmpty()) obj.put("shelf", shName);
                 arr.put(obj);
             }
             root.put("books", arr);
@@ -152,6 +154,10 @@ public final class FolioMetadataBackup {
                 if (sRate > 0) {
                     FolioMetadataCatalogDialog.setRating(ctx, kfxPath, sRate);
                 }
+                String shName = obj.optString("shelf", "");
+                if (!shName.isEmpty()) {
+                    FolioMetadataCatalogDialog.setShelf(ctx, kfxPath, shName);
+                }
                 restored++;
             }
             Log.i(TAG, "Restored " + restored + " metadata records from " + inFile.getAbsolutePath());
@@ -235,6 +241,10 @@ public final class FolioMetadataBackup {
                     md.append("- **Rating:** ");
                     for (int s = 0; s < 5; s++) md.append(s < stars ? "★" : "☆");
                     md.append(" (").append(stars).append("/5)\n");
+                }
+                String shName = FolioMetadataCatalogDialog.getShelf(ctx, r.kfxPath);
+                if (!shName.isEmpty()) {
+                    md.append("- **Shelf:** ").append(shName).append("\n");
                 }
                 if (r.isbn != null && !r.isbn.isEmpty()) {
                     md.append("- **ISBN:** ").append(r.isbn).append("\n");
