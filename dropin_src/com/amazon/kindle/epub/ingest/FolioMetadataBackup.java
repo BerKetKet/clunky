@@ -194,6 +194,10 @@ public final class FolioMetadataBackup {
     }
 
     public static String buildReadingLogMarkdown(Context ctx) {
+        return buildReadingLogMarkdown(ctx, false);
+    }
+
+    public static String buildReadingLogMarkdown(Context ctx, boolean curatedOnly) {
         FolioMetadataDb db = new FolioMetadataDb(ctx);
         try {
             List<FolioMetadataDb.BookRecord> all = db.getAllBooks();
@@ -222,7 +226,7 @@ public final class FolioMetadataBackup {
             String dateStr = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
                     .format(new java.util.Date());
             StringBuilder md = new StringBuilder();
-            md.append("# Folio Reading Log (").append(dateStr).append(")\n\n");
+            md.append(curatedOnly ? "# Folio Curated Reading Log (" : "# Folio Reading Log (").append(dateStr).append(")\n\n");
             int goalTarget = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
                     .getInt("reading_goal_target", 12);
             if (goalTarget <= 0) goalTarget = 12;
@@ -238,14 +242,36 @@ public final class FolioMetadataBackup {
               .append(finished).append(" / ").append(goalTarget)
               .append(" books finished (").append(goalPct).append("%)\n\n");
 
+            List<FolioMetadataDb.BookRecord> qBooks = new ArrayList<>();
+            for (FolioMetadataDb.BookRecord r : all) {
+                if (r.kfxPath != null && FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath)) {
+                    qBooks.add(r);
+                }
+            }
+            if (!qBooks.isEmpty()) {
+                md.append("## 📌 Up Next Queue (").append(qBooks.size()).append(")\n\n");
+                for (FolioMetadataDb.BookRecord r : qBooks) {
+                    String ca = FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
+                    md.append("- **").append(r.title != null ? r.title : "Untitled").append("**");
+                    if (!ca.isEmpty()) md.append(" — ").append(ca);
+                    md.append("\n");
+                }
+                md.append("\n");
+            }
+
             for (FolioMetadataDb.BookRecord r : all) {
                 boolean isFav = FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath);
                 int stars = FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath);
                 String note = FolioMetadataCatalogDialog.getNote(ctx, r.kfxPath);
+                String shCheck = FolioMetadataCatalogDialog.getShelf(ctx, r.kfxPath);
+                boolean inQ = FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath);
                 String yr = EpubMetadataExtractor.normalizePubDate(r.pubDate);
                 String cleanAuthor = FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
                 Integer pv = (r.kfxPath != null) ? progMap.get(r.kfxPath) : null;
                 int pct = pv != null ? pv : 0;
+                if (curatedOnly && pct <= 0 && !isFav && stars <= 0 && note.isEmpty() && shCheck.isEmpty() && !inQ) {
+                    continue;
+                }
 
                 md.append("## ");
                 if (isFav) md.append("★ ");
@@ -275,22 +301,6 @@ public final class FolioMetadataBackup {
                 }
                 md.append("\n");
             }
-            List<FolioMetadataDb.BookRecord> qBooks = new ArrayList<>();
-            for (FolioMetadataDb.BookRecord r : all) {
-                if (r.kfxPath != null && FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath)) {
-                    qBooks.add(r);
-                }
-            }
-            if (!qBooks.isEmpty()) {
-                md.append("## 📌 Up Next Queue (").append(qBooks.size()).append(")\n\n");
-                for (FolioMetadataDb.BookRecord r : qBooks) {
-                    String ca = FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
-                    md.append("- **").append(r.title != null ? r.title : "Untitled").append("**");
-                    if (!ca.isEmpty()) md.append(" — ").append(ca);
-                    md.append("\n");
-                }
-                md.append("\n");
-            }
             return md.toString();
         } catch (Throwable t) {
             Log.e(TAG, "Failed to build reading log markdown", t);
@@ -301,8 +311,12 @@ public final class FolioMetadataBackup {
     }
 
     public static File exportReadingLogMarkdown(Context ctx) {
+        return exportReadingLogMarkdown(ctx, false);
+    }
+
+    public static File exportReadingLogMarkdown(Context ctx, boolean curatedOnly) {
         try {
-            String md = buildReadingLogMarkdown(ctx);
+            String md = buildReadingLogMarkdown(ctx, curatedOnly);
             File out = getReadingLogFile(ctx);
             FileOutputStream fos = new FileOutputStream(out);
             try {

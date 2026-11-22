@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v9.6 KFX");
+        badgeTv.setText("Folio v9.7 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2707,29 +2707,49 @@ public final class FolioMoreView {
     }
 
     private static void showReadingLogDialog(final Context ctx) {
-        final File outFile = com.amazon.kindle.epub.ingest.FolioMetadataBackup.exportReadingLogMarkdown(ctx);
-        final String md = com.amazon.kindle.epub.ingest.FolioMetadataBackup.buildReadingLogMarkdown(ctx);
-        float d = ctx.getResources().getDisplayMetrics().density;
+        final boolean[] curatedOnly = new boolean[] { true };
+        final File initFile = com.amazon.kindle.epub.ingest.FolioMetadataBackup.exportReadingLogMarkdown(ctx, true);
+        final String[] currentMd = new String[] {
+                com.amazon.kindle.epub.ingest.FolioMetadataBackup.buildReadingLogMarkdown(ctx, true)
+        };
+        final float d = ctx.getResources().getDisplayMetrics().density;
 
         LinearLayout box = new LinearLayout(ctx);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setBackgroundColor(0xFF161922);
         box.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
+        final TextView pathTv = new TextView(ctx);
+        pathTv.setText(initFile != null
+                ? "Saved: " + initFile.getAbsolutePath()
+                : "Markdown preview ready");
+        pathTv.setTextColor(0xFF34D399);
+        pathTv.setTextSize(11);
+        pathTv.setTypeface(Typeface.DEFAULT_BOLD);
+        pathTv.setPadding(0, 0, 0, dp(d, 8));
+        box.addView(pathTv);
+
         LinearLayout topExportRow = new LinearLayout(ctx);
         topExportRow.setOrientation(LinearLayout.HORIZONTAL);
         topExportRow.setGravity(Gravity.CENTER_VERTICAL);
         topExportRow.setPadding(0, 0, 0, dp(d, 10));
 
-        final TextView pathTv = new TextView(ctx);
-        pathTv.setText(outFile != null
-                ? "Saved: " + outFile.getAbsolutePath()
-                : "Markdown preview ready");
-        pathTv.setTextColor(0xFF34D399);
-        pathTv.setTextSize(11);
-        pathTv.setTypeface(Typeface.DEFAULT_BOLD);
-        pathTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        topExportRow.addView(pathTv);
+        final TextView scopeBtn = new TextView(ctx);
+        scopeBtn.setText("✨ Scope: Curated Only");
+        scopeBtn.setTextColor(0xFFC084FC);
+        scopeBtn.setTextSize(11);
+        scopeBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        scopeBtn.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
+        final GradientDrawable scopeBg = new GradientDrawable();
+        scopeBg.setColor(0xFF2B1B3D);
+        scopeBg.setCornerRadius(dp(d, 10));
+        scopeBg.setStroke(dp(d, 1), 0x88A855F7);
+        scopeBtn.setBackground(scopeBg);
+        topExportRow.addView(scopeBtn);
+
+        View spacer = new View(ctx);
+        spacer.setLayoutParams(new LinearLayout.LayoutParams(0, 1, 1f));
+        topExportRow.addView(spacer);
 
         TextView csvBtn = new TextView(ctx);
         csvBtn.setText("📊 Export CSV");
@@ -2742,10 +2762,6 @@ public final class FolioMoreView {
         csvBg.setCornerRadius(dp(d, 10));
         csvBg.setStroke(dp(d, 1), 0x66F59E0B);
         csvBtn.setBackground(csvBg);
-        LinearLayout.LayoutParams csvLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        csvLp.leftMargin = dp(d, 8);
-        csvBtn.setLayoutParams(csvLp);
         csvBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 File csvFile = com.amazon.kindle.epub.ingest.FolioMetadataBackup.exportLibraryCsv(ctx);
@@ -2762,9 +2778,9 @@ public final class FolioMoreView {
 
         ScrollView sv = new ScrollView(ctx);
         sv.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 340)));
-        TextView mdTv = new TextView(ctx);
-        mdTv.setText(md);
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 330)));
+        final TextView mdTv = new TextView(ctx);
+        mdTv.setText(currentMd[0]);
         mdTv.setTextColor(0xFFE2E8F0);
         mdTv.setTextSize(12);
         mdTv.setTypeface(Typeface.MONOSPACE);
@@ -2777,6 +2793,27 @@ public final class FolioMoreView {
         sv.addView(mdTv);
         box.addView(sv);
 
+        scopeBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                curatedOnly[0] = !curatedOnly[0];
+                currentMd[0] = com.amazon.kindle.epub.ingest.FolioMetadataBackup.buildReadingLogMarkdown(ctx, curatedOnly[0]);
+                File saved = com.amazon.kindle.epub.ingest.FolioMetadataBackup.exportReadingLogMarkdown(ctx, curatedOnly[0]);
+                mdTv.setText(currentMd[0]);
+                if (saved != null) pathTv.setText("Saved: " + saved.getAbsolutePath());
+                if (curatedOnly[0]) {
+                    scopeBtn.setText("✨ Scope: Curated Only");
+                    scopeBtn.setTextColor(0xFFC084FC);
+                    scopeBg.setColor(0xFF2B1B3D);
+                    scopeBg.setStroke(dp(d, 1), 0x88A855F7);
+                } else {
+                    scopeBtn.setText("📚 Scope: All Books");
+                    scopeBtn.setTextColor(0xFF38BDF8);
+                    scopeBg.setColor(0xFF152638);
+                    scopeBg.setStroke(dp(d, 1), 0x8838BDF8);
+                }
+            }
+        });
+
         new AlertDialog.Builder(ctx)
                 .setTitle("Reading Log (.md)")
                 .setView(box)
@@ -2787,7 +2824,7 @@ public final class FolioMoreView {
                             Intent share = new Intent(Intent.ACTION_SEND);
                             share.setType("text/plain");
                             share.putExtra(Intent.EXTRA_SUBJECT, "Folio Reading Log");
-                            share.putExtra(Intent.EXTRA_TEXT, md);
+                            share.putExtra(Intent.EXTRA_TEXT, currentMd[0]);
                             ctx.startActivity(Intent.createChooser(share, "Share Folio Reading Log"));
                         } catch (Throwable ignored) {}
                     }
@@ -2798,7 +2835,7 @@ public final class FolioMoreView {
                             android.content.ClipboardManager cm = (android.content.ClipboardManager)
                                     ctx.getSystemService(Context.CLIPBOARD_SERVICE);
                             if (cm != null) {
-                                cm.setPrimaryClip(android.content.ClipData.newPlainText("Folio Reading Log", md));
+                                cm.setPrimaryClip(android.content.ClipData.newPlainText("Folio Reading Log", currentMd[0]));
                                 Toast.makeText(ctx, "Copied Reading Log Markdown to clipboard", Toast.LENGTH_SHORT).show();
                             }
                         } catch (Throwable ignored) {}
@@ -2869,7 +2906,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v9.6 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v9.7 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
