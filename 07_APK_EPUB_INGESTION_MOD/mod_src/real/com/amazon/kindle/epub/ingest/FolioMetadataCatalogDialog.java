@@ -89,18 +89,42 @@ public final class FolioMetadataCatalogDialog {
         topRow.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView eyebrow = new TextView(ctx);
-        eyebrow.setText("FOLIO METADATA");
+        eyebrow.setText("FOLIO");
         eyebrow.setTextColor(Color.parseColor("#F59E0B"));
         eyebrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         eyebrow.setTypeface(Typeface.DEFAULT_BOLD);
         eyebrow.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         topRow.addView(eyebrow);
 
+        boolean savedGrid = false;
+        try {
+            savedGrid = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .getBoolean("catalog_grid_mode", false);
+        } catch (Throwable ignored) {}
+        final boolean[] gridMode = new boolean[] { savedGrid };
+
+        final TextView btnViewMode = new TextView(ctx);
+        btnViewMode.setText(gridMode[0] ? "☰" : "⊞");
+        btnViewMode.setTextColor(Color.parseColor(gridMode[0] ? "#F59E0B" : "#E2E8F0"));
+        btnViewMode.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        btnViewMode.setTypeface(Typeface.DEFAULT_BOLD);
+        btnViewMode.setPadding(dp(ctx, 7), dp(ctx, 4), dp(ctx, 7), dp(ctx, 4));
+        GradientDrawable vmBg = new GradientDrawable();
+        vmBg.setColor(Color.parseColor("#1E2433"));
+        vmBg.setCornerRadius(dp(ctx, 14));
+        vmBg.setStroke(dp(ctx, 1), Color.parseColor("#334155"));
+        btnViewMode.setBackground(vmBg);
+        LinearLayout.LayoutParams vmLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        vmLp.setMargins(0, 0, dp(ctx, 5), 0);
+        btnViewMode.setLayoutParams(vmLp);
+        topRow.addView(btnViewMode);
+
         final TextView btnAuthors = new TextView(ctx);
         btnAuthors.setText("👤");
         btnAuthors.setTextColor(Color.parseColor("#E2E8F0"));
         btnAuthors.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        btnAuthors.setPadding(dp(ctx, 8), dp(ctx, 4), dp(ctx, 8), dp(ctx, 4));
+        btnAuthors.setPadding(dp(ctx, 7), dp(ctx, 4), dp(ctx, 7), dp(ctx, 4));
         GradientDrawable authBg = new GradientDrawable();
         authBg.setColor(Color.parseColor("#1E2433"));
         authBg.setCornerRadius(dp(ctx, 14));
@@ -108,7 +132,7 @@ public final class FolioMetadataCatalogDialog {
         btnAuthors.setBackground(authBg);
         LinearLayout.LayoutParams authLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        authLp.setMargins(0, 0, dp(ctx, 6), 0);
+        authLp.setMargins(0, 0, dp(ctx, 5), 0);
         btnAuthors.setLayoutParams(authLp);
         topRow.addView(btnAuthors);
 
@@ -116,7 +140,7 @@ public final class FolioMetadataCatalogDialog {
         btnRandom.setText("🎲");
         btnRandom.setTextColor(Color.parseColor("#E2E8F0"));
         btnRandom.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        btnRandom.setPadding(dp(ctx, 8), dp(ctx, 4), dp(ctx, 8), dp(ctx, 4));
+        btnRandom.setPadding(dp(ctx, 7), dp(ctx, 4), dp(ctx, 7), dp(ctx, 4));
         GradientDrawable randBg = new GradientDrawable();
         randBg.setColor(Color.parseColor("#1E2433"));
         randBg.setCornerRadius(dp(ctx, 14));
@@ -124,7 +148,7 @@ public final class FolioMetadataCatalogDialog {
         btnRandom.setBackground(randBg);
         LinearLayout.LayoutParams randLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        randLp.setMargins(0, 0, dp(ctx, 6), 0);
+        randLp.setMargins(0, 0, dp(ctx, 5), 0);
         btnRandom.setLayoutParams(randLp);
         topRow.addView(btnRandom);
 
@@ -373,14 +397,39 @@ public final class FolioMetadataCatalogDialog {
                     searchBox.setText(author);
                     searchBox.setSelection(author.length());
                 };
+                final Runnable onRefreshAll = () -> {
+                    loadFromDb(ctx, allBooks, genres);
+                    progressMap.clear();
+                    progressMap.putAll(loadProgressMap(ctx));
+                    renderRef[0].run();
+                };
                 cardsContainer.removeAllViews();
-                for (final FolioMetadataDb.BookRecord rec : filtered) {
-                    cardsContainer.addView(buildBookCard(ctx, rec, progressMap, dialog, () -> {
-                        loadFromDb(ctx, allBooks, genres);
-                        progressMap.clear();
-                        progressMap.putAll(loadProgressMap(ctx));
-                        renderRef[0].run();
-                    }, onAuthorFilter));
+                if (gridMode[0]) {
+                    for (int i = 0; i < filtered.size(); i += 3) {
+                        LinearLayout gRow = new LinearLayout(ctx);
+                        gRow.setOrientation(LinearLayout.HORIZONTAL);
+                        LinearLayout.LayoutParams grLp = new LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                        grLp.setMargins(0, 0, 0, dp(ctx, 10));
+                        gRow.setLayoutParams(grLp);
+                        for (int c = 0; c < 3; c++) {
+                            if (i + c < filtered.size()) {
+                                gRow.addView(buildGridTile(ctx, filtered.get(i + c), progressMap,
+                                        dialog, onRefreshAll, onAuthorFilter, c < 2));
+                            } else {
+                                View spacer = new View(ctx);
+                                LinearLayout.LayoutParams spLp = new LinearLayout.LayoutParams(0, 1, 1f);
+                                if (c < 2) spLp.setMargins(0, 0, dp(ctx, 8), 0);
+                                spacer.setLayoutParams(spLp);
+                                gRow.addView(spacer);
+                            }
+                        }
+                        cardsContainer.addView(gRow);
+                    }
+                } else {
+                    for (final FolioMetadataDb.BookRecord rec : filtered) {
+                        cardsContainer.addView(buildBookCard(ctx, rec, progressMap, dialog, onRefreshAll, onAuthorFilter));
+                    }
                 }
 
                 if (filtered.isEmpty()) {
@@ -395,6 +444,17 @@ public final class FolioMetadataCatalogDialog {
                 }
             }
         };
+
+        btnViewMode.setOnClickListener(v -> {
+            gridMode[0] = !gridMode[0];
+            btnViewMode.setText(gridMode[0] ? "☰" : "⊞");
+            btnViewMode.setTextColor(Color.parseColor(gridMode[0] ? "#F59E0B" : "#E2E8F0"));
+            try {
+                ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                        .edit().putBoolean("catalog_grid_mode", gridMode[0]).apply();
+            } catch (Throwable ignored) {}
+            renderRef[0].run();
+        });
 
         btnAuthors.setOnClickListener(v -> showAuthorsDirectoryDialog(ctx, allBooks, author -> {
             selectedGenre[0] = "All";
@@ -598,6 +658,99 @@ public final class FolioMetadataCatalogDialog {
             if (w.length() > 1) sb.append(w.substring(1));
         }
         return sb.toString();
+    }
+
+    private static View buildGridTile(final Context ctx, final FolioMetadataDb.BookRecord rec,
+                                      final Map<String, Integer> progressMap,
+                                      final AlertDialog parentDialog, final Runnable onMetadataEdited,
+                                      final AuthorFilterCallback onAuthorFilter, boolean addRightGap) {
+        LinearLayout tile = new LinearLayout(ctx);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setPadding(dp(ctx, 6), dp(ctx, 6), dp(ctx, 6), dp(ctx, 8));
+        GradientDrawable tBg = new GradientDrawable();
+        tBg.setColor(Color.parseColor("#1A1F2E"));
+        tBg.setCornerRadius(dp(ctx, 10));
+        tBg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
+        tile.setBackground(tBg);
+        LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        if (addRightGap) tLp.setMargins(0, 0, dp(ctx, 8), 0);
+        tile.setLayoutParams(tLp);
+
+        ImageView cover = new ImageView(ctx);
+        cover.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 128)));
+        cover.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        cover.setBackgroundColor(Color.parseColor("#262B38"));
+        if (rec.coverPath != null && !rec.coverPath.isEmpty()) {
+            File cf = new File(rec.coverPath);
+            if (cf.exists()) {
+                BitmapFactory.Options opts = new BitmapFactory.Options();
+                opts.inSampleSize = 2;
+                Bitmap bm = BitmapFactory.decodeFile(cf.getAbsolutePath(), opts);
+                if (bm != null) cover.setImageBitmap(bm);
+            }
+        }
+        tile.addView(cover);
+
+        TextView tTv = new TextView(ctx);
+        String pref = isFavorite(ctx, rec.kfxPath) ? "★ " : "";
+        tTv.setText(pref + rec.title);
+        tTv.setTextColor(Color.WHITE);
+        tTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        tTv.setTypeface(Typeface.DEFAULT_BOLD);
+        tTv.setMaxLines(2);
+        tTv.setEllipsize(TextUtils.TruncateAt.END);
+        tTv.setPadding(0, dp(ctx, 6), 0, dp(ctx, 2));
+        tile.addView(tTv);
+
+        int pct = getProgress(progressMap, rec.kfxPath);
+        int stars = getRating(ctx, rec.kfxPath);
+        LinearLayout metaRow = new LinearLayout(ctx);
+        metaRow.setOrientation(LinearLayout.HORIZONTAL);
+        metaRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView badgeTv = new TextView(ctx);
+        if (pct >= 100) {
+            badgeTv.setText("✓ Done");
+            badgeTv.setTextColor(Color.parseColor("#34D399"));
+        } else if (pct > 0) {
+            badgeTv.setText(pct + "%");
+            badgeTv.setTextColor(Color.parseColor("#38BDF8"));
+        } else if (stars > 0) {
+            badgeTv.setText("★ " + stars + "/5");
+            badgeTv.setTextColor(Color.parseColor("#FBBF24"));
+        } else {
+            badgeTv.setText("Unread");
+            badgeTv.setTextColor(Color.parseColor("#64748B"));
+        }
+        badgeTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
+        badgeTv.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        metaRow.addView(badgeTv);
+
+        TextView infoIco = new TextView(ctx);
+        infoIco.setText("ⓘ");
+        infoIco.setTextColor(Color.parseColor("#94A3B8"));
+        infoIco.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        infoIco.setPadding(dp(ctx, 4), 0, 0, 0);
+        infoIco.setOnClickListener(v -> showBookDetailDialog(ctx, rec, pct, parentDialog, onMetadataEdited, onAuthorFilter));
+        metaRow.addView(infoIco);
+        tile.addView(metaRow);
+
+        tile.setOnClickListener(v -> {
+            File f = new File(rec.kfxPath);
+            if (!f.exists()) {
+                Toast.makeText(ctx, "Book file not found in app storage", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            parentDialog.dismiss();
+            ExternalEpubActivity.launchKfxReader(ctx, f);
+        });
+        tile.setOnLongClickListener(v -> {
+            showBookDetailDialog(ctx, rec, pct, parentDialog, onMetadataEdited, onAuthorFilter);
+            return true;
+        });
+        return tile;
     }
 
     private static View buildBookCard(final Context ctx, final FolioMetadataDb.BookRecord rec,
