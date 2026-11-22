@@ -387,3 +387,25 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.3_kfx/base.apk` (131 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report047.zip` (~650 KB)
+
+
+---
+
+# Round 048: Frequency-Ranked Genre Chips & Unified Local Scan (Folio v4.4 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v4.4 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 048 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMetadataCatalogDialog.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Genre Chips now ranked by book count frequency (`All (27)`, `History (5)`, `Fiction (4)`, `Biography (2)`, `Correspondence (2)`), filtering out compound `--` LC headings.
+     - Unified `scanLocalLibrary()` in `FolioMoreView.java` to convert new EPUBs into app-private `files/folio_library/` with full metadata enrichment and double DB registration.
+     - Bumped version badge to `Folio v4.4 KFX` in `FolioMoreView.java`.
+     - Built `classes9.dex` (198,512 B), rebuilt APK with apktool, signed, and deployed to Galaxy M32.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.4_kfx/base.apk` (131 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `screenshots/verify_r48_ranked_genre_chips_counts.png`: Proves Genre Chips strip displays `All (27)`, `History (5)`, `Fiction (4)`, `Biography (2)`, `Correspondence (2)` with live counts and no `--` strings.
+     - `screenshots/verify_r48_control_center_v44.png`: Proves Control Center shows `Folio v4.4 KFX` badge and offline tools.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.4_kfx/base.apk` (131 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report048.zip` (~650 KB)
