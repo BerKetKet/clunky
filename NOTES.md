@@ -605,3 +605,25 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.4_kfx/base.apk` (131 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report048.zip` (~650 KB)
+
+
+---
+
+# Round 079: Stacked Reading Status Bar & Top Publishers Chart in Library Insights (Folio v7.9 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v7.9 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 079 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMoreView.java` from `dropin_src/`.
+     - Added `READING STATUS (TAP TO FILTER)` horizontal stacked proportional bar (`● Finished (1)` emerald `#10b981` · `● Reading (5)` sky blue `#0284c7` · `● Unread (21)` slate `#64748b`) with 1-tap filter drill-down.
+     - Added `TOP PUBLISHERS (TAP TO FILTER)` teal horizontal bar chart at the bottom of the Library Insights modal with 1-tap search filter drill-down.
+     - Bumped version badge to `Folio v7.9 KFX (Enhanced Typesetting)`.
+     - Built `classes9.dex` (263,236 B), fast-rebuilt APK, signed, and deployed to Galaxy M32 (`lastUpdateTime=2026-11-23 00:05:49`).
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v7.9_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `screenshots/verify_r79_insights_stacked_status.png`: Proves stacked proportional `READING STATUS` bar with Finished (1), Reading (5), Unread (21) segments and legend pills above `TOP GENRES`.
+     - `screenshots/verify_r79_insights_shelves_publishers.png`: Proves `CUSTOM SHELVES` (`🏷 Classics 1`) and `TOP PUBLISHERS` teal bars (`Focus Publishing/R. Pullins Company 2`, `HarperCollins 2`, `Airlift 1`, `Apud Janssonio-Waesbergios 1`) and `CLOSE` button inside modal.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v7.9_kfx/base.apk` (132 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report079.zip`
