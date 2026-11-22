@@ -1,44 +1,42 @@
-# Folio Milestone Release Report: Custom Reading Shelves (🏷), Indigo Shelf Filter Chips & Portable Backup (Round 070)
+# Folio Milestone Release Report: Annual Reading Goal Progress Card & Shelf Clipboard Info (Round 071)
 
 **Date:** 2026-11-22  
-**Target Package:** `com.amazon.kindle.epub` (Milestone Folio v7.0 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v7.1 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v7.0_kfx/base.apk` (131 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v7.1_kfx/base.apk` (131 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Milestone Round 070, Folio advanced to **Milestone Folio v7.0 KFX**. Gemini pre-authored drop-in Java updates for `FolioMetadataCatalogDialog.java`, `FolioMetadataBackup.java`, and `FolioMoreView.java`. Antigravity resolved a missing `import java.util.LinkedHashMap;` in `FolioMetadataCatalogDialog.java`, compiled Dalvik DEX (`classes9.dex`, 238,968 B), built, aligned, signed, and deployed the milestone APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **Persistent Custom Reading Shelves Subsystem (`FolioMetadataCatalogDialog.java`)**: Implemented safe, lightweight shelf assignments stored in `SharedPreferences("folio_shelves")`, guaranteeing zero SQLite schema migration risks and persistent preservation across app upgrades.
-2. **Book Details Shelf Assignment UI**: Book Details (`ⓘ`) renders a `Shelf: + Assign Shelf ›` pill below `Your Rating:`. Tapping it launches a dark-themed shelf picker dialog offering 1-tap presets (`Classics`, `Philosophy`, `Sci-Fi`, `History`, `To Read`, `Reference`), custom shelf text input, and shelf removal. Assigned books display an indigo `Shelf: 🏷 <Shelf> ›` pill.
-3. **Dynamic Indigo `🏷 <Shelf> (N)` Catalog Filter Chips & Card Badges**: Dynamically tallies shelf occurrences across the catalog, surfaces indigo `🏷 <Shelf> (N)` filter chips (`#818CF8` active / `#A5B4FC` inactive), renders compact indigo `🏷 <Shelf>` card badges on list cards, and integrates shelf names into catalog full-text search.
-4. **Portable JSON Backup & Markdown Log Integration (`FolioMetadataBackup.java`)**: Serializes `"shelf"` property in portable JSON metadata export, restores it upon JSON import, and injects `- **Shelf:** <shelf>` into the Markdown reading journal.
-5. **Milestone Version Bump (`FolioMoreView.java`)**: Bumped Control Center badge and About Folio dialog string to **`Folio v7.0 KFX (Enhanced Typesetting)`**.
-6. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
+In Round 071, Folio advanced to **Folio v7.1 KFX**. Gemini pre-authored drop-in Java updates for `FolioMoreView.java` and `FolioMetadataCatalogDialog.java`. Antigravity integrated both files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 243,152 B), built, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **Annual Reading Goal Progress Card (`FolioMoreView.java`)**: Situated directly beneath the 4-tile Live Stats Strip in Control Center (`More` tab), rendering `🎯 <Year> Reading Goal` (`1 of 12 books finished (8%)`), an emerald progress bar (`#34D399`), and an `Edit ›` tap target.
+2. **Interactive Goal Customizer Dialog (`FolioMoreView.java`)**: Tapping the card opens a dark modal offering 1-tap presets (`5`, `12`, `24`, `36`, `52`) and numeric `EditText` input. Persisted target safely in `SharedPreferences("folio_ui_prefs")` (`"annual_reading_goal_target"`). Saving updates the progress card text and bar ratio immediately (verified updating from 12 to 5 books: `1 of 5 books finished (20%)`).
+3. **Reading Shelf in 1-Tap Copy Info (`FolioMetadataCatalogDialog.java`)**: Extended `📋 Copy Info` summary to include `Shelf: <shelf>` when a reading shelf is assigned.
+4. **Control Center Version Bump**: Header badge and About Folio dialog bumped to **`Folio v7.1 KFX (Enhanced Typesetting)`**.
+5. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Milestone Folio v7.0 KFX
+## 2. Integrated Features in Folio v7.1 KFX
 
-### A. Custom Reading Shelves Subsystem (`FolioMetadataCatalogDialog.java`)
-- `getShelf(Context, String)` & `setShelf(Context, String, String)` manipulate `SharedPreferences("folio_shelves")`.
-- `showShelfPickerDialog(Context, BookRecord, String, Runnable)` presents:
-  - Preset horizontal scroll strip: `🏷 Classics`, `🏷 Philosophy`, `🏷 Sci-Fi`, `🏷 History`, `🏷 To Read`, `🏷 Reference`.
-  - Custom shelf input `EditText` with dark styling (`#1A1F2E`).
-  - Actions: `Save Shelf`, `Remove Shelf`, `Cancel`.
-- `matchesQuery` checks: `sh != null && sh.toLowerCase().contains(q)`.
-- Catalog strip dynamically injects `SHELF:<Name>` chips after Notes chip with counts.
-- Catalog card layout renders indigo badge: `🏷 <Shelf>` above rating and note snippets.
+### A. Annual Reading Goal Card & Goal Setter (`FolioMoreView.java`)
+- Positioned card below the 4-tile stat strip styled with `#1A1F2E` surface, `#2A3142` border, and rounded corners (`12dp`).
+- Card layout contains:
+  - Header row: `🎯 <CurrentYear> Reading Goal` (bold primary text) + `Edit ›` (`#34D399` emerald).
+  - Status row: `<finished> of <target> books finished (<percentage>%)` (muted text).
+  - Track: 6dp rounded track (`#242938`) with proportional `#34D399` fill weight.
+- `showReadingGoalDialog(Context, Runnable)`:
+  - Shows 5 pill buttons (`5`, `12`, `24`, `36`, `52`) and custom number input.
+  - Tapping presets autofills the input.
+  - Saving persists via `setReadingGoalTarget(Context, int)` and triggers immediate UI refresh.
 
-### B. Backup & Export Serialization (`FolioMetadataBackup.java`)
-- JSON export includes `"shelf": <shelf>` per book record.
-- JSON restore checks `obj.optString("shelf", "")` and calls `FolioMetadataCatalogDialog.setShelf(ctx, kfxPath, shName)`.
-- Markdown export injects `- **Shelf:** <shelf>` when assigned.
+### B. Shelf Property in Clipboard Copy (`FolioMetadataCatalogDialog.java`)
+- Inside `📋 Copy Info` handler in Book Details (`ⓘ`), inspects `getShelf(ctx, rec.kfxPath)` and appends `\nShelf: <shelf>` into the clipboard payload.
 
 ### C. Version Bump (`FolioMoreView.java`)
-- Bumped Control Center badge and About Folio dialog string to **`Folio v7.0 KFX (Enhanced Typesetting)`**.
+- Bumped Control Center badge and About Folio dialog string to **`Folio v7.1 KFX (Enhanced Typesetting)`**.
 
 ---
 
@@ -46,8 +44,8 @@ In Milestone Round 070, Folio advanced to **Milestone Folio v7.0 KFX**. Gemini p
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Shelf Assignment in Book Details** | Book Details (`ⓘ` on *1984*) | `screenshots/verify_r70_shelf_picker_assigned.png` | **PASS** — Book Details renders indigo `Shelf: 🏷 Classics  ›` pill below `Your Rating: ★★★★★`. |
-| **Catalog Indigo Shelf Filter Chip & Card Badge** | Catalog Dialog (`All Metadata ›`) | `screenshots/verify_r70_shelf_chip_filter_live.png` | **PASS** — Tapping indigo `🏷 Classics (1)` chip filters catalog to `Library Metadata & Genres (1 of 27)`, displaying `★ 📝 1984` with its indigo `🏷 Classics` card badge. |
+| **Control Center Reading Goal Card** | More Tab (Control Center) | `screenshots/verify_r71_control_center_reading_goal.png` | **PASS** — Control Center shows `Folio v7.1 KFX` badge, the 4-tile live stats strip, and `🎯 2026 Reading Goal` progress card (`1 of 12 books finished (8%)` with emerald progress bar). |
+| **Live Goal Update to 5 Books** | More Tab (Control Center) | `screenshots/verify_r71_reading_goal_updated.png` | **PASS** — Tapping card, selecting preset `5`, and saving live-updates card to `1 of 5 books finished (20%)` with expanded emerald progress bar fill. |
 | **Stock Package Safety Invariant** | Android Package Manager | `lastUpdateTime=2026-11-19 21:59:23` | **PASS** — Stock `com.amazon.kindle` remains 100% untouched, intact, and read-only. |
 
 ---
@@ -61,10 +59,10 @@ As instructed by the Project Lead, the following architectural directive is reaf
 
 ## 5. Artifacts and Deliverables
 
-- `antig_to_gemini_neon_clunky_report070.zip`:
+- `antig_to_gemini_neon_clunky_report071.zip`:
   - `REPORT.md`
-  - `INSTRUCTIONS_ROUND_070.md`
+  - `INSTRUCTIONS_ROUND_071.md`
   - `protocol.json`
-  - `screenshots/verify_r70_shelf_picker_assigned.png`
-  - `screenshots/verify_r70_shelf_chip_filter_live.png`
-- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v7.0_kfx/base.apk` (131 MB)
+  - `screenshots/verify_r71_control_center_reading_goal.png`
+  - `screenshots/verify_r71_reading_goal_updated.png`
+- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v7.1_kfx/base.apk` (131 MB)
