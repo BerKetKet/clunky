@@ -857,3 +857,104 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.4_kfx/base.apk` (132 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report084.zip`
+
+
+---
+
+# Round 085: Multi-Select Catalog Batch Curation (Milestone Folio v8.5 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.5 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 085 complete:
+  1. **Source Integration**:
+     - Added `☑ Select` / `✕ Done` multi-select pill in catalog header, dynamic selection highlighting (`2dp #818CF8` border, `#1E2642` fill), and floating bottom Bulk Action Bar (`N books selected`, `Select All / Clear All`, `🏷 Shelf`, `★ Fav`, `✓ Finished`).
+     - Widened Continue Reading carousel cards to `196dp`.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.5_kfx/base.apk` (132 MB).
+  2. **Hardware Verification**:
+     - `verify_r85_bulk_select_mode.png`: Proves multi-select mode with floating bottom bar.
+     - `verify_r85_about_v85.png`: Proves About dialog bumped to Folio v8.5 KFX.
+  3. **Stock Invariant**: `com.amazon.kindle` (v8.160.1.0) verified 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Report Archive**: `antig_to_gemini_neon_clunky_report085.zip`.
+
+---
+
+# Round 086: Metadata Health Audit & Catalog Deep-Links (Folio v8.6 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.6 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 086 complete:
+  1. **Source Integration**:
+     - Integrated `METADATA HEALTH — 70% COMPLETE (TAP TO FIX)` section inside `📊 Library Insights` with 3 live audit tiles: Covers (`1 › No Cover`), Genres (`2 › No Genre`), and Synopsis (`21 › No Synopsis`).
+     - Added smart audit filter deep-links into catalog (`MISSING_COVER`, `MISSING_GENRES`, `MISSING_SYNOPSIS`) with dedicated `🩺 Missing ... (N)` active chips.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.6_kfx/base.apk` (132 MB).
+  2. **Hardware Verification**:
+     - `verify_r86_insights_metadata_health.png`: Proves Library Insights Metadata Health section with 3 audit tiles.
+     - `verify_r86_missing_filter_drilldown.png`: Proves catalog filtered to missing genres via `🩺 Missing Genres (2)` chip.
+  3. **Stock Invariant**: `com.amazon.kindle` (v8.160.1.0) verified 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Report Archive**: `antig_to_gemini_neon_clunky_report086.zip`.
+
+---
+
+# Round 087: Multi-Select Batch Genre Assignment (Folio v8.7 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.7 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 087 complete:
+  1. **Source Integration**:
+     - Added sky-blue `+ Genre` bulk action pill in bottom multi-select bar.
+     - Built interactive `🏷 Add Genre (N books)` modal with horizontal genre preset chips and comma-separated custom genre input, merging safely into `books_metadata.genres` in `folio_metadata.db`.
+     - Center-aligned typography (`Gravity.CENTER`) on all 3 Metadata Health tiles.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.7_kfx/base.apk` (132 MB).
+  2. **Hardware Verification**:
+     - `verify_r87_bulk_genre_bar.png`: Proves bottom multi-select bar with `+ Genre` pill.
+     - `verify_r87_insights_centered_v87.png`: Proves center-aligned Metadata Health tiles and Folio v8.7 KFX version.
+  3. **Stock Invariant**: `com.amazon.kindle` (v8.160.1.0) verified 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Report Archive**: `antig_to_gemini_neon_clunky_report087.zip`.
+
+---
+
+# Round 088: Storage & Duplicate Titles Audit (Folio v8.8 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.8 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 088 complete:
+  1. **Source Integration**:
+     - Added `💾 Storage & Duplicates` action card on Control Center directly below `🏷 Manage Shelves`.
+     - Built interactive Storage & Duplicates modal with 3 storage tiles (`13.3 MB App Library`, `682 KB Backups`, `1.3 MB Temp Cache`), Top 5 Largest Books amber bars with 1-tap locate, duplicate titles audit (`✓ No duplicate titles found across 27 cataloged books`), and Clear Temp Cache.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.8_kfx/base.apk` (132 MB).
+  2. **Hardware Verification**:
+     - `verify_r88_control_center_v88.png`: Proves Control Center with `💾 Storage & Duplicates` action card.
+     - `verify_r88_storage_duplicates_modal.png`: Proves Storage & Duplicates modal with storage tiles, largest books, and duplicate audit.
+  3. **Stock Invariant**: `com.amazon.kindle` (v8.160.1.0) verified 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Report Archive**: `antig_to_gemini_neon_clunky_report088.zip`.
+
+---
+
+# Round 089: Reading Notes Notebook (Folio v8.9 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.9 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 089 complete:
+  1. **Source Integration**:
+     - Added `📝 Reading Notes Notebook` action card on Control Center directly below `📄 Reading Log & Export`.
+     - Built interactive Reading Notes Notebook modal with live search bar, cover thumbnail, rating/shelf badges, warm amber quote card (`Essential dystopian classic - reread Part 3`), 1-tap copy, inline edit, and Markdown export.
+     - Expanded Storage & Duplicates scroll viewport to `388dp` with `10dp` bottom padding.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.9_kfx/base.apk` (132 MB).
+  2. **Hardware Verification**:
+     - `verify_r89_notes_notebook.png`: Proves Reading Notes Notebook modal with *1984* note card.
+     - `verify_r89_about_v89.png`: Proves About dialog bumped to Folio v8.9 KFX.
+  3. **Stock Invariant**: `com.amazon.kindle` (v8.160.1.0) verified 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Report Archive**: `antig_to_gemini_neon_clunky_report089.zip`.
+
+---
+
+# Round 090: Up Next Reading Queue (Milestone Folio v9.0 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v9.0 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 090 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMetadataCatalogDialog.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Fixed syntax quote escaping issue in `FolioMetadataCatalogDialog.java` line 1515.
+     - Added persistent `SharedPreferences("folio_queue")` FIFO reading queue.
+     - Added violet `📌 Up Next` / `📌 Queued` toggle pill in Book Details modal.
+     - Added dynamic violet `📌 Up Next (N)` chip to catalog filter strip.
+     - Added `📌 Up Next Queue` horizontal card carousel directly below `📖 Continue Reading` on Control Center, showing cover art thumbnails, title, author, `Start Reading ›` 1-tap reader launch, and inline `✕` unqueue button.
+     - Bumped version to `Milestone Folio v9.0 KFX (Enhanced Typesetting)`.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.0_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `verify_r90_book_details_queue_v90.png`: Proves Book Details for *Animal Farm* displaying active violet `📌 Queued` pill alongside Custom Shelf pill.
+     - `verify_r90_up_next_control_center.png`: Proves Control Center top showing `Folio v9.0 KFX` badge, `📖 Continue Reading`, and the live `📌 Up Next Queue` carousel card with cover thumbnail, *Animal Farm*, *George Orwell*, `Start Reading ›`, and `✕` unqueue button.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.0_kfx/base.apk` (132 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report090.zip`

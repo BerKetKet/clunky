@@ -1,49 +1,63 @@
-# Folio Milestone Release Report: Reading Notes Notebook (Round 089)
+# Folio Milestone Release Report: Up Next Reading Queue (Round 090)
 
 **Date:** 2026-11-23  
-**Target Package:** `com.amazon.kindle.epub` (Folio v8.9 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v9.0 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v8.9_kfx/base.apk` (132 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v9.0_kfx/base.apk` (132 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 089, Folio advanced to **Folio v8.9 KFX**. Gemini pre-authored drop-in Java updates for `FolioMoreView.java`. Antigravity integrated the update into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java`, compiled Dalvik DEX (`classes9.dex`, 314,228 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **📝 Reading Notes Notebook Subsystem (`FolioMoreView.java`)**: Added a dedicated `📝 Reading Notes Notebook` action card to Control Center situated directly below `📄 Reading Log & Export` (`"Browse, search, copy & edit personal book notes in one place"`).
-2. **Interactive Notes Notebook Modal**:
-   - Header with live annotated volume count (`📝 Reading Notes (1)`).
-   - Real-time search filter bar (`Search notes, titles, or authors...`).
-   - Book metadata header: displays standalone `.cover.jpg` thumbnail, bold title (1-tap instant launch into KFX reader), normalized author, rating badge (`★ 5/5`), and custom reading shelf badge (`🏷 Classics`).
-   - Warm amber quote card (`#251D14` fill with `#D97706` border): displays personal book note text (`"Essential dystopian classic - reread Part 3"`).
-   - 1-tap action buttons: **`📋 Copy`** (copies formatted note to clipboard) and **`✏️ Edit`** (launches inline note editor with immediate reactive notebook refresh on save).
-   - Footer contains **`Copy All`** Markdown batch export tool and **`Close`**.
-3. **Storage & Duplicates Viewport Polish (`FolioMoreView.java`)**: Expanded scroll viewport height to `388dp` with `10dp` bottom padding to eliminate edge clipping on the Duplicate Titles status card.
-4. **Version Bump (`FolioMoreView.java`)**: Bumped Control Center badge and About Folio dialog string to **`Folio v8.9 KFX (Enhanced Typesetting)`**.
-5. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
+In Milestone Round 090, Folio advanced to **Milestone Folio v9.0 KFX**. Drop-in updates were integrated into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`. Antigravity resolved a minor syntax quote escaping issue in `FolioMetadataCatalogDialog.java` (line 1515), compiled Dalvik DEX (`classes9.dex`, 320,168 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **📌 Up Next Reading Queue Core (`FolioMetadataCatalogDialog.java`)**:
+   - Backed by persistent `SharedPreferences("folio_queue")` storing book paths with insertion timestamps for FIFO ordering.
+   - Helper methods implemented: `isInQueue(ctx, kfxPath)`, `setInQueue(ctx, kfxPath, inQ)`, `loadQueuePaths(ctx)`, `loadQueueMap(ctx)`.
+2. **Book Details Queue Toggle Pill (`FolioMetadataCatalogDialog.java`)**:
+   - Integrated dynamic violet pill right beside the Custom Shelf pill:
+     * Unqueued state: **`📌 Up Next`** (`#2E1065` fill, `#7C3AED` border).
+     * Queued state: **`📌 Queued`** (`#4C1D95` fill, `#A78BFA` border).
+   - Tapping toggles status with live Toast confirmation and catalog refresh.
+3. **Dynamic Catalog Queue Filter Strip (`FolioMetadataCatalogDialog.java`)**:
+   - Whenever 1+ books are queued, the horizontal filter strip automatically injects a violet **`📌 Up Next (N)`** chip.
+   - 1-tap filtering isolates queued books.
+4. **Control Center `📌 Up Next Queue` Carousel (`FolioMoreView.java`)**:
+   - Located on Control Center directly below `📖 Continue Reading`.
+   - When empty, presents a compact `+ Pick ›` prompt.
+   - When books are queued, displays a horizontal carousel featuring cover thumbnail, book title, author, **`Start Reading ›`** (1-tap instant launch into KFX reader), an inline **`✕`** unqueue button, and header **`See All (N) ›`** deep-link directly into the catalog queue filter.
+5. **Version Bump (`FolioMoreView.java`)**:
+   - Bumped Control Center badge and About Folio dialog string to **`Milestone Folio v9.0 KFX (Enhanced Typesetting)`**.
+6. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Folio v8.9 KFX
+## 2. Integrated Features in Folio v9.0 KFX
 
-### A. Reading Notes Notebook Subsystem (`FolioMoreView.java`)
-- Filter and sort annotated books:
+### A. Up Next Reading Queue Architecture (`FolioMetadataCatalogDialog.java` & `FolioMoreView.java`)
+- Storage & Retrieval:
   ```java
-  final java.util.Map<String, String> notesMap = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.loadNotesMap(ctx);
-  // Sorts records with non-empty notes by rating descending
+  public static boolean isInQueue(Context ctx, String kfxPath) {
+      if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return false;
+      try {
+          return ctx.getSharedPreferences("folio_queue", Context.MODE_PRIVATE).contains(kfxPath);
+      } catch (Throwable ignored) { return false; }
+  }
+  public static void setInQueue(Context ctx, String kfxPath, boolean inQ) {
+      if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return;
+      try {
+          SharedPreferences.Editor ed = ctx.getSharedPreferences("folio_queue", Context.MODE_PRIVATE).edit();
+          if (inQ) ed.putLong(kfxPath, System.currentTimeMillis());
+          else ed.remove(kfxPath);
+          ed.apply();
+      } catch (Throwable ignored) {}
+  }
   ```
-- Search & live reactive filtering:
-  - Real-time search watcher matching queries against book title, author, and note content.
-  - Dynamically updates header counter and note cards container.
-- Note quote card styling:
-  - Container: `#251D14` background, `#3D2E1A` stroke with amber highlight border.
-  - Typography: 13sp italic `#FDE68A` text.
-  - 1-tap Copy action formats markdown quote to Android clipboard (`ClipboardManager`).
-  - 1-tap Edit action launches `showInlineNoteEditor(...)` and refreshes notebook upon save.
-
-### B. Viewport Height Polish (`FolioMoreView.java`)
-- Storage & Duplicates modal height adjusted to `388dp` with `10dp` bottom padding.
+- Carousel UI in Control Center:
+  - Dynamically sorts queued books by FIFO insertion timestamp.
+  - Resolves cover art from `.cover.jpg` sidecar or fallback placeholder.
+  - Launches reader via `OpenCatalogView.launchReaderForFile(ctx, rec.kfxPath)`.
+  - Inline `✕` allows instant unqueuing without opening the book details modal.
 
 ---
 
@@ -51,8 +65,8 @@ In Round 089, Folio advanced to **Folio v8.9 KFX**. Gemini pre-authored drop-in 
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Reading Notes Notebook** | Reading Notes Modal | `verify_r89_notes_notebook.png` | **VERIFIED**: Tapped `📝 Reading Notes Notebook` on Control Center; verified modal with live search bar, *1984* cover art, metadata badges (`George Orwell · ★ 5/5 · 🏷 Classics`), warm amber quote card (`Essential dystopian classic - reread Part 3`), and `📋 Copy` / `✏️ Edit` buttons. |
-| **About Folio v8.9 KFX** | About Folio Modal | `verify_r89_about_v89.png` | **VERIFIED**: Tapped Control Center version badge; verified modal confirming `Version: Folio v8.9 KFX (Enhanced Typesetting)` and live stats. |
+| **Book Details Up Next Queue** | Book Details Modal | `verify_r90_book_details_queue_v90.png` | **VERIFIED**: Opened *Animal Farm* Details (`ⓘ`); tapped `📌 Up Next` to queue it; verified active violet **`📌 Queued`** pill alongside Custom Shelf pill (`[455, 1499][655, 1569]`). |
+| **Control Center Up Next Carousel** | Control Center (More Tab) | `verify_r90_up_next_control_center.png` | **VERIFIED**: Switched to More tab; verified top header showing **`Folio v9.0 KFX`** badge, `📖 Continue Reading` carousel, and live **`📌 Up Next Queue`** carousel card with cover thumbnail, *Animal Farm*, *George Orwell*, **`Start Reading ›`**, and **`✕`** unqueue button. |
 | **Stock Kindle Invariant** | Android OS PackageManager | CLI `dumpsys package com.amazon.kindle` | **VERIFIED**: `lastUpdateTime=2026-11-19 21:59:23` completely untouched. |
 
 ---
