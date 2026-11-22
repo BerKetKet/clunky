@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v3.0 KFX");
+        badgeTv.setText("Folio v3.1 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -241,10 +241,18 @@ public final class FolioMoreView {
     private static void openSettings(Context ctx) {
         try {
             Intent intent = new Intent();
-            intent.setClassName(ctx.getPackageName(), "com.amazon.kcp.library.SettingsActivity");
+            intent.setClassName(ctx.getPackageName(), "com.amazon.kcp.library.SettingsComposeActivity");
+            intent.putExtra(Intent.EXTRA_TITLE, "Settings");
             ctx.startActivity(intent);
         } catch (Throwable t) {
-            Toast.makeText(ctx, "Could not launch Settings: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            try {
+                Intent fallback = new Intent();
+                fallback.setClassName(ctx.getPackageName(), "com.amazon.kcp.library.SettingsActivity");
+                fallback.putExtra(Intent.EXTRA_TITLE, "Settings");
+                ctx.startActivity(fallback);
+            } catch (Throwable t2) {
+                Toast.makeText(ctx, "Could not launch Settings: " + t2.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -408,7 +416,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: 3.0 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: 3.1 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

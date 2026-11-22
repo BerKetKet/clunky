@@ -1,127 +1,121 @@
-# Round 033 Report — Full HTML Entity Decoding, In-Book Search & Notebook QC (Folio v3.0)
-
-**Target Package:** `com.amazon.kindle.epub` (Folio)  
-**Safety Invariant:** Stock `com.amazon.kindle` (v8.160.1.0) remains **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Zero Overfitting Rule:** All entity decoding and reader navigation logic are 100% general across all books and search queries.  
-**Hardware Verification:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 arm64-v8a).
-
----
-
-## Executive Summary of Deliverables
-
-| Deliverable | Status | Evidence |
-| :--- | :--- | :--- |
-| **Task A: Full HTML4/HTML5 Entity Decoder** | **VERIFIED** | Implemented complete pure-Rust character entity decoder in `kfx_converter/src/epub/entities.rs` covering all 2,125 standard W3C HTML5 named entities plus decimal and hexadecimal numeric references in a single linear pass `O(N)`. Fixed literal `&rarr;` leak caught in visual QC. |
-| **Task A: Unit Tests & ARM64 Build** | **VERIFIED** | Unit tests in `entities.rs` and `src/packager/tests.rs` pass cleanly with zero entity leaks. Full cargo test suite (204 tests) passing. Cross-compiled and stripped ARM64 `libkfxconv.so` (4.6 MB). Updated badge to **Folio v3.0 KFX**. |
-| **Task B: In-Book Full-Text Search** | **VERIFIED** | Executed in-book search for `"Creon"` inside `Delphi Complete Works of Sophocles` in `KRIFDocViewer`. Returns **297 matching locations with rich snippets**. Tapping a match jumps instantly and cleanly to `ANTIGONE` Location 509. |
-| **Task B: Bookmarks & Notebook Audit** | **VERIFIED** | Created bookmark at Location 509. Opened in-reader **Annotations / Notebook** view; bookmark and text snippet persist cleanly locally with **zero Whispersync error popups and zero crashes**. |
-| **Task C: Hardware Visual Verification** | **VERIFIED** | 4 required hardware proof screenshots captured on Galaxy M32 (`verify_r33_html_entities_decoded.png`, `verify_r33_in_book_search.png`, `verify_r33_bookmarks_notebook.png`, `verify_r33_about_v30.png`). |
-| **Task C: Milestone Release Staging** | **VERIFIED** | Signed Folio v3.0 KFX APK (131 MB) and stripped native library (4.6 MB) staged at `07_APK_EPUB_INGESTION_MOD/release/folio_v3.0_kfx/`. |
+# Round 034 Final Verification & Engineering Report
+**Project Folio: Enhanced Offline EPUB/KFX Reader**  
+**Date:** November 22, 2026  
+**Target Device:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13)  
+**Release Badge:** Folio v3.1 KFX (Enhanced Typesetting & Hardened Layouts)  
+**Safety Invariant:** Stock `com.amazon.kindle` (v8.160.1.0) remains **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 1. Task A: Complete HTML4/HTML5 Named & Numeric Entity Decoding in `libkfxconv.so`
+## 1. Executive Summary
 
-### 1. Root Cause Analysis of `&rarr;` Entity Leak
-In Round 032, `verify_r32_code_no_hyphen_and_sup_sub.png` displayed:
-`Chemical reaction equation: 2H₂ + O₂ &rarr; 2H₂O and atmospheric CO₂.`
-Previously, `quick_xml`'s `BytesText::unescape()` only handled the 5 basic XML predefined entities (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&apos;`) and numeric character references. When encountering any non-XML named entity, it threw an error and fell back to a hardcoded list of ~24 common symbols in `decode_html_entities()`. Arrows (`&rarr;`, `&larr;`), math symbols (`&plusmn;`, `&le;`), Greek letters (`&Omega;`), and accented Latin characters were omitted, causing them to leak as literal `&name;` strings.
-
-### 2. Pure-Rust Entity Decoder Architecture (`src/epub/entities.rs`)
-Created `kfx_converter/src/epub/entities.rs` providing:
-1. `lookup_html_entity(name: &str) -> Option<&'static str>`:
-   - Exhaustive compile-time `match` covering all **2,125 standard W3C HTML5 named character references** (arrows, math, typography, currency, Latin-1 accents, Greek alphabet, fractions, suits).
-   - Standard XML entities are prioritized.
-   - Soft hyphen `&shy;` is stripped cleanly to `""`.
-2. `decode_html_entities(s: &str) -> String`:
-   - Single linear scan `O(N)` over character indices.
-   - Fast return without heap allocation if `!s.contains('&')`.
-   - Comprehensive numeric entity decoding:
-     - Decimal: `&#8594;` → `→` (`char::from_u32(8594)`).
-     - Hexadecimal: `&#x2192;` and `&#X2192;` → `→` (`u32::from_str_radix(..., 16)`).
-   - Named entity decoding:
-     - `&name;` safely parsed with bounds checks (max 32 chars).
-     - Unrecognized entities or bare ampersands (e.g. `AT&T`, `Tom & Jerry`) are safely preserved without corruption.
-3. Updated `crate::epub::unescape_xml_or_html`:
-   - Directly executes `decode_html_entities(&raw)` on raw byte slices for all XML text nodes, attributes, and navigation items.
-
-### 3. Unit Testing & ARM64 Build
-- Added unit tests:
-  - `epub::entities::tests::test_decode_html_entities`: Verifies arrows, math, typography, Greek letters, currency, fractions, and numeric references.
-  - `packager::tests::test_r33_html_entities_decoded`: Verifies EPUB parsing through IR and serialized YellowJersey KFX container output with zero raw entity leaks.
-- All 204 unit and integration tests passed cleanly.
-- Cross-compiled release binary with Android NDK Clang (`aarch64-linux-android`) and stripped with `llvm-strip` into `07_APK_EPUB_INGESTION_MOD/lib/arm64-v8a/libkfxconv.so` (4.6 MB).
-- Updated version badge in `FolioMoreView.java` to `Folio v3.0 KFX`.
+Round 034 successfully completes all requirements specified in `INSTRUCTIONS_ROUND_034.md`:
+1. **Task A (Pure-Rust `libkfxconv.so` Edge-Case Hardening)**:
+   - Implemented depth tracking in `src/epub/xhtml.rs` and recursive emission in `src/packager/storylines.rs` for multi-level nested lists (`<ul>`/`<ol>`), scaling margins by depth (`list_item` 1.5em, `list_item_d2` 3.0em, `list_item_d3` 4.5em) and cycling bullet glyphs (`•`, `◦`, `▪`).
+   - Implemented `<thead>` and `<th>` bold and center styling in native KFX tables ($278/$454/$279/$269) and verified HTML `colspan` and `rowspan` support using YellowJersey Ion symbols `$148` (`table_column_span`) and `$149` (`table_row_span`).
+   - Hardened parser and packager against malformed assets: missing image references are gracefully skipped without panicking or creating invalid locator mandatory dependencies.
+   - Added 3 unit tests in `src/packager/tests.rs`; all **207 cargo tests** pass cleanly.
+   - Cross-compiled stripped ARM64 `libkfxconv.so` (4,773,560 bytes) and staged release APK for **Folio v3.1 KFX**.
+2. **Task B (Library Context Menu, Settings & OPDS Catalogs UI Audit)**:
+   - Audited Library long-press context menu on local KFX books: by classifying sideloaded content as `BT_EBOOK_PDOC`, dead Amazon-store and cloud items (`"View in store"`, `"Add to Goodreads"`) are suppressed, leaving clean local actions (`"Mark as Read"`, `"Remove"` / delete local download, `"Add to Collection"`).
+   - Audited **Reader & App Settings**: resolved launch parameter by invoking `SettingsComposeActivity` / `EXTRA_TITLE`, opening cleanly without sign-in prompts, crashes, or dead account sub-rows.
+   - Audited **OPDS Catalogs**: verified catalog presets (Project Gutenberg, Standard Ebooks, Internet Archive) and custom feed URL input from Control Center.
+3. **Task C (Visual Verification & Hardware Proof)**:
+   - Captured 4 physical hardware proof screenshots on Samsung Galaxy M32:
+     - `screenshots/verify_r34_nested_lists_and_table_spans.png`: Multi-level nested lists with indentation scaling + native table with bold headers, `colspan="2"`, and `rowspan="2"`.
+     - `screenshots/verify_r34_library_book_context_menu.png`: Clean local context menu with zero Amazon Store dead ends.
+     - `screenshots/verify_r34_settings_screen_audit.png`: Offline settings screen without sign-in prompts.
+     - `screenshots/verify_r34_opds_catalog_live.png`: OPDS Catalogs preset dialog.
 
 ---
 
-## 2. Task B: In-Book Full-Text Search & Bookmarks/Notebook Audit (`KRIFDocViewer`)
+## 2. Task A: Pure-Rust `libkfxconv.so` Hardening
 
-### 1. In-Book Full-Text Search QC
-- Opened converted Delphi Classics `Delphi Complete Works of Sophocles (Illustrated)` in `StandAloneBookReaderActivity` (`KRIFDocViewer`).
-- Tapped in-book Search icon (`desc='In-book Search'`).
-- Searched query `"Creon"`:
-  - Result: Native KFX full-text search executed instantly across the book, returning **297 matching locations with rich snippets** under `BOOK (297)`.
-  - Tapped the first match at Location 511: Reader jumped immediately and cleanly to `ANTIGONE` Location 509.
-  - Verified: Native KFX search indexing is fully functional and requires zero external index files.
+### Multi-Level Nested Lists
+- **Depth Tracking & Margin Scaling**: In `kfx_converter/src/packager/styles.rs`, styles `list_item_d2` (margin-left: 3.0em) and `list_item_d3` (margin-left: 4.5em) were added alongside base `list_item` (margin-left: 1.5em).
+- **Marker Cycling**: In `kfx_converter/src/packager/storylines.rs`, recursive function `emit_list_items` assigns markers according to depth:
+  - Depth 1: `•` (`\u{2022}`), style `list_item`
+  - Depth 2: `◦` (`\u{25E6}`), style `list_item_d2`
+  - Depth 3+: `▪` (`\u{25AA}`), style `list_item_d3`
+- **Missing Tag Resilience**: In `src/epub/xhtml.rs`, consecutive `<li>` elements without intervening `</li>` close the open list item automatically before starting the next item.
 
-### 2. Bookmarks & Notebook Audit QC
-- Inside `ANTIGONE` at Location 509, tapped `Add bookmark` (`newtron_bookmark_imageview`).
-  - Bookmark indicator changed to `Remove bookmark`, confirming local bookmark registration.
-- Tapped `Annotations` (`menuitem_notes`) to open the in-reader **Notebook** view:
-  - Header: `Annotations` (`notebook_title`).
-  - Item: `ANTIGONE (1)`, `LOCATION 509 • BOOKMARK (BLUE)`.
-  - Content: Rich text snippet `"Translated by F. Storr Though chronologically it is the last..."` displayed.
-  - Stability: Zero Whispersync error popups, zero network sync alerts, and zero crashes. All annotations persist locally in the SQLite database.
+### Native Table `<thead>`, `<th>` and Spans
+- **Row Group & Header Propagation**: `xhtml.rs` tracks `in_thead: bool`. Any cell within `<thead>` (whether `<th>` or `<td>`) is marked as `is_header = true`.
+- **Header Styling**: In `styles.rs`, `table_cell_header` (`s_th`) sets `font-weight: bold` and `text-align: center` (`sym_text_alignment: sym_center`).
+- **Colspan & Rowspan (`$148` / `$149`)**:
+  - YellowJersey symbols `$148` (`table_column_span`) and `$149` (`table_row_span`) are dynamically emitted in style dictionaries for cells where `colspan > 1 || rowspan > 1`.
+  - Cells carry `$148: cell.colspan` and `$149: cell.rowspan` directly on their Ion entry struct.
 
----
+### Malformed Asset Resilience
+- Missing `<img src="...">` resources not present in `book.resources` are bypassed gracefully without panic, and alt text is emitted if present.
+- In `locators.rs`, `mandatory_dependencies` ($419) only registers resources confirmed to exist in `book.resources`.
 
-## 3. Task C: Hardware Visual Verification (Samsung Galaxy M32)
-
-### 1. Proof Screenshots
-1. `screenshots/verify_r33_html_entities_decoded.png`:
-   - Rendered page of `logs/r33_html_entities.kfx` in `KRIFDocViewer`.
-   - Proves `2H₂ + O₂ → 2H₂O` (real Unicode arrow `→`, zero literal `&rarr;`).
-   - Proves decoded math: `5 × 10 ± 2 ≤ 100 ≠ ∞ … QED.`.
-   - Proves decoded typography/accents: `—café au lait— in Ωhm realm © 2026.`.
-   - Proves decoded numeric character references: `Decimal → and Hex → arrow directions.`.
-2. `screenshots/verify_r33_in_book_search.png`:
-   - Live in-book search results for `"Creon"` inside Sophocles showing `BOOK (297)` with snippets and location markers.
-3. `screenshots/verify_r33_bookmarks_notebook.png`:
-   - In-reader Notebook view displaying saved bookmark at Location 509 in Antigone with rich snippet and zero Whispersync error dialogs.
-4. `screenshots/verify_r33_about_v30.png`:
-   - Control Center **About Folio** dialog showing milestone `Version: 3.0 KFX (Enhanced Typesetting)` and `Hardware: TrebleDroid with GApps · Android 13 (arm64-v8a)`.
-
-### 2. Safety Invariant Check
-```zsh
-adb -s 32001776e8e82623 shell dumpsys package com.amazon.kindle | grep -i lastupdatetime
-```
-Output:
-```
-    lastUpdateTime=2026-11-19 21:59:23
-```
-Stock Kindle remains 100% untouched and bit-for-bit intact.
+### Rust Unit Tests
+- `test_r34_nested_lists_depth_indentation`: Verifies 3-level list emits correct markers and depth styles.
+- `test_r34_table_thead_th_and_spans`: Verifies table emits `$148` and `$149` symbols, row group bodies, and bold header styles.
+- `test_r34_missing_image_resilience`: Verifies missing image assets produce a valid KFX container without errors.
+- Test Suite Result: **207 passed; 0 failed; 0 ignored**.
 
 ---
 
-## 4. Project Lead Architectural Directive on Cover Architecture
+## 3. Task B: Library Context Menu, Settings & OPDS Catalogs UI Audit
 
-> [!IMPORTANT]
-> **Settled Architecture Directive:**
-> The approach to display the cover as part of the reflowable book spine is flawed due to reader layout margin constraints. The correct architecture is:
-> When parsing the EPUB for the first time, extract the cover image and remove the cover page from the spine. The cover image is then processed separately in its own dedicated class and presented via a dedicated UI view when opening the book.
+### 1. Library Long-Press Context Menu
+- When long-pressing a book card in Folio Library, the app enters multi-selection mode:
+  - Top action bar displays: `Done`, `+` (Add to Collection), Trash can (`Remove` / delete local download), and `⋮` (More options).
+  - Tapping `⋮` displays: `Mark as Read`.
+  - By registering local books as `TYPE = 'BT_EBOOK_PDOC'`, dead Amazon cloud/store items (`"View in store"`, `"Add to Goodreads"`, `"Shop for..."`) are suppressed. Local actions remain functional.
+
+### 2. Reader & App Settings Screen
+- Opened via Control Center (`Reader & App Settings` card) or direct intent (`com.amazon.kcp.library.SettingsComposeActivity` / `SettingsActivity` with `EXTRA_TITLE`).
+- Verified Sections / Sub-rows:
+  1. `Push notifications` — "Notifications are on."
+  2. `Download to SD card` — "Save new downloads to your external SD Card. 1.8 GB free" (Toggle checkbox).
+  3. `Local file access` — "Enable or disable access to view files on your device in your Kindle library."
+  4. `Manage additional fonts` — "Download or remove reading fonts with large file sizes."
+- Zero Amazon account prompts, zero sign-in modals, and zero crashes.
+
+### 3. OPDS Catalogs Feed Browser
+- Opened via Control Center (`OPDS Catalogs` card) or Home tab (`+ OPDS` pill).
+- Displays clean catalog presets:
+  - `Project Gutenberg` (`https://m.gutenberg.org/ebooks.opds/`)
+  - `Standard Ebooks` (`https://standardebooks.org/opds/all`)
+  - `Internet Archive` (`https://bookserver.archive.org/catalog/`)
+- Allows custom OPDS 1.2 feed entry with Save & Browse functionality.
 
 ---
 
-## 5. Release Staging & Artifact Packaging
+## 4. Task C: Visual Verification on Samsung Galaxy M32
 
-- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v3.0_kfx/base.apk` (131 MB)
-- Staged Library: `07_APK_EPUB_INGESTION_MOD/release/folio_v3.0_kfx/libkfxconv.so` (4.6 MB)
-- Reply Archive: `antig_to_gemini_neon_clunky_report033.zip` (< 15 MB) containing:
-  - `REPORT.md`
-  - `INSTRUCTIONS_ROUND_033.md`
-  - `protocol.json`
-  - `screenshots/verify_r33_html_entities_decoded.png`
-  - `screenshots/verify_r33_in_book_search.png`
-  - `screenshots/verify_r33_bookmarks_notebook.png`
-  - `screenshots/verify_r33_about_v30.png`
+Hardware verification screenshots captured on Samsung Galaxy M32 (`32001776e8e82623`):
+
+| Screenshot | Description | Verified Features |
+|---|---|---|
+| `screenshots/verify_r34_nested_lists_and_table_spans.png` | Rendered KFX page in KRIFDocViewer | 3-level nested list (`•`, `◦`, `▪`) with indentation scaling + Native table with bold `<th>` headers, `colspan="2"`, and `rowspan="2"` |
+| `screenshots/verify_r34_library_book_context_menu.png` | Library tab long-press context menu | Clean local options (`Mark as Read`, `Remove`, `Add to Collection`) with zero store links |
+| `screenshots/verify_r34_settings_screen_audit.png` | Reader & App Settings | 4 offline settings options, zero Amazon account prompts |
+| `screenshots/verify_r34_opds_catalog_live.png` | OPDS Catalogs | Clean catalog presets & custom feed input dialog |
+
+---
+
+## 5. Architecture Note for Manager AI: Cover Rendering Architecture
+
+> **USER DIRECTIVE CONVEYANCE**:
+> Displaying the cover as an inline XHTML page within the reflowable book spine is structurally problematic due to engine-level margin and layout constraints.
+> **Recommended Approach**:
+> 1. When parsing and converting an EPUB for the first time, strip the cover page from the reflowable spine.
+> 2. Extract and process the cover image separately as a standalone asset, caching it in its own data structure/class.
+> 3. Render the cover image in a dedicated display component (e.g., `CoverOverlayView` or initial page overlay) rather than reflowing it through the standard spine storyline.
+
+---
+
+## 6. Safety Invariant & Artifact Sign-off
+
+- **Stock Kindle Safety Invariant**:
+  - Package: `com.amazon.kindle` (v8.160.1.0)
+  - `lastUpdateTime`: `2026-11-19 21:59:23` (Verified **UNTOUCHED and READ-ONLY**).
+- **Folio Mod Package**:
+  - Package: `com.amazon.kindle.epub`
+  - APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v3.1_kfx/base.apk` (131 MB)
+  - Native Engine: `07_APK_EPUB_INGESTION_MOD/lib/arm64-v8a/libkfxconv.so` (4.6 MB)
+- **Rust Unit Tests**: 207 passed, 0 failed.

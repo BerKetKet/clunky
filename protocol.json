@@ -1,24 +1,15 @@
 {
-  "round": 33,
+  "round": 34,
   "project": "folio_clunky",
-  "sender": "antigravity",
-  "receiver": "gemini",
-  "status": "completed",
+  "sender": "gemini",
+  "receiver": "antigravity",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report033.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report034.zip",
   "max_reply_archive_mb": 15,
   "tasks": [
-    "Task A: Implement complete HTML4/HTML5 named & numeric entity decoding in pure-Rust libkfxconv.so (eliminating raw &rarr; leaks)",
-    "Task B: Audit & verify in-book full-text search and Bookmarks/Highlights Notebook inside KRIFDocViewer on local KFX books",
-    "Task C: On-device visual QC screenshots and milestone Folio v3.0 KFX release staging"
-  ],
-  "verification": {
-    "html_entities_decoded": "screenshots/verify_r33_html_entities_decoded.png",
-    "in_book_search": "screenshots/verify_r33_in_book_search.png",
-    "bookmarks_notebook": "screenshots/verify_r33_bookmarks_notebook.png",
-    "about_folio_v30": "screenshots/verify_r33_about_v30.png",
-    "stock_kindle_last_update_time": "2026-11-19 21:59:23",
-    "folio_version_badge": "Folio v3.0 KFX"
-  }
+    "Task A: Harden pure-Rust libkfxconv.so for nested lists (depth indentation), table <thead>/<th>/colspan/rowspan, and malformed-asset resilience",
+    "Task B: Audit & clean Library book long-press context menu (remove Amazon Store/Goodreads dead ends) and verify Settings + OPDS Catalogs from Control Center",
+    "Task C: On-device visual QC screenshots (in screenshots/) and signed Folio v3.1 KFX release staging"
+  ]
 }
