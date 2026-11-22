@@ -49,7 +49,7 @@ public final class FolioMetadataCatalogDialog {
         void onFilterByAuthor(String author);
     }
 
-    private static final String[] SORT_MODES = new String[] { "Recent", "Title", "Author", "Year", "Progress" };
+    private static final String[] SORT_MODES = new String[] { "Recent", "Title", "Author", "Year", "Progress", "Favorites" };
 
     private FolioMetadataCatalogDialog() {}
 
@@ -291,7 +291,7 @@ public final class FolioMetadataCatalogDialog {
                         ? "Library Metadata & Genres (" + filtered.size() + " of " + allBooks.size() + ")"
                         : "Library Metadata & Genres (" + allBooks.size() + ")");
 
-                sortBooks(filtered, sortIdx[0], progressMap);
+                sortBooks(ctx, filtered, sortIdx[0], progressMap);
 
                 final AuthorFilterCallback onAuthorFilter = author -> {
                     selectedGenre[0] = "All";
@@ -366,7 +366,7 @@ public final class FolioMetadataCatalogDialog {
         dialog.show();
     }
 
-    private static void sortBooks(List<FolioMetadataDb.BookRecord> list, final int mode, final Map<String, Integer> progressMap) {
+    private static void sortBooks(final Context ctx, List<FolioMetadataDb.BookRecord> list, final int mode, final Map<String, Integer> progressMap) {
         Collections.sort(list, new Comparator<FolioMetadataDb.BookRecord>() {
             @Override
             public int compare(FolioMetadataDb.BookRecord a, FolioMetadataDb.BookRecord b) {
@@ -384,6 +384,11 @@ public final class FolioMetadataCatalogDialog {
                     int pb = getProgress(progressMap, b.kfxPath);
                     if (pa != pb) return Integer.compare(pb, pa);
                     return safeLower(a.title).compareTo(safeLower(b.title));
+                } else if (mode == 5) { // Favorites first
+                    boolean fa = isFavorite(ctx, a.kfxPath);
+                    boolean fb = isFavorite(ctx, b.kfxPath);
+                    if (fa != fb) return fa ? -1 : 1;
+                    return Long.compare(b.addedAt, a.addedAt);
                 }
                 // Default 0: Recent (descending addedAt)
                 return Long.compare(b.addedAt, a.addedAt);
@@ -558,6 +563,19 @@ public final class FolioMetadataCatalogDialog {
             isbnTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             isbnTv.setPadding(0, dp(ctx, 2), 0, 0);
             col.addView(isbnTv);
+        }
+
+        String cardNote = getNote(ctx, rec.kfxPath);
+        if (!cardNote.isEmpty()) {
+            TextView notePreviewTv = new TextView(ctx);
+            notePreviewTv.setText("“" + cardNote + "”");
+            notePreviewTv.setTextColor(Color.parseColor("#F59E0B"));
+            notePreviewTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            notePreviewTv.setTypeface(null, Typeface.ITALIC);
+            notePreviewTv.setMaxLines(1);
+            notePreviewTv.setEllipsize(TextUtils.TruncateAt.END);
+            notePreviewTv.setPadding(0, dp(ctx, 3), 0, 0);
+            col.addView(notePreviewTv);
         }
 
         card.addView(col);
@@ -1150,6 +1168,17 @@ public final class FolioMetadataCatalogDialog {
             else ed.putString(kfxPath, clean);
             ed.apply();
         } catch (Throwable ignored) {}
+    }
+
+    public static int countNotes(Context ctx) {
+        if (ctx == null) return 0;
+        try {
+            int n = 0;
+            for (Object v : ctx.getSharedPreferences("folio_notes", Context.MODE_PRIVATE).getAll().values()) {
+                if (v instanceof String && !((String) v).trim().isEmpty()) n++;
+            }
+            return n;
+        } catch (Throwable ignored) { return 0; }
     }
 
     private static void showEditNoteDialog(final Context ctx, final FolioMetadataDb.BookRecord rec,
