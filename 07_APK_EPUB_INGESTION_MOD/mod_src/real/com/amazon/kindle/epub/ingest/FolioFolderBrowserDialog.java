@@ -75,6 +75,25 @@ public final class FolioFolderBrowserDialog {
         eyebrow.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         topRow.addView(eyebrow);
 
+        final String[] folderSortLabels = new String[] { "A–Z", "Newest", "Largest", "Smallest" };
+        final int[] folderSortIdx = new int[] { 0 };
+        final TextView btnSortFolder = new TextView(ctx);
+        btnSortFolder.setText("Sort: A–Z");
+        btnSortFolder.setTextColor(Color.parseColor("#E2E8F0"));
+        btnSortFolder.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        btnSortFolder.setTypeface(Typeface.DEFAULT_BOLD);
+        btnSortFolder.setPadding(dp(ctx, 9), dp(ctx, 5), dp(ctx, 9), dp(ctx, 5));
+        GradientDrawable sBg = new GradientDrawable();
+        sBg.setColor(Color.parseColor("#1E2433"));
+        sBg.setCornerRadius(dp(ctx, 14));
+        sBg.setStroke(dp(ctx, 1), Color.parseColor("#334155"));
+        btnSortFolder.setBackground(sBg);
+        LinearLayout.LayoutParams sLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sLp.setMargins(0, 0, dp(ctx, 6), 0);
+        btnSortFolder.setLayoutParams(sLp);
+        topRow.addView(btnSortFolder);
+
         final TextView btnHideImported = new TextView(ctx);
         btnHideImported.setText("Hide Imported: OFF");
         btnHideImported.setTextColor(Color.parseColor("#CBD5E1"));
@@ -236,7 +255,16 @@ public final class FolioFolderBrowserDialog {
         final List<File> currentVisible = new ArrayList<>();
         final Runnable updateImportLabel = () -> {
             int nSel = selectedFiles.size();
-            btnImport.setText("Import Selected (" + nSel + ")");
+            if (nSel == 0) {
+                btnImport.setText("Import Selected (0)");
+            } else {
+                long totalBytes = 0L;
+                for (File sf : selectedFiles) totalBytes += sf.length();
+                String szStr = totalBytes >= 1024L * 1024L
+                        ? String.format(Locale.US, "%.1f MB", totalBytes / (1024.0 * 1024.0))
+                        : Math.max(1L, totalBytes / 1024L) + " KB";
+                btnImport.setText("Import Selected (" + nSel + " · " + szStr + ")");
+            }
             if (nSel > 0) {
                 btnSelectBatch.setText("Clear (" + nSel + ")");
                 btnSelectBatch.setTextColor(Color.parseColor("#F59E0B"));
@@ -266,6 +294,14 @@ public final class FolioFolderBrowserDialog {
                 if (!q.isEmpty() && !lower.contains(q)) continue;
                 matched.add(f);
             }
+
+            final int sMode = folderSortIdx[0];
+            java.util.Collections.sort(matched, (a, b) -> {
+                if (sMode == 1) return Long.compare(b.lastModified(), a.lastModified());
+                if (sMode == 2) return Long.compare(b.length(), a.length());
+                if (sMode == 3) return Long.compare(a.length(), b.length());
+                return a.getName().compareToIgnoreCase(b.getName());
+            });
 
             int cap = Math.min(matched.size(), 60);
             currentVisible.clear();
@@ -375,6 +411,12 @@ public final class FolioFolderBrowserDialog {
             });
             chipRow.addView(chip);
         }
+
+        btnSortFolder.setOnClickListener(v -> {
+            folderSortIdx[0] = (folderSortIdx[0] + 1) % folderSortLabels.length;
+            btnSortFolder.setText("Sort: " + folderSortLabels[folderSortIdx[0]]);
+            renderList.run();
+        });
 
         btnHideImported.setOnClickListener(v -> {
             hideImported[0] = !hideImported[0];
