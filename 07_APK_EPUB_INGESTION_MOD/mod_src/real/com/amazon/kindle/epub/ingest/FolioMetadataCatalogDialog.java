@@ -45,6 +45,9 @@ import java.util.Set;
  *   - Book Details (ⓘ) popup with "Edit Metadata" form & "Read Now" launch
  */
 public final class FolioMetadataCatalogDialog {
+    private interface AuthorFilterCallback {
+        void onFilterByAuthor(String author);
+    }
 
     private static final String[] SORT_MODES = new String[] { "Recent", "Title", "Author", "Year", "Progress" };
 
@@ -114,24 +117,43 @@ public final class FolioMetadataCatalogDialog {
         heading.setPadding(0, dp(ctx, 4), 0, dp(ctx, 10));
         root.addView(heading);
 
-        // Search box
+        // Search box + inline Clear (✕) button
+        LinearLayout searchRow = new LinearLayout(ctx);
+        searchRow.setOrientation(LinearLayout.HORIZONTAL);
+        searchRow.setGravity(Gravity.CENTER_VERTICAL);
+        GradientDrawable searchBg = new GradientDrawable();
+        searchBg.setColor(Color.parseColor("#1A1F2E"));
+        searchBg.setCornerRadius(dp(ctx, 10));
+        searchBg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
+        searchRow.setBackground(searchBg);
+        LinearLayout.LayoutParams searchRowLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        searchRowLp.setMargins(0, 0, 0, dp(ctx, 10));
+        searchRow.setLayoutParams(searchRowLp);
+
         final EditText searchBox = new EditText(ctx);
         searchBox.setHint("Filter by title, author, genre, or ISBN...");
         searchBox.setHintTextColor(Color.parseColor("#64748B"));
         searchBox.setTextColor(Color.WHITE);
         searchBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         searchBox.setSingleLine(true);
-        searchBox.setPadding(dp(ctx, 12), dp(ctx, 9), dp(ctx, 12), dp(ctx, 9));
-        GradientDrawable searchBg = new GradientDrawable();
-        searchBg.setColor(Color.parseColor("#1A1F2E"));
-        searchBg.setCornerRadius(dp(ctx, 10));
-        searchBg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
-        searchBox.setBackground(searchBg);
-        LinearLayout.LayoutParams searchLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        searchLp.setMargins(0, 0, 0, dp(ctx, 10));
-        searchBox.setLayoutParams(searchLp);
-        root.addView(searchBox);
+        searchBox.setBackgroundColor(Color.TRANSPARENT);
+        searchBox.setPadding(dp(ctx, 12), dp(ctx, 9), dp(ctx, 6), dp(ctx, 9));
+        searchBox.setLayoutParams(new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        searchRow.addView(searchBox);
+
+        final TextView btnClearSearch = new TextView(ctx);
+        btnClearSearch.setText("✕");
+        btnClearSearch.setTextColor(Color.parseColor("#94A3B8"));
+        btnClearSearch.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        btnClearSearch.setTypeface(Typeface.DEFAULT_BOLD);
+        btnClearSearch.setPadding(dp(ctx, 10), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8));
+        btnClearSearch.setVisibility(View.GONE);
+        btnClearSearch.setOnClickListener(v -> searchBox.setText(""));
+        searchRow.addView(btnClearSearch);
+
+        root.addView(searchRow);
 
         // Genre filter chip strip
         HorizontalScrollView chipScroll = new HorizontalScrollView(ctx);
@@ -237,6 +259,11 @@ public final class FolioMetadataCatalogDialog {
 
                 sortBooks(filtered, sortIdx[0], progressMap);
 
+                final AuthorFilterCallback onAuthorFilter = author -> {
+                    selectedGenre[0] = "All";
+                    searchBox.setText(author);
+                    searchBox.setSelection(author.length());
+                };
                 cardsContainer.removeAllViews();
                 for (final FolioMetadataDb.BookRecord rec : filtered) {
                     cardsContainer.addView(buildBookCard(ctx, rec, progressMap, dialog, () -> {
@@ -244,7 +271,7 @@ public final class FolioMetadataCatalogDialog {
                         progressMap.clear();
                         progressMap.putAll(loadProgressMap(ctx));
                         renderRef[0].run();
-                    }));
+                    }, onAuthorFilter));
                 }
 
                 if (filtered.isEmpty()) {
@@ -269,6 +296,7 @@ public final class FolioMetadataCatalogDialog {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 queryText[0] = s != null ? s.toString() : "";
+                btnClearSearch.setVisibility(queryText[0].trim().isEmpty() ? View.GONE : View.VISIBLE);
                 renderRef[0].run();
             }
             @Override public void afterTextChanged(Editable s) {}
@@ -384,7 +412,9 @@ public final class FolioMetadataCatalogDialog {
     }
 
     private static boolean matchesQuery(FolioMetadataDb.BookRecord r, String q) {
-        return contains(r.title, q) || contains(r.author, q) || contains(r.genres, q)
+        return contains(r.title, q) || contains(r.author, q)
+                || contains(formatAuthorForDisplay(r.author), q)
+                || contains(r.genres, q)
                 || contains(r.publisher, q) || contains(r.isbn, q) || contains(r.pubDate, q);
     }
 
@@ -407,7 +437,8 @@ public final class FolioMetadataCatalogDialog {
 
     private static View buildBookCard(final Context ctx, final FolioMetadataDb.BookRecord rec,
                                       final Map<String, Integer> progressMap,
-                                      final AlertDialog parentDialog, final Runnable onMetadataEdited) {
+                                      final AlertDialog parentDialog, final Runnable onMetadataEdited,
+                                      final AuthorFilterCallback onAuthorFilter) {
         LinearLayout card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setPadding(dp(ctx, 12), dp(ctx, 12), dp(ctx, 12), dp(ctx, 12));
@@ -501,7 +532,7 @@ public final class FolioMetadataCatalogDialog {
         infoBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         infoBtn.setPadding(dp(ctx, 8), dp(ctx, 4), dp(ctx, 2), dp(ctx, 4));
         final int currentProg = getProgress(progressMap, rec.kfxPath);
-        infoBtn.setOnClickListener(v -> showBookDetailDialog(ctx, rec, currentProg, parentDialog, onMetadataEdited));
+        infoBtn.setOnClickListener(v -> showBookDetailDialog(ctx, rec, currentProg, parentDialog, onMetadataEdited, onAuthorFilter));
         card.addView(infoBtn);
 
         card.setOnClickListener(v -> {
@@ -519,7 +550,8 @@ public final class FolioMetadataCatalogDialog {
 
     private static void showBookDetailDialog(final Context ctx, final FolioMetadataDb.BookRecord rec,
                                              final int currentProgress,
-                                             final AlertDialog parentDialog, final Runnable onMetadataEdited) {
+                                             final AlertDialog parentDialog, final Runnable onMetadataEdited,
+                                             final AuthorFilterCallback onAuthorFilter) {
         LinearLayout box = new LinearLayout(ctx);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setBackgroundColor(Color.parseColor("#161922"));
@@ -532,11 +564,21 @@ public final class FolioMetadataCatalogDialog {
         title.setTypeface(Typeface.DEFAULT_BOLD);
         box.addView(title);
 
+        final AlertDialog[] detailDlgRef = new AlertDialog[1];
+
+        final String displayAuthor = formatAuthorForDisplay(rec.author);
         TextView sub = new TextView(ctx);
-        sub.setText(formatAuthorForDisplay(rec.author));
+        sub.setText(displayAuthor.isEmpty() ? "" : displayAuthor + "  ›");
         sub.setTextColor(Color.parseColor("#F59E0B"));
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        sub.setTypeface(Typeface.DEFAULT_BOLD);
         sub.setPadding(0, dp(ctx, 4), 0, dp(ctx, 10));
+        if (!displayAuthor.isEmpty() && onAuthorFilter != null) {
+            sub.setOnClickListener(v -> {
+                if (detailDlgRef[0] != null) detailDlgRef[0].dismiss();
+                onAuthorFilter.onFilterByAuthor(displayAuthor);
+            });
+        }
         box.addView(sub);
 
         StringBuilder details = new StringBuilder();
@@ -567,8 +609,6 @@ public final class FolioMetadataCatalogDialog {
             descTv.setEllipsize(TextUtils.TruncateAt.END);
             box.addView(descTv);
         }
-
-        final AlertDialog[] detailDlgRef = new AlertDialog[1];
 
         final boolean isFinished = currentProgress >= 100;
         TextView readToggleBtn = new TextView(ctx);
