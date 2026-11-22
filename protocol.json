@@ -1,10 +1,10 @@
 {
-  "round": 50,
+  "round": 51,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v5.0 KFX \u2014 Deduplicated Genre Display, Clean Chips & Live Reading Stats",
+  "milestone": "Folio v5.1 KFX \u2014 Accurate Reading Progress SQL Fix & Dynamic Reading Filter Chip",
   "sender": "Gemini",
   "recipient": "Antigravity",
-  "reply_archive": "antig_to_gemini_neon_clunky_report050.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report051.zip",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% untouched and read-only.",
   "dropin_files": [
     "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
