@@ -1449,7 +1449,7 @@ public final class FolioMetadataCatalogDialog {
         wrap.setBackgroundColor(Color.parseColor("#11131A"));
         wrap.setPadding(dp(ctx, 18), dp(ctx, 16), dp(ctx, 18), dp(ctx, 10));
 
-        TextView hdr = new TextView(ctx);
+        final TextView hdr = new TextView(ctx);
         hdr.setText("Authors Directory (" + keys.size() + ")");
         hdr.setTextColor(Color.WHITE);
         hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
@@ -1457,53 +1457,95 @@ public final class FolioMetadataCatalogDialog {
         hdr.setPadding(0, 0, 0, dp(ctx, 10));
         wrap.addView(hdr);
 
+        final EditText authSearch = new EditText(ctx);
+        authSearch.setHint("Search authors...");
+        authSearch.setHintTextColor(Color.parseColor("#64748B"));
+        authSearch.setTextColor(Color.WHITE);
+        authSearch.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        authSearch.setSingleLine(true);
+        authSearch.setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8));
+        GradientDrawable asBg = new GradientDrawable();
+        asBg.setColor(Color.parseColor("#1A1F2E"));
+        asBg.setCornerRadius(dp(ctx, 10));
+        asBg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
+        authSearch.setBackground(asBg);
+        LinearLayout.LayoutParams asLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        asLp.setMargins(0, 0, 0, dp(ctx, 10));
+        authSearch.setLayoutParams(asLp);
+        wrap.addView(authSearch);
+
         ScrollView sv = new ScrollView(ctx);
         sv.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 360)));
-        LinearLayout list = new LinearLayout(ctx);
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 340)));
+        final LinearLayout list = new LinearLayout(ctx);
         list.setOrientation(LinearLayout.VERTICAL);
         sv.addView(list);
         wrap.addView(sv);
 
         final AlertDialog[] dlgRef = new AlertDialog[1];
-        for (String k : keys) {
-            final String name = labels.get(k);
-            int n = counts.get(k);
-            LinearLayout row = new LinearLayout(ctx);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10));
-            GradientDrawable rBg = new GradientDrawable();
-            rBg.setColor(Color.parseColor("#1A1F2E"));
-            rBg.setCornerRadius(dp(ctx, 10));
-            rBg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
-            row.setBackground(rBg);
-            LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            rLp.setMargins(0, 0, 0, dp(ctx, 8));
-            row.setLayoutParams(rLp);
+        final String[] authQuery = new String[] { "" };
+        final Runnable renderAuthors = () -> {
+            list.removeAllViews();
+            String q = authQuery[0].trim().toLowerCase(Locale.ROOT);
+            int shown = 0;
+            for (String k : keys) {
+                final String name = labels.get(k);
+                if (!q.isEmpty() && !k.contains(q)) continue;
+                shown++;
+                int n = counts.get(k);
+                LinearLayout row = new LinearLayout(ctx);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10));
+                GradientDrawable rBg = new GradientDrawable();
+                rBg.setColor(Color.parseColor("#1A1F2E"));
+                rBg.setCornerRadius(dp(ctx, 10));
+                rBg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
+                row.setBackground(rBg);
+                LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                rLp.setMargins(0, 0, 0, dp(ctx, 8));
+                row.setLayoutParams(rLp);
 
-            TextView nameTv = new TextView(ctx);
-            nameTv.setText(name);
-            nameTv.setTextColor(Color.WHITE);
-            nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-            nameTv.setTypeface(Typeface.DEFAULT_BOLD);
-            nameTv.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-            row.addView(nameTv);
+                TextView nameTv = new TextView(ctx);
+                nameTv.setText(name);
+                nameTv.setTextColor(Color.WHITE);
+                nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                nameTv.setTypeface(Typeface.DEFAULT_BOLD);
+                nameTv.setMaxLines(1);
+                nameTv.setEllipsize(TextUtils.TruncateAt.END);
+                nameTv.setPadding(0, 0, dp(ctx, 10), 0);
+                nameTv.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+                row.addView(nameTv);
 
-            TextView cntTv = new TextView(ctx);
-            cntTv.setText(n + (n == 1 ? " book ›" : " books ›"));
-            cntTv.setTextColor(Color.parseColor("#F59E0B"));
-            cntTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            cntTv.setTypeface(Typeface.DEFAULT_BOLD);
-            row.addView(cntTv);
+                TextView cntTv = new TextView(ctx);
+                cntTv.setText(n + (n == 1 ? " book ›" : " books ›"));
+                cntTv.setTextColor(Color.parseColor("#F59E0B"));
+                cntTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                cntTv.setTypeface(Typeface.DEFAULT_BOLD);
+                row.addView(cntTv);
 
-            row.setOnClickListener(v -> {
-                if (dlgRef[0] != null) dlgRef[0].dismiss();
-                if (onPick != null) onPick.onFilterByAuthor(name);
-            });
-            list.addView(row);
-        }
+                row.setOnClickListener(v -> {
+                    if (dlgRef[0] != null) dlgRef[0].dismiss();
+                    if (onPick != null) onPick.onFilterByAuthor(name);
+                });
+                list.addView(row);
+            }
+            hdr.setText(q.isEmpty()
+                    ? "Authors Directory (" + keys.size() + ")"
+                    : "Authors Directory (" + shown + " of " + keys.size() + ")");
+        };
+        renderAuthors.run();
+
+        authSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                authQuery[0] = s != null ? s.toString() : "";
+                renderAuthors.run();
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
 
         dlgRef[0] = new AlertDialog.Builder(ctx)
                 .setView(wrap)
