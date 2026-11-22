@@ -1,6 +1,30 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.8 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 088 complete:
+  1. **Storage Footprint & Duplicate Titles Manager (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java`.
+     - Added `💾 Storage & Duplicates` action card on Control Center directly below `🏷 Manage Shelves`.
+     - Built comprehensive `showStorageDuplicatesDialog(...)` modal:
+       * Three centered live storage tiles: App Library (`13.3 MB`), Backups (`682 KB`), and Temp Cache (`1.3 MB`).
+       * Top 5 Largest Books ranking with amber proportional horizontal bars and 1-tap search drill-down into catalog (*Homer*, *Cicero*, *Plutarch*, *Aristotle*, *Xenophon*).
+       * Duplicate Titles Audit running title normalization across all 27 cataloged books, reporting `✓ No duplicate titles found across 27 cataloged books`.
+       * 1-tap `Clear Temp Cache` button allowing instant scratch cache purge and live modal refresh.
+     - Bumped badge and About Folio string to `Folio v8.8 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Milestone Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `screenshots/verify_r88_control_center_v88.png` (206 KB) — Control Center showing the new `💾 Storage & Duplicates` card under `🏷 Manage Shelves` with `Folio v8.8 KFX` badge.
+       * `screenshots/verify_r88_storage_duplicates_modal.png` (231 KB) — Storage & Duplicates modal showing 3 storage tiles, Top 5 Largest Books amber bars, and duplicate title audit status.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v8.8 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v8.8_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 088)
+1. `screenshots/verify_r88_control_center_v88.png`: Control Center with `💾 Storage & Duplicates` card and `Folio v8.8 KFX` badge.
+2. `screenshots/verify_r88_storage_duplicates_modal.png`: Storage & Duplicates modal with 3 storage tiles, largest books bars, and duplicate check.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v8.8 KFX deployed (`lastUpdateTime=2026-11-23 01:15:26`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.7 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 087 complete:
   1. **Bulk Genre Tagging & Centered Metadata Health Tiles (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`.
