@@ -1,10 +1,10 @@
 {
-  "round": 66,
+  "round": 67,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v6.6 KFX \u2014 Sort by Rating & Random Unread Book Picker (\ud83c\udfb2)",
+  "milestone": "Folio v6.7 KFX \u2014 Unread Backlog Filter Chip & 1-Tap Copy Book Info to Clipboard",
   "sender": "Gemini",
   "recipient": "Antigravity",
-  "reply_archive": "antig_to_gemini_neon_clunky_report066.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report067.zip",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% untouched and read-only.",
   "dropin_files": [
     "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
