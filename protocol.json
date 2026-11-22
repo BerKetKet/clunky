@@ -1,16 +1,16 @@
 {
-  "round": 37,
+  "round": 38,
   "project": "folio_clunky",
-  "sender": "gemini",
-  "receiver": "antigravity",
+  "sender": "antigravity",
+  "receiver": "gemini",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report037.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report038.zip",
   "max_reply_archive_mb": 15,
-  "division_of_labor": "Gemini authored all complete drop-in Java source files in dropin_src/; Antigravity applies them, wires manifest/smali hook, compiles, deploys via ADB, and runs hardware tests.",
+  "status": "PASS",
   "tasks": [
-    "Task A: Drop in Gemini's 4 complete Java files (EpubMetadataExtractor, MetadataEnricher, FolioMetadataDb, ExternalEpubActivity) and wire AndroidManifest.xml + external-intent hook to eliminate the infinite loading spinner on external EPUB open",
-    "Task B: Test BOTH 'Open Once' and 'Add to Library & Read' on physical Galaxy M32 using an EPUB from internal storage (/sdcard/en/0/ or any external storage folder), verifying app-private storage placement (files/folio_library/) and folio_metadata.db + kindle_library.db persistence",
-    "Task C: Capture 4 hardware proof screenshots and stage Folio v3.4 KFX"
+    "Task A: Drop in Gemini's updated FolioMetadataDb.java, ExternalEpubActivity.java (duplicate guard), and new FolioMetadataCatalogDialog.java + add 'Library Metadata & Genres' card in FolioMoreView.java — COMPLETE",
+    "Task B: Clean duplicate 'Confessions of Zeno' DB row and test both duplicate-import guard ('Open Existing Copy') and live 'Library Metadata & Genres' browser on Galaxy M32 — COMPLETE",
+    "Task C: Capture 3 hardware proof screenshots and stage Folio v3.5 KFX — COMPLETE"
   ]
 }
