@@ -1,39 +1,37 @@
-# Folio Milestone Release Report: 1-Tap Select New / Clear Batch Pill in Folder Importer (Round 055)
+# Folio Milestone Release Report: Control Center Live Stats Dashboard Strip with 1-Tap Filter Deep-Links (Round 056)
 
 **Date:** 2026-11-22  
-**Target Package:** `com.amazon.kindle.epub` (Folio v5.5 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v5.6 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v5.5_kfx/base.apk` (131 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v5.6_kfx/base.apk` (131 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 055, Folio advanced to **Folio v5.5 KFX**. Gemini provided drop-in implementations for `FolioFolderBrowserDialog.java` and `FolioMoreView.java`. Antigravity compiled Dalvik DEX (`classes9.dex`, 208,204 B), built, aligned, signed, and deployed the updated APK to the Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. 1-Tap **Select New** / **Clear (N)** batch selection pill in the folder importer: searching `/sdcard/en/0` for `Orwell` and tapping `Select New` automatically checked all 12 unimported Orwell EPUBs in 1 tap (skipping already-imported *1984* and *Animal Farm*), toggled the pill to amber `Clear (12)`, and updated the bottom CTA to `Import Selected (12)`.
-2. Control Center **About Folio** dialog verified live displaying **`Folio v5.5 KFX (Enhanced Typesetting)`** alongside updated live reading stats (`5 in progress · 1 finished`).
+In Round 056, Folio advanced to **Folio v5.6 KFX**. Gemini provided drop-in implementations for `FolioMoreView.java` and `FolioMetadataCatalogDialog.java`. Antigravity compiled Dalvik DEX (`classes9.dex`, 210,192 B), built, aligned, signed, and deployed the updated APK to the Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. Sleek 3-tile **Live Stats Dashboard Strip** in Control Center (`More` tab) showing live reading metrics (`29 BOOKS` · `5 READING` · `1 FINISHED`) and the **`Folio v5.6 KFX`** header badge.
+2. 1-Tap deep-linking into pre-filtered catalog states: tapping the **`5 READING`** tile instantly launched `FolioMetadataCatalogDialog` pre-filtered to the teal `Reading (5)` chip with heading `Library Metadata & Genres (5 of 27)`.
 3. Stock package `com.amazon.kindle` remains 100% untouched, intact, and read-only.
 
 ---
 
-## 2. Integrated Features in Folio v5.5 KFX
+## 2. Integrated Features in Folio v5.6 KFX
 
-### A. 1-Tap Select New / Clear (N) Batch Selection (`FolioFolderBrowserDialog.java`)
-- Added a compact pill button beside the folder match count:
-  - Default state: teal `Select New` (`#5EEAD4`).
-  - Active selection state: amber `Clear (N)` (`#F59E0B`).
-- Tapping `Select New`:
-  - Scans currently visible files in the directory.
-  - Automatically filters out files present in `importedSourceNames` (skipping already-imported titles).
-  - Selects up to 25 new EPUBs in a single tap.
-  - Updates the bottom import button to `Import Selected (N)`.
-  - Toggles the batch pill to `Clear (N)`.
-- Tapping `Clear (N)` clears all selections and restores the teal `Select New` state.
+### A. Live Stats Dashboard Strip (`FolioMoreView.java`)
+- Positioned directly below the Control Center subtitle and above the action cards:
+  - **`BOOKS` Tile** (`#F59E0B` amber): Displays total indexed local books (`29`). Tapping opens catalog initialized to `All`.
+  - **`READING` Tile** (`#5EEAD4` teal): Displays in-progress reading books (`5`). Tapping deep-links directly to `Reading`.
+  - **`FINISHED` Tile** (`#34D399` emerald): Displays completed books (`1`). Tapping deep-links directly to `Finished`.
+- Styled with rounded corners (`12dp`), dark background (`#1A1F2E`), and subtle border stroke (`#2A3142`).
 
-### B. Version Bump & Telemetry (`FolioMoreView.java`)
-- Bumped Control Center badge and About Folio dialog to **`Folio v5.5 KFX (Enhanced Typesetting)`**.
-- Confirmed live reading stats accurately report `5 in progress · 1 finished`.
+### B. Overloaded Initial-Filter Entry Point (`FolioMetadataCatalogDialog.java`)
+- Added `show(Context ctx, String initialFilter)` overloaded method.
+- Directly binds `selectedGenre[0]` to the requested initial state (`All`, `Reading`, `Finished`), eliminating navigation friction.
+
+### C. Version Bump & Telemetry (`FolioMoreView.java`)
+- Bumped Control Center badge and About Folio dialog to **`Folio v5.6 KFX (Enhanced Typesetting)`**.
 
 ---
 
@@ -41,8 +39,8 @@ In Round 055, Folio advanced to **Folio v5.5 KFX**. Gemini provided drop-in impl
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **1-Tap Select New & Clear (12) Batch Pill** | Home → Import → /sdcard/en/0 → "Orwell" → Select New | `screenshots/verify_r55_select_new_orwell.png` | **PASS** — Tapping `Select New` automatically selects 12 new Orwell EPUBs (skipping already-imported *1984* and *Animal Farm*), toggles pill to amber `Clear (12)`, and updates bottom CTA to `Import Selected (12)`. |
-| **Control Center About Folio v5.5** | More → About Folio | `screenshots/verify_r55_about_v55.png` | **PASS** — Dialog displays `Version: Folio v5.5 KFX (Enhanced Typesetting)` and accurate live reading stats (`5 in progress · 1 finished`). |
+| **Control Center Live Stats Strip** | More tab (Control Center) | `screenshots/verify_r56_control_center_stats_strip.png` | **PASS** — Control Center shows `Folio v5.6 KFX` badge and the 3-tile live stats strip (`29 BOOKS` · `5 READING` · `1 FINISHED`) above action cards. |
+| **Stat Tile Deep-Link into Reading** | More → Tap "5 READING" tile | `screenshots/verify_r56_stat_tile_deeplink_reading.png` | **PASS** — Tapping `5 READING` launches catalog pre-filtered to active teal `Reading (5)` chip displaying `Library Metadata & Genres (5 of 27)`. |
 | **Stock Package Safety Invariant** | Android Package Manager | `lastUpdateTime=2026-11-19 21:59:23` | **PASS** — Stock `com.amazon.kindle` remains 100% untouched, intact, and read-only. |
 
 ---
@@ -56,10 +54,10 @@ As instructed by the Project Lead, the following architectural directive is reaf
 
 ## 5. Artifacts and Deliverables
 
-- `antig_to_gemini_neon_clunky_report055.zip`:
+- `antig_to_gemini_neon_clunky_report056.zip`:
   - `REPORT.md`
-  - `INSTRUCTIONS_ROUND_055.md`
+  - `INSTRUCTIONS_ROUND_056.md`
   - `protocol.json`
-  - `screenshots/verify_r55_select_new_orwell.png`
-  - `screenshots/verify_r55_about_v55.png`
-- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v5.5_kfx/base.apk` (131 MB)
+  - `screenshots/verify_r56_control_center_stats_strip.png`
+  - `screenshots/verify_r56_stat_tile_deeplink_reading.png`
+- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v5.6_kfx/base.apk` (131 MB)
