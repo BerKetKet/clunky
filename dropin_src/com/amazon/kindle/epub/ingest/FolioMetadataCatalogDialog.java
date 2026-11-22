@@ -1056,7 +1056,7 @@ public final class FolioMetadataCatalogDialog {
         col.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView title = new TextView(ctx);
-        String prefix = (isFavorite(ctx, rec.kfxPath) ? "★ " : "") + (!getNote(ctx, rec.kfxPath).isEmpty() ? "📝 " : "");
+        String prefix = (isInQueue(ctx, rec.kfxPath) ? "📌 " : "") + (isFavorite(ctx, rec.kfxPath) ? "★ " : "") + (!getNote(ctx, rec.kfxPath).isEmpty() ? "📝 " : "");
         title.setText(prefix + rec.title);
         title.setTextColor(Color.WHITE);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);

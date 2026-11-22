@@ -12,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -71,6 +72,7 @@ public final class FolioMetadataBackup {
                 if (sRate > 0) obj.put("star_rating", sRate);
                 String shName = FolioMetadataCatalogDialog.getShelf(ctx, r.kfxPath);
                 if (!shName.isEmpty()) obj.put("shelf", shName);
+                if (FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath)) obj.put("in_queue", true);
                 arr.put(obj);
             }
             root.put("books", arr);
@@ -165,6 +167,9 @@ public final class FolioMetadataBackup {
                 String shName = obj.optString("shelf", "");
                 if (!shName.isEmpty()) {
                     FolioMetadataCatalogDialog.setShelf(ctx, kfxPath, shName);
+                }
+                if (obj.optBoolean("in_queue", false)) {
+                    FolioMetadataCatalogDialog.setInQueue(ctx, kfxPath, true);
                 }
                 restored++;
             }
@@ -270,6 +275,22 @@ public final class FolioMetadataBackup {
                 }
                 md.append("\n");
             }
+            List<FolioMetadataDb.BookRecord> qBooks = new ArrayList<>();
+            for (FolioMetadataDb.BookRecord r : all) {
+                if (r.kfxPath != null && FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath)) {
+                    qBooks.add(r);
+                }
+            }
+            if (!qBooks.isEmpty()) {
+                md.append("## 📌 Up Next Queue (").append(qBooks.size()).append(")\n\n");
+                for (FolioMetadataDb.BookRecord r : qBooks) {
+                    String ca = FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
+                    md.append("- **").append(r.title != null ? r.title : "Untitled").append("**");
+                    if (!ca.isEmpty()) md.append(" — ").append(ca);
+                    md.append("\n");
+                }
+                md.append("\n");
+            }
             return md.toString();
         } catch (Throwable t) {
             Log.e(TAG, "Failed to build reading log markdown", t);
@@ -323,7 +344,7 @@ public final class FolioMetadataBackup {
             List<FolioMetadataDb.BookRecord> all = db.getAllBooks();
             java.util.Map<String, Integer> progMap = FolioMetadataCatalogDialog.loadProgressMap(ctx);
             StringBuilder csv = new StringBuilder();
-            csv.append("Title,Author,Year,Publisher,ISBN,Status,Shelf,Rating,Favorite,Note\n");
+            csv.append("Title,Author,Year,Publisher,ISBN,Status,Shelf,Rating,Favorite,In Queue,Note\n");
             for (FolioMetadataDb.BookRecord r : all) {
                 String cleanAuthor = FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
                 String yr = EpubMetadataExtractor.normalizePubDate(r.pubDate);
@@ -333,6 +354,7 @@ public final class FolioMetadataBackup {
                 String shelf = FolioMetadataCatalogDialog.getShelf(ctx, r.kfxPath);
                 int rating = FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath);
                 boolean fav = FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath);
+                boolean inQ = FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath);
                 String note = FolioMetadataCatalogDialog.getNote(ctx, r.kfxPath);
 
                 csv.append(csvEsc(r.title)).append(",")
@@ -344,6 +366,7 @@ public final class FolioMetadataBackup {
                    .append(csvEsc(shelf)).append(",")
                    .append(rating > 0 ? rating : "").append(",")
                    .append(fav ? "Yes" : "").append(",")
+                   .append(inQ ? "Yes" : "").append(",")
                    .append(csvEsc(note)).append("\n");
             }
             File out = getCsvFile(ctx);

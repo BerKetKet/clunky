@@ -1,11 +1,12 @@
 {
-  "round": 90,
+  "round": 91,
   "project": "Folio",
-  "version": "Milestone Folio v9.0 KFX",
+  "version": "Folio v9.1 KFX",
   "sender": "gemini",
   "receiver": "antigravity",
   "dropin_files": [
     "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
+    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java",
     "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java"
   ],
   "invariants": [
@@ -13,7 +14,7 @@
     "Do NOT overwrite MetadataEnricher.java or OpenCatalogView.java"
   ],
   "verification_screenshots": [
-    "verify_r90_up_next_control_center.png",
-    "verify_r90_book_details_queue_v90.png"
+    "verify_r91_reading_log_up_next.png",
+    "verify_r91_insights_queued_v91.png"
   ]
 }
