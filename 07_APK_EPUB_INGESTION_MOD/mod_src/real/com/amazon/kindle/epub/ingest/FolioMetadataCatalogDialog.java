@@ -241,6 +241,8 @@ public final class FolioMetadataCatalogDialog {
                 for (final FolioMetadataDb.BookRecord rec : filtered) {
                     cardsContainer.addView(buildBookCard(ctx, rec, progressMap, dialog, () -> {
                         loadFromDb(ctx, allBooks, genres);
+                        progressMap.clear();
+                        progressMap.putAll(loadProgressMap(ctx));
                         renderRef[0].run();
                     }));
                 }
@@ -498,7 +500,8 @@ public final class FolioMetadataCatalogDialog {
         infoBtn.setTextColor(Color.parseColor("#94A3B8"));
         infoBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         infoBtn.setPadding(dp(ctx, 8), dp(ctx, 4), dp(ctx, 2), dp(ctx, 4));
-        infoBtn.setOnClickListener(v -> showBookDetailDialog(ctx, rec, parentDialog, onMetadataEdited));
+        final int currentProg = getProgress(progressMap, rec.kfxPath);
+        infoBtn.setOnClickListener(v -> showBookDetailDialog(ctx, rec, currentProg, parentDialog, onMetadataEdited));
         card.addView(infoBtn);
 
         card.setOnClickListener(v -> {
@@ -515,6 +518,7 @@ public final class FolioMetadataCatalogDialog {
     }
 
     private static void showBookDetailDialog(final Context ctx, final FolioMetadataDb.BookRecord rec,
+                                             final int currentProgress,
                                              final AlertDialog parentDialog, final Runnable onMetadataEdited) {
         LinearLayout box = new LinearLayout(ctx);
         box.setOrientation(LinearLayout.VERTICAL);
@@ -565,6 +569,33 @@ public final class FolioMetadataCatalogDialog {
         }
 
         final AlertDialog[] detailDlgRef = new AlertDialog[1];
+
+        final boolean isFinished = currentProgress >= 100;
+        TextView readToggleBtn = new TextView(ctx);
+        readToggleBtn.setText(isFinished ? "↺ Mark as Unread" : "✓ Mark as Finished");
+        readToggleBtn.setTextColor(Color.parseColor(isFinished ? "#F59E0B" : "#34D399"));
+        readToggleBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        readToggleBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        readToggleBtn.setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8));
+        GradientDrawable toggleBg = new GradientDrawable();
+        toggleBg.setColor(Color.parseColor("#1E2433"));
+        toggleBg.setCornerRadius(dp(ctx, 10));
+        readToggleBtn.setBackground(toggleBg);
+        LinearLayout.LayoutParams toggleLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        toggleLp.setMargins(0, dp(ctx, 14), 0, dp(ctx, 2));
+        readToggleBtn.setLayoutParams(toggleLp);
+        readToggleBtn.setOnClickListener(v -> {
+            boolean targetFinished = !isFinished;
+            setBookReadState(ctx, rec.kfxPath, targetFinished);
+            if (detailDlgRef[0] != null) detailDlgRef[0].dismiss();
+            Toast.makeText(ctx,
+                    (targetFinished ? "Marked \"" : "Reset \"") + rec.title
+                            + (targetFinished ? "\" as Finished" : "\" to Unread"),
+                    Toast.LENGTH_SHORT).show();
+            if (onMetadataEdited != null) onMetadataEdited.run();
+        });
+        box.addView(readToggleBtn);
 
         TextView removeBtn = new TextView(ctx);
         removeBtn.setText("Remove from Folio Library");
@@ -773,6 +804,37 @@ public final class FolioMetadataCatalogDialog {
             }
         } catch (Throwable ignored) {}
         return map;
+    }
+
+    private static void setBookReadState(Context ctx, String kfxPath, boolean finished) {
+        if (kfxPath == null || kfxPath.isEmpty()) return;
+        try {
+            File kdbFile = ctx.getDatabasePath("kindle_library.db");
+            if (kdbFile == null || !kdbFile.exists()) return;
+            android.database.sqlite.SQLiteDatabase kdb =
+                    android.database.sqlite.SQLiteDatabase.openDatabase(
+                            kdbFile.getAbsolutePath(), null,
+                            android.database.sqlite.SQLiteDatabase.OPEN_READWRITE);
+            try {
+                String key = null;
+                android.database.Cursor c = kdb.rawQuery(
+                        "SELECT KEY FROM LocalContent WHERE FILE_PATH = ?",
+                        new String[] { kfxPath });
+                try {
+                    if (c.moveToFirst()) key = c.getString(0);
+                } finally {
+                    c.close();
+                }
+                if (key != null && !key.isEmpty()) {
+                    kdb.execSQL("UPDATE KindleContent SET READ_STATE = ? WHERE ID = ?",
+                            new Object[] { finished ? "READ" : "UNREAD", key });
+                    kdb.execSQL("UPDATE UserContent SET READING_PROGRESS = ? WHERE KEY = ?",
+                            new Object[] { finished ? 100 : 0, key });
+                }
+            } finally {
+                kdb.close();
+            }
+        } catch (Throwable ignored) {}
     }
 
     private static int getProgress(Map<String, Integer> map, String kfxPath) {
