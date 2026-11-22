@@ -573,14 +573,46 @@ public final class FolioMetadataCatalogDialog {
         box.setBackgroundColor(Color.parseColor("#161922"));
         box.setPadding(dp(ctx, 20), dp(ctx, 18), dp(ctx, 20), dp(ctx, 14));
 
+        final AlertDialog[] detailDlgRef = new AlertDialog[1];
+
+        LinearLayout headerRow = new LinearLayout(ctx);
+        headerRow.setOrientation(LinearLayout.HORIZONTAL);
+        headerRow.setGravity(Gravity.TOP);
+        LinearLayout.LayoutParams hrLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        hrLp.setMargins(0, 0, 0, dp(ctx, 12));
+        headerRow.setLayoutParams(hrLp);
+
+        if (rec.coverPath != null && !rec.coverPath.isEmpty()) {
+            File cf = new File(rec.coverPath);
+            if (cf.exists()) {
+                BitmapFactory.Options opts = new BitmapFactory.Options();
+                opts.inSampleSize = 2;
+                Bitmap bm = BitmapFactory.decodeFile(cf.getAbsolutePath(), opts);
+                if (bm != null) {
+                    ImageView coverIv = new ImageView(ctx);
+                    LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(dp(ctx, 64), dp(ctx, 96));
+                    cLp.setMargins(0, 0, dp(ctx, 14), 0);
+                    coverIv.setLayoutParams(cLp);
+                    coverIv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    coverIv.setBackgroundColor(Color.parseColor("#262B38"));
+                    coverIv.setImageBitmap(bm);
+                    headerRow.addView(coverIv);
+                }
+            }
+        }
+
+        LinearLayout headerCol = new LinearLayout(ctx);
+        headerCol.setOrientation(LinearLayout.VERTICAL);
+        headerCol.setLayoutParams(new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
         TextView title = new TextView(ctx);
         title.setText(rec.title);
         title.setTextColor(Color.WHITE);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         title.setTypeface(Typeface.DEFAULT_BOLD);
-        box.addView(title);
-
-        final AlertDialog[] detailDlgRef = new AlertDialog[1];
+        headerCol.addView(title);
 
         final String displayAuthor = formatAuthorForDisplay(rec.author);
         TextView sub = new TextView(ctx);
@@ -588,14 +620,27 @@ public final class FolioMetadataCatalogDialog {
         sub.setTextColor(Color.parseColor("#F59E0B"));
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         sub.setTypeface(Typeface.DEFAULT_BOLD);
-        sub.setPadding(0, dp(ctx, 4), 0, dp(ctx, 10));
+        sub.setPadding(0, dp(ctx, 4), 0, dp(ctx, 4));
         if (!displayAuthor.isEmpty() && onAuthorFilter != null) {
             sub.setOnClickListener(v -> {
                 if (detailDlgRef[0] != null) detailDlgRef[0].dismiss();
                 onAuthorFilter.onFilterByAuthor(displayAuthor);
             });
         }
-        box.addView(sub);
+        headerCol.addView(sub);
+
+        if (currentProgress > 0) {
+            TextView progTv = new TextView(ctx);
+            progTv.setText(currentProgress >= 100 ? "✓ Finished" : currentProgress + "% read");
+            progTv.setTextColor(Color.parseColor(currentProgress >= 100 ? "#34D399" : "#38BDF8"));
+            progTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            progTv.setTypeface(Typeface.DEFAULT_BOLD);
+            progTv.setPadding(0, dp(ctx, 2), 0, 0);
+            headerCol.addView(progTv);
+        }
+
+        headerRow.addView(headerCol);
+        box.addView(headerRow);
 
         StringBuilder details = new StringBuilder();
         String cleanDetailDate = EpubMetadataExtractor.normalizePubDate(rec.pubDate);
@@ -656,13 +701,41 @@ public final class FolioMetadataCatalogDialog {
         }
 
         if (!rec.description.isEmpty()) {
-            TextView descTv = new TextView(ctx);
+            final boolean isLong = rec.description.length() > 180;
+            final boolean[] expanded = new boolean[] { false };
+            final TextView descTv = new TextView(ctx);
             descTv.setText("\n" + rec.description);
             descTv.setTextColor(Color.parseColor("#94A3B8"));
             descTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            descTv.setMaxLines(6);
-            descTv.setEllipsize(TextUtils.TruncateAt.END);
+            if (isLong) {
+                descTv.setMaxLines(5);
+                descTv.setEllipsize(TextUtils.TruncateAt.END);
+            }
             box.addView(descTv);
+
+            if (isLong) {
+                final TextView moreTv = new TextView(ctx);
+                moreTv.setText("Read full synopsis ›");
+                moreTv.setTextColor(Color.parseColor("#5EEAD4"));
+                moreTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                moreTv.setTypeface(Typeface.DEFAULT_BOLD);
+                moreTv.setPadding(0, dp(ctx, 4), 0, dp(ctx, 2));
+                View.OnClickListener toggleDesc = v -> {
+                    expanded[0] = !expanded[0];
+                    if (expanded[0]) {
+                        descTv.setMaxLines(Integer.MAX_VALUE);
+                        descTv.setEllipsize(null);
+                        moreTv.setText("Show less");
+                    } else {
+                        descTv.setMaxLines(5);
+                        descTv.setEllipsize(TextUtils.TruncateAt.END);
+                        moreTv.setText("Read full synopsis ›");
+                    }
+                };
+                descTv.setOnClickListener(toggleDesc);
+                moreTv.setOnClickListener(toggleDesc);
+                box.addView(moreTv);
+            }
         }
 
         final boolean isFinished = currentProgress >= 100;
