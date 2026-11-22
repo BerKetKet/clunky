@@ -1,39 +1,45 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v3.5 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 038 complete:
-  1. **Duplicate Import Guard (Task A & B)**:
-     - Re-opening `/sdcard/en/0/Aldous Huxley - Brave New World.epub` displays green `ALREADY IN FOLIO LIBRARY` banner with `Open Existing Copy` (instant launch into `KRIFDocViewer` in 0ms without re-conversion) and `Re-Import & Replace`.
-  2. **Library Metadata & Genres Card & Dialog (Task A & B)**:
-     - Wired `📚 Library Metadata & Genres` card into Control Center (`FolioMoreView.java`).
-     - Bumped Control Center version badge to **Folio v3.5 KFX**.
-     - Dialog displays genre chips (`All`, `Fiction`, `shipwrecks`, `Journalists`, `Utopias`), cover thumbnails, author, pub date, publisher, ISBN, and full genres.
-     - Tapping a card launches directly into `KRIFDocViewer`.
-  3. **Second EPUB Ingestion & Open Library Enrichment**:
-     - Imported `/sdcard/en/0/Aldous Huxley - Island.epub` (661 KB).
-     - Converted into app-private `Island_FOLIO_8CE251A8A07B.kfx` (1.1 MB) + `.cover.jpg` (65 KB) + `.sdr` directory.
-     - Enriched via Open Library Search API (`/works/OL64462W`, publisher `HarperCollins`, `1962`, `ISBN 9780061959646`, genres `Fiction, Survival after airplane accidents, shipwrecks, Journalists, Utopias, Islands`).
-     - Fixed `UserContent.LAST_ACCESSED` NOT NULL constraint and `LocalContent.KEY` / `UserContent.KEY` matching `KindleContent.ID`.
-     - Preserved prior enriched metadata during re-import.
-  4. **Dedup Cleanup**:
-     - Removed stale duplicate `Confessions of Zeno` row (186.4 KB), leaving genuine 2.1 MB book intact.
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v3.6 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 039 complete:
+  1. **Full-Library Metadata Backfill (Task A & B)**:
+     - Integrated `LibraryMetadataBackfiller.java` and upgraded `FolioMetadataCatalogDialog.java`.
+     - Tapped `Sync & Enrich` in the catalog dialog; scanned existing local books from `kindle_library.db` (`KindleContent` joined with `LocalContent`).
+     - Enriched missing authors, pub dates, publishers, ISBNs, and genre subjects via Open Library Search API with HTTP 200 for all queries.
+     - All 21 library books indexed into `folio_metadata.db` (including Aeschylus, Aristotle, Cicero, Herodotus, Hesiod, Homer, Julius Caesar, Pliny, Plutarch, Sallust, Seneca, Sophocles, Tacitus, Xenophon, Rashomon, The 210th Day, Island, Brave New World).
+  2. **Title-Cased Genre Chips & Subject Normalization (Task A & B)**:
+     - Upgraded genre chips to Title Case (`19th Century Fiction`, `Modern Fiction`, `Literary Criticism`, `Shipwrecks`, `Journalists`, `Utopias`), filtering verbose or excessively long subjects (`> 24 chars`).
+  3. **Live Real-Time Search Filtering (Task B)**:
+     - Real-time text search filter (`searchBox`) dynamically matches across title, author, genres, publisher, and ISBN. Searching `"Huxley"` instantly isolates `Island` and `Brave New World`.
+  4. **Rich Book Details (`ⓘ`) Popup (Task B)**:
+     - Tapping `ⓘ` on any book card opens the dark Book Details dialog showing title, author, pub date, publisher, ISBN, genres, language, Open Library key, synopsis, and a direct `Read Now` action.
+     - Tapping `Read Now` launches `StandAloneBookReaderActivity` (`KRIFDocViewer`) in 0ms.
   5. **Visual Verification & Milestone Release Staging (Task C)**:
      - Captured 3 hardware proof screenshots on Galaxy M32:
-       * `screenshots/verify_r38_duplicate_import_guard.png`
-       * `screenshots/verify_r38_metadata_catalog_genres.png`
-       * `screenshots/verify_r38_control_center_v35.png`
+       * `screenshots/verify_r39_metadata_catalog_synced.png` (371 KB)
+       * `screenshots/verify_r39_metadata_search_filtered.png` (301 KB)
+       * `screenshots/verify_r39_book_details_popup.png` (214 KB)
      - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
-     - Staged signed Folio v3.5 KFX release APK (131 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v3.5_kfx/base.apk`.
+     - Staged signed Folio v3.6 KFX release APK (131 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v3.6_kfx/base.apk`.
   6. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
      "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
 - **Installed Packages**:
   - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only, v8.160.1.0, `lastUpdateTime=2026-11-19 21:59:23`)
-  - Clone: `com.amazon.kindle.epub` ("Folio v3.5 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, duplicate import guard with "Open Existing Copy" vs "Re-Import & Replace", "Library Metadata & Genres" browser dialog with genre chips, persistent `folio_metadata.db`, Open Library metadata enrichment, live OPDS/Atom feed download, heavy omnibus stress-tested up to 23 MB / 1,450 sections, CSS text-transform uppercase/lowercase/capitalize, font-variant small-caps, RTL Arabic/Hebrew direction and right alignment, multi-level nested lists, native tables with thead/colspan/rowspan, malformed asset resilience, full HTML4/HTML5 entity decoding, store-free library search, zero-hyphenation code blocks, proportional sup/sub, `$270` cover container, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, dynamic hardware metadata, KRIFDocViewer Enhanced Typesetting)
+  - Clone: `com.amazon.kindle.epub` ("Folio v3.6 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, full-library `Sync & Enrich` metadata backfiller, real-time search filtering, Title-Cased genre chips, rich Book Details popup with 0ms reader launch, duplicate import guard with "Open Existing Copy" vs "Re-Import & Replace", "Library Metadata & Genres" browser dialog, persistent `folio_metadata.db`, Open Library metadata enrichment, live OPDS/Atom feed download, heavy omnibus stress-tested up to 23 MB / 1,450 sections, CSS text-transform uppercase/lowercase/capitalize, font-variant small-caps, RTL Arabic/Hebrew direction and right alignment, multi-level nested lists, native tables with thead/colspan/rowspan, malformed asset resilience, full HTML4/HTML5 entity decoding, store-free library search, zero-hyphenation code blocks, proportional sup/sub, `$270` cover container, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, dynamic hardware metadata, KRIFDocViewer Enhanced Typesetting)
 
-## Verification Evidence (Round 038)
+## Verification Evidence (Round 039)
+1. `screenshots/verify_r39_metadata_catalog_synced.png`: Catalog dialog after `Sync & Enrich` showing `Library Metadata & Genres (21)`, Title-Cased genre chips (`19th Century Fiction`, `Modern Fiction`, `Literary Criticism`), search bar, and enriched book cards.
+2. `screenshots/verify_r39_metadata_search_filtered.png`: Live real-time search filter active with query `"Huxley"`, filtering display strictly to matching cards.
+3. `screenshots/verify_r39_book_details_popup.png`: Tapping `ⓘ` on `Island` showing dark Book Details dialog with full metadata, Open Library work key, and `READ NOW` / `CLOSE` actions.
+4. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+5. `dumpsys package com.amazon.kindle.epub`: Folio v3.6 KFX deployed (`lastUpdateTime=2026-11-22 17:39:47`).
+
+---
+
+# Round 038: Duplicate Guard & Metadata Catalog (Folio v3.5)
 1. `screenshots/verify_r38_duplicate_import_guard.png`: Green `ALREADY IN FOLIO LIBRARY` dialog over Galaxy M32 showing `Open Existing Copy` and `Re-Import & Replace`.
-2. `screenshots/verify_r38_metadata_catalog_genres.png`: Dark `FOLIO METADATA CATALOG` dialog with genre filter chips (`All`, `Fiction`, `shipwrecks`, `Journalists`, `Utopias`) and enriched book cards.
+2. `screenshots/verify_r38_metadata_catalog_genres.png`: Dark `FOLIO METADATA CATALOG` dialog with genre filter chips and enriched book cards.
 3. `screenshots/verify_r38_control_center_v35.png`: Folio Control Center showing `Folio v3.5 KFX` badge and `Library Metadata & Genres` action card.
 4. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
 5. `dumpsys package com.amazon.kindle.epub`: Folio v3.5 KFX deployed (`lastUpdateTime=2026-11-22 17:22:20`).

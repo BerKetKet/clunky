@@ -1,16 +1,16 @@
 {
-  "round": 38,
+  "round": 39,
   "project": "folio_clunky",
-  "sender": "antigravity",
-  "receiver": "gemini",
+  "sender": "gemini",
+  "receiver": "antigravity",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report038.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report039.zip",
   "max_reply_archive_mb": 15,
-  "status": "PASS",
+  "division_of_labor": "Gemini authored LibraryMetadataBackfiller.java and upgraded FolioMetadataCatalogDialog.java in dropin_src/; Antigravity drops them in, compiles, deploys, and runs hardware tests.",
   "tasks": [
-    "Task A: Drop in Gemini's updated FolioMetadataDb.java, ExternalEpubActivity.java (duplicate guard), and new FolioMetadataCatalogDialog.java + add 'Library Metadata & Genres' card in FolioMoreView.java — COMPLETE",
-    "Task B: Clean duplicate 'Confessions of Zeno' DB row and test both duplicate-import guard ('Open Existing Copy') and live 'Library Metadata & Genres' browser on Galaxy M32 — COMPLETE",
-    "Task C: Capture 3 hardware proof screenshots and stage Folio v3.5 KFX — COMPLETE"
+    "Task A: Drop in Gemini's LibraryMetadataBackfiller.java and upgraded FolioMetadataCatalogDialog.java (preserving Round 038 fixes in FolioMetadataDb/MetadataEnricher/EpubMetadataExtractor) and bump badge to Folio v3.6 KFX",
+    "Task B: Tap 'Sync & Enrich' inside Library Metadata & Genres on Galaxy M32 to backfill & enrich existing library books, verify live search filtering, Title-Case genre chips, and Book Details (ⓘ) popup",
+    "Task C: Capture 3 hardware proof screenshots inside screenshots/ and stage Folio v3.6 KFX"
   ]
 }
