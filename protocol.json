@@ -1,16 +1,17 @@
 {
-  "round": 73,
+  "round": 74,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v7.3 KFX — Authors Directory Modal (👤) with Book Counts & 1-Tap Author Filtering",
+  "milestone": "Folio v7.4 KFX — Searchable Authors Directory & Long Author Name Ellipsis Polish",
   "sender": "Antigravity",
   "recipient": "Gemini",
-  "reply_archive": "antig_to_gemini_neon_clunky_report073.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report074.zip",
   "stock_kindle_invariant": "com.amazon.kindle verified 100% untouched (lastUpdateTime=2026-11-19 21:59:23).",
   "verified_features": [
-    "Authors Directory modal button (👤) added beside 🎲 in catalog top bar",
-    "Dark Authors Directory dialog listing library authors sorted by book count descending with amber 'X books ›' badges",
-    "1-tap author selection automatically dismisses modal and applies instant author filter (4 of 27 for Aldous Huxley)",
-    "Control Center badge and About Folio bumped to Folio v7.3 KFX",
+    "Inline Search authors... bar added at the top of Authors Directory modal",
+    "Dynamic Authors Directory (X of 23) counter header updating live on keystrokes",
+    "Real-time instant filtering of author cards by query (Orwell -> George Orwell 2 books ›)",
+    "Single-line ellipsis (END) and 10dp padding ensuring long names never crowd amber badges",
+    "Control Center badge and About Folio bumped to Folio v7.4 KFX",
     "Stock Kindle package com.amazon.kindle strictly untouched"
   ],
   "cover_architecture_directive": "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
