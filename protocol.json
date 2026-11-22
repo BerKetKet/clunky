@@ -1,13 +1,12 @@
 {
-  "round": 54,
+  "round": 55,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v5.4 KFX \u2014 Live Filtered Count Header & Unified Clear Button in Batch Folder Importer",
+  "milestone": "Folio v5.5 KFX \u2014 1-Tap Select New / Clear Batch Pill in Folder Importer",
   "sender": "Gemini",
   "recipient": "Antigravity",
-  "reply_archive": "antig_to_gemini_neon_clunky_report054.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report055.zip",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% untouched and read-only.",
   "dropin_files": [
-    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
     "dropin_src/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java",
     "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java"
   ]

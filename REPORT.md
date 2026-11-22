@@ -1,36 +1,39 @@
-# Folio Milestone Release Report: Live Filtered Count Header & Unified Clear Button in Batch Folder Importer (Round 054)
+# Folio Milestone Release Report: 1-Tap Select New / Clear Batch Pill in Folder Importer (Round 055)
 
 **Date:** 2026-11-22  
-**Target Package:** `com.amazon.kindle.epub` (Folio v5.4 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v5.5 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v5.4_kfx/base.apk` (131 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v5.5_kfx/base.apk` (131 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 054, Folio advanced to **Folio v5.4 KFX**. Gemini provided drop-in implementations for `FolioMetadataCatalogDialog.java`, `FolioFolderBrowserDialog.java`, and `FolioMoreView.java`. Antigravity compiled Dalvik DEX (`classes9.dex`, 206,940 B), built, aligned, signed, and deployed the updated APK to the Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. Dynamic live filtered count header in the metadata catalog: tapping any quick-filter chip (e.g. `Reading (5)`) instantly updates the title to **`Library Metadata & Genres (5 of 27)`** (and reverts to `(27)` when unfiltered).
-2. Unified inline **`✕`** clear button in the batch folder importer: searching `/sdcard/en/0` (719 EPUBs) with query `Orwell` filtered strictly to matching files and surfaced the inline `✕` clear button on the right of the search bar.
+In Round 055, Folio advanced to **Folio v5.5 KFX**. Gemini provided drop-in implementations for `FolioFolderBrowserDialog.java` and `FolioMoreView.java`. Antigravity compiled Dalvik DEX (`classes9.dex`, 208,204 B), built, aligned, signed, and deployed the updated APK to the Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. 1-Tap **Select New** / **Clear (N)** batch selection pill in the folder importer: searching `/sdcard/en/0` for `Orwell` and tapping `Select New` automatically checked all 12 unimported Orwell EPUBs in 1 tap (skipping already-imported *1984* and *Animal Farm*), toggled the pill to amber `Clear (12)`, and updated the bottom CTA to `Import Selected (12)`.
+2. Control Center **About Folio** dialog verified live displaying **`Folio v5.5 KFX (Enhanced Typesetting)`** alongside updated live reading stats (`5 in progress · 1 finished`).
 3. Stock package `com.amazon.kindle` remains 100% untouched, intact, and read-only.
 
 ---
 
-## 2. Integrated Features in Folio v5.4 KFX
+## 2. Integrated Features in Folio v5.5 KFX
 
-### A. Dynamic Live Filtered Count Header (`FolioMetadataCatalogDialog.java`)
-- The catalog heading now dynamically reflects the exact filtering state:
-  - When filtered (by genre chip, reading state chip, or search query): `Library Metadata & Genres (X of 27)` where `X` is the count of currently visible matching cards.
-  - When unfiltered (chip `All` and empty search query): `Library Metadata & Genres (27)`.
+### A. 1-Tap Select New / Clear (N) Batch Selection (`FolioFolderBrowserDialog.java`)
+- Added a compact pill button beside the folder match count:
+  - Default state: teal `Select New` (`#5EEAD4`).
+  - Active selection state: amber `Clear (N)` (`#F59E0B`).
+- Tapping `Select New`:
+  - Scans currently visible files in the directory.
+  - Automatically filters out files present in `importedSourceNames` (skipping already-imported titles).
+  - Selects up to 25 new EPUBs in a single tap.
+  - Updates the bottom import button to `Import Selected (N)`.
+  - Toggles the batch pill to `Clear (N)`.
+- Tapping `Clear (N)` clears all selections and restores the teal `Select New` state.
 
-### B. Unified Inline Clear Button in Folder Importer (`FolioFolderBrowserDialog.java`)
-- Wrapped the 719-EPUB folder search bar in a horizontal row containing an inline `✕` clear button (`#94A3B8`).
-- The clear button dynamically toggles visibility on text entry (`View.VISIBLE` when non-empty, `View.GONE` when empty).
-- Tapping `✕` immediately clears the query and restores the folder view.
-
-### C. Version Bump & Telemetry (`FolioMoreView.java`)
-- Bumped Control Center badge and About Folio dialog to **`Folio v5.4 KFX (Enhanced Typesetting)`**.
+### B. Version Bump & Telemetry (`FolioMoreView.java`)
+- Bumped Control Center badge and About Folio dialog to **`Folio v5.5 KFX (Enhanced Typesetting)`**.
+- Confirmed live reading stats accurately report `5 in progress · 1 finished`.
 
 ---
 
@@ -38,8 +41,8 @@ In Round 054, Folio advanced to **Folio v5.4 KFX**. Gemini provided drop-in impl
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Live Filtered Count Header** | Home → All Metadata › → Reading (5) | `screenshots/verify_r54_filtered_count_header.png` | **PASS** — Tapping teal `Reading (5)` chip immediately updates dialog header to `Library Metadata & Genres (5 of 27)`. |
-| **Folder Search Clear Button** | Home → Import → /sdcard/en/0 → "Orwell" | `screenshots/verify_r54_folder_search_clear.png` | **PASS** — Filename query `Orwell` filters folder to 14 matching EPUBs and displays inline `✕` clear button on right of search bar. |
+| **1-Tap Select New & Clear (12) Batch Pill** | Home → Import → /sdcard/en/0 → "Orwell" → Select New | `screenshots/verify_r55_select_new_orwell.png` | **PASS** — Tapping `Select New` automatically selects 12 new Orwell EPUBs (skipping already-imported *1984* and *Animal Farm*), toggles pill to amber `Clear (12)`, and updates bottom CTA to `Import Selected (12)`. |
+| **Control Center About Folio v5.5** | More → About Folio | `screenshots/verify_r55_about_v55.png` | **PASS** — Dialog displays `Version: Folio v5.5 KFX (Enhanced Typesetting)` and accurate live reading stats (`5 in progress · 1 finished`). |
 | **Stock Package Safety Invariant** | Android Package Manager | `lastUpdateTime=2026-11-19 21:59:23` | **PASS** — Stock `com.amazon.kindle` remains 100% untouched, intact, and read-only. |
 
 ---
@@ -53,10 +56,10 @@ As instructed by the Project Lead, the following architectural directive is reaf
 
 ## 5. Artifacts and Deliverables
 
-- `antig_to_gemini_neon_clunky_report054.zip`:
+- `antig_to_gemini_neon_clunky_report055.zip`:
   - `REPORT.md`
-  - `INSTRUCTIONS_ROUND_054.md`
+  - `INSTRUCTIONS_ROUND_055.md`
   - `protocol.json`
-  - `screenshots/verify_r54_filtered_count_header.png`
-  - `screenshots/verify_r54_folder_search_clear.png`
-- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v5.4_kfx/base.apk` (131 MB)
+  - `screenshots/verify_r55_select_new_orwell.png`
+  - `screenshots/verify_r55_about_v55.png`
+- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v5.5_kfx/base.apk` (131 MB)
