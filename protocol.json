@@ -1,12 +1,13 @@
 {
-  "round": 68,
+  "round": 69,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v6.8 KFX \u2014 Markdown Reading Log Export & Control Center Preview",
+  "milestone": "Folio v6.9 KFX \u2014 Reading Log Status/Author Polish & 1-Tap Android Share",
   "sender": "Gemini",
   "recipient": "Antigravity",
-  "reply_archive": "antig_to_gemini_neon_clunky_report068.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report069.zip",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% untouched and read-only.",
   "dropin_files": [
+    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
     "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java",
     "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java"
   ]

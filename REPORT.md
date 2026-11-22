@@ -1,47 +1,48 @@
-# Folio Milestone Release Report: Markdown Reading Log Export & Control Center Preview (Round 068)
+# Folio Milestone Release Report: Reading Log Status/Author Polish & 1-Tap Android Share (Round 069)
 
 **Date:** 2026-11-22  
-**Target Package:** `com.amazon.kindle.epub` (Folio v6.8 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v6.9 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v6.8_kfx/base.apk` (131 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v6.9_kfx/base.apk` (131 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 068, Folio advanced to **Folio v6.8 KFX**. Gemini pre-authored drop-in Java updates for `FolioMetadataBackup.java` and `FolioMoreView.java`. Antigravity integrated both files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 232,836 B), built, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **Markdown Reading Log Export (`FolioMetadataBackup.java`)**: Added `buildReadingLogMarkdown(Context)` and `exportReadingLogMarkdown(Context)` to generate a formatted Markdown reading journal saved directly to `/sdcard/kindle/backups/folio_reading_log.md` (verified 3,380 bytes). Entries are ranked deterministically by star rating descending, then favorites, then added date, complete with library summary metrics, star badges (`★★★★★ (5/5)`), ISBNs, and personal note blockquotes (`> Essential dystopian classic - reread Part 3`).
-2. **Control Center `📄 Reading Log & Export` Action Card (`FolioMoreView.java`)**: Added a dedicated action card under Backup & Restore. Tapping it generates/exports the log and presents a monospace dark Markdown preview dialog displaying the saved file banner, formatted text, and a 1-tap `COPY MARKDOWN` clipboard button.
-3. **Control Center Version Bump**: Header badge and About Folio dialog bumped to **`Folio v6.8 KFX (Enhanced Typesetting)`**.
-4. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
+In Round 069, Folio advanced to **Folio v6.9 KFX**. Gemini pre-authored drop-in Java updates for `FolioMetadataCatalogDialog.java`, `FolioMetadataBackup.java`, and `FolioMoreView.java`. Antigravity integrated all three files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 233,732 B), built, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **Reading Log Author Normalization & Live Progress Status (`FolioMetadataBackup.java`)**: Reused `FolioMetadataCatalogDialog.formatAuthorForDisplay` to normalize inverted library author strings (e.g. `"Melville, Herman"` → `"Herman Melville"`). Integrated `FolioMetadataCatalogDialog.loadProgressMap` to inject live status entries per book: `- **Status:** ✓ Finished` (for finished books) and `- **Status:** X% read` (for in-progress books). Updated the library summary header to include live progress counts (`**Library:** 27 books · 5 reading · 1 finished · 1 favorited · 1 rated · 1 annotated`).
+2. **1-Tap Android System Share (`FolioMoreView.java`)**: Added a third `SHARE` button to the Reading Log dialog. Tapping `SHARE` triggers `Intent.ACTION_SEND` with `Intent.createChooser`, broadcasting formatted Markdown across Android apps (messaging, notes, cloud drives, email).
+3. **Public Helper Exposure (`FolioMetadataCatalogDialog.java`)**: Promoted `loadProgressMap(Context)` and `formatAuthorForDisplay(String)` to `public static` to enable zero-overhead cross-module progress and author reuse without duplicating SQLite logic.
+4. **Control Center Version Bump**: Header badge and About Folio dialog bumped to **`Folio v6.9 KFX (Enhanced Typesetting)`**.
+5. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Folio v6.8 KFX
+## 2. Integrated Features in Folio v6.9 KFX
 
-### A. Structured Markdown Reading Journal Generation (`FolioMetadataBackup.java`)
-- `buildReadingLogMarkdown(Context)` queries all cataloged books from `FolioMetadataDb` and sorts them:
-  - First by rating descending (`FolioMetadataCatalogDialog.getRating`).
-  - Next by favorites (`FolioMetadataCatalogDialog.isFavorite`).
-  - Next by timestamp added.
-- Computes library-wide metrics: total books, favorited count, rated count, and annotated count.
-- Emits clean GitHub-flavored Markdown:
-  - `# Folio Reading Log (YYYY-MM-DD)`
-  - Summary header: `**Library:** 27 books · 1 favorited · 1 rated · 1 annotated`
-  - Book sections: `## ★ 1984`, `- **Author:** George Orwell (2003)`, `- **Rating:** ★★★★★ (5/5)`, `- **ISBN:** 0582777313`, and `> Essential dystopian classic - reread Part 3`.
-- `exportReadingLogMarkdown(Context)` writes output atomically via UTF-8 `FileOutputStream` to `/sdcard/kindle/backups/folio_reading_log.md` (with app-internal fallback).
+### A. Author Normalization & Status Telemetry in Reading Log (`FolioMetadataBackup.java`)
+- Queried reading progress map via `FolioMetadataCatalogDialog.loadProgressMap(ctx)`.
+- Calculated active reading metrics: `reading` (0 < pct < 100) and `finished` (pct >= 100).
+- Emitted updated summary header:
+  `**Library:** <N> books · <reading> reading · <finished> finished · <favs> favorited · <rated> rated · <noted> annotated`.
+- Filtered author names through `FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author)`, turning comma-separated last-names first into natural reading names.
+- Injected status line:
+  - If `pct >= 100`: `- **Status:** ✓ Finished`.
+  - If `0 < pct < 100`: `- **Status:** <pct>% read`.
 
-### B. Control Center Action Card & Monospace Preview Dialog (`FolioMoreView.java`)
-- Inserted `Card C2: Reading Log & Markdown Export` under Control Center with icon `📄` and subtitle `"Export rated, favorited & annotated books to Markdown"`.
-- `showReadingLogDialog(Context)` performs live export and displays an `AlertDialog` styled with:
-  - Emerald green path banner: `Saved to: /sdcard/kindle/backups/folio_reading_log.md`.
-  - Rounded dark monospace scroll view (`#11131A` background, `#2A3142` stroke, `#E2E8F0` text).
-  - Neutral action button `COPY MARKDOWN` copying full Markdown content to `ClipboardManager` with Toast feedback.
-  - Positive action button `CLOSE`.
+### B. 1-Tap Android Share Intent (`FolioMoreView.java`)
+- Extended `showReadingLogDialog(Context)` `AlertDialog.Builder` with `.setNegativeButton("Share", ...)`:
+  - Dispatches standard Android `Intent(Intent.ACTION_SEND)`.
+  - Sets `type = "text/plain"`.
+  - Attaches `Intent.EXTRA_SUBJECT = "Folio Reading Log"` and `Intent.EXTRA_TEXT = md`.
+  - Spawns system chooser: `ctx.startActivity(Intent.createChooser(share, "Share Folio Reading Log"))`.
 
-### C. Version Bump (`FolioMoreView.java`)
-- Bumped Control Center badge and About Folio dialog string to **`Folio v6.8 KFX (Enhanced Typesetting)`**.
+### C. Public Method Decoupling (`FolioMetadataCatalogDialog.java`)
+- Promoted `loadProgressMap(Context)` and `formatAuthorForDisplay(String)` from private to public static, eliminating redundant query duplication across dialog and backup packages.
+
+### D. Version Bump (`FolioMoreView.java`)
+- Bumped Control Center badge and About Folio dialog string to **`Folio v6.9 KFX (Enhanced Typesetting)`**.
 
 ---
 
@@ -49,8 +50,8 @@ In Round 068, Folio advanced to **Folio v6.8 KFX**. Gemini pre-authored drop-in 
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Control Center Action Card & Version Badge** | More Tab (Control Center) | `screenshots/verify_r68_control_center_reading_log_card.png` | **PASS** — Control Center shows `Folio v6.8 KFX` badge and `📄 Reading Log & Export` card under Backup & Restore. |
-| **Markdown Preview Dialog & Live Export** | Reading Log Dialog | `screenshots/verify_r68_reading_log_markdown_preview.png` | **PASS** — Monospace dialog renders saved path banner (`Saved to: /sdcard/kindle/backups/folio_reading_log.md`), full formatted Markdown (`## ★ 1984`, `★★★★★ (5/5)`, `> Essential dystopian classic - reread Part 3`), and `COPY MARKDOWN` button. File verified on disk (3,380 B). |
+| **Reading Log Progress & Share Button** | Reading Log Dialog | `screenshots/verify_r69_reading_log_status_and_share.png` | **PASS** — Monospace dialog renders `Herman Melville`, `- **Status:** ✓ Finished` on *Moby Dick*, summary header `27 books · 5 reading · 1 finished · 1 favorited · 1 rated · 1 annotated`, and `SHARE` button beside `COPY MARKDOWN` and `CLOSE`. |
+| **Control Center Version Bump & About Dialog** | About Folio Dialog | `screenshots/verify_r69_about_v69.png` | **PASS** — Tapping `Folio v6.9 KFX` badge displays About Folio dialog with `Version: Folio v6.9 KFX (Enhanced Typesetting)`. |
 | **Stock Package Safety Invariant** | Android Package Manager | `lastUpdateTime=2026-11-19 21:59:23` | **PASS** — Stock `com.amazon.kindle` remains 100% untouched, intact, and read-only. |
 
 ---
@@ -64,10 +65,10 @@ As instructed by the Project Lead, the following architectural directive is reaf
 
 ## 5. Artifacts and Deliverables
 
-- `antig_to_gemini_neon_clunky_report068.zip`:
+- `antig_to_gemini_neon_clunky_report069.zip`:
   - `REPORT.md`
-  - `INSTRUCTIONS_ROUND_068.md`
+  - `INSTRUCTIONS_ROUND_069.md`
   - `protocol.json`
-  - `screenshots/verify_r68_control_center_reading_log_card.png`
-  - `screenshots/verify_r68_reading_log_markdown_preview.png`
-- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v6.8_kfx/base.apk` (131 MB)
+  - `screenshots/verify_r69_reading_log_status_and_share.png`
+  - `screenshots/verify_r69_about_v69.png`
+- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v6.9_kfx/base.apk` (131 MB)
