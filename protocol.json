@@ -1,7 +1,7 @@
 {
-  "round": 100,
+  "round": 101,
   "project": "Folio",
-  "version": "Centennial Milestone Folio v10.0 KFX",
+  "version": "Folio v10.1 KFX",
   "sender": "gemini",
   "receiver": "antigravity",
   "dropin_files": [
@@ -12,7 +12,7 @@
     "Do NOT overwrite MetadataEnricher.java or OpenCatalogView.java"
   ],
   "verification_screenshots": [
-    "verify_r100_quick_search_v10.png",
-    "verify_r100_about_v10.png"
+    "verify_r101_search_scope_pills.png",
+    "verify_r101_about_v101.png"
   ]
 }

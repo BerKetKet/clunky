@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v10.0 KFX");
+        badgeTv.setText("Folio v10.1 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1449,6 +1449,42 @@ public final class FolioMoreView {
         }
     }
 
+    private static java.util.List<String> loadRecentSearches(Context ctx) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        try {
+            String raw = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .getString("recent_global_searches", "");
+            if (raw != null && !raw.isEmpty()) {
+                for (String s : raw.split("\n")) {
+                    String t = s.trim();
+                    if (!t.isEmpty()) out.add(t);
+                }
+            }
+        } catch (Throwable ignored) {}
+        return out;
+    }
+
+    private static void saveRecentSearch(Context ctx, String query) {
+        if (query == null) return;
+        String q = query.trim();
+        if (q.length() < 2) return;
+        try {
+            java.util.List<String> cur = loadRecentSearches(ctx);
+            java.util.List<String> next = new java.util.ArrayList<>();
+            next.add(q);
+            for (String item : cur) {
+                if (!item.equalsIgnoreCase(q) && next.size() < 5) next.add(item);
+            }
+            StringBuilder sb = new StringBuilder();
+            for (String item : next) {
+                if (sb.length() > 0) sb.append("\n");
+                sb.append(item);
+            }
+            ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .edit().putString("recent_global_searches", sb.toString()).apply();
+        } catch (Throwable ignored) {}
+    }
+
     private static void showGlobalSearchDialog(final Context ctx) {
         final float d = ctx.getResources().getDisplayMetrics().density;
         final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> all = new java.util.ArrayList<>();
@@ -1535,27 +1571,136 @@ public final class FolioMoreView {
         searchWrap.addView(clearBtn);
         root.addView(searchWrap);
 
+        // Quick-Filter Scope Pills (All, Reading, Notes, Queue, Shelves)
+        final String[] scopeKeys = new String[] { "ALL", "READING", "NOTES", "QUEUE", "SHELVES" };
+        final String[] scopeLabels = new String[] { "All", "📖 Reading", "📝 Notes", "📌 Queue", "🏷 Shelves" };
+        final String[] activeScope = new String[] { "ALL" };
+
+        android.widget.HorizontalScrollView scopeScroll = new android.widget.HorizontalScrollView(ctx);
+        scopeScroll.setHorizontalScrollBarEnabled(false);
+        final LinearLayout scopeRow = new LinearLayout(ctx);
+        scopeRow.setOrientation(LinearLayout.HORIZONTAL);
+        scopeScroll.addView(scopeRow);
+        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        scLp.bottomMargin = dp(d, 8);
+        scopeScroll.setLayoutParams(scLp);
+        root.addView(scopeScroll);
+
+        // Recent Search Chips Row (shown when query is empty & history exists)
+        final LinearLayout recentHost = new LinearLayout(ctx);
+        recentHost.setOrientation(LinearLayout.HORIZONTAL);
+        recentHost.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams rhLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rhLp.bottomMargin = dp(d, 8);
+        recentHost.setLayoutParams(rhLp);
+        root.addView(recentHost);
+
         ScrollView sv = new ScrollView(ctx);
         sv.setVerticalScrollBarEnabled(false);
         sv.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 350)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 316)));
         final LinearLayout resultsBox = new LinearLayout(ctx);
         resultsBox.setOrientation(LinearLayout.VERTICAL);
         sv.addView(resultsBox);
         root.addView(sv);
 
-        final Runnable renderResults = new Runnable() {
+        final Runnable[] renderRef = new Runnable[1];
+        renderRef[0] = new Runnable() {
             @Override
             public void run() {
+                // Repaint scope pills
+                scopeRow.removeAllViews();
+                for (int si = 0; si < scopeKeys.length; si++) {
+                    final String sk = scopeKeys[si];
+                    boolean act = sk.equals(activeScope[0]);
+                    TextView sp = new TextView(ctx);
+                    sp.setText(scopeLabels[si]);
+                    sp.setTextColor(act ? 0xFF111827 : 0xFFCBD5E1);
+                    sp.setTextSize(11.5f);
+                    sp.setTypeface(act ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+                    sp.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
+                    GradientDrawable spBg = new GradientDrawable();
+                    spBg.setColor(act ? 0xFFF59E0B : 0xFF1E2433);
+                    spBg.setCornerRadius(dp(d, 13));
+                    sp.setBackground(spBg);
+                    LinearLayout.LayoutParams spLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    spLp.rightMargin = dp(d, 6);
+                    sp.setLayoutParams(spLp);
+                    sp.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            activeScope[0] = sk;
+                            renderRef[0].run();
+                        }
+                    });
+                    scopeRow.addView(sp);
+                }
+
                 resultsBox.removeAllViews();
                 String q = searchEt.getText() != null
                         ? searchEt.getText().toString().trim().toLowerCase(java.util.Locale.ROOT)
                         : "";
                 clearBtn.setVisibility(q.isEmpty() ? View.GONE : View.VISIBLE);
 
-                // 1. Matching Custom Shelves
+                // Render Recent Searches strip when query is empty
+                recentHost.removeAllViews();
+                java.util.List<String> recents = loadRecentSearches(ctx);
+                if (q.isEmpty() && !recents.isEmpty()) {
+                    recentHost.setVisibility(View.VISIBLE);
+                    android.widget.HorizontalScrollView rhsv = new android.widget.HorizontalScrollView(ctx);
+                    rhsv.setHorizontalScrollBarEnabled(false);
+                    LinearLayout rRow = new LinearLayout(ctx);
+                    rRow.setOrientation(LinearLayout.HORIZONTAL);
+                    rRow.setGravity(Gravity.CENTER_VERTICAL);
+                    for (final String rq : recents) {
+                        TextView chip = new TextView(ctx);
+                        chip.setText("🕒 " + rq);
+                        chip.setTextColor(0xFF94A3B8);
+                        chip.setTextSize(11);
+                        chip.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
+                        GradientDrawable rcBg = new GradientDrawable();
+                        rcBg.setColor(0xFF171C28);
+                        rcBg.setCornerRadius(dp(d, 12));
+                        rcBg.setStroke(dp(d, 1), 0xFF283044);
+                        chip.setBackground(rcBg);
+                        LinearLayout.LayoutParams rcLp = new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                        rcLp.rightMargin = dp(d, 6);
+                        chip.setLayoutParams(rcLp);
+                        chip.setOnClickListener(new View.OnClickListener() {
+                            @Override public void onClick(View v) {
+                                searchEt.setText(rq);
+                                searchEt.setSelection(rq.length());
+                            }
+                        });
+                        rRow.addView(chip);
+                    }
+                    TextView clrH = new TextView(ctx);
+                    clrH.setText("Clear");
+                    clrH.setTextColor(0xFFF87171);
+                    clrH.setTextSize(11);
+                    clrH.setPadding(dp(d, 6), dp(d, 4), dp(d, 4), dp(d, 4));
+                    clrH.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                                    .edit().remove("recent_global_searches").apply();
+                            renderRef[0].run();
+                        }
+                    });
+                    rRow.addView(clrH);
+                    rhsv.addView(rRow);
+                    recentHost.addView(rhsv);
+                } else {
+                    recentHost.setVisibility(View.GONE);
+                }
+
+                // 1. Matching Custom Shelves (shown for ALL or SHELVES scope)
                 int shelfHits = 0;
+                boolean showShelves = "ALL".equals(activeScope[0]) || "SHELVES".equals(activeScope[0]);
                 for (java.util.Map.Entry<String, Integer> se : shelfCounts.entrySet()) {
+                    if (!showShelves) break;
                     final String shName = se.getKey();
                     if (!q.isEmpty() && !shName.toLowerCase(java.util.Locale.ROOT).contains(q)) continue;
                     if (q.isEmpty() && shelfHits >= 3) break;
@@ -1602,7 +1747,22 @@ public final class FolioMoreView {
                 // 2. Matching Books & Personal Notes
                 int bookHits = 0;
                 int shown = 0;
+                boolean showBooks = !"SHELVES".equals(activeScope[0]);
                 for (final com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec : all) {
+                    if (!showBooks) break;
+                    if ("NOTES".equals(activeScope[0])
+                            && com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getNote(ctx, rec.kfxPath).isEmpty()) {
+                        continue;
+                    }
+                    if ("QUEUE".equals(activeScope[0])
+                            && !com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.isInQueue(ctx, rec.kfxPath)) {
+                        continue;
+                    }
+                    if ("READING".equals(activeScope[0])) {
+                        Integer pChk = (rec.kfxPath != null) ? progMap.get(rec.kfxPath) : null;
+                        int pvChk = pChk != null ? pChk : 0;
+                        if (pvChk <= 0 || pvChk >= 100) continue;
+                    }
                     String tStr = (rec.title != null && !rec.title.isEmpty()) ? rec.title : "Untitled";
                     String aStr = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(rec.author);
                     String nStr = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getNote(ctx, rec.kfxPath);
@@ -1692,6 +1852,8 @@ public final class FolioMoreView {
 
                     card.setOnClickListener(new View.OnClickListener() {
                         @Override public void onClick(View v) {
+                            String curQ = searchEt.getText() != null ? searchEt.getText().toString().trim() : "";
+                            if (!curQ.isEmpty()) saveRecentSearch(ctx, curQ);
                             File f = new File(rec.kfxPath);
                             if (f.exists()) {
                                 if (gsDlgRef[0] != null) gsDlgRef[0].dismiss();
@@ -1723,11 +1885,11 @@ public final class FolioMoreView {
 
         searchEt.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
-            @Override public void onTextChanged(CharSequence s, int st, int b, int c) { renderResults.run(); }
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) { renderRef[0].run(); }
             @Override public void afterTextChanged(android.text.Editable s) {}
         });
 
-        renderResults.run();
+        renderRef[0].run();
 
         gsDlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setView(root)
@@ -1735,6 +1897,7 @@ public final class FolioMoreView {
                     @Override public void onClick(DialogInterface dialog, int which) {
                         String q = searchEt.getText() != null ? searchEt.getText().toString().trim() : "";
                         if (!q.isEmpty()) {
+                            saveRecentSearch(ctx, q);
                             com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.showWithSearch(ctx, q);
                         } else {
                             com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "All");
@@ -3386,7 +3549,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v10.0 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v10.1 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
