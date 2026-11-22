@@ -324,12 +324,14 @@ public final class FolioMetadataCatalogDialog {
         bulkBtnsRow.setOrientation(LinearLayout.HORIZONTAL);
         bulkBtnsRow.setGravity(Gravity.CENTER_VERTICAL);
 
-        final TextView btnBulkShelf = makeBulkActionPill(ctx, "🏷 Shelf", "#312E81", "#C7D2FE", "#4F46E5");
-        final TextView btnBulkGenre = makeBulkActionPill(ctx, "+ Genre", "#152638", "#38BDF8", "#1E4E75");
-        final TextView btnBulkFav = makeBulkActionPill(ctx, "★ Fav", "#3B2A14", "#FBBF24", "#784F1D");
-        final TextView btnBulkDone = makeBulkActionPill(ctx, "✓ Done", "#123328", "#34D399", "#1E664E");
+        final TextView btnBulkShelf = makeBulkActionPill(ctx, "Shelf", "#312E81", "#C7D2FE", "#4F46E5");
+        final TextView btnBulkGenre = makeBulkActionPill(ctx, "+Genre", "#152638", "#38BDF8", "#1E4E75");
+        final TextView btnBulkQueue = makeBulkActionPill(ctx, "📌Queue", "#2B1B3D", "#C084FC", "#6B21A8");
+        final TextView btnBulkFav = makeBulkActionPill(ctx, "★Fav", "#3B2A14", "#FBBF24", "#784F1D");
+        final TextView btnBulkDone = makeBulkActionPill(ctx, "✓Done", "#123328", "#34D399", "#1E664E");
         bulkBtnsRow.addView(btnBulkShelf);
         bulkBtnsRow.addView(btnBulkGenre);
+        bulkBtnsRow.addView(btnBulkQueue);
         bulkBtnsRow.addView(btnBulkFav);
         bulkBtnsRow.addView(btnBulkDone);
         bulkBar.addView(bulkBtnsRow);
@@ -739,6 +741,31 @@ public final class FolioMetadataCatalogDialog {
             });
         });
 
+        btnBulkQueue.setOnClickListener(v -> {
+            if (selectedPaths.isEmpty()) {
+                Toast.makeText(ctx, "Select at least one book first", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            boolean allQueued = true;
+            for (String p : selectedPaths) {
+                if (!isInQueue(ctx, p)) { allQueued = false; break; }
+            }
+            boolean nextQ = !allQueued;
+            int count = 0;
+            for (String p : selectedPaths) {
+                setInQueue(ctx, p, nextQ);
+                count++;
+            }
+            Toast.makeText(ctx,
+                    (nextQ ? "📌 Queued " : "Removed ") + count
+                            + (count == 1 ? " book" : " books")
+                            + (nextQ ? " in Up Next" : " from Up Next"),
+                    Toast.LENGTH_SHORT).show();
+            selectedPaths.clear();
+            updateBulkBarHeader.run();
+            renderRef[0].run();
+        });
+
         btnBulkFav.setOnClickListener(v -> {
             if (selectedPaths.isEmpty()) {
                 Toast.makeText(ctx, "Select at least one book first", Toast.LENGTH_SHORT).show();
@@ -988,6 +1015,9 @@ public final class FolioMetadataCatalogDialog {
         } else if (stars > 0) {
             badgeTv.setText("★ " + stars + "/5");
             badgeTv.setTextColor(Color.parseColor("#FBBF24"));
+        } else if (isInQueue(ctx, rec.kfxPath)) {
+            badgeTv.setText("📌 Up Next");
+            badgeTv.setTextColor(Color.parseColor("#C084FC"));
         } else {
             badgeTv.setText("Unread");
             badgeTv.setTextColor(Color.parseColor("#64748B"));
@@ -2321,10 +2351,11 @@ public final class FolioMetadataCatalogDialog {
         TextView tv = new TextView(ctx);
         tv.setText(label);
         tv.setTextColor(Color.parseColor(textHex));
-        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
         tv.setTypeface(Typeface.DEFAULT_BOLD);
+        tv.setSingleLine(true);
         tv.setGravity(Gravity.CENTER);
-        tv.setPadding(dp(ctx, 8), dp(ctx, 7), dp(ctx, 8), dp(ctx, 7));
+        tv.setPadding(dp(ctx, 4), dp(ctx, 7), dp(ctx, 4), dp(ctx, 7));
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(Color.parseColor(bgHex));
         bg.setCornerRadius(dp(ctx, 8));
