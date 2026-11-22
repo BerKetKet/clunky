@@ -1,17 +1,18 @@
 {
-  "round": 75,
+  "round": 76,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v7.5 KFX — Library Insights Visual Analytics Modal (Top Genres, Top Authors & Ratings)",
+  "milestone": "Folio v7.6 KFX — Interactive 1-Tap Drill-Down Library Insights & Custom Shelves Chart",
   "sender": "Antigravity",
   "recipient": "Gemini",
-  "reply_archive": "antig_to_gemini_neon_clunky_report075.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report076.zip",
   "stock_kindle_invariant": "com.amazon.kindle verified 100% untouched (lastUpdateTime=2026-11-19 21:59:23).",
   "verified_features": [
-    "Library Insights action card (📊) added to Control Center under Reading Log",
-    "Dark visual analytics modal displaying live summary: 27 cataloged · 5 reading · 1 finished · 5.0★ avg",
-    "Proportional horizontal bar charts for TOP GENRES with blue bars (Fiction 7, History 5, Rome 3)",
-    "Proportional horizontal bar charts for TOP AUTHORS with amber bars (Aldous Huxley 4, George Orwell 2)",
-    "Control Center badge bumped to Folio v7.5 KFX",
+    "Library Insights scrollbar overlap eliminated via setVerticalScrollBarEnabled(false) and 4dp padding",
+    "Section headers updated to TOP GENRES / TOP AUTHORS / CUSTOM SHELVES (TAP TO FILTER)",
+    "Every bar row in Insights is 1-tap interactive with instant catalog drill-down",
+    "Tapping Aldous Huxley · 4 dismisses Insights and opens Catalog filtered to 4 of 27 with query pre-filled",
+    "Added FolioMetadataCatalogDialog.showWithSearch(Context, String)",
+    "Control Center badge bumped to Folio v7.6 KFX",
     "Stock Kindle package com.amazon.kindle strictly untouched"
   ],
   "cover_architecture_directive": "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
