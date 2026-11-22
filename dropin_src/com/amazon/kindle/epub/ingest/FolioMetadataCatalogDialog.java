@@ -1412,7 +1412,16 @@ public final class FolioMetadataCatalogDialog {
 
         if (currentProgress > 0) {
             TextView progTv = new TextView(ctx);
-            progTv.setText(currentProgress >= 100 ? "✓ Finished" : currentProgress + "% read");
+            if (currentProgress >= 100) {
+                final String finDate = getFinishedDate(ctx, rec.kfxPath);
+                progTv.setText(finDate.isEmpty() ? "✓ Finished · Set date ›" : "✓ Finished on " + finDate + " · Edit ›");
+                progTv.setOnClickListener(v -> showEditFinishedDateDialog(ctx, rec, finDate, () -> {
+                    if (detailDlgRef[0] != null) detailDlgRef[0].dismiss();
+                    if (onMetadataEdited != null) onMetadataEdited.run();
+                }));
+            } else {
+                progTv.setText(currentProgress + "% read");
+            }
             progTv.setTextColor(Color.parseColor(currentProgress >= 100 ? "#34D399" : "#38BDF8"));
             progTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             progTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2940,6 +2949,60 @@ public final class FolioMetadataCatalogDialog {
         return n;
     }
 
+    public static String getFinishedDate(Context ctx, String kfxPath) {
+        if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return "";
+        try {
+            String s = ctx.getSharedPreferences("folio_finished_dates", Context.MODE_PRIVATE).getString(kfxPath, "");
+            return s != null ? s.trim() : "";
+        } catch (Throwable ignored) { return ""; }
+    }
+
+    public static void setFinishedDate(Context ctx, String kfxPath, String dateStr) {
+        if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return;
+        try {
+            android.content.SharedPreferences.Editor ed =
+                    ctx.getSharedPreferences("folio_finished_dates", Context.MODE_PRIVATE).edit();
+            if (dateStr == null || dateStr.trim().isEmpty()) ed.remove(kfxPath);
+            else ed.putString(kfxPath, dateStr.trim());
+            ed.apply();
+        } catch (Throwable ignored) {}
+    }
+
+    private static void showEditFinishedDateDialog(
+            final Context ctx, final FolioMetadataDb.BookRecord rec,
+            final String curDate, final Runnable onSaved) {
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(ctx, 20), dp(ctx, 12), dp(ctx, 20), dp(ctx, 6));
+
+        String today = new java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new java.util.Date());
+        final EditText input = new EditText(ctx);
+        input.setText(curDate.isEmpty() ? today : curDate);
+        input.setSelection(input.getText().length());
+        input.setSingleLine(true);
+        input.setHint("YYYY-MM-DD (e.g. " + today + ")");
+        input.setTextColor(Color.WHITE);
+        input.setHintTextColor(Color.parseColor("#64748B"));
+        box.addView(input);
+
+        new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("Finished Date — " + (rec.title != null ? rec.title : "Book"))
+                .setView(box)
+                .setPositiveButton("Save Date", (d, w) -> {
+                    String val = input.getText().toString().trim();
+                    setFinishedDate(ctx, rec.kfxPath, val);
+                    Toast.makeText(ctx, val.isEmpty() ? "Cleared finished date" : "Saved finished date: " + val, Toast.LENGTH_SHORT).show();
+                    if (onSaved != null) onSaved.run();
+                })
+                .setNeutralButton("Clear", (d, w) -> {
+                    setFinishedDate(ctx, rec.kfxPath, "");
+                    Toast.makeText(ctx, "Cleared finished date", Toast.LENGTH_SHORT).show();
+                    if (onSaved != null) onSaved.run();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
     private static void setBookReadState(Context ctx, String kfxPath, boolean finished) {
         if (kfxPath == null || kfxPath.isEmpty()) return;
         try {
@@ -2964,6 +3027,15 @@ public final class FolioMetadataCatalogDialog {
                             new Object[] { finished ? "READ" : "UNREAD", key });
                     kdb.execSQL("UPDATE UserContent SET READING_PROGRESS = ? WHERE KEY = ?",
                             new Object[] { finished ? 100 : 0, key });
+                }
+                if (finished) {
+                    if (getFinishedDate(ctx, kfxPath).isEmpty()) {
+                        String today = new java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                                .format(new java.util.Date());
+                        setFinishedDate(ctx, kfxPath, today);
+                    }
+                } else {
+                    setFinishedDate(ctx, kfxPath, "");
                 }
             } finally {
                 kdb.close();

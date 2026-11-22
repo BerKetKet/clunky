@@ -73,6 +73,8 @@ public final class FolioMetadataBackup {
                 String shName = FolioMetadataCatalogDialog.getShelf(ctx, r.kfxPath);
                 if (!shName.isEmpty()) obj.put("shelf", shName);
                 if (FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath)) obj.put("in_queue", true);
+                String finDt = FolioMetadataCatalogDialog.getFinishedDate(ctx, r.kfxPath);
+                if (!finDt.isEmpty()) obj.put("finished_date", finDt);
                 arr.put(obj);
             }
             root.put("books", arr);
@@ -170,6 +172,10 @@ public final class FolioMetadataBackup {
                 }
                 if (obj.optBoolean("in_queue", false)) {
                     FolioMetadataCatalogDialog.setInQueue(ctx, kfxPath, true);
+                }
+                String finDt = obj.optString("finished_date", "");
+                if (!finDt.isEmpty()) {
+                    FolioMetadataCatalogDialog.setFinishedDate(ctx, kfxPath, finDt);
                 }
                 restored++;
             }
@@ -280,7 +286,10 @@ public final class FolioMetadataBackup {
                 if (!yr.isEmpty()) md.append(" (").append(yr).append(")");
                 md.append("\n");
                 if (pct >= 100) {
-                    md.append("- **Status:** ✓ Finished\n");
+                    String finDt = FolioMetadataCatalogDialog.getFinishedDate(ctx, r.kfxPath);
+                    md.append("- **Status:** ✓ Finished");
+                    if (!finDt.isEmpty()) md.append(" (").append(finDt).append(")");
+                    md.append("\n");
                 } else if (pct > 0) {
                     md.append("- **Status:** ").append(pct).append("% read\n");
                 }
@@ -358,13 +367,14 @@ public final class FolioMetadataBackup {
             List<FolioMetadataDb.BookRecord> all = db.getAllBooks();
             java.util.Map<String, Integer> progMap = FolioMetadataCatalogDialog.loadProgressMap(ctx);
             StringBuilder csv = new StringBuilder();
-            csv.append("Title,Author,Year,Publisher,ISBN,Status,Shelf,Rating,Favorite,In Queue,Note\n");
+            csv.append("Title,Author,Year,Publisher,ISBN,Status,Finished Date,Shelf,Rating,Favorite,In Queue,Note\n");
             for (FolioMetadataDb.BookRecord r : all) {
                 String cleanAuthor = FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
                 String yr = EpubMetadataExtractor.normalizePubDate(r.pubDate);
                 Integer pv = (r.kfxPath != null) ? progMap.get(r.kfxPath) : null;
                 int pct = pv != null ? pv : 0;
                 String status = pct >= 100 ? "Finished" : (pct > 0 ? pct + "%" : "Unread");
+                String finDt = FolioMetadataCatalogDialog.getFinishedDate(ctx, r.kfxPath);
                 String shelf = FolioMetadataCatalogDialog.getShelf(ctx, r.kfxPath);
                 int rating = FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath);
                 boolean fav = FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath);
@@ -377,6 +387,7 @@ public final class FolioMetadataBackup {
                    .append(csvEsc(r.publisher)).append(",")
                    .append(csvEsc(r.isbn)).append(",")
                    .append(csvEsc(status)).append(",")
+                   .append(csvEsc(finDt)).append(",")
                    .append(csvEsc(shelf)).append(",")
                    .append(rating > 0 ? rating : "").append(",")
                    .append(fav ? "Yes" : "").append(",")
