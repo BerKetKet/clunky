@@ -1,6 +1,28 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.7 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 087 complete:
+  1. **Bulk Genre Tagging & Centered Metadata Health Tiles (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`.
+     - In `FolioMetadataCatalogDialog.java`, added sky-blue `+ Genre` action pill in the bottom Bulk Action Bar alongside `🏷 Shelf`, `★ Fav`, and `✓ Done`.
+     - Implemented `showBulkGenrePicker(...)` displaying interactive `🏷 Add Genre (N books)` modal with horizontal genre preset chips (`+ Fiction`, `+ History`, `+ Rome`, `+ Biography`, `+ Correspondence`) and custom comma-separated genre input.
+     - Implemented safe case-insensitive genre merge logic into `books_metadata.genres` in `folio_metadata.db` for all selected volumes.
+     - In `FolioMoreView.java`, center-aligned both count (`valTv`) and label (`lblTv`) inside `makeHealthBadge(...)` across all 3 audit tiles.
+     - Bumped badge and About Folio string to `Folio v8.7 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Milestone Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `screenshots/verify_r87_bulk_genre_bar.png` (210 KB) — Bulk Add Genre modal with horizontal genre chips, custom input field, and 4-action bottom bar.
+       * `screenshots/verify_r87_insights_centered_v87.png` (161 KB) — Library Insights modal showing crisp center-aligned 3-tile Metadata Health strip with `Folio v8.7 KFX` badge.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v8.7 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v8.7_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 087)
+1. `screenshots/verify_r87_bulk_genre_bar.png`: Add Genre modal with preset chips, custom input, and 4-button bulk bar.
+2. `screenshots/verify_r87_insights_centered_v87.png`: Library Insights modal with center-aligned 3-tile Metadata Health strip.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v8.7 KFX deployed (`lastUpdateTime=2026-11-23 01:06:47`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.6 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 086 complete:
   1. **Metadata Health Audit & 1-Tap Quick-Fix Filters (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java` and `FolioMetadataCatalogDialog.java`.
