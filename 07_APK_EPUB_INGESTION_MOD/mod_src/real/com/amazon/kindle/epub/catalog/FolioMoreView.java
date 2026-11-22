@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v7.4 KFX");
+        badgeTv.setText("Folio v7.5 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -314,6 +314,19 @@ public final class FolioMoreView {
                     @Override
                     public void onClick(View v) {
                         showReadingLogDialog(ctx);
+                    }
+                }
+        ));
+
+        // Card C3: Library Insights & Visual Analytics
+        container.addView(makeActionCard(
+                ctx, d,
+                "📊", "Library Insights",
+                "Top authors, top genres, average rating & shelf stats",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showLibraryInsightsDialog(ctx);
                     }
                 }
         ));
@@ -750,6 +763,188 @@ public final class FolioMoreView {
         }).start();
     }
 
+    private static void showLibraryInsightsDialog(final Context ctx) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> all = new java.util.ArrayList<>();
+        com.amazon.kindle.epub.ingest.FolioMetadataDb mdb = new com.amazon.kindle.epub.ingest.FolioMetadataDb(ctx);
+        try {
+            all.addAll(mdb.getAllBooks());
+        } catch (Throwable ignored) {
+        } finally {
+            mdb.close();
+        }
+
+        final java.util.Map<String, Integer> authorFreq = new java.util.HashMap<>();
+        final java.util.Map<String, String> authorLabel = new java.util.HashMap<>();
+        final java.util.Map<String, Integer> genreFreq = new java.util.HashMap<>();
+        final java.util.Map<String, String> genreLabel = new java.util.HashMap<>();
+        int favs = 0, noted = 0, shelved = 0, ratedCount = 0, ratingSum = 0;
+
+        for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : all) {
+            String aDisp = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
+            if (!aDisp.isEmpty() && !"Unknown Author".equalsIgnoreCase(aDisp)) {
+                String ak = aDisp.toLowerCase(java.util.Locale.ROOT);
+                authorFreq.put(ak, (authorFreq.containsKey(ak) ? authorFreq.get(ak) : 0) + 1);
+                if (!authorLabel.containsKey(ak)) authorLabel.put(ak, aDisp);
+            }
+            if (r.genres != null && !r.genres.isEmpty()) {
+                java.util.Set<String> seenG = new java.util.HashSet<>();
+                for (String g : r.genres.split(",")) {
+                    String c = g.trim();
+                    if (c.length() >= 3 && c.length() <= 22 && !c.contains("--")
+                            && !com.amazon.kindle.epub.ingest.EpubMetadataExtractor.isNoiseTag(c)) {
+                        String gk = c.toLowerCase(java.util.Locale.ROOT);
+                        if (gk.startsWith("early works") || gk.startsWith("translations into")
+                                || gk.contains("textbooks for") || gk.equals("general")) continue;
+                        if (seenG.add(gk)) {
+                            genreFreq.put(gk, (genreFreq.containsKey(gk) ? genreFreq.get(gk) : 0) + 1);
+                            if (!genreLabel.containsKey(gk)) {
+                                genreLabel.put(gk, Character.toUpperCase(c.charAt(0)) + c.substring(1));
+                            }
+                        }
+                    }
+                }
+            }
+            if (com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath)) favs++;
+            if (!com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getNote(ctx, r.kfxPath).isEmpty()) noted++;
+            if (!com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getShelf(ctx, r.kfxPath).isEmpty()) shelved++;
+            int st = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath);
+            if (st > 0) { ratedCount++; ratingSum += st; }
+        }
+
+        java.util.List<String> topAuthors = new java.util.ArrayList<>(authorFreq.keySet());
+        java.util.Collections.sort(topAuthors, (a, b) -> {
+            int cmp = Integer.compare(authorFreq.get(b), authorFreq.get(a));
+            return cmp != 0 ? cmp : a.compareTo(b);
+        });
+        java.util.List<String> topGenres = new java.util.ArrayList<>(genreFreq.keySet());
+        java.util.Collections.sort(topGenres, (a, b) -> {
+            int cmp = Integer.compare(genreFreq.get(b), genreFreq.get(a));
+            return cmp != 0 ? cmp : a.compareTo(b);
+        });
+
+        int[] qs = readQuickStats(ctx);
+        LinearLayout root = new LinearLayout(ctx);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(0xFF11131A);
+        root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
+
+        TextView titleTv = new TextView(ctx);
+        titleTv.setText("📊 Library Insights");
+        titleTv.setTextColor(TEXT_PRIMARY);
+        titleTv.setTextSize(18);
+        titleTv.setTypeface(Typeface.DEFAULT_BOLD);
+        titleTv.setPadding(0, 0, 0, dp(d, 4));
+        root.addView(titleTv);
+
+        String avgStr = ratedCount > 0
+                ? String.format(java.util.Locale.US, "%.1f★ avg (%d rated)", ratingSum / (float) ratedCount, ratedCount)
+                : "No ratings yet";
+        TextView summaryTv = new TextView(ctx);
+        summaryTv.setText(all.size() + " cataloged · " + qs[1] + " reading · " + qs[2] + " finished\n"
+                + favs + " favorited · " + noted + " annotated · " + shelved + " shelved · " + avgStr);
+        summaryTv.setTextColor(TEXT_MUTED);
+        summaryTv.setTextSize(12);
+        summaryTv.setPadding(0, 0, 0, dp(d, 14));
+        root.addView(summaryTv);
+
+        ScrollView sv = new ScrollView(ctx);
+        sv.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 360)));
+        LinearLayout content = new LinearLayout(ctx);
+        content.setOrientation(LinearLayout.VERTICAL);
+
+        // Section 1: Top Genres Bar Chart
+        TextView gHdr = new TextView(ctx);
+        gHdr.setText("TOP GENRES");
+        gHdr.setTextColor(0xFF60A5FA);
+        gHdr.setTextSize(11);
+        gHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        gHdr.setPadding(0, 0, 0, dp(d, 8));
+        content.addView(gHdr);
+
+        int maxG = topGenres.isEmpty() ? 1 : Math.max(1, genreFreq.get(topGenres.get(0)));
+        for (int i = 0; i < Math.min(5, topGenres.size()); i++) {
+            String k = topGenres.get(i);
+            content.addView(makeInsightBarRow(ctx, d, genreLabel.get(k), genreFreq.get(k), maxG, 0xFF60A5FA));
+        }
+
+        // Section 2: Top Authors Bar Chart
+        TextView aHdr = new TextView(ctx);
+        aHdr.setText("TOP AUTHORS");
+        aHdr.setTextColor(0xFFF59E0B);
+        aHdr.setTextSize(11);
+        aHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        aHdr.setPadding(0, dp(d, 14), 0, dp(d, 8));
+        content.addView(aHdr);
+
+        int maxA = topAuthors.isEmpty() ? 1 : Math.max(1, authorFreq.get(topAuthors.get(0)));
+        for (int i = 0; i < Math.min(5, topAuthors.size()); i++) {
+            String k = topAuthors.get(i);
+            content.addView(makeInsightBarRow(ctx, d, authorLabel.get(k), authorFreq.get(k), maxA, 0xFFF59E0B));
+        }
+
+        sv.addView(content);
+        root.addView(sv);
+
+        new AlertDialog.Builder(ctx)
+                .setView(root)
+                .setPositiveButton("Close", null)
+                .show();
+    }
+
+    private static View makeInsightBarRow(Context ctx, float d, String label, int count, int maxCount, int barColor) {
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(0, 0, 0, dp(d, 9));
+
+        LinearLayout top = new LinearLayout(ctx);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        TextView lbl = new TextView(ctx);
+        lbl.setText(label);
+        lbl.setTextColor(TEXT_PRIMARY);
+        lbl.setTextSize(13);
+        lbl.setSingleLine(true);
+        lbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        lbl.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        top.addView(lbl);
+
+        TextView cnt = new TextView(ctx);
+        cnt.setText(String.valueOf(count));
+        cnt.setTextColor(barColor);
+        cnt.setTextSize(12);
+        cnt.setTypeface(Typeface.DEFAULT_BOLD);
+        top.addView(cnt);
+        box.addView(top);
+
+        LinearLayout track = new LinearLayout(ctx);
+        track.setOrientation(LinearLayout.HORIZONTAL);
+        GradientDrawable trBg = new GradientDrawable();
+        trBg.setColor(0xFF1E2433);
+        trBg.setCornerRadius(dp(d, 4));
+        track.setBackground(trBg);
+        LinearLayout.LayoutParams trLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 6));
+        trLp.topMargin = dp(d, 4);
+        track.setLayoutParams(trLp);
+
+        float ratio = Math.max(0.06f, Math.min(1f, count / (float) Math.max(1, maxCount)));
+        View fill = new View(ctx);
+        GradientDrawable fBg = new GradientDrawable();
+        fBg.setColor(barColor);
+        fBg.setCornerRadius(dp(d, 4));
+        fill.setBackground(fBg);
+        fill.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, ratio));
+        track.addView(fill);
+
+        View rest = new View(ctx);
+        rest.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, Math.max(0f, 1f - ratio)));
+        track.addView(rest);
+
+        box.addView(track);
+        return box;
+    }
+
     private static void showReadingLogDialog(final Context ctx) {
         final File outFile = com.amazon.kindle.epub.ingest.FolioMetadataBackup.exportReadingLogMarkdown(ctx);
         final String md = com.amazon.kindle.epub.ingest.FolioMetadataBackup.buildReadingLogMarkdown(ctx);
@@ -913,7 +1108,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v7.4 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v7.5 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
