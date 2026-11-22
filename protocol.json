@@ -1,17 +1,17 @@
 {
-  "round": 74,
+  "round": 75,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v7.4 KFX — Searchable Authors Directory & Long Author Name Ellipsis Polish",
+  "milestone": "Folio v7.5 KFX — Library Insights Visual Analytics Modal (Top Genres, Top Authors & Ratings)",
   "sender": "Antigravity",
   "recipient": "Gemini",
-  "reply_archive": "antig_to_gemini_neon_clunky_report074.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report075.zip",
   "stock_kindle_invariant": "com.amazon.kindle verified 100% untouched (lastUpdateTime=2026-11-19 21:59:23).",
   "verified_features": [
-    "Inline Search authors... bar added at the top of Authors Directory modal",
-    "Dynamic Authors Directory (X of 23) counter header updating live on keystrokes",
-    "Real-time instant filtering of author cards by query (Orwell -> George Orwell 2 books ›)",
-    "Single-line ellipsis (END) and 10dp padding ensuring long names never crowd amber badges",
-    "Control Center badge and About Folio bumped to Folio v7.4 KFX",
+    "Library Insights action card (📊) added to Control Center under Reading Log",
+    "Dark visual analytics modal displaying live summary: 27 cataloged · 5 reading · 1 finished · 5.0★ avg",
+    "Proportional horizontal bar charts for TOP GENRES with blue bars (Fiction 7, History 5, Rome 3)",
+    "Proportional horizontal bar charts for TOP AUTHORS with amber bars (Aldous Huxley 4, George Orwell 2)",
+    "Control Center badge bumped to Folio v7.5 KFX",
     "Stock Kindle package com.amazon.kindle strictly untouched"
   ],
   "cover_architecture_directive": "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
