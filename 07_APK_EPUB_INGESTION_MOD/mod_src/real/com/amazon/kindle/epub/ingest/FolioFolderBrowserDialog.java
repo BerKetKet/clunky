@@ -117,7 +117,14 @@ public final class FolioFolderBrowserDialog {
         pathRow.setGravity(Gravity.CENTER_VERTICAL);
 
         final EditText etPath = new EditText(ctx);
-        etPath.setText(pickDefaultDir());
+        String savedDir = null;
+        try {
+            savedDir = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .getString("last_import_dir", null);
+        } catch (Throwable ignored) {}
+        String initDir = (savedDir != null && !savedDir.trim().isEmpty() && new File(savedDir).isDirectory())
+                ? savedDir.trim() : pickDefaultDir();
+        etPath.setText(initDir);
         etPath.setTextColor(Color.WHITE);
         etPath.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         etPath.setSingleLine(true);
@@ -284,6 +291,8 @@ public final class FolioFolderBrowserDialog {
         };
         styleHideToggle.run();
 
+        final int[] displayLimit = new int[] { 60 };
+        final Runnable[] renderListRef = new Runnable[1];
         final Runnable renderList = () -> {
             listContainer.removeAllViews();
             String q = filterQuery[0].trim().toLowerCase(Locale.ROOT);
@@ -303,7 +312,7 @@ public final class FolioFolderBrowserDialog {
                 return a.getName().compareToIgnoreCase(b.getName());
             });
 
-            int cap = Math.min(matched.size(), 60);
+            int cap = Math.min(matched.size(), displayLimit[0]);
             currentVisible.clear();
             for (int k = 0; k < cap; k++) currentVisible.add(matched.get(k));
             statusTv.setText("Showing " + cap + " of " + matched.size() + " matching EPUBs ("
@@ -362,9 +371,37 @@ public final class FolioFolderBrowserDialog {
                 row.setOnClickListener(v -> cb.setChecked(!cb.isChecked()));
                 listContainer.addView(row);
             }
+
+            int remaining = matched.size() - cap;
+            if (remaining > 0) {
+                int step = Math.min(60, remaining);
+                TextView btnMore = new TextView(ctx);
+                btnMore.setText("Load More (+" + step + " of " + remaining + " remaining)");
+                btnMore.setGravity(Gravity.CENTER);
+                btnMore.setTextColor(Color.parseColor("#5EEAD4"));
+                btnMore.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                btnMore.setTypeface(Typeface.DEFAULT_BOLD);
+                btnMore.setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10));
+                GradientDrawable mBg = new GradientDrawable();
+                mBg.setColor(Color.parseColor("#1E2433"));
+                mBg.setCornerRadius(dp(ctx, 8));
+                mBg.setStroke(dp(ctx, 1), Color.parseColor("#334155"));
+                btnMore.setBackground(mBg);
+                LinearLayout.LayoutParams mLp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                mLp.setMargins(0, dp(ctx, 4), 0, dp(ctx, 6));
+                btnMore.setLayoutParams(mLp);
+                btnMore.setOnClickListener(v -> {
+                    displayLimit[0] += 60;
+                    if (renderListRef[0] != null) renderListRef[0].run();
+                });
+                listContainer.addView(btnMore);
+            }
         };
+        renderListRef[0] = renderList;
 
         final Runnable loadDir = () -> {
+            displayLimit[0] = 60;
             selectedFiles.clear();
             allEpubsInDir.clear();
             updateImportLabel.run();
@@ -382,6 +419,10 @@ public final class FolioFolderBrowserDialog {
                 statusTv.setText("Cannot read folder: " + dirPath);
                 return;
             }
+            try {
+                ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                        .edit().putString("last_import_dir", dirPath).apply();
+            } catch (Throwable ignored) {}
             for (File f : children) {
                 if (f.isFile() && f.getName().toLowerCase(Locale.ROOT).endsWith(".epub")) {
                     allEpubsInDir.add(f);
