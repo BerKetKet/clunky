@@ -163,4 +163,97 @@ public final class FolioMetadataBackup {
             db.close();
         }
     }
+
+    public static File getReadingLogFile(Context ctx) {
+        File extDir = new File(BACKUP_DIR);
+        if (extDir.exists() || extDir.mkdirs()) {
+            return new File(extDir, "folio_reading_log.md");
+        }
+        File fallback = new File(ctx.getFilesDir(), "backups");
+        if (!fallback.exists()) fallback.mkdirs();
+        return new File(fallback, "folio_reading_log.md");
+    }
+
+    public static String buildReadingLogMarkdown(Context ctx) {
+        FolioMetadataDb db = new FolioMetadataDb(ctx);
+        try {
+            List<FolioMetadataDb.BookRecord> all = db.getAllBooks();
+            java.util.Collections.sort(all, (a, b) -> {
+                int ra = FolioMetadataCatalogDialog.getRating(ctx, a.kfxPath);
+                int rb = FolioMetadataCatalogDialog.getRating(ctx, b.kfxPath);
+                if (ra != rb) return Integer.compare(rb, ra);
+                boolean fa = FolioMetadataCatalogDialog.isFavorite(ctx, a.kfxPath);
+                boolean fb = FolioMetadataCatalogDialog.isFavorite(ctx, b.kfxPath);
+                if (fa != fb) return fa ? -1 : 1;
+                return Long.compare(b.addedAt, a.addedAt);
+            });
+
+            int favs = 0, rated = 0, noted = 0;
+            for (FolioMetadataDb.BookRecord r : all) {
+                if (FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath)) favs++;
+                if (FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath) > 0) rated++;
+                if (!FolioMetadataCatalogDialog.getNote(ctx, r.kfxPath).isEmpty()) noted++;
+            }
+
+            String dateStr = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                    .format(new java.util.Date());
+            StringBuilder md = new StringBuilder();
+            md.append("# Folio Reading Log (").append(dateStr).append(")\n\n");
+            md.append("**Library:** ").append(all.size()).append(" books · ")
+              .append(favs).append(" favorited · ")
+              .append(rated).append(" rated · ")
+              .append(noted).append(" annotated\n\n");
+
+            for (FolioMetadataDb.BookRecord r : all) {
+                boolean isFav = FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath);
+                int stars = FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath);
+                String note = FolioMetadataCatalogDialog.getNote(ctx, r.kfxPath);
+                String yr = EpubMetadataExtractor.normalizePubDate(r.pubDate);
+
+                md.append("## ");
+                if (isFav) md.append("★ ");
+                md.append(r.title != null ? r.title : "Untitled").append("\n");
+                md.append("- **Author:** ").append(r.author != null ? r.author : "Unknown");
+                if (!yr.isEmpty()) md.append(" (").append(yr).append(")");
+                md.append("\n");
+                if (stars > 0) {
+                    md.append("- **Rating:** ");
+                    for (int s = 0; s < 5; s++) md.append(s < stars ? "★" : "☆");
+                    md.append(" (").append(stars).append("/5)\n");
+                }
+                if (r.isbn != null && !r.isbn.isEmpty()) {
+                    md.append("- **ISBN:** ").append(r.isbn).append("\n");
+                }
+                if (!note.isEmpty()) {
+                    md.append("> ").append(note.replace("\n", "\n> ")).append("\n");
+                }
+                md.append("\n");
+            }
+            return md.toString();
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed to build reading log markdown", t);
+            return "# Folio Reading Log\n\nError generating reading log.";
+        } finally {
+            db.close();
+        }
+    }
+
+    public static File exportReadingLogMarkdown(Context ctx) {
+        try {
+            String md = buildReadingLogMarkdown(ctx);
+            File out = getReadingLogFile(ctx);
+            FileOutputStream fos = new FileOutputStream(out);
+            try {
+                fos.write(md.getBytes(StandardCharsets.UTF_8));
+                fos.flush();
+            } finally {
+                fos.close();
+            }
+            Log.i(TAG, "Exported reading log to " + out.getAbsolutePath());
+            return out;
+        } catch (Throwable t) {
+            Log.e(TAG, "Reading log export failed", t);
+            return null;
+        }
+    }
 }

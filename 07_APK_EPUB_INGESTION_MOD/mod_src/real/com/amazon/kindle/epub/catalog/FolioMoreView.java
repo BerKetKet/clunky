@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v6.7 KFX");
+        badgeTv.setText("Folio v6.8 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -222,6 +222,19 @@ public final class FolioMoreView {
                     @Override
                     public void onClick(View v) {
                         OpenCatalogView.showBackupRestoreDialog(ctx);
+                    }
+                }
+        ));
+
+        // Card C2: Reading Log & Markdown Export
+        container.addView(makeActionCard(
+                ctx, d,
+                "📄", "Reading Log & Export",
+                "Export rated, favorited & annotated books to Markdown",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showReadingLogDialog(ctx);
                     }
                 }
         ));
@@ -551,6 +564,62 @@ public final class FolioMoreView {
         }).start();
     }
 
+    private static void showReadingLogDialog(final Context ctx) {
+        final File outFile = com.amazon.kindle.epub.ingest.FolioMetadataBackup.exportReadingLogMarkdown(ctx);
+        final String md = com.amazon.kindle.epub.ingest.FolioMetadataBackup.buildReadingLogMarkdown(ctx);
+        float d = ctx.getResources().getDisplayMetrics().density;
+
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setBackgroundColor(0xFF161922);
+        box.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
+
+        TextView pathTv = new TextView(ctx);
+        pathTv.setText(outFile != null
+                ? "Saved to: " + outFile.getAbsolutePath()
+                : "Markdown preview ready");
+        pathTv.setTextColor(0xFF34D399);
+        pathTv.setTextSize(12);
+        pathTv.setTypeface(Typeface.DEFAULT_BOLD);
+        pathTv.setPadding(0, 0, 0, dp(d, 10));
+        box.addView(pathTv);
+
+        ScrollView sv = new ScrollView(ctx);
+        sv.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 340)));
+        TextView mdTv = new TextView(ctx);
+        mdTv.setText(md);
+        mdTv.setTextColor(0xFFE2E8F0);
+        mdTv.setTextSize(12);
+        mdTv.setTypeface(Typeface.MONOSPACE);
+        mdTv.setPadding(dp(d, 12), dp(d, 10), dp(d, 12), dp(d, 10));
+        GradientDrawable mdBg = new GradientDrawable();
+        mdBg.setColor(0xFF11131A);
+        mdBg.setCornerRadius(dp(d, 10));
+        mdBg.setStroke(dp(d, 1), 0xFF2A3142);
+        mdTv.setBackground(mdBg);
+        sv.addView(mdTv);
+        box.addView(sv);
+
+        new AlertDialog.Builder(ctx)
+                .setTitle("Reading Log (.md)")
+                .setView(box)
+                .setPositiveButton("Close", null)
+                .setNeutralButton("Copy Markdown", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                                    ctx.getSystemService(Context.CLIPBOARD_SERVICE);
+                            if (cm != null) {
+                                cm.setPrimaryClip(android.content.ClipData.newPlainText("Folio Reading Log", md));
+                                Toast.makeText(ctx, "Copied Reading Log Markdown to clipboard", Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+                })
+                .show();
+    }
+
     private static void showAboutDialog(final Context ctx) {
         // Collect live stats
         int indexedBooks = 0;
@@ -613,7 +682,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v6.7 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v6.8 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
