@@ -1,6 +1,28 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Centennial Milestone Folio v10.0 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 100 complete:
+  1. **Unified Quick Library Search & v10.0 Telemetry (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java`.
+     - Added sky-blue `🔍 Search` pill directly in Control Center header beside `Folio v10.0 KFX` badge.
+     - Built `showGlobalSearchDialog(...)` modal providing real-time search across books (title, author, genre, ISBN), reading notes (warm amber quotes), and custom shelves (`🏷 Shelf: Classics`).
+     - Added 1-tap `Read ›` launch into KFX reader, `Open in Catalog` deep link, and cover thumbnails.
+     - Added live `• Up Next & Goal: 1 queued · 1/5 annual goal` telemetry line to About Folio.
+     - Bumped badge and About Folio string to `Folio v10.0 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Milestone Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r100_quick_search_v10.png` (275 KB) — Quick Library Search modal showing search bar, `🏷 Shelf: Classics`, *Moby Dick*, *Animal Farm*, and *1984* note snippet with `Read ›` buttons.
+       * `verify_r100_about_v10.png` (341 KB) — About Folio modal showing `Version: Folio v10.0 KFX (Enhanced Typesetting)` and new `Up Next & Goal` telemetry.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v10.0 KFX release APK (137 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v10.0_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 100)
+1. `verify_r100_quick_search_v10.png`: Quick Library Search modal with search bar, shelves, and notes.
+2. `verify_r100_about_v10.png`: About Folio modal confirming `Version: Folio v10.0 KFX (Enhanced Typesetting)` and `Up Next & Goal` telemetry.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v10.0 KFX deployed (`lastUpdateTime=2026-11-23 02:44:49`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v9.9 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 099 complete:
   1. **Reading Goal Completed Books Trophy Shelf (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java`.
