@@ -1,11 +1,16 @@
 package com.amazon.kindle.epub.ingest;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -13,8 +18,8 @@ import java.util.Set;
 
 /**
  * Backfills folio_metadata.db from all existing local books in kindle_library.db,
- * enriching missing author, pub_date, publisher, genres, and ISBN via Open Library
- * on a background thread without blocking the UI.
+ * enriching missing author, pub_date, publisher, genres, ISBN, and missing cover
+ * thumbnails (local sidecars + Open Library Covers API fallback) on a background thread.
  */
 public final class LibraryMetadataBackfiller {
 
@@ -29,7 +34,6 @@ public final class LibraryMetadataBackfiller {
         String title;
         String author;
         String filePath;
-        String coverPath;
     }
 
     private LibraryMetadataBackfiller() {}
@@ -42,11 +46,13 @@ public final class LibraryMetadataBackfiller {
                 List<Candidate> candidates = readKindleLibraryBooks(ctx);
                 FolioMetadataDb metaDb = new FolioMetadataDb(ctx);
                 try {
+                    List<FolioMetadataDb.BookRecord> existingRecords = metaDb.getAllBooks();
                     Set<String> existingPaths = new HashSet<>();
-                    for (FolioMetadataDb.BookRecord r : metaDb.getAllBooks()) {
+                    for (FolioMetadataDb.BookRecord r : existingRecords) {
                         if (r.kfxPath != null) existingPaths.add(r.kfxPath);
                     }
 
+                    // Pass 1: Backfill any new books not yet in folio_metadata.db
                     List<Candidate> todo = new ArrayList<>();
                     for (Candidate c : candidates) {
                         if (c.filePath != null && !existingPaths.contains(c.filePath)) {
@@ -57,14 +63,24 @@ public final class LibraryMetadataBackfiller {
                         }
                     }
 
-                    int total = todo.size();
-                    for (int i = 0; i < total; i++) {
-                        Candidate c = todo.get(i);
+                    // Pass 2: Collect existing records missing a valid cover thumbnail
+                    List<FolioMetadataDb.BookRecord> missingCovers = new ArrayList<>();
+                    for (FolioMetadataDb.BookRecord r : existingRecords) {
+                        if (r.coverPath == null || r.coverPath.trim().isEmpty()
+                                || !new File(r.coverPath).exists()) {
+                            missingCovers.add(r);
+                        }
+                    }
+
+                    int totalWork = todo.size() + missingCovers.size();
+                    int done = 0;
+
+                    for (Candidate c : todo) {
+                        done++;
                         if (listener != null) {
-                            listener.onProgress(i + 1, total, c.title);
+                            listener.onProgress(done, totalWork, c.title);
                         }
                         File kfxFile = new File(c.filePath);
-                        File coverFile = resolveCover(kfxFile, c.coverPath);
 
                         EpubMetadataExtractor.BookMeta meta = new EpubMetadataExtractor.BookMeta();
                         meta.title = cleanTitleForLookup(c.title);
@@ -72,23 +88,38 @@ public final class LibraryMetadataBackfiller {
                                 ? c.author.trim() : "Unknown Author";
                         meta.author = cleanAuthorForLookup(originalAuthor, meta.title);
 
-                        // Enrich via Open Library (gracefully offline-safe)
                         MetadataEnricher.enrichInPlace(meta);
 
-                        // Restore sensible author if Open Library did not find an author
-                        if (meta.author == null || meta.author.isEmpty() || "Unknown Author".equalsIgnoreCase(meta.author)) {
+                        if (meta.author == null || meta.author.isEmpty()
+                                || "Unknown Author".equalsIgnoreCase(meta.author)) {
                             meta.author = originalAuthor;
                         }
-
-                        // Restore full display title while keeping enriched author/date/genres/ISBN
                         if (c.title != null && !c.title.trim().isEmpty()) {
                             meta.title = c.title.trim();
                         }
 
                         String bookKey = FolioMetadataDb.computeBookKey(meta.title, kfxFile.length());
+                        File coverFile = resolveOrFetchCover(ctx, kfxFile, bookKey, meta.isbn);
                         metaDb.upsertBook(bookKey, kfxFile, coverFile, kfxFile.getName(), meta);
                         added++;
                     }
+
+                    for (FolioMetadataDb.BookRecord r : missingCovers) {
+                        done++;
+                        if (listener != null) {
+                            listener.onProgress(done, totalWork, r.title);
+                        }
+                        File kfxFile = new File(r.kfxPath);
+                        File repaired = resolveOrFetchCover(ctx, kfxFile, r.bookKey, r.isbn);
+                        if (repaired != null && repaired.exists() && repaired.length() > 512) {
+                            ContentValues cv = new ContentValues();
+                            cv.put("cover_path", repaired.getAbsolutePath());
+                            metaDb.getWritableDatabase().update(
+                                    "books_metadata", cv, "id = ?", new String[] { String.valueOf(r.id) });
+                            added++;
+                        }
+                    }
+
                     totalInDb = metaDb.getAllBooks().size();
                 } finally {
                     metaDb.close();
@@ -111,7 +142,6 @@ public final class LibraryMetadataBackfiller {
         Cursor c = null;
         try {
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
-            // Join KindleContent with LocalContent on ID = KEY
             String sql = "SELECT k.TITLE, k.AUTHOR, l.FILE_PATH "
                     + "FROM KindleContent k "
                     + "INNER JOIN LocalContent l ON l.KEY = k.ID "
@@ -124,7 +154,6 @@ public final class LibraryMetadataBackfiller {
                 item.title = c.getString(0);
                 item.author = c.getString(1);
                 item.filePath = c.getString(2);
-                item.coverPath = null;
                 if (item.title != null && !item.title.trim().isEmpty()) {
                     out.add(item);
                 }
@@ -142,7 +171,6 @@ public final class LibraryMetadataBackfiller {
                             item.filePath = fp;
                             item.title = EpubMetadataExtractor.cleanTitleFromFilename(fp);
                             item.author = "";
-                            item.coverPath = "";
                             out.add(item);
                         }
                     }
@@ -155,20 +183,92 @@ public final class LibraryMetadataBackfiller {
         return out;
     }
 
-    private static File resolveCover(File kfxFile, String dbCoverPath) {
-        File sidecar = new File(kfxFile.getAbsolutePath() + ".cover.jpg");
-        if (sidecar.exists()) return sidecar;
-        if (dbCoverPath != null && !dbCoverPath.isEmpty()) {
-            File f = new File(dbCoverPath);
-            if (f.exists()) return f;
+    private static File resolveOrFetchCover(Context ctx, File bookFile, String bookKey, String isbn) {
+        // 1. Direct sidecar: <bookFile>.cover.jpg
+        File sidecar = new File(bookFile.getAbsolutePath() + ".cover.jpg");
+        if (sidecar.exists() && sidecar.length() > 512) return sidecar;
+
+        // 2. Sibling sidecar variants (<base>.cover.jpg, <base>.azw3.cover.jpg, <base>.kfx.cover.jpg)
+        File parent = bookFile.getParentFile();
+        String name = bookFile.getName();
+        int dot = name.lastIndexOf('.');
+        String base = dot > 0 ? name.substring(0, dot) : name;
+        if (parent != null) {
+            String[] variants = new String[] {
+                base + ".cover.jpg",
+                base + ".azw3.cover.jpg",
+                base + ".kfx.cover.jpg",
+                base + ".jpg"
+            };
+            for (String v : variants) {
+                File f = new File(parent, v);
+                if (f.exists() && f.length() > 512) return f;
+            }
+        }
+
+        // 3. Cached Folio cover in app storage
+        File cacheDir = new File(ctx.getFilesDir(), "folio_covers");
+        if (!cacheDir.exists()) cacheDir.mkdirs();
+        File cached = new File(cacheDir, bookKey + ".jpg");
+        if (cached.exists() && cached.length() > 512) return cached;
+
+        // 4. Fallback: fetch cover from Open Library Covers API by ISBN
+        if (isbn != null && !isbn.trim().isEmpty()) {
+            String cleanIsbn = isbn.replace("-", "").replace(" ", "").trim();
+            if (downloadCover("https://covers.openlibrary.org/b/isbn/" + cleanIsbn + "-M.jpg?default=false", cached)) {
+                return cached;
+            }
         }
         return null;
     }
 
-    /**
-     * Strips verbose omnibus suffixes like "(Illustrated) (Delphi Ancient Classics Book 11)"
-     * strictly for Open Library title lookup so hits succeed cleanly.
-     */
+    private static boolean downloadCover(String urlStr, File dest) {
+        HttpURLConnection conn = null;
+        InputStream in = null;
+        FileOutputStream out = null;
+        try {
+            URL url = new URL(urlStr);
+            int redirects = 0;
+            while (redirects < 5) {
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setInstanceFollowRedirects(true);
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(12000);
+                conn.setRequestProperty("User-Agent", "FolioReader/3.7 (Android; Local-First EPUB)");
+                int code = conn.getResponseCode();
+                if (code == 301 || code == 302 || code == 303 || code == 307) {
+                    String loc = conn.getHeaderField("Location");
+                    conn.disconnect();
+                    if (loc == null || loc.isEmpty()) return false;
+                    url = new URL(loc);
+                    redirects++;
+                    continue;
+                }
+                if (code != 200) return false;
+                break;
+            }
+            in = conn.getInputStream();
+            out = new FileOutputStream(dest);
+            byte[] buf = new byte[8192];
+            int n;
+            int total = 0;
+            while ((n = in.read(buf)) > 0) {
+                out.write(buf, 0, n);
+                total += n;
+            }
+            out.flush();
+            if (total > 1024) return true;
+            dest.delete();
+        } catch (Throwable ignored) {
+            if (dest.exists()) dest.delete();
+        } finally {
+            if (in != null) try { in.close(); } catch (Throwable ignored) {}
+            if (out != null) try { out.close(); } catch (Throwable ignored) {}
+            if (conn != null) try { conn.disconnect(); } catch (Throwable ignored) {}
+        }
+        return false;
+    }
+
     private static String cleanTitleForLookup(String raw) {
         if (raw == null) return "";
         String s = raw.replaceAll("\\([^)]*\\)", " ")

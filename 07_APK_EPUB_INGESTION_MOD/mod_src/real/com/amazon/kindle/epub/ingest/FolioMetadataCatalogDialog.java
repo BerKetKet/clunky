@@ -1,6 +1,7 @@
 package com.amazon.kindle.epub.ingest;
 
 import android.app.AlertDialog;
+import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -25,6 +26,8 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -34,11 +37,14 @@ import java.util.Set;
  * Dark-themed "Library Metadata & Genres" browser surfacing all rich metadata
  * stored in folio_metadata.db with:
  *   - Live search bar (title, author, genre, ISBN, publisher)
+ *   - Sort mode cycling (Recent / Title A-Z / Author / Year)
  *   - Title-cased genre filter chips
- *   - One-tap "Sync Library" button to backfill & enrich all existing books
- *   - Rich book cards (1-tap open in KRIFDocViewer, Info pill for full synopsis/details)
+ *   - One-tap "Sync & Enrich" button (backfills new books + repairs missing covers)
+ *   - Book Details (ⓘ) popup with "Edit Metadata" form & "Read Now" launch
  */
 public final class FolioMetadataCatalogDialog {
+
+    private static final String[] SORT_MODES = new String[] { "Recent", "Title", "Author", "Year" };
 
     private FolioMetadataCatalogDialog() {}
 
@@ -54,18 +60,35 @@ public final class FolioMetadataCatalogDialog {
         root.setBackgroundColor(Color.parseColor("#11131A"));
         root.setPadding(dp(ctx, 18), dp(ctx, 16), dp(ctx, 18), dp(ctx, 12));
 
-        // Top row: Eyebrow + Sync Library pill
+        // Top row: Eyebrow + Sort pill + Sync pill
         LinearLayout topRow = new LinearLayout(ctx);
         topRow.setOrientation(LinearLayout.HORIZONTAL);
         topRow.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView eyebrow = new TextView(ctx);
-        eyebrow.setText("FOLIO METADATA CATALOG");
+        eyebrow.setText("FOLIO METADATA");
         eyebrow.setTextColor(Color.parseColor("#F59E0B"));
         eyebrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         eyebrow.setTypeface(Typeface.DEFAULT_BOLD);
         eyebrow.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         topRow.addView(eyebrow);
+
+        final TextView btnSort = new TextView(ctx);
+        btnSort.setText("Sort: Recent");
+        btnSort.setTextColor(Color.parseColor("#E2E8F0"));
+        btnSort.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        btnSort.setTypeface(Typeface.DEFAULT_BOLD);
+        btnSort.setPadding(dp(ctx, 9), dp(ctx, 5), dp(ctx, 9), dp(ctx, 5));
+        GradientDrawable sortBg = new GradientDrawable();
+        sortBg.setColor(Color.parseColor("#1E2433"));
+        sortBg.setCornerRadius(dp(ctx, 14));
+        sortBg.setStroke(dp(ctx, 1), Color.parseColor("#334155"));
+        btnSort.setBackground(sortBg);
+        LinearLayout.LayoutParams sortLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sortLp.setMargins(0, 0, dp(ctx, 6), 0);
+        btnSort.setLayoutParams(sortLp);
+        topRow.addView(btnSort);
 
         final TextView btnSync = new TextView(ctx);
         btnSync.setText("Sync & Enrich");
@@ -139,11 +162,14 @@ public final class FolioMetadataCatalogDialog {
 
         final String[] selectedGenre = new String[] { "All" };
         final String[] queryText = new String[] { "" };
+        final int[] sortIdx = new int[] { 0 };
 
-        final Runnable render = new Runnable() {
+        final Runnable[] renderRef = new Runnable[1];
+        renderRef[0] = new Runnable() {
             @Override
             public void run() {
                 heading.setText("Library Metadata & Genres (" + allBooks.size() + ")");
+                btnSort.setText("Sort: " + SORT_MODES[sortIdx[0]]);
 
                 chipRow.removeAllViews();
                 for (final String g : genres) {
@@ -164,22 +190,30 @@ public final class FolioMetadataCatalogDialog {
                     chip.setLayoutParams(lp);
                     chip.setOnClickListener(v -> {
                         selectedGenre[0] = g;
-                        run();
+                        renderRef[0].run();
                     });
                     chipRow.addView(chip);
                 }
 
-                cardsContainer.removeAllViews();
+                List<FolioMetadataDb.BookRecord> filtered = new ArrayList<>();
                 String q = queryText[0].trim().toLowerCase(Locale.ROOT);
-                int shown = 0;
-                for (final FolioMetadataDb.BookRecord rec : allBooks) {
+                for (FolioMetadataDb.BookRecord rec : allBooks) {
                     if (!rec.hasGenre(selectedGenre[0])) continue;
                     if (!q.isEmpty() && !matchesQuery(rec, q)) continue;
-                    shown++;
-                    cardsContainer.addView(buildBookCard(ctx, rec, dialog));
+                    filtered.add(rec);
                 }
 
-                if (shown == 0) {
+                sortBooks(filtered, sortIdx[0]);
+
+                cardsContainer.removeAllViews();
+                for (final FolioMetadataDb.BookRecord rec : filtered) {
+                    cardsContainer.addView(buildBookCard(ctx, rec, dialog, () -> {
+                        loadFromDb(ctx, allBooks, genres);
+                        renderRef[0].run();
+                    }));
+                }
+
+                if (filtered.isEmpty()) {
                     TextView empty = new TextView(ctx);
                     empty.setText(allBooks.isEmpty()
                             ? "No books indexed yet. Tap \"Sync & Enrich\" above to index your Folio library."
@@ -192,11 +226,16 @@ public final class FolioMetadataCatalogDialog {
             }
         };
 
+        btnSort.setOnClickListener(v -> {
+            sortIdx[0] = (sortIdx[0] + 1) % SORT_MODES.length;
+            renderRef[0].run();
+        });
+
         searchBox.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 queryText[0] = s != null ? s.toString() : "";
-                render.run();
+                renderRef[0].run();
             }
             @Override public void afterTextChanged(Editable s) {}
         });
@@ -207,7 +246,7 @@ public final class FolioMetadataCatalogDialog {
             LibraryMetadataBackfiller.syncAllAsync(ctx, new LibraryMetadataBackfiller.ProgressListener() {
                 @Override
                 public void onProgress(final int done, final int total, final String currentTitle) {
-                    mainHandler.post(() -> btnSync.setText("Enriching " + done + "/" + total));
+                    mainHandler.post(() -> btnSync.setText("Sync " + done + "/" + total));
                 }
 
                 @Override
@@ -216,10 +255,10 @@ public final class FolioMetadataCatalogDialog {
                         btnSync.setEnabled(true);
                         btnSync.setText("Sync & Enrich");
                         loadFromDb(ctx, allBooks, genres);
-                        render.run();
+                        renderRef[0].run();
                         Toast.makeText(ctx,
                                 newlyAdded > 0
-                                        ? "Indexed " + newlyAdded + " books (" + totalInDb + " total)"
+                                        ? "Updated " + newlyAdded + " books (" + totalInDb + " total)"
                                         : "All " + totalInDb + " library books are up to date",
                                 Toast.LENGTH_SHORT).show();
                     });
@@ -227,8 +266,41 @@ public final class FolioMetadataCatalogDialog {
             });
         });
 
-        render.run();
+        renderRef[0].run();
         dialog.show();
+    }
+
+    private static void sortBooks(List<FolioMetadataDb.BookRecord> list, final int mode) {
+        Collections.sort(list, new Comparator<FolioMetadataDb.BookRecord>() {
+            @Override
+            public int compare(FolioMetadataDb.BookRecord a, FolioMetadataDb.BookRecord b) {
+                if (mode == 1) { // Title A-Z
+                    return safeLower(a.title).compareTo(safeLower(b.title));
+                } else if (mode == 2) { // Author A-Z
+                    return safeLower(a.author).compareTo(safeLower(b.author));
+                } else if (mode == 3) { // Year (oldest to newest, blank last)
+                    int ya = parseYear(a.pubDate);
+                    int yb = parseYear(b.pubDate);
+                    if (ya == yb) return safeLower(a.title).compareTo(safeLower(b.title));
+                    return Integer.compare(ya, yb);
+                }
+                // Default 0: Recent (descending addedAt)
+                return Long.compare(b.addedAt, a.addedAt);
+            }
+        });
+    }
+
+    private static int parseYear(String pubDate) {
+        if (pubDate == null || pubDate.trim().isEmpty()) return 9999;
+        String digits = pubDate.replaceAll("[^0-9]", "");
+        if (digits.length() >= 4) {
+            try { return Integer.parseInt(digits.substring(0, 4)); } catch (Throwable ignored) {}
+        }
+        return 9999;
+    }
+
+    private static String safeLower(String s) {
+        return s == null ? "" : s.trim().toLowerCase(Locale.ROOT);
     }
 
     private static void loadFromDb(Context ctx, List<FolioMetadataDb.BookRecord> outBooks, List<String> outGenres) {
@@ -269,8 +341,7 @@ public final class FolioMetadataCatalogDialog {
         if (s == null || s.isEmpty()) return "";
         String[] words = s.split("\\s+");
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < words.length; i++) {
-            String w = words[i];
+        for (String w : words) {
             if (w.isEmpty()) continue;
             if (sb.length() > 0) sb.append(' ');
             sb.append(Character.toUpperCase(w.charAt(0)));
@@ -280,7 +351,7 @@ public final class FolioMetadataCatalogDialog {
     }
 
     private static View buildBookCard(final Context ctx, final FolioMetadataDb.BookRecord rec,
-                                      final AlertDialog parentDialog) {
+                                      final AlertDialog parentDialog, final Runnable onMetadataEdited) {
         LinearLayout card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setPadding(dp(ctx, 12), dp(ctx, 12), dp(ctx, 12), dp(ctx, 12));
@@ -355,13 +426,12 @@ public final class FolioMetadataCatalogDialog {
 
         card.addView(col);
 
-        // Info badge button -> shows full Book Details & synopsis
         TextView infoBtn = new TextView(ctx);
         infoBtn.setText("ⓘ");
         infoBtn.setTextColor(Color.parseColor("#94A3B8"));
         infoBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         infoBtn.setPadding(dp(ctx, 8), dp(ctx, 4), dp(ctx, 2), dp(ctx, 4));
-        infoBtn.setOnClickListener(v -> showBookDetailDialog(ctx, rec, parentDialog));
+        infoBtn.setOnClickListener(v -> showBookDetailDialog(ctx, rec, parentDialog, onMetadataEdited));
         card.addView(infoBtn);
 
         card.setOnClickListener(v -> {
@@ -378,7 +448,7 @@ public final class FolioMetadataCatalogDialog {
     }
 
     private static void showBookDetailDialog(final Context ctx, final FolioMetadataDb.BookRecord rec,
-                                             final AlertDialog parentDialog) {
+                                             final AlertDialog parentDialog, final Runnable onMetadataEdited) {
         LinearLayout box = new LinearLayout(ctx);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setBackgroundColor(Color.parseColor("#161922"));
@@ -422,11 +492,11 @@ public final class FolioMetadataCatalogDialog {
             box.addView(descTv);
         }
 
-        ScrollView sv = new ScrollView(ctx);
-        sv.addView(box);
+        ScrollView detailSv = new ScrollView(ctx);
+        detailSv.addView(box);
 
         new AlertDialog.Builder(ctx)
-                .setView(sv)
+                .setView(detailSv)
                 .setPositiveButton("Read Now", (d, w) -> {
                     File f = new File(rec.kfxPath);
                     if (f.exists()) {
@@ -434,8 +504,81 @@ public final class FolioMetadataCatalogDialog {
                         ExternalEpubActivity.launchKfxReader(ctx, f);
                     }
                 })
+                .setNeutralButton("Edit Metadata", (d, w) ->
+                        showEditMetadataDialog(ctx, rec, onMetadataEdited))
                 .setNegativeButton("Close", null)
                 .show();
+    }
+
+    private static void showEditMetadataDialog(final Context ctx, final FolioMetadataDb.BookRecord rec,
+                                               final Runnable onSaved) {
+        ScrollView sv = new ScrollView(ctx);
+        LinearLayout form = new LinearLayout(ctx);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setBackgroundColor(Color.parseColor("#161922"));
+        form.setPadding(dp(ctx, 20), dp(ctx, 18), dp(ctx, 20), dp(ctx, 14));
+        sv.addView(form);
+
+        TextView hdr = new TextView(ctx);
+        hdr.setText("Edit Book Metadata");
+        hdr.setTextColor(Color.WHITE);
+        hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        hdr.setTypeface(Typeface.DEFAULT_BOLD);
+        hdr.setPadding(0, 0, 0, dp(ctx, 12));
+        form.addView(hdr);
+
+        final EditText etTitle = addField(ctx, form, "Title", rec.title);
+        final EditText etAuthor = addField(ctx, form, "Author", rec.author);
+        final EditText etPubDate = addField(ctx, form, "Published Date / Year", rec.pubDate);
+        final EditText etPublisher = addField(ctx, form, "Publisher", rec.publisher);
+        final EditText etGenres = addField(ctx, form, "Genres (comma-separated)", rec.genres);
+        final EditText etIsbn = addField(ctx, form, "ISBN", rec.isbn);
+
+        new AlertDialog.Builder(ctx)
+                .setView(sv)
+                .setPositiveButton("Save", (d, w) -> {
+                    FolioMetadataDb db = new FolioMetadataDb(ctx);
+                    try {
+                        ContentValues cv = new ContentValues();
+                        cv.put("title", etTitle.getText().toString().trim());
+                        cv.put("author", etAuthor.getText().toString().trim());
+                        cv.put("pub_date", etPubDate.getText().toString().trim());
+                        cv.put("publisher", etPublisher.getText().toString().trim());
+                        cv.put("genres", etGenres.getText().toString().trim());
+                        cv.put("isbn", etIsbn.getText().toString().trim());
+                        db.getWritableDatabase().update(
+                                "books_metadata", cv, "id = ?", new String[] { String.valueOf(rec.id) });
+                        Toast.makeText(ctx, "Saved metadata changes", Toast.LENGTH_SHORT).show();
+                        if (onSaved != null) onSaved.run();
+                    } finally {
+                        db.close();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private static EditText addField(Context ctx, LinearLayout parent, String label, String value) {
+        TextView tv = new TextView(ctx);
+        tv.setText(label);
+        tv.setTextColor(Color.parseColor("#CBD5E1"));
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tv.setPadding(0, dp(ctx, 6), 0, dp(ctx, 4));
+        parent.addView(tv);
+
+        EditText et = new EditText(ctx);
+        et.setText(value != null ? value : "");
+        et.setTextColor(Color.WHITE);
+        et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        et.setSingleLine(true);
+        et.setPadding(dp(ctx, 10), dp(ctx, 8), dp(ctx, 10), dp(ctx, 8));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Color.parseColor("#1E2433"));
+        bg.setCornerRadius(dp(ctx, 8));
+        bg.setStroke(dp(ctx, 1), Color.parseColor("#334155"));
+        et.setBackground(bg);
+        parent.addView(et);
+        return et;
     }
 
     private static int dp(Context ctx, int v) {
