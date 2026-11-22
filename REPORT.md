@@ -1,48 +1,46 @@
-# Folio Milestone Release Report: "More by Author" Sibling Carousel in Book Details (Round 095)
+# Folio Release Report: 1-Tap Sort Picker Modal, Direction Toggle & Size/Queue Sorts (Round 096)
 
 **Date:** 2026-11-23  
-**Target Package:** `com.amazon.kindle.epub` (Milestone Folio v9.5 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v9.6 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v9.5_kfx/base.apk` (132 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v9.6_kfx/base.apk` (137 MB / 137,453,254 bytes)
 
 ---
 
 ## 1. Executive Summary
 
-In Milestone Round 095, Folio advanced to **Milestone Folio v9.5 KFX**. Drop-in updates were integrated into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`. Antigravity compiled Dalvik DEX (`classes9.dex`, 328,932 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **"MORE BY [AUTHOR] (N)" Interactive Sibling Carousel (`FolioMetadataCatalogDialog.java`)**:
-   - Automatically queries `folio_metadata.db` to discover all other cataloged volumes by the same normalized author.
-   - Situates an interactive horizontal card carousel right below the Personal Note card.
-   - Each sibling card features a standalone `.cover.jpg` thumbnail, 2-line title, and live dynamic badge (`✓ Done ›`, `X% read ›`, `📌 Up Next ›`, or publication year).
-   - Tapping any card switches immediately to that book's Details (`ⓘ`) modal in 1 tap.
+In Round 096, Folio advanced to **Folio v9.6 KFX**. Drop-in updates were integrated into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`. Antigravity compiled Dalvik DEX (`classes9.dex`, 333,020 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **1-Tap Dark `Sort Catalog` Picker Modal (`FolioMetadataCatalogDialog.java`)**:
+   - Replaced linear cycling of the `Sort: ...` button with a dark modal (`showSortPickerDialog(...)`) providing 1-tap direct selection across all **9 sort modes**:
+     1. `Recently Added`
+     2. `Title (A–Z)`
+     3. `Author (A–Z)`
+     4. `Publication Year`
+     5. `Reading Progress`
+     6. `Favorites First`
+     7. `Star Rating`
+     8. `File Size (Largest)`
+     9. `📌 Up Next Queue First`
+   - Active sort mode is prominently badged with an amber `✓` and warm gold tint (`#F59E0B`).
+   - Added persistent **`↓ Standard / ↑ Reversed`** direction toggle pill in the modal header, stored in `SharedPreferences("folio_ui_prefs", "catalog_sort_rev")`.
+   - The top bar `Sort:` pill displays dynamic live arrow indicators (`↓`/`↑`) reflecting the current sort direction.
 2. **Control Center & About Version Bump (`FolioMoreView.java`)**:
-   - Bumped Control Center header badge and About Folio dialog string to **Milestone Folio v9.5 KFX (Enhanced Typesetting)**.
+   - Bumped Control Center header badge and About Folio dialog string to **Folio v9.6 KFX (Enhanced Typesetting)**.
 3. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Folio v9.5 KFX
+## 2. Integrated Features in Folio v9.6 KFX
 
-### A. Author Sibling Discovery & Card Layout (`FolioMetadataCatalogDialog.java`)
-- Sibling Query:
+### A. Sort Picker Modal Architecture (`FolioMetadataCatalogDialog.java`)
+- Direction state is read from and written to `folio_ui_prefs`:
   ```java
-  String curAuthorClean = formatAuthorForDisplay(rec.author);
-  if (!curAuthorClean.isEmpty() && !"Unknown Author".equalsIgnoreCase(curAuthorClean)) {
-      List<FolioMetadataDb.BookRecord> siblings = new ArrayList<>();
-      FolioMetadataDb sibDb = new FolioMetadataDb(ctx);
-      try {
-          for (FolioMetadataDb.BookRecord cand : sibDb.getAllBooks()) {
-              if (cand.id == rec.id) continue;
-              if (curAuthorClean.equalsIgnoreCase(formatAuthorForDisplay(cand.author))) {
-                  siblings.add(cand);
-              }
-          }
-      } finally { sibDb.close(); }
-  ...
+  boolean sortReversed = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+      .getBoolean("catalog_sort_rev", false);
   ```
-- 1-Tap Sibling Navigation:
-  - Tapping a sibling card calls `showBookDetailDialog(...)` with the sibling record, allowing smooth lateral exploration across an author's complete library catalog.
+- Tapping the sort direction toggle updates SharedPreferences and reverses sorting comparisons cleanly across all 9 modes (including file size and queue priority).
+- When a user selects any of the 9 sort options, the active mode updates immediately and the catalog list re-sorts and renders in-place.
 
 ---
 
@@ -50,8 +48,8 @@ In Milestone Round 095, Folio advanced to **Milestone Folio v9.5 KFX**. Drop-in 
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **More by Author Details** | Book Details Modal | `verify_r95_more_by_author_details.png` | **VERIFIED**: Opened Book Details for *1984*; verified `MORE BY GEORGE ORWELL (1)` horizontal strip right below Personal Note card, showing *Animal farm: a fairy story* with standalone cover thumbnail, title, and violet `📌 Up Next ›` status badge (`[215, 1774][515, 1858]`). |
-| **About Folio v9.5 KFX** | About Folio Modal | `verify_r95_about_v95.png` | **VERIFIED**: Tapped Control Center version badge; verified modal confirming `Version: Folio v9.5 KFX (Enhanced Typesetting)` and live stats. |
+| **Sort Catalog Picker Modal** | Metadata Catalog Modal | `verify_r96_sort_picker_modal.png` | **VERIFIED**: Tapped `Sort: Added ↓` on top bar; verified dark `Sort Catalog` modal showing `↓ Standard` toggle pill and all 9 sort modes with amber `✓` on `Recently Added` (`[120, 480][960, 1680]`). |
+| **About Folio v9.6 KFX** | About Folio Modal | `verify_r96_about_v96.png` | **VERIFIED**: Tapped Control Center version badge; verified modal confirming `Version: Folio v9.6 KFX (Enhanced Typesetting)` and live stats. |
 | **Stock Kindle Invariant** | Android OS PackageManager | CLI `dumpsys package com.amazon.kindle` | **VERIFIED**: `lastUpdateTime=2026-11-19 21:59:23` completely untouched. |
 
 ---
