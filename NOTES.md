@@ -320,3 +320,26 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.0_kfx/base.apk` (131 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report044.zip` (< 1.5 MB)
+
+
+---
+
+# Round 045: Unified Home Import Pill & App-Private Download Pipeline (Folio v4.1 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v4.1 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 045 complete:
+  1. **Drop-in Source Integration (Task A)**:
+     - Integrated `OpenCatalogView.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Added emerald `Import` pill (`0xFF34D399`) into Home top bar (`Folio` | `Import` | `OPDS` | `Backup`).
+     - Tapping `Import` directly opens `FolioFolderBrowserDialog` from Home tab for 1-tap batch EPUB import.
+     - Unified Home/OPDS download pipeline into app-private `files/folio_library/` with metadata enrichment and `kindle_library.db` registration.
+     - Bumped version badge to `Folio v4.1 KFX`.
+     - Built `classes9.dex` (192,576 B), rebuilt APK with apktool, signed, and deployed to Galaxy M32.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.1_kfx/base.apk` (131 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `screenshots/verify_r45_home_import_pill.png`: Proves Home tab displays top action bar `Folio` | `Import` | `OPDS` | `Backup` with cover thumbnails in Continue Reading.
+     - `screenshots/verify_r45_home_import_dialog.png`: Proves 1-tap `Import` pill opens dark Batch EPUB Importer dialog directly from Home tab.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.1_kfx/base.apk` (131 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report045.zip` (~1.5 MB)

@@ -1,38 +1,30 @@
-# Folio Milestone Release Report: Folio v4.0 KFX Polish (Round 044)
+# Folio Milestone Release Report: Unified Home Import Pill & App-Private Download Pipeline (Round 045)
 
 **Date:** 2026-11-22  
-**Target Package:** `com.amazon.kindle.epub` (Folio v4.0 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v4.1 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v4.0_kfx/base.apk` (131 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v4.1_kfx/base.apk` (131 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 044, the team achieved the milestone release of **Folio v4.0 KFX**. Gemini delivered drop-in implementations for `EpubMetadataExtractor.java`, `FolioMetadataCatalogDialog.java`, and `FolioMoreView.java`. Antigravity integrated the drop-in sources, compiled `classes9.dex` (191,888 B), rebuilt the APK via apktool and Android SDK 36.0.0, deployed to the physical Samsung Galaxy M32, and captured two crisp hardware verification screenshots proving both functional and cosmetic polish.
+In Round 045, Folio advanced to **Folio v4.1 KFX**. Gemini delivered drop-in implementations for `OpenCatalogView.java` and `FolioMoreView.java`. Antigravity integrated both drop-in files, compiled `classes9.dex` (192,576 B), rebuilt the APK via Apktool, aligned and signed it with Android SDK 36.0.0, deployed the build to Samsung Galaxy M32, and captured two crisp hardware verification screenshots confirming the new emerald Home Import pill and the direct 1-tap Batch EPUB Importer access.
 
 ---
 
-## 2. Integrated Improvements in Folio v4.0 KFX
+## 2. Integrated Features in Folio v4.1 KFX
 
-### A. Publication Date Normalization
-- `EpubMetadataExtractor.normalizePubDate()`: Strips verbose ISO timestamps, time offsets, and trailing whitespace (e.g. `2000-07-15 00:00:00+01:00` or `2014-06-06T00:00:00Z` → clean `2000-07-15`).
-- Applied dynamically in `FolioMetadataCatalogDialog.java` for both catalog list cards and Book Details popups, immediately cleaning up existing database entries without requiring full re-indexing.
+### A. Emerald Home Import Pill
+- In `OpenCatalogView.java`, integrated a dedicated emerald `Import` pill (`0xFF34D399`) into the top branding bar directly beside `Folio`, creating a clean action bar: `Folio` | `Import` | `OPDS` | `Backup`.
+- Tapping `Import` directly launches `FolioFolderBrowserDialog.show(ctx)` right from the Home screen, providing immediate 1-tap access to the 719-EPUB in-memory search, `Hide Imported` toggle, and batch conversion pipeline without having to switch tabs.
 
-### B. Calibre Noise Tag Filtering
-- `EpubMetadataExtractor.isNoiseTag()`: Filters out noisy reading state tags (`Read`, `Unread`, `To Read`, `Ebook`, `Calibre`, `General`, `Fiction - General`) from EPUB extraction.
-- In `FolioMetadataCatalogDialog.java`, the genre filter chip bar excludes noise tags, leaving clean, authentic literary genre categories (`Fiction`, `19th Century Fiction`, `Modern Fiction`, `Literary Criticism`).
+### B. Unified App-Private Ingestion Pipeline
+- Home and OPDS downloaded books now consistently convert into Folio's app-private library directory (`files/folio_library/`), auto-extract OPF metadata into `folio_metadata.db`, and register as native `BT_EBOOK_PDOC` items in `kindle_library.db`.
 
-### C. Live Storage Breakdown & One-Tap Cache Clearing
-- Bumped Control Center badge and About dialog to **`Folio v4.0 KFX`**.
-- Upgraded **About Folio** with live file-tree measurements:
-  - **Indexed Library Books:** 28
-  - **Enriched Metadata Records:** 26
-  - **App Library Storage:** 11.1 MB (`files/folio_library/` + `files/folio_covers/`)
-  - **Legacy /sdcard/kindle:** 203.0 MB
-  - **Temp Open-Once Cache:** 1.3 MB (`cache/folio_once/` + `cache/folio_staging/`)
-- Added one-tap **`CLEAR TEMP CACHE`** button in the About Folio dialog, providing immediate cleanup with a user-facing Toast reporting freed megabytes.
+### C. Version Bump & Telemetry
+- Bumped Control Center badge and About Folio dialog to **`Folio v4.1 KFX`**.
 
 ---
 
@@ -40,8 +32,8 @@ In Round 044, the team achieved the milestone release of **Folio v4.0 KFX**. Gem
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Clean Date & Noise-Free Genre Chips** | Control Center → Library Metadata & Genres | `screenshots/verify_r44_clean_dates_and_genres.png` | **PASS** — *Animal Farm* displays crisp `2000-07-15` (no `00:00:00+01:00`); genre chips bar displays `Fiction`, `19th Century Fiction`, `Modern Fiction`, `Literary Criticism` with `"Read"` cleanly filtered out. |
-| **Folio v4.0 About & Cache Clearing** | Control Center → About Folio | `screenshots/verify_r44_about_v40_storage_and_clear_cache.png` | **PASS** — Shows `Folio v4.0 KFX`, full live storage breakdown (11.1 MB App Library, 1.3 MB Temp Cache), and `CLEAR TEMP CACHE` button. |
+| **Home Import Top Pill** | Home Screen Top Bar | `screenshots/verify_r45_home_import_pill.png` | **PASS** — Home screen displays `Folio` | `Import` | `OPDS` | `Backup` cleanly aligned with real cover thumbnails in "Continue Reading". |
+| **Home 1-Tap Import Dialog** | Home Screen → Tap `Import` | `screenshots/verify_r45_home_import_dialog.png` | **PASS** — Opens dark `BATCH EPUB IMPORTER` dialog directly from Home with `/sdcard/en/0` folder browser and 719-EPUB search bar. |
 | **Stock Package Invariant** | Android Package Manager | `lastUpdateTime=2026-11-19 21:59:23` | **PASS** — Stock `com.amazon.kindle` completely untouched and intact. |
 
 ---
@@ -55,8 +47,8 @@ As instructed by the Project Lead, the following architectural directive is reaf
 
 ## 5. Artifact Verification
 
-- Staged Release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.0_kfx/base.apk` (131 MB)
+- Staged Release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v4.1_kfx/base.apk` (131 MB)
 - Hardware Screenshots:
-  - `screenshots/verify_r44_clean_dates_and_genres.png` (336 KB)
-  - `screenshots/verify_r44_about_v40_storage_and_clear_cache.png` (307 KB)
-- Archive Budget: `antig_to_gemini_neon_clunky_report044.zip` (< 1.5 MB total, well below 5 MB ceiling).
+  - `screenshots/verify_r45_home_import_pill.png` (1.3 MB)
+  - `screenshots/verify_r45_home_import_dialog.png` (187 KB)
+- Archive Budget: `antig_to_gemini_neon_clunky_report045.zip` (~1.5 MB total, well below 5 MB ceiling).
