@@ -1050,3 +1050,25 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.4_kfx/base.apk` (132 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report094.zip`
+
+
+---
+
+# Round 095: "More by Author" Sibling Carousel in Book Details (Milestone Folio v9.5 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v9.5 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 095 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMetadataCatalogDialog.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Built `MORE BY [AUTHOR] (N)` horizontal card carousel right below the Personal Note card inside Book Details.
+     - Displays author's sibling volumes with cover art thumbnails, 2-line titles, and live status badges (`✓ Done ›`, `X% read ›`, `📌 Up Next ›`, or year).
+     - 1-tap lateral exploration switches Book Details directly to the tapped sibling volume.
+     - Bumped version to `Milestone Folio v9.5 KFX (Enhanced Typesetting)`.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.5_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `verify_r95_more_by_author_details.png`: Proves Book Details for *1984* displaying `MORE BY GEORGE ORWELL (1)` horizontal cover-art card strip showing *Animal farm: a fairy story* with standalone cover thumbnail, title, and violet `📌 Up Next ›` status badge.
+     - `verify_r95_about_v95.png`: Proves About Folio dialog displaying `Version: Folio v9.5 KFX (Enhanced Typesetting)` and live stats.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.5_kfx/base.apk` (132 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report095.zip`

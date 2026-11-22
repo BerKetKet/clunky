@@ -1,49 +1,48 @@
-# Folio Milestone Release Report: Bulk Queue Action & Grid-View Up Next Badge (Round 094)
+# Folio Milestone Release Report: "More by Author" Sibling Carousel in Book Details (Round 095)
 
 **Date:** 2026-11-23  
-**Target Package:** `com.amazon.kindle.epub` (Folio v9.4 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Milestone Folio v9.5 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v9.4_kfx/base.apk` (132 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v9.5_kfx/base.apk` (132 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 094, Folio advanced to **Folio v9.4 KFX**. Drop-in updates were integrated into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`. Antigravity compiled Dalvik DEX (`classes9.dex`, 326,536 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **Bulk `📌Queue` Action Pill (`FolioMetadataCatalogDialog.java`)**:
-   - Upgraded the bottom Multi-Select Bulk Action Bar to a sleek 5-pill single row (`Shelf`, `+Genre`, `📌Queue`, `★Fav`, `✓Done`).
-   - Tapping `📌Queue` toggles queue status for all selected volumes with Toast feedback and immediate reactive catalog refresh.
-2. **Grid-View Violet `📌 Up Next` Badge (`FolioMetadataCatalogDialog.java`)**:
-   - Unread queued books in the 3-column Cover Art Grid view now display a violet **`📌 Up Next`** badge (`#C084FC`) instead of generic `Unread`.
-3. **Control Center & About Version Bump (`FolioMoreView.java`)**:
-   - Bumped Control Center header badge and About Folio dialog string to **Folio v9.4 KFX (Enhanced Typesetting)**.
-4. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
+In Milestone Round 095, Folio advanced to **Milestone Folio v9.5 KFX**. Drop-in updates were integrated into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`. Antigravity compiled Dalvik DEX (`classes9.dex`, 328,932 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **"MORE BY [AUTHOR] (N)" Interactive Sibling Carousel (`FolioMetadataCatalogDialog.java`)**:
+   - Automatically queries `folio_metadata.db` to discover all other cataloged volumes by the same normalized author.
+   - Situates an interactive horizontal card carousel right below the Personal Note card.
+   - Each sibling card features a standalone `.cover.jpg` thumbnail, 2-line title, and live dynamic badge (`✓ Done ›`, `X% read ›`, `📌 Up Next ›`, or publication year).
+   - Tapping any card switches immediately to that book's Details (`ⓘ`) modal in 1 tap.
+2. **Control Center & About Version Bump (`FolioMoreView.java`)**:
+   - Bumped Control Center header badge and About Folio dialog string to **Milestone Folio v9.5 KFX (Enhanced Typesetting)**.
+3. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Folio v9.4 KFX
+## 2. Integrated Features in Folio v9.5 KFX
 
-### A. Bulk Queue Action (`FolioMetadataCatalogDialog.java`)
-- 5-Pill Single-Row Layout:
+### A. Author Sibling Discovery & Card Layout (`FolioMetadataCatalogDialog.java`)
+- Sibling Query:
   ```java
-  final TextView btnBulkShelf = makeBulkActionPill(ctx, "Shelf", "#312E81", "#C7D2FE", "#4F46E5");
-  final TextView btnBulkGenre = makeBulkActionPill(ctx, "+Genre", "#152638", "#38BDF8", "#1E4E75");
-  final TextView btnBulkQueue = makeBulkActionPill(ctx, "📌Queue", "#2B1B3D", "#C084FC", "#6B21A8");
-  final TextView btnBulkFav = makeBulkActionPill(ctx, "★Fav", "#3B2A14", "#FBBF24", "#784F1D");
-  final TextView btnBulkDone = makeBulkActionPill(ctx, "✓Done", "#123328", "#34D399", "#1E664E");
+  String curAuthorClean = formatAuthorForDisplay(rec.author);
+  if (!curAuthorClean.isEmpty() && !"Unknown Author".equalsIgnoreCase(curAuthorClean)) {
+      List<FolioMetadataDb.BookRecord> siblings = new ArrayList<>();
+      FolioMetadataDb sibDb = new FolioMetadataDb(ctx);
+      try {
+          for (FolioMetadataDb.BookRecord cand : sibDb.getAllBooks()) {
+              if (cand.id == rec.id) continue;
+              if (curAuthorClean.equalsIgnoreCase(formatAuthorForDisplay(cand.author))) {
+                  siblings.add(cand);
+              }
+          }
+      } finally { sibDb.close(); }
+  ...
   ```
-- Batch Queue Logic:
-  - Checks if all selected books are in queue; if so, unqueues them; otherwise queues all selected books in FIFO order.
-
-### B. Grid-View Queue Badge (`FolioMetadataCatalogDialog.java`)
-- Replaces generic `Unread` text for queued books:
-  ```java
-  } else if (isInQueue(ctx, rec.kfxPath)) {
-      badgeTv.setText("📌 Up Next");
-      badgeTv.setTextColor(Color.parseColor("#C084FC"));
-  }
-  ```
+- 1-Tap Sibling Navigation:
+  - Tapping a sibling card calls `showBookDetailDialog(...)` with the sibling record, allowing smooth lateral exploration across an author's complete library catalog.
 
 ---
 
@@ -51,8 +50,8 @@ In Round 094, Folio advanced to **Folio v9.4 KFX**. Drop-in updates were integra
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Bulk Queue & Grid Badge** | Metadata Catalog (Multi-Select) | `verify_r94_bulk_queue_grid_badge.png` | **VERIFIED**: Opened Metadata Catalog in 3-column Grid view; tapped `☑ Select`; verified violet **`📌 Up Next`** badge on *Animal farm: a fairy story* (`[725, 1287][941, 1324]`) AND new 5-pill Bulk Action Bar (`Shelf`, `+Genre`, `📌Queue`, `★Fav`, `✓Done`). |
-| **About Folio v9.4 KFX** | About Folio Modal | `verify_r94_about_v94.png` | **VERIFIED**: Tapped Control Center version badge; verified modal confirming `Version: Folio v9.4 KFX (Enhanced Typesetting)` and live stats. |
+| **More by Author Details** | Book Details Modal | `verify_r95_more_by_author_details.png` | **VERIFIED**: Opened Book Details for *1984*; verified `MORE BY GEORGE ORWELL (1)` horizontal strip right below Personal Note card, showing *Animal farm: a fairy story* with standalone cover thumbnail, title, and violet `📌 Up Next ›` status badge (`[215, 1774][515, 1858]`). |
+| **About Folio v9.5 KFX** | About Folio Modal | `verify_r95_about_v95.png` | **VERIFIED**: Tapped Control Center version badge; verified modal confirming `Version: Folio v9.5 KFX (Enhanced Typesetting)` and live stats. |
 | **Stock Kindle Invariant** | Android OS PackageManager | CLI `dumpsys package com.amazon.kindle` | **VERIFIED**: `lastUpdateTime=2026-11-19 21:59:23` completely untouched. |
 
 ---
