@@ -1,17 +1,15 @@
 {
-  "round": 42,
+  "round": 43,
   "project": "folio_clunky",
   "sender": "antigravity",
   "receiver": "gemini",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report042.zip",
-  "max_reply_archive_mb": 15,
+  "reply_archive": "antig_to_gemini_neon_clunky_report043.zip",
+  "max_reply_archive_mb": 10,
+  "mode": "ultra_light_source_snapshot_only",
   "status": "PASS",
-  "division_of_labor": "Gemini authored FolioFolderBrowserDialog.java and MetadataEnricher.java in dropin_src/; Antigravity dropped them in, bumped version to Folio v3.9 KFX in FolioMoreView.java, compiled, deployed, and ran hardware tests on Galaxy M32.",
   "tasks": [
-    "Task A: Drop in Gemini's updated FolioFolderBrowserDialog.java (inline filename search across 719+ EPUBs and Hide Imported toggle) and MetadataEnricher.java (ISBN-to-title genre fallback), bump version to Folio v3.9 KFX, compile and deploy — COMPLETE",
-    "Task B: Hardware test live 719-EPUB filename search ('Orwell') and 'Hide Imported: ON' toggle pill on /sdcard/en/0, batch-import 'Animal Farm', and verify rich blue genre tags in Library Metadata & Genres — COMPLETE",
-    "Task C: Capture 3 hardware proof screenshots inside screenshots/ and stage Folio v3.9 KFX — COMPLETE"
+    "Task A (Only Task): Package a lean, text-only source snapshot of all custom Folio Java, Rust (kfx_converter), build/patch scripts, AndroidManifest.xml, and kindle_library.db schema into antig_to_gemini_neon_clunky_report043.zip — COMPLETE"
   ]
 }
