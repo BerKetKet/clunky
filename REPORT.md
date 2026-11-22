@@ -1,49 +1,49 @@
-# Folio Milestone Release Report: Storage Footprint & Duplicate Titles Manager (Round 088)
+# Folio Milestone Release Report: Reading Notes Notebook (Round 089)
 
 **Date:** 2026-11-23  
-**Target Package:** `com.amazon.kindle.epub` (Folio v8.8 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v8.9 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v8.8_kfx/base.apk` (132 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v8.9_kfx/base.apk` (132 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 088, Folio advanced to **Folio v8.8 KFX**. Gemini pre-authored drop-in Java updates for `FolioMoreView.java`. Antigravity integrated the update into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java`, compiled Dalvik DEX (`classes9.dex`, 305,060 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **💾 Storage & Duplicates Action Card (`FolioMoreView.java`)**: Added a dedicated action card to Control Center situated directly below `🏷 Manage Shelves` (`"Inspect largest KFX books, cache size & duplicate titles"`).
-2. **Interactive Storage & Duplicates Modal Subsystem**:
-   - **STORAGE FOOTPRINT**: 3 centered live storage telemetry tiles showing **App Library** (`13.3 MB`), **Backups** (`682 KB`), and **Temp Cache** (`1.3 MB`).
-   - **LARGEST BOOKS (TAP TO LOCATE)**: Top 5 largest cataloged KFX books with amber horizontal proportional size bars and 1-tap locate drill-down into the Metadata Catalog:
-     * *Complete Works of Homer* (31.8 MB)
-     * *Cicero - Delphi Complete Works* (26.3 MB)
-     * *Complete Works of Plutarch* (24.6 MB)
-     * *Delphi Complete Works of Aristotle* (22.9 MB)
-     * *Complete Works of Xenophon* (11.1 MB)
-   - **DUPLICATE TITLES AUDIT**: Title normalization scanner over all cataloged volumes dynamically displaying an emerald badge (`✓ No duplicate titles found across 27 cataloged books`).
-   - **Cache Reclamation**: Includes a 1-tap `Clear Temp Cache` button allowing instant purge of staging/open-once scratch files and live modal refresh.
-3. **Version Bump (`FolioMoreView.java`)**: Bumped Control Center badge and About Folio dialog string to **`Folio v8.8 KFX (Enhanced Typesetting)`**.
-4. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
+In Round 089, Folio advanced to **Folio v8.9 KFX**. Gemini pre-authored drop-in Java updates for `FolioMoreView.java`. Antigravity integrated the update into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java`, compiled Dalvik DEX (`classes9.dex`, 314,228 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **📝 Reading Notes Notebook Subsystem (`FolioMoreView.java`)**: Added a dedicated `📝 Reading Notes Notebook` action card to Control Center situated directly below `📄 Reading Log & Export` (`"Browse, search, copy & edit personal book notes in one place"`).
+2. **Interactive Notes Notebook Modal**:
+   - Header with live annotated volume count (`📝 Reading Notes (1)`).
+   - Real-time search filter bar (`Search notes, titles, or authors...`).
+   - Book metadata header: displays standalone `.cover.jpg` thumbnail, bold title (1-tap instant launch into KFX reader), normalized author, rating badge (`★ 5/5`), and custom reading shelf badge (`🏷 Classics`).
+   - Warm amber quote card (`#251D14` fill with `#D97706` border): displays personal book note text (`"Essential dystopian classic - reread Part 3"`).
+   - 1-tap action buttons: **`📋 Copy`** (copies formatted note to clipboard) and **`✏️ Edit`** (launches inline note editor with immediate reactive notebook refresh on save).
+   - Footer contains **`Copy All`** Markdown batch export tool and **`Close`**.
+3. **Storage & Duplicates Viewport Polish (`FolioMoreView.java`)**: Expanded scroll viewport height to `388dp` with `10dp` bottom padding to eliminate edge clipping on the Duplicate Titles status card.
+4. **Version Bump (`FolioMoreView.java`)**: Bumped Control Center badge and About Folio dialog string to **`Folio v8.9 KFX (Enhanced Typesetting)`**.
+5. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Folio v8.8 KFX
+## 2. Integrated Features in Folio v8.9 KFX
 
-### A. Storage & Duplicates Subsystem (`FolioMoreView.java`)
-- Storage calculation:
+### A. Reading Notes Notebook Subsystem (`FolioMoreView.java`)
+- Filter and sort annotated books:
   ```java
-  long appLibBytes = dirSizeBytes(new File(ctx.getFilesDir(), "folio_library"))
-          + dirSizeBytes(new File(ctx.getFilesDir(), "folio_covers"));
-  long backupBytes = dirSizeBytes(new File("/sdcard/kindle/backups"));
-  long tempCacheBytes = dirSizeBytes(new File(ctx.getCacheDir(), "folio_once"))
-          + dirSizeBytes(new File(ctx.getCacheDir(), "folio_staging"));
+  final java.util.Map<String, String> notesMap = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.loadNotesMap(ctx);
+  // Sorts records with non-empty notes by rating descending
   ```
-- Largest books sorting & bar visualization:
-  - Iterates cataloged books, measures corresponding KFX payload size on disk, and extracts Top 5 largest.
-  - Constructs amber horizontal proportional bars (`0xFFF59E0B`) with 1-tap click listener routing into `FolioMetadataCatalogDialog.showWithSearch(ctx, item.rec.title)`.
-- Duplicate titles audit:
-  - Normalizes book titles (lowercase, punctuation stripped).
-  - Groups books by normalized title and flags clusters with count > 1 or renders emerald pass badge.
+- Search & live reactive filtering:
+  - Real-time search watcher matching queries against book title, author, and note content.
+  - Dynamically updates header counter and note cards container.
+- Note quote card styling:
+  - Container: `#251D14` background, `#3D2E1A` stroke with amber highlight border.
+  - Typography: 13sp italic `#FDE68A` text.
+  - 1-tap Copy action formats markdown quote to Android clipboard (`ClipboardManager`).
+  - 1-tap Edit action launches `showInlineNoteEditor(...)` and refreshes notebook upon save.
+
+### B. Viewport Height Polish (`FolioMoreView.java`)
+- Storage & Duplicates modal height adjusted to `388dp` with `10dp` bottom padding.
 
 ---
 
@@ -51,8 +51,8 @@ In Round 088, Folio advanced to **Folio v8.8 KFX**. Gemini pre-authored drop-in 
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Control Center Card & Badge** | More Tab (Control Center) | `verify_r88_control_center_v88.png` | **VERIFIED**: Opened Control Center; verified new `💾 Storage & Duplicates` card positioned directly below `🏷 Manage Shelves` and confirmed top badge reads `Folio v8.8 KFX`. |
-| **Storage & Duplicates Modal** | Storage & Duplicates Dialog | `verify_r88_storage_duplicates_modal.png` | **VERIFIED**: Tapped card; verified modal showing 3 storage tiles (`13.3 MB App Library`, `682 KB Backups`, `1.3 MB Temp Cache`), Top 5 Largest Books amber bars (*Homer*, *Cicero*, *Plutarch*, *Aristotle*, *Xenophon*), and Duplicate Titles Audit status (`✓ No duplicate titles found across 27 cataloged books`). |
+| **Reading Notes Notebook** | Reading Notes Modal | `verify_r89_notes_notebook.png` | **VERIFIED**: Tapped `📝 Reading Notes Notebook` on Control Center; verified modal with live search bar, *1984* cover art, metadata badges (`George Orwell · ★ 5/5 · 🏷 Classics`), warm amber quote card (`Essential dystopian classic - reread Part 3`), and `📋 Copy` / `✏️ Edit` buttons. |
+| **About Folio v8.9 KFX** | About Folio Modal | `verify_r89_about_v89.png` | **VERIFIED**: Tapped Control Center version badge; verified modal confirming `Version: Folio v8.9 KFX (Enhanced Typesetting)` and live stats. |
 | **Stock Kindle Invariant** | Android OS PackageManager | CLI `dumpsys package com.amazon.kindle` | **VERIFIED**: `lastUpdateTime=2026-11-19 21:59:23` completely untouched. |
 
 ---
