@@ -181,11 +181,11 @@ public final class EpubMetadataExtractor {
                             } else if ("publisher".equals(name) && isBlank(meta.publisher)) {
                                 meta.publisher = val;
                             } else if ("date".equals(name) && isBlank(meta.pubDate)) {
-                                meta.pubDate = val;
+                                meta.pubDate = normalizePubDate(val);
                             } else if ("language".equals(name) && isBlank(meta.language)) {
                                 meta.language = val;
                             } else if ("subject".equals(name)) {
-                                if (!isBlank(val) && val.length() <= 60 && genreSet.size() < 8) {
+                                if (!isBlank(val) && !isNoiseTag(val) && val.length() <= 60 && genreSet.size() < 8) {
                                     genreSet.add(val);
                                 }
                             } else if ("description".equals(name) && isBlank(meta.description)) {
@@ -255,6 +255,27 @@ public final class EpubMetadataExtractor {
         }
         name = name.replace('_', ' ').replaceAll("\\s+", " ").trim();
         return name.isEmpty() ? "Untitled" : name;
+    }
+
+    public static String normalizePubDate(String raw) {
+        if (raw == null) return "";
+        String s = raw.trim();
+        // Trim ISO timestamps like "2000-07-15 00:00:00+01:00" or "2014-06-06T00:00:00Z"
+        int tIdx = s.indexOf('T');
+        if (tIdx >= 4) s = s.substring(0, tIdx);
+        int spIdx = s.indexOf(' ');
+        if (spIdx >= 4) s = s.substring(0, spIdx);
+        return s.trim();
+    }
+
+    public static boolean isNoiseTag(String tag) {
+        if (tag == null) return true;
+        String k = tag.trim().toLowerCase(Locale.ROOT);
+        return k.isEmpty() || "read".equals(k) || "unread".equals(k)
+                || "to read".equals(k) || "to-read".equals(k)
+                || "ebook".equals(k) || "e-book".equals(k)
+                || "kindle".equals(k) || "calibre".equals(k)
+                || "general".equals(k) || "fiction - general".equals(k);
     }
 
     public static boolean isBlank(String s) {

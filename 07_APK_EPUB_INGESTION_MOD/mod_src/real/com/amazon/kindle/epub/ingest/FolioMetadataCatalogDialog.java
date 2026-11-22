@@ -318,7 +318,7 @@ public final class FolioMetadataCatalogDialog {
             if (r.genres == null || r.genres.isEmpty()) continue;
             for (String g : r.genres.split(",")) {
                 String c = g.trim();
-                if (c.length() >= 3 && c.length() <= 24) {
+                if (c.length() >= 3 && c.length() <= 24 && !EpubMetadataExtractor.isNoiseTag(c)) {
                     cleanGenres.add(toTitleCase(c));
                     if (cleanGenres.size() >= 12) break;
                 }
@@ -396,7 +396,8 @@ public final class FolioMetadataCatalogDialog {
         col.addView(title);
 
         StringBuilder byline = new StringBuilder(rec.author);
-        if (!rec.pubDate.isEmpty()) byline.append(" · ").append(rec.pubDate);
+        String cleanDate = EpubMetadataExtractor.normalizePubDate(rec.pubDate);
+        if (!cleanDate.isEmpty()) byline.append(" · ").append(cleanDate);
         if (!rec.publisher.isEmpty()) byline.append(" · ").append(rec.publisher);
         TextView metaLine = new TextView(ctx);
         metaLine.setText(byline.toString());
@@ -469,7 +470,8 @@ public final class FolioMetadataCatalogDialog {
         box.addView(sub);
 
         StringBuilder details = new StringBuilder();
-        if (!rec.pubDate.isEmpty()) details.append("Published: ").append(rec.pubDate).append("\n");
+        String cleanDetailDate = EpubMetadataExtractor.normalizePubDate(rec.pubDate);
+        if (!cleanDetailDate.isEmpty()) details.append("Published: ").append(cleanDetailDate).append("\n");
         if (!rec.publisher.isEmpty()) details.append("Publisher: ").append(rec.publisher).append("\n");
         if (!rec.isbn.isEmpty()) details.append("ISBN: ").append(rec.isbn).append("\n");
         if (!rec.genres.isEmpty()) details.append("Genres: ").append(rec.genres).append("\n");

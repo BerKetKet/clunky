@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v3.9 KFX");
+        badgeTv.setText("Folio v4.0 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -425,24 +425,29 @@ public final class FolioMoreView {
             }
         } catch (Throwable ignored) {}
 
-        long cacheBytes = 0;
+        int metaRecords = 0;
         try {
-            File kindleDir = new File("/sdcard/kindle");
-            if (kindleDir.exists()) {
-                File[] files = kindleDir.listFiles();
-                if (files != null) {
-                    for (File f : files) {
-                        cacheBytes += f.length();
-                    }
-                }
+            com.amazon.kindle.epub.ingest.FolioMetadataDb mdb = new com.amazon.kindle.epub.ingest.FolioMetadataDb(ctx);
+            try {
+                metaRecords = mdb.getAllBooks().size();
+            } finally {
+                mdb.close();
             }
         } catch (Throwable ignored) {}
 
-        double cacheMb = cacheBytes / (1024.0 * 1024.0);
+        long appLibBytes = dirSizeBytes(new File(ctx.getFilesDir(), "folio_library"))
+                + dirSizeBytes(new File(ctx.getFilesDir(), "folio_covers"));
+        long tempCacheBytes = dirSizeBytes(new File(ctx.getCacheDir(), "folio_once"))
+                + dirSizeBytes(new File(ctx.getCacheDir(), "folio_staging"));
+        long sdKindleBytes = dirSizeBytes(new File("/sdcard/kindle"));
+
+        double appLibMb = appLibBytes / (1024.0 * 1024.0);
+        double tempCacheMb = tempCacheBytes / (1024.0 * 1024.0);
+        double sdKindleMb = sdKindleBytes / (1024.0 * 1024.0);
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v3.9 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v4.0 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
@@ -471,16 +476,61 @@ public final class FolioMoreView {
         sb.append("• Rich Code Blocks (<pre>/<code>), <hr/> Rules & Inlines\n");
         sb.append("• Native $266 Anchor Links & $179 Hyperlink Navigation\n\n");
 
-        sb.append("Live Library & Cache Stats:\n");
+        sb.append("Live Library & Storage Stats:\n");
         sb.append("• Indexed Library Books: ").append(indexedBooks).append("\n");
-        sb.append("• Local Storage Cache: ").append(String.format("%.1f", cacheMb)).append(" MB\n");
+        sb.append("• Enriched Metadata Records: ").append(metaRecords).append("\n");
+        sb.append("• App Library Storage: ").append(String.format("%.1f", appLibMb)).append(" MB\n");
+        sb.append("• Legacy /sdcard/kindle: ").append(String.format("%.1f", sdKindleMb)).append(" MB\n");
+        sb.append("• Temp Open-Once Cache: ").append(String.format("%.1f", tempCacheMb)).append(" MB\n");
         sb.append("• Privacy Mode: Local-First (Zero Amazon Telemetry)\n");
 
         new AlertDialog.Builder(ctx)
                 .setTitle("About Folio")
                 .setMessage(sb.toString())
                 .setPositiveButton("Close", null)
+                .setNeutralButton("Clear Temp Cache", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int which) {
+                        long freed = clearDirContents(new File(ctx.getCacheDir(), "folio_once"))
+                                + clearDirContents(new File(ctx.getCacheDir(), "folio_staging"));
+                        double mb = freed / (1024.0 * 1024.0);
+                        Toast.makeText(ctx,
+                                String.format("Cleared %.1f MB of temporary cache", mb),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                })
                 .show();
+    }
+
+    private static long dirSizeBytes(File dir) {
+        if (dir == null || !dir.exists()) return 0L;
+        if (dir.isFile()) return dir.length();
+        long sum = 0L;
+        File[] children = dir.listFiles();
+        if (children != null) {
+            for (File f : children) {
+                sum += f.isDirectory() ? dirSizeBytes(f) : f.length();
+            }
+        }
+        return sum;
+    }
+
+    private static long clearDirContents(File dir) {
+        if (dir == null || !dir.exists() || !dir.isDirectory()) return 0L;
+        long freed = 0L;
+        File[] children = dir.listFiles();
+        if (children != null) {
+            for (File f : children) {
+                if (f.isDirectory()) {
+                    freed += clearDirContents(f);
+                    f.delete();
+                } else {
+                    freed += f.length();
+                    f.delete();
+                }
+            }
+        }
+        return freed;
     }
 
     private static int dp(float density, int value) {
