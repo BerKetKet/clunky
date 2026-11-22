@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v8.2 KFX");
+        badgeTv.setText("Folio v8.3 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -327,6 +327,19 @@ public final class FolioMoreView {
                     @Override
                     public void onClick(View v) {
                         showLibraryInsightsDialog(ctx);
+                    }
+                }
+        ));
+
+        // Card C4: Custom Shelves Manager
+        container.addView(makeActionCard(
+                ctx, d,
+                "🏷", "Manage Shelves",
+                "Rename, remove, or open your custom reading shelves",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showManageShelvesDialog(ctx);
                     }
                 }
         ));
@@ -761,6 +774,269 @@ public final class FolioMoreView {
                 });
             }
         }).start();
+    }
+
+    private static void showManageShelvesDialog(final Context ctx) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        final SharedPreferences shelfPrefs = ctx.getSharedPreferences("folio_shelves", Context.MODE_PRIVATE);
+        final java.util.Map<String, ?> rawAll = shelfPrefs.getAll();
+        final java.util.Map<String, Integer> shelfCounts = new java.util.HashMap<>();
+        int totalShelved = 0;
+        if (rawAll != null) {
+            for (java.util.Map.Entry<String, ?> e : rawAll.entrySet()) {
+                Object v = e.getValue();
+                if (v instanceof String) {
+                    String s = ((String) v).trim();
+                    if (!s.isEmpty()) {
+                        shelfCounts.put(s, (shelfCounts.containsKey(s) ? shelfCounts.get(s) : 0) + 1);
+                        totalShelved++;
+                    }
+                }
+            }
+        }
+
+        final java.util.List<String> shelves = new java.util.ArrayList<>(shelfCounts.keySet());
+        java.util.Collections.sort(shelves, new java.util.Comparator<String>() {
+            @Override
+            public int compare(String a, String b) {
+                int cmp = Integer.compare(shelfCounts.get(b), shelfCounts.get(a));
+                return cmp != 0 ? cmp : a.compareToIgnoreCase(b);
+            }
+        });
+
+        LinearLayout root = new LinearLayout(ctx);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(0xFF11131A);
+        root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
+
+        TextView titleTv = new TextView(ctx);
+        titleTv.setText("🏷 Manage Shelves");
+        titleTv.setTextColor(TEXT_PRIMARY);
+        titleTv.setTextSize(18);
+        titleTv.setTypeface(Typeface.DEFAULT_BOLD);
+        titleTv.setPadding(0, 0, 0, dp(d, 4));
+        root.addView(titleTv);
+
+        String subText = shelves.isEmpty()
+                ? "No custom shelves yet"
+                : shelves.size() + (shelves.size() == 1 ? " custom shelf · " : " custom shelves · ")
+                        + totalShelved + (totalShelved == 1 ? " shelved book" : " shelved books")
+                        + " — tap a shelf to browse";
+        TextView subTv = new TextView(ctx);
+        subTv.setText(subText);
+        subTv.setTextColor(TEXT_MUTED);
+        subTv.setTextSize(12);
+        subTv.setPadding(0, 0, 0, dp(d, 14));
+        root.addView(subTv);
+
+        final AlertDialog[] mgrDlgRef = new AlertDialog[1];
+
+        if (shelves.isEmpty()) {
+            TextView emptyTv = new TextView(ctx);
+            emptyTv.setText("Open any book's Details (ⓘ) in the Metadata Catalog to assign a custom reading shelf (e.g. Classics, Sci-Fi, Study).");
+            emptyTv.setTextColor(0xFF94A3B8);
+            emptyTv.setTextSize(13);
+            emptyTv.setPadding(dp(d, 14), dp(d, 16), dp(d, 14), dp(d, 16));
+            GradientDrawable emptyBg = new GradientDrawable();
+            emptyBg.setColor(BG_CARD);
+            emptyBg.setCornerRadius(dp(d, 10));
+            emptyBg.setStroke(dp(d, 1), 0xFF2A3140);
+            emptyTv.setBackground(emptyBg);
+            root.addView(emptyTv);
+        } else {
+            ScrollView sv = new ScrollView(ctx);
+            sv.setVerticalScrollBarEnabled(false);
+            LinearLayout listBox = new LinearLayout(ctx);
+            listBox.setOrientation(LinearLayout.VERTICAL);
+
+            for (final String shelfName : shelves) {
+                final int cnt = shelfCounts.get(shelfName);
+
+                LinearLayout row = new LinearLayout(ctx);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding(dp(d, 12), dp(d, 10), dp(d, 10), dp(d, 10));
+                GradientDrawable rowBg = new GradientDrawable();
+                rowBg.setColor(BG_CARD);
+                rowBg.setCornerRadius(dp(d, 10));
+                rowBg.setStroke(dp(d, 1), 0xFF2A3140);
+                row.setBackground(rowBg);
+                LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                rowLp.bottomMargin = dp(d, 8);
+                row.setLayoutParams(rowLp);
+
+                LinearLayout infoCol = new LinearLayout(ctx);
+                infoCol.setOrientation(LinearLayout.VERTICAL);
+                infoCol.setLayoutParams(new LinearLayout.LayoutParams(
+                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                infoCol.setPadding(0, 0, dp(d, 8), 0);
+
+                TextView nameTv = new TextView(ctx);
+                nameTv.setText("🏷 " + shelfName);
+                nameTv.setTextColor(0xFFC7D2FE);
+                nameTv.setTextSize(14);
+                nameTv.setTypeface(Typeface.DEFAULT_BOLD);
+                nameTv.setSingleLine(true);
+                nameTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                infoCol.addView(nameTv);
+
+                TextView cntTv = new TextView(ctx);
+                cntTv.setText(cnt + (cnt == 1 ? " book ›" : " books ›"));
+                cntTv.setTextColor(0xFF94A3B8);
+                cntTv.setTextSize(11.5f);
+                infoCol.addView(cntTv);
+
+                infoCol.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (mgrDlgRef[0] != null) mgrDlgRef[0].dismiss();
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "SHELF:" + shelfName);
+                    }
+                });
+                row.addView(infoCol);
+
+                // Rename pill
+                TextView renBtn = new TextView(ctx);
+                renBtn.setText("Rename");
+                renBtn.setTextColor(ACCENT_TEAL);
+                renBtn.setTextSize(11.5f);
+                renBtn.setTypeface(Typeface.DEFAULT_BOLD);
+                renBtn.setPadding(dp(d, 10), dp(d, 6), dp(d, 10), dp(d, 6));
+                GradientDrawable renBg = new GradientDrawable();
+                renBg.setColor(0xFF172536);
+                renBg.setCornerRadius(dp(d, 7));
+                renBg.setStroke(dp(d, 1), 0xFF1E3A5F);
+                renBtn.setBackground(renBg);
+                LinearLayout.LayoutParams renLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                renLp.rightMargin = dp(d, 6);
+                renBtn.setLayoutParams(renLp);
+                renBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showRenameShelfDialog(ctx, shelfName, cnt, mgrDlgRef[0]);
+                    }
+                });
+                row.addView(renBtn);
+
+                // Remove pill
+                TextView delBtn = new TextView(ctx);
+                delBtn.setText("Remove");
+                delBtn.setTextColor(0xFFF87171);
+                delBtn.setTextSize(11.5f);
+                delBtn.setTypeface(Typeface.DEFAULT_BOLD);
+                delBtn.setPadding(dp(d, 10), dp(d, 6), dp(d, 10), dp(d, 6));
+                GradientDrawable delBg = new GradientDrawable();
+                delBg.setColor(0xFF2A181C);
+                delBg.setCornerRadius(dp(d, 7));
+                delBg.setStroke(dp(d, 1), 0xFF5C262E);
+                delBtn.setBackground(delBg);
+                delBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showRemoveShelfDialog(ctx, shelfName, cnt, mgrDlgRef[0]);
+                    }
+                });
+                row.addView(delBtn);
+
+                listBox.addView(row);
+            }
+
+            sv.addView(listBox);
+            int maxH = dp(d, Math.min(340, Math.max(96, shelves.size() * 68)));
+            sv.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, maxH));
+            root.addView(sv);
+        }
+
+        mgrDlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setView(root)
+                .setNeutralButton("Browse Catalog", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "All");
+                    }
+                })
+                .setPositiveButton("Close", null)
+                .show();
+    }
+
+    private static void showRenameShelfDialog(final Context ctx, final String oldName, final int count, final AlertDialog parentDlg) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(d, 20), dp(d, 12), dp(d, 20), dp(d, 6));
+
+        final EditText input = new EditText(ctx);
+        input.setText(oldName);
+        input.setSelection(oldName.length());
+        input.setSingleLine(true);
+        input.setHint("New shelf name");
+        input.setTextColor(TEXT_PRIMARY);
+        input.setHintTextColor(0xFF64748B);
+        box.addView(input);
+
+        new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("Rename Shelf \"" + oldName + "\"")
+                .setView(box)
+                .setPositiveButton("Rename", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String newName = input.getText().toString().trim();
+                        if (newName.isEmpty() || newName.equals(oldName)) return;
+                        SharedPreferences sp = ctx.getSharedPreferences("folio_shelves", Context.MODE_PRIVATE);
+                        SharedPreferences.Editor ed = sp.edit();
+                        java.util.Map<String, ?> all = sp.getAll();
+                        int updated = 0;
+                        if (all != null) {
+                            for (java.util.Map.Entry<String, ?> e : all.entrySet()) {
+                                Object v = e.getValue();
+                                if (v instanceof String && oldName.equals(((String) v).trim())) {
+                                    ed.putString(e.getKey(), newName);
+                                    updated++;
+                                }
+                            }
+                        }
+                        ed.apply();
+                        Toast.makeText(ctx,
+                                "Renamed \"" + oldName + "\" to \"" + newName + "\" (" + updated + (updated == 1 ? " book)" : " books)"),
+                                Toast.LENGTH_SHORT).show();
+                        if (parentDlg != null) parentDlg.dismiss();
+                        showManageShelvesDialog(ctx);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private static void showRemoveShelfDialog(final Context ctx, final String shelfName, final int count, final AlertDialog parentDlg) {
+        new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("Remove Shelf")
+                .setMessage("Remove shelf \"" + shelfName + "\" from " + count + (count == 1 ? " book" : " books")
+                        + "? Your books and metadata will stay untouched.")
+                .setPositiveButton("Remove", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        SharedPreferences sp = ctx.getSharedPreferences("folio_shelves", Context.MODE_PRIVATE);
+                        SharedPreferences.Editor ed = sp.edit();
+                        java.util.Map<String, ?> all = sp.getAll();
+                        if (all != null) {
+                            for (java.util.Map.Entry<String, ?> e : all.entrySet()) {
+                                Object v = e.getValue();
+                                if (v instanceof String && shelfName.equals(((String) v).trim())) {
+                                    ed.remove(e.getKey());
+                                }
+                            }
+                        }
+                        ed.apply();
+                        Toast.makeText(ctx, "Removed shelf \"" + shelfName + "\"", Toast.LENGTH_SHORT).show();
+                        if (parentDlg != null) parentDlg.dismiss();
+                        showManageShelvesDialog(ctx);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private static void showLibraryInsightsDialog(final Context ctx) {
@@ -1294,7 +1570,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v8.2 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v8.3 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
