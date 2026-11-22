@@ -14,6 +14,10 @@ cp "${MOD_ROOT}/dex/classes9.dex" "${WORK_DIR}/base_dec/classes4.dex"
 mkdir -p "${WORK_DIR}/base_dec/lib/arm64-v8a"
 cp "${MOD_ROOT}/lib/arm64-v8a/libkfxconv.so" "${WORK_DIR}/base_dec/lib/arm64-v8a/libkfxconv.so"
 
+echo "[1b/5] Patching strings.xml Folio library branding..."
+find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i 's/in your Kindle library\./in your Folio library\./g' {} +
+find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i 's/your Kindle library/your Folio library/g' {} +
+
 echo "[2/5] Building APK with apktool..."
 apktool b "${WORK_DIR}/base_dec" -o "${WORK_DIR}/base_cloned_raw.apk"
 
@@ -30,11 +34,11 @@ else
     adb install -r -d "${WORK_DIR}/signed_splits/base.apk"
 fi
 
-echo "[5/5] Staging Folio v3.1 KFX release..."
-mkdir -p "${MOD_ROOT}/release/folio_v3.1_kfx"
-cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/folio_v3.1_kfx/base.apk"
+echo "[5/5] Staging Folio v3.2 KFX release..."
+mkdir -p "${MOD_ROOT}/release/folio_v3.2_kfx"
+cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/folio_v3.2_kfx/base.apk"
 if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
-    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/folio_v3.1_kfx/base.apk.idsig"
+    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/folio_v3.2_kfx/base.apk.idsig"
 fi
 
-echo "Fast rebuild, deploy, and Folio v3.1 KFX staging successful!"
+echo "Fast rebuild, deploy, and Folio v3.2 KFX staging successful!"

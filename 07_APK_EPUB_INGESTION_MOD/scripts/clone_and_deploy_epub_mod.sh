@@ -158,7 +158,9 @@ if [[ -f "${WORK_DIR}/base_dec/res/xml/network_security_config.xml" ]]; then
 fi
 
 find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i 's/>Search Kindle</>Search Folio</g' {} +
-echo "Rebranded 'Search Kindle' to 'Search Folio' in strings.xml"
+find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i 's/in your Kindle library\./in your Folio library\./g' {} +
+find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i 's/your Kindle library/your Folio library/g' {} +
+echo "Rebranded 'Search Kindle' to 'Search Folio' and 'Kindle library' to 'Folio library' in strings.xml"
 
 echo "[3.5/6] Compiling mod DEX (EpubTranscoder, EpubBookBuilder, dp.g, OpenCatalogView) with javac + d8..."
 bash "${MOD_ROOT}/tools/compile_mod_dex.sh" "${MOD_ROOT}/dex/classes9.dex"

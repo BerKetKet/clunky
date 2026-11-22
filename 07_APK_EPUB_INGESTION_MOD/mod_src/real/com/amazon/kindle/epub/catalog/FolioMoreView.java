@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v3.1 KFX");
+        badgeTv.setText("Folio v3.2 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -266,7 +266,7 @@ public final class FolioMoreView {
 
         TextView label = new TextView(ctx);
         label.setText("Quick OPDS Catalogs:");
-        label.setTextColor(0xFF333333);
+        label.setTextColor(0xFFCBD5E1);
         label.setTypeface(Typeface.DEFAULT_BOLD);
         label.setPadding(0, 0, 0, dp(d, 8));
         layout.addView(label);
@@ -299,7 +299,7 @@ public final class FolioMoreView {
 
         TextView customLabel = new TextView(ctx);
         customLabel.setText("\nOr enter custom OPDS feed URL:");
-        customLabel.setTextColor(0xFF333333);
+        customLabel.setTextColor(0xFFCBD5E1);
         customLabel.setTypeface(Typeface.DEFAULT_BOLD);
         layout.addView(customLabel);
         layout.addView(input);
