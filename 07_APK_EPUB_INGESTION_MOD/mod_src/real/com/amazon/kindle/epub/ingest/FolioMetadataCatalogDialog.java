@@ -210,15 +210,18 @@ public final class FolioMetadataCatalogDialog {
                 int readingCount = 0;
                 int finishedCount = 0;
                 int favCount = 0;
+                int notesCount = 0;
                 for (FolioMetadataDb.BookRecord rec : allBooks) {
                     int p = getProgress(progressMap, rec.kfxPath);
                     if (p >= 100) finishedCount++;
                     else if (p > 0) readingCount++;
                     if (isFavorite(ctx, rec.kfxPath)) favCount++;
+                    if (!getNote(ctx, rec.kfxPath).isEmpty()) notesCount++;
                 }
                 List<String> chipList = new ArrayList<>();
                 chipList.add("All");
                 if (favCount > 0) chipList.add("Favorites");
+                if (notesCount > 0) chipList.add("Notes");
                 if (readingCount > 0) chipList.add("Reading");
                 if (finishedCount > 0) chipList.add("Finished");
                 for (String g : genres) {
@@ -229,24 +232,27 @@ public final class FolioMetadataCatalogDialog {
                 for (final String g : chipList) {
                     boolean active = g.equalsIgnoreCase(selectedGenre[0]);
                     boolean isFavChip = "Favorites".equalsIgnoreCase(g);
+                    boolean isNotesChip = "Notes".equalsIgnoreCase(g);
                     boolean isStatusChip = "Reading".equalsIgnoreCase(g) || "Finished".equalsIgnoreCase(g);
                     int gCount;
                     if ("All".equalsIgnoreCase(g)) gCount = allBooks.size();
                     else if (isFavChip) gCount = favCount;
+                    else if (isNotesChip) gCount = notesCount;
                     else if ("Reading".equalsIgnoreCase(g)) gCount = readingCount;
                     else if ("Finished".equalsIgnoreCase(g)) gCount = finishedCount;
                     else gCount = countBooksInGenre(allBooks, g);
 
                     TextView chip = new TextView(ctx);
-                    chip.setText((isFavChip ? "★ " : "") + g + " (" + gCount + ")");
+                    String chipPrefix = isFavChip ? "★ " : (isNotesChip ? "📝 " : "");
+                    chip.setText(chipPrefix + g + " (" + gCount + ")");
                     chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                     chip.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                     chip.setTextColor(Color.parseColor(active ? "#111827"
-                            : (isFavChip ? "#FBBF24" : (isStatusChip ? "#5EEAD4" : "#CBD5E1"))));
+                            : ((isFavChip || isNotesChip) ? "#FBBF24" : (isStatusChip ? "#5EEAD4" : "#CBD5E1"))));
                     chip.setPadding(dp(ctx, 12), dp(ctx, 6), dp(ctx, 12), dp(ctx, 6));
                     GradientDrawable bg = new GradientDrawable();
                     bg.setColor(Color.parseColor(active
-                            ? (isFavChip ? "#FBBF24" : (isStatusChip ? "#14B8A6" : "#F59E0B"))
+                            ? ((isFavChip || isNotesChip) ? "#FBBF24" : (isStatusChip ? "#14B8A6" : "#F59E0B"))
                             : "#1E2433"));
                     bg.setCornerRadius(dp(ctx, 16));
                     chip.setBackground(bg);
@@ -266,6 +272,8 @@ public final class FolioMetadataCatalogDialog {
                 for (FolioMetadataDb.BookRecord rec : allBooks) {
                     if ("Favorites".equalsIgnoreCase(selectedGenre[0])) {
                         if (!isFavorite(ctx, rec.kfxPath)) continue;
+                    } else if ("Notes".equalsIgnoreCase(selectedGenre[0])) {
+                        if (getNote(ctx, rec.kfxPath).isEmpty()) continue;
                     } else if ("Reading".equalsIgnoreCase(selectedGenre[0])) {
                         int p = getProgress(progressMap, rec.kfxPath);
                         if (p <= 0 || p >= 100) continue;
@@ -274,7 +282,7 @@ public final class FolioMetadataCatalogDialog {
                     } else {
                         if (!rec.hasGenre(selectedGenre[0])) continue;
                     }
-                    if (!q.isEmpty() && !matchesQuery(rec, q)) continue;
+                    if (!q.isEmpty() && !matchesQuery(ctx, rec, q)) continue;
                     filtered.add(rec);
                 }
 
@@ -437,11 +445,12 @@ public final class FolioMetadataCatalogDialog {
         }
     }
 
-    private static boolean matchesQuery(FolioMetadataDb.BookRecord r, String q) {
+    private static boolean matchesQuery(Context ctx, FolioMetadataDb.BookRecord r, String q) {
         return contains(r.title, q) || contains(r.author, q)
                 || contains(formatAuthorForDisplay(r.author), q)
                 || contains(r.genres, q)
-                || contains(r.publisher, q) || contains(r.isbn, q) || contains(r.pubDate, q);
+                || contains(r.publisher, q) || contains(r.isbn, q) || contains(r.pubDate, q)
+                || contains(getNote(ctx, r.kfxPath), q);
     }
 
     private static boolean contains(String haystack, String needle) {
