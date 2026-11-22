@@ -1,14 +1,13 @@
 {
-  "round": 62,
+  "round": 63,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v6.2 KFX \u2014 Personal Reading Notes in Book Details & Portable JSON Note Backup",
+  "milestone": "Folio v6.3 KFX \u2014 Dynamic Notes (\ud83d\udcdd) Filter Chip & Full-Text Note Search",
   "sender": "Gemini",
   "recipient": "Antigravity",
-  "reply_archive": "antig_to_gemini_neon_clunky_report062.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report063.zip",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% untouched and read-only.",
   "dropin_files": [
     "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
-    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java",
     "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java"
   ]
 }

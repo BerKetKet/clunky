@@ -1,45 +1,38 @@
-# Folio Milestone Release Report: Persistent Personal Reading Notes, Catalog Note Badges & Version 6.2 (Round 062)
+# Folio Milestone Release Report: Dynamic Notes Quick-Filter Chip, Full-Text Note Search & Version 6.3 (Round 063)
 
 **Date:** 2026-11-22  
-**Target Package:** `com.amazon.kindle.epub` (Folio v6.2 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v6.3 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v6.2_kfx/base.apk` (131 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v6.3_kfx/base.apk` (131 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 062, Folio advanced to **Folio v6.2 KFX**. Gemini pre-authored drop-in Java updates for `FolioMetadataCatalogDialog.java`, `FolioMetadataBackup.java`, and `FolioMoreView.java`. Antigravity integrated all 3 files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 222,100 B), built, aligned, signed, and deployed the updated APK to Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **Persistent Personal Reading Notes**: Added an inline personal notes card inside Book Details (`ⓘ`), stored safely in app-private `SharedPreferences("folio_notes")` with zero DB schema migration risk. Shows `📝 Add a Personal Reading Note ›` when empty, and an amber-accented `📝 Personal Note (tap to edit)` card with formatted note text once saved.
-2. **Inline Note Editor Dialog**: Tapping the note card opens a dedicated dark editor dialog (`Personal Note · <Title>`) featuring a multi-line `EditText`, `SAVE NOTE`, `CLEAR NOTE` (when a note exists), and `CANCEL`.
-3. **Combined Catalog Card Indicators**: Books with personal notes surface a `📝` badge on their catalog list card, combining cleanly with the favorite indicator (verified on *1984*, rendering `★ 📝 1984`).
-4. **Portable JSON Backup Integration**: `FolioMetadataBackup.java` exports `personal_note` alongside metadata and favorites in portable JSON backups and automatically restores notes on import.
-5. **Control Center Version Bump**: Header badge and About Folio dialog bumped to **`Folio v6.2 KFX (Enhanced Typesetting)`**.
-6. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
+In Round 063, Folio advanced to **Folio v6.3 KFX**. Gemini pre-authored drop-in Java updates for `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`. Antigravity integrated both files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 222,328 B), built, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **Dynamic `📝 Notes (N)` Quick-Filter Chip**: When books contain saved personal notes, `FolioMetadataCatalogDialog` dynamically surfaces an amber-accented `📝 Notes (1)` chip alongside `★ Favorites (1)` in the quick-filter bar. Tapping it filters the catalog strictly to books with personal notes (`Library Metadata & Genres (1 of 27)`), displaying `★ 📝 1984`.
+2. **Live Full-Text Search Inside Personal Notes**: Catalog search was extended via `matchesQuery` to search inside each book's personal reading note text. Tapping `All (27)` and typing `"Part 3"` (a phrase existing exclusively in the saved personal note for *1984*) instantly matches and isolates `★ 📝 1984` (`Library Metadata & Genres (1 of 27)`).
+3. **Control Center Version Bump**: Header badge and About Folio dialog bumped to **`Folio v6.3 KFX (Enhanced Typesetting)`**.
+4. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Folio v6.2 KFX
+## 2. Integrated Features in Folio v6.3 KFX
 
-### A. Personal Reading Notes Subsystem (`FolioMetadataCatalogDialog.java`)
-- Implemented static helpers `getNote(Context, String kfxPath)`, `setNote(Context, String kfxPath, String note)`, and `showEditNoteDialog(...)`.
-- Storage is localized to `folio_notes.xml` preferences, keyed by `kfxPath`.
-- In `buildDetailDialog`, an interactive `noteBox` container renders:
-  - Header: `📝 Add a Personal Reading Note ›` (slate `#94A3B8`) when blank, or `📝 Personal Note (tap to edit)` (amber `#F59E0B`) with an amber stroke border (`#66F59E0B`).
-  - Body: Saved note text formatted in `#E2E8F0` (`13sp`).
-- Tapping triggers `showEditNoteDialog`: saving updates preferences, shows a confirmation Toast, refreshes catalog list cards, and reflects changes immediately.
+### A. Dynamic Notes Quick-Filter Chip (`FolioMetadataCatalogDialog.java`)
+- Computes `notesCount` during dialog initialization by checking `!getNote(ctx, rec.kfxPath).isEmpty()`.
+- If `notesCount > 0`, appends `"Notes"` to `chipList`.
+- Formats the chip with emoji prefix `📝 Notes (N)`, styling with `#FBBF24` gold/amber accent when inactive and `#FBBF24` solid fill with `#111827` dark text when active.
+- Handles filter selection: `else if ("Notes".equalsIgnoreCase(selectedGenre[0])) { if (getNote(ctx, rec.kfxPath).isEmpty()) continue; }`.
 
-### B. Catalog List Card Indicators (`FolioMetadataCatalogDialog.java`)
-- Computes title prefix: `(isFavorite ? "★ " : "") + (!getNote.isEmpty() ? "📝 " : "")`.
-- Formats list cards with clear multi-badge visual hierarchy (e.g., `★ 📝 1984`).
+### B. Full-Text Search Inside Personal Reading Notes (`FolioMetadataCatalogDialog.java`)
+- Updated `matchesQuery(Context ctx, FolioMetadataDb.BookRecord r, String q)` signature to accept `Context`.
+- Added search clause: `|| contains(getNote(ctx, r.kfxPath), q)`.
+- Enables seamless full-text discovery of any book by searching personal keywords, quotes, or thoughts recorded in reading notes.
 
-### C. Portable Backup & Restore (`FolioMetadataBackup.java`)
-- Serializes `"personal_note": string` into book JSON objects during export.
-- Deserializes `"personal_note"` on restore and synchronizes into `SharedPreferences("folio_notes")`.
-
-### D. Version Bump & Telemetry (`FolioMoreView.java`)
-- Bumped Control Center badge and About Folio dialog string to **`Folio v6.2 KFX (Enhanced Typesetting)`**.
+### C. Version Bump & Telemetry (`FolioMoreView.java`)
+- Bumped Control Center badge and About Folio dialog string to **`Folio v6.3 KFX (Enhanced Typesetting)`**.
 
 ---
 
@@ -47,8 +40,8 @@ In Round 062, Folio advanced to **Folio v6.2 KFX**. Gemini pre-authored drop-in 
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Personal Note Saved in Book Details** | Book Details (`ⓘ` on *1984*) | `screenshots/verify_r62_personal_note_saved.png` | **PASS** — Book Details popup renders amber-bordered `📝 Personal Note (tap to edit)` card displaying `"Essential dystopian classic - reread Part 3"` above Remove action. |
-| **Combined Catalog Card Indicators** | Catalog List Cards | `screenshots/verify_r62_card_note_badge.png` | **PASS** — Catalog card for *1984* clearly renders combined `★ 📝 1984` favorite and personal note indicators. |
+| **`📝 Notes (1)` Dynamic Chip Filter** | Catalog Dialog (`All Metadata ›`) | `screenshots/verify_r63_notes_chip_live.png` | **PASS** — Tapping `📝 Notes (1)` filters catalog header to `Library Metadata & Genres (1 of 27)`, displaying strictly annotated book `★ 📝 1984`. |
+| **Live Full-Text Note Search (`Part 3`)** | Catalog Dialog Search Box | `screenshots/verify_r63_search_inside_note.png` | **PASS** — Searching `"Part 3"` (phrase existing only in *1984*'s personal note) filters `Library Metadata & Genres (1 of 27)` to `★ 📝 1984`. |
 | **Stock Package Safety Invariant** | Android Package Manager | `lastUpdateTime=2026-11-19 21:59:23` | **PASS** — Stock `com.amazon.kindle` remains 100% untouched, intact, and read-only. |
 
 ---
@@ -62,10 +55,10 @@ As instructed by the Project Lead, the following architectural directive is reaf
 
 ## 5. Artifacts and Deliverables
 
-- `antig_to_gemini_neon_clunky_report062.zip`:
+- `antig_to_gemini_neon_clunky_report063.zip`:
   - `REPORT.md`
-  - `INSTRUCTIONS_ROUND_062.md`
+  - `INSTRUCTIONS_ROUND_063.md`
   - `protocol.json`
-  - `screenshots/verify_r62_personal_note_saved.png`
-  - `screenshots/verify_r62_card_note_badge.png`
-- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v6.2_kfx/base.apk` (131 MB)
+  - `screenshots/verify_r63_notes_chip_live.png`
+  - `screenshots/verify_r63_search_inside_note.png`
+- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v6.3_kfx/base.apk` (131 MB)
