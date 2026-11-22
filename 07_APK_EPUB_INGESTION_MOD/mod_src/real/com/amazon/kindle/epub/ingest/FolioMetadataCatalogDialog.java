@@ -1119,6 +1119,8 @@ public final class FolioMetadataCatalogDialog {
             if (!cleanDetailDate.isEmpty()) clip.append(" (").append(cleanDetailDate).append(")");
             if (!rec.publisher.isEmpty()) clip.append("\nPublisher: ").append(rec.publisher);
             if (!rec.isbn.isEmpty()) clip.append("\nISBN: ").append(rec.isbn);
+            String shTxt = getShelf(ctx, rec.kfxPath);
+            if (!shTxt.isEmpty()) clip.append("\nShelf: ").append(shTxt);
             int rStars = getRating(ctx, rec.kfxPath);
             if (rStars > 0) clip.append("\nRating: ").append(rStars).append("/5");
             String nTxt = getNote(ctx, rec.kfxPath);

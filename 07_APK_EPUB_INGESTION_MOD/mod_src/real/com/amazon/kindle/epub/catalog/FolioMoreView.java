@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v7.0 KFX");
+        badgeTv.setText("Folio v7.1 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -110,8 +110,11 @@ public final class FolioMoreView {
         subTv.setPadding(0, 0, 0, dp(d, 14));
         container.addView(subTv);
 
-        // 1b. Live 4-Tile Reading Stats Strip (1-tap deep-links + auto-refresh on dialog dismiss)
+        // 1b. Live 4-Tile Reading Stats Strip + Annual Reading Goal Card
         final TextView[] statNums = new TextView[4];
+        final TextView[] goalStatusRef = new TextView[1];
+        final View[] goalFillRef = new View[1];
+        final View[] goalTrackRef = new View[1];
         final Runnable refreshStats = new Runnable() {
             @Override public void run() {
                 int[] s = readQuickStats(ctx);
@@ -119,6 +122,7 @@ public final class FolioMoreView {
                 if (statNums[1] != null) statNums[1].setText(String.valueOf(s[1]));
                 if (statNums[2] != null) statNums[2].setText(String.valueOf(s[2]));
                 if (statNums[3] != null) statNums[3].setText(String.valueOf(s[3]));
+                updateGoalCard(ctx, s[2], goalStatusRef[0], goalFillRef[0], goalTrackRef[0]);
             }
         };
 
@@ -159,6 +163,81 @@ public final class FolioMoreView {
                     }
                 }));
         container.addView(statsRow);
+
+        // 1c. Annual Reading Goal Progress Card (tap to customize target)
+        LinearLayout goalCard = new LinearLayout(ctx);
+        goalCard.setOrientation(LinearLayout.VERTICAL);
+        goalCard.setPadding(dp(d, 14), dp(d, 12), dp(d, 14), dp(d, 12));
+        GradientDrawable gcBg = new GradientDrawable();
+        gcBg.setColor(0xFF1A1F2E);
+        gcBg.setCornerRadius(dp(d, 12));
+        gcBg.setStroke(dp(d, 1), 0xFF2A3142);
+        goalCard.setBackground(gcBg);
+        LinearLayout.LayoutParams gcLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        gcLp.bottomMargin = dp(d, 16);
+        goalCard.setLayoutParams(gcLp);
+
+        LinearLayout goalTop = new LinearLayout(ctx);
+        goalTop.setOrientation(LinearLayout.HORIZONTAL);
+        goalTop.setGravity(Gravity.CENTER_VERTICAL);
+
+        int yrNow = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+        TextView goalTitleTv = new TextView(ctx);
+        goalTitleTv.setText("🎯 " + yrNow + " Reading Goal");
+        goalTitleTv.setTextColor(TEXT_PRIMARY);
+        goalTitleTv.setTextSize(13);
+        goalTitleTv.setTypeface(Typeface.DEFAULT_BOLD);
+        goalTitleTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        goalTop.addView(goalTitleTv);
+
+        TextView goalEditTv = new TextView(ctx);
+        goalEditTv.setText("Edit ›");
+        goalEditTv.setTextColor(0xFF34D399);
+        goalEditTv.setTextSize(12);
+        goalEditTv.setTypeface(Typeface.DEFAULT_BOLD);
+        goalTop.addView(goalEditTv);
+        goalCard.addView(goalTop);
+
+        TextView goalSubTv = new TextView(ctx);
+        goalSubTv.setTextColor(TEXT_MUTED);
+        goalSubTv.setTextSize(12);
+        goalSubTv.setPadding(0, dp(d, 3), 0, dp(d, 8));
+        goalStatusRef[0] = goalSubTv;
+        goalCard.addView(goalSubTv);
+
+        LinearLayout barTrack = new LinearLayout(ctx);
+        barTrack.setOrientation(LinearLayout.HORIZONTAL);
+        GradientDrawable trBg = new GradientDrawable();
+        trBg.setColor(0xFF242938);
+        trBg.setCornerRadius(dp(d, 4));
+        barTrack.setBackground(trBg);
+        barTrack.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 6)));
+
+        View barFill = new View(ctx);
+        GradientDrawable flBg = new GradientDrawable();
+        flBg.setColor(0xFF34D399);
+        flBg.setCornerRadius(dp(d, 4));
+        barFill.setBackground(flBg);
+        barFill.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0f));
+        barTrack.addView(barFill);
+
+        View barRest = new View(ctx);
+        barRest.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+        barTrack.addView(barRest);
+
+        goalFillRef[0] = barFill;
+        goalTrackRef[0] = barRest;
+        goalCard.addView(barTrack);
+
+        updateGoalCard(ctx, stats[2], goalSubTv, barFill, barRest);
+        goalCard.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                showReadingGoalDialog(ctx, refreshStats);
+            }
+        });
+        container.addView(goalCard);
 
         // 2. Action Cards
         // Card: Library Metadata & Genres
@@ -336,6 +415,113 @@ public final class FolioMoreView {
 
         tile.setOnClickListener(listener);
         return tile;
+    }
+
+    private static int getReadingGoalTarget(Context ctx) {
+        try {
+            int g = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .getInt("reading_goal_target", 12);
+            return g > 0 ? g : 12;
+        } catch (Throwable ignored) { return 12; }
+    }
+
+    private static void setReadingGoalTarget(Context ctx, int target) {
+        try {
+            ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .edit().putInt("reading_goal_target", Math.max(1, target)).apply();
+        } catch (Throwable ignored) {}
+    }
+
+    private static void updateGoalCard(Context ctx, int finishedCount, TextView statusTv, View fillV, View restV) {
+        if (statusTv == null || fillV == null || restV == null) return;
+        int target = getReadingGoalTarget(ctx);
+        int pct = Math.min(100, Math.round((finishedCount * 100f) / Math.max(1, target)));
+        statusTv.setText(finishedCount + " of " + target + " books finished (" + pct + "%)");
+        float ratio = Math.min(1f, finishedCount / (float) Math.max(1, target));
+        if (ratio > 0f && ratio < 0.04f) ratio = 0.04f;
+        fillV.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, ratio));
+        restV.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, Math.max(0f, 1f - ratio)));
+    }
+
+    private static void showReadingGoalDialog(final Context ctx, final Runnable onSaved) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        int cur = getReadingGoalTarget(ctx);
+        LinearLayout wrap = new LinearLayout(ctx);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setBackgroundColor(0xFF161922);
+        wrap.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
+
+        TextView hdr = new TextView(ctx);
+        hdr.setText("Set Annual Reading Goal");
+        hdr.setTextColor(TEXT_PRIMARY);
+        hdr.setTextSize(16);
+        hdr.setTypeface(Typeface.DEFAULT_BOLD);
+        hdr.setPadding(0, 0, 0, dp(d, 10));
+        wrap.addView(hdr);
+
+        final android.widget.EditText et = new android.widget.EditText(ctx);
+        et.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        et.setText(String.valueOf(cur));
+        et.setTextColor(TEXT_PRIMARY);
+        et.setHint("Number of books (e.g. 12, 24, 52)");
+        et.setHintTextColor(0xFF64748B);
+        et.setPadding(dp(d, 12), dp(d, 10), dp(d, 12), dp(d, 10));
+        GradientDrawable etBg = new GradientDrawable();
+        etBg.setColor(0xFF1A1F2E);
+        etBg.setCornerRadius(dp(d, 10));
+        etBg.setStroke(dp(d, 1), 0xFF2A3142);
+        et.setBackground(etBg);
+
+        LinearLayout presetRow = new LinearLayout(ctx);
+        presetRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams prLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        prLp.bottomMargin = dp(d, 12);
+        presetRow.setLayoutParams(prLp);
+
+        int[] presets = new int[] { 5, 12, 24, 36, 52 };
+        for (final int pv : presets) {
+            TextView pill = new TextView(ctx);
+            pill.setText(String.valueOf(pv));
+            pill.setTextColor(pv == cur ? 0xFF111827 : 0xFF34D399);
+            pill.setTextSize(12);
+            pill.setTypeface(Typeface.DEFAULT_BOLD);
+            pill.setGravity(Gravity.CENTER);
+            pill.setPadding(dp(d, 10), dp(d, 6), dp(d, 10), dp(d, 6));
+            GradientDrawable pBg = new GradientDrawable();
+            pBg.setColor(pv == cur ? 0xFF34D399 : 0xFF1E2433);
+            pBg.setCornerRadius(dp(d, 12));
+            pill.setBackground(pBg);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            lp.rightMargin = dp(d, 6);
+            pill.setLayoutParams(lp);
+            pill.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    et.setText(String.valueOf(pv));
+                    et.setSelection(et.getText().length());
+                }
+            });
+            presetRow.addView(pill);
+        }
+        wrap.addView(presetRow);
+        wrap.addView(et);
+
+        new AlertDialog.Builder(ctx)
+                .setView(wrap)
+                .setPositiveButton("Save Goal", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            int val = Integer.parseInt(et.getText().toString().trim());
+                            if (val > 0 && val <= 999) {
+                                setReadingGoalTarget(ctx, val);
+                                Toast.makeText(ctx, "Reading goal set to " + val + " books", Toast.LENGTH_SHORT).show();
+                                if (onSaved != null) onSaved.run();
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private static View makeActionCard(
@@ -693,7 +879,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v7.0 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v7.1 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
