@@ -1,10 +1,10 @@
 {
-  "round": 58,
+  "round": 59,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v5.8 KFX \u2014 Rich Book Details Cover Header & Expandable Synopsis",
+  "milestone": "Folio v5.9 KFX \u2014 Fullscreen Standalone Cover Lightbox & Live KFX File Size Display",
   "sender": "Gemini",
   "recipient": "Antigravity",
-  "reply_archive": "antig_to_gemini_neon_clunky_report058.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report059.zip",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% untouched and read-only.",
   "dropin_files": [
     "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
