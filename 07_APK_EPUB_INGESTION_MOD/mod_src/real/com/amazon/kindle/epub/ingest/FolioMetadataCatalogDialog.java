@@ -597,6 +597,7 @@ public final class FolioMetadataCatalogDialog {
                     coverIv.setScaleType(ImageView.ScaleType.CENTER_CROP);
                     coverIv.setBackgroundColor(Color.parseColor("#262B38"));
                     coverIv.setImageBitmap(bm);
+                    coverIv.setOnClickListener(v -> showCoverLightbox(ctx, rec));
                     headerRow.addView(coverIv);
                 }
             }
@@ -653,6 +654,16 @@ public final class FolioMetadataCatalogDialog {
             details.append("Language: ").append(rec.language).append("\n");
         }
         if (!rec.openLibraryKey.isEmpty()) details.append("Open Library: ").append(rec.openLibraryKey).append("\n");
+        if (rec.kfxPath != null && !rec.kfxPath.isEmpty()) {
+            File kf = new File(rec.kfxPath);
+            if (kf.exists()) {
+                long bytes = kf.length();
+                String sizeStr = bytes >= 1024L * 1024L
+                        ? String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
+                        : Math.max(1L, bytes / 1024L) + " KB";
+                details.append("Format: Enhanced KFX · ").append(sizeStr).append("\n");
+            }
+        }
 
         TextView metaTv = new TextView(ctx);
         metaTv.setText(details.toString().trim());
@@ -802,6 +813,63 @@ public final class FolioMetadataCatalogDialog {
                         showEditMetadataDialog(ctx, rec, onMetadataEdited))
                 .setNegativeButton("Close", null)
                 .show();
+    }
+
+    private static void showCoverLightbox(final Context ctx, final FolioMetadataDb.BookRecord rec) {
+        if (rec == null || rec.coverPath == null || rec.coverPath.isEmpty()) return;
+        File cf = new File(rec.coverPath);
+        if (!cf.exists()) return;
+        Bitmap bm = null;
+        try {
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(cf.getAbsolutePath(), bounds);
+            int sample = 1;
+            int maxDim = Math.max(bounds.outWidth, bounds.outHeight);
+            while (maxDim / sample > 1600) sample *= 2;
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inSampleSize = sample;
+            bm = BitmapFactory.decodeFile(cf.getAbsolutePath(), opts);
+        } catch (Throwable ignored) {}
+        if (bm == null) return;
+
+        LinearLayout wrap = new LinearLayout(ctx);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setBackgroundColor(Color.BLACK);
+        wrap.setGravity(Gravity.CENTER);
+        wrap.setPadding(dp(ctx, 16), dp(ctx, 20), dp(ctx, 16), dp(ctx, 16));
+
+        ImageView fullIv = new ImageView(ctx);
+        fullIv.setImageBitmap(bm);
+        fullIv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        fullIv.setAdjustViewBounds(true);
+        LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 440));
+        fullIv.setLayoutParams(ivLp);
+        wrap.addView(fullIv);
+
+        TextView capTv = new TextView(ctx);
+        String authorStr = formatAuthorForDisplay(rec.author);
+        capTv.setText(authorStr.isEmpty() ? rec.title : rec.title + " · " + authorStr);
+        capTv.setTextColor(Color.parseColor("#CBD5E1"));
+        capTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        capTv.setGravity(Gravity.CENTER);
+        capTv.setPadding(0, dp(ctx, 12), 0, dp(ctx, 4));
+        wrap.addView(capTv);
+
+        TextView hintTv = new TextView(ctx);
+        hintTv.setText("Tap cover to close");
+        hintTv.setTextColor(Color.parseColor("#64748B"));
+        hintTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        hintTv.setGravity(Gravity.CENTER);
+        wrap.addView(hintTv);
+
+        final AlertDialog dlg = new AlertDialog.Builder(ctx)
+                .setView(wrap)
+                .create();
+        wrap.setOnClickListener(v -> dlg.dismiss());
+        fullIv.setOnClickListener(v -> dlg.dismiss());
+        dlg.show();
     }
 
     private static void showEditMetadataDialog(final Context ctx, final FolioMetadataDb.BookRecord rec,
