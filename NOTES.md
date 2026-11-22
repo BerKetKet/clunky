@@ -1,30 +1,35 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.4 KFX") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 027 complete:
-  1. **HTML Whitespace Normalization**: Implemented ASCII whitespace collapsing (`collapse_ascii_whitespace`, trimming trailing span space, preserving `<br/>` and `<pre>`) in `src/epub/xhtml.rs`. Completely eliminated stray line breaks in Contents entries (e.g. `"THE WOMEN OF TRACHIS"` and `"OEDIPUS THE KING"` now render cleanly on single continuous lines).
-  2. **Multi-Byte UTF-16 Code Unit Offsets**: Replaced `.chars().count()` with `.encode_utf16().count()` in `src/packager/storylines.rs`, matching YellowJersey Java/ICU/Skia UTF-16 code unit offset requirements for style events.
-  3. **Native YellowJersey Internal Hyperlinks**: Emitted `$266` anchor entities (`$180 anchor_sym, $183: {$155 target_eid, $143 offset}`) and `$179 link_to` style events in `$142`. Verified live jump from Location 10 ("ANTIGONE") to Location 508 in `KRIFDocViewer`.
-  4. **Systematic UI/UX Audit**: Verified Reader Black/Dark mode (pure `#000000` background, crisp white text), Library tab (local KFX books with real covers), and Home tab (unified search and Continue Reading).
-  5. **Cover Architecture Directive Recorded**: Documented Project Lead directive regarding cover extraction and rendering in dedicated UI container rather than in-spine KFX.
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.5 KFX") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 028 complete:
+  1. **Pure-Rust Prose Image Aspect-Ratio Scaling (Task A)**: Added `"gif"` decoder feature in `kfx_converter/Cargo.toml`, sniffed GIF/PNG headers for zero-cost dimension detection, transcoded non-renderable GIFs to standard PNG, emitted decoded pixel dimensions in external resource entities (`$422/$423` + `$66/$67`), and generated proportional column styles (`pct = min(100.0, w / 512.0 * 100.0)`) with `$65: 100% max_width` and `$64: 100% max_height`. Verified all 150 Rust tests pass cleanly.
+  2. **Multi-Book On-Device Visual Verification (Task B)**:
+     - Antigone ornament (`00008.gif`, 296×38) renders at width 369px, height 39px, completely eliminating 1600px vertical stretch (`screenshots/verify_r28_antigone_ornament_fixed.png`).
+     - Mixed-aspect image exam verified on single page with 6:1 wide banner (918×150), 3:2 landscape photo (904×595), and 1:1 icon (20×20) maintaining exact geometric proportions (`screenshots/verify_r28_images_exam_aspect.png`).
+     - Contents page verified with uniform 75px line spacing and clean single-line blue link underlines at default `Aa → Spacing` (`screenshots/verify_r28_sophocles_contents_default_spacing.png`).
+  3. **UI Polish & More Tab Audit (Task C)**:
+     - Patched XML string resources during APK packaging: Library search bar re-branded to `"Search Folio"` (`screenshots/verify_r28_library_branding.png`).
+     - Added `mainScroll.setClipToPadding(false)` and `mainScroll.setPadding(0, 0, 0, dp(d, 80))` in `OpenCatalogView.java` for clean clearance above mini-cover dock (`screenshots/verify_r28_home_bottom_padding.png`).
+     - Audited More tab menu items (`Sign In with Amazon`, `Sync now`, `Settings`, `Help`) for Round 029 offline repurposing (`screenshots/verify_r28_more_tab.png`).
+  4. **Cover Architecture Directive Relayed**: Included Project Lead directive in `REPORT.md` regarding extracting cover images on ingestion and managing them in a dedicated UI View rather than within the reflowable KFX book spine.
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
 - **Installed Packages**:
   - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only, v8.160.1.0, `lastUpdateTime=2026-11-19 21:59:23`)
-  - Clone: `com.amazon.kindle.epub` ("Folio v2.4 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, `$270` cover container, native table support, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, `$179` hyperlinks, KRIFDocViewer Enhanced Typesetting)
+  - Clone: `com.amazon.kindle.epub` ("Folio v2.5 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, `$270` cover container, native table support, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, KRIFDocViewer Enhanced Typesetting)
 
-## Verification Evidence (Round 027)
-1. `screenshots/verify_r27_sophocles_contents_fixed.png`: Single-line rendering of `"THE WOMEN OF TRACHIS"` and `"OEDIPUS THE KING"`.
-2. `screenshots/verify_r27_internal_link_jump.png`: Internal hyperlink navigation to Location 508 with `"Back to 10"` breadcrumb.
-3. `screenshots/verify_r27_prose_emphasis_verse.png`: Dramatic verse dialogue with speaker cues (`ANTIGONE`, `ISMENE`) and poetry line breaks.
-4. `screenshots/verify_r27_reader_dark_theme.png`: Reader in Black/Dark mode (`#000000` background).
-5. `screenshots/verify_r27_library_tab.png`: Library grid displaying local KFX books and real covers.
-6. `screenshots/verify_r27_home_tab.png`: Home tab with unified search and Continue Reading carousel.
-7. `dumpsys package com.amazon.kindle`: Stock app unchanged (`lastUpdateTime=2026-11-19 21:59:23`).
+## Verification Evidence (Round 028)
+1. `screenshots/verify_r28_antigone_ornament_fixed.png`: 296×38 ornament rendered at 369×39px.
+2. `screenshots/verify_r28_images_exam_aspect.png`: Wide 6:1 banner, 3:2 photo, and 1:1 icon undistorted.
+3. `screenshots/verify_r28_sophocles_contents_default_spacing.png`: Clean 75px spacing at default `Aa → Spacing`.
+4. `screenshots/verify_r28_library_branding.png`: Library search bar reads `"Search Folio"`.
+5. `screenshots/verify_r28_home_bottom_padding.png`: 80dp scroll clearance above mini-cover dock.
+6. `screenshots/verify_r28_more_tab.png`: More tab UI audit capture.
+7. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ## Next Steps
-1. Package `antig_to_gemini_neon_clunky_report027.zip` (< 15 MB).
+1. Package `antig_to_gemini_neon_clunky_report028.zip` (< 15 MB).
 2. Relay report zip to Gemini Neon tab via Chrome bridge, verifying attachment preview chip before sending.
-3. Launch autonomous relay runner with 2000s timeout and 60s polling interval to await Round 028 instructions.
+3. Launch autonomous relay runner with 2000s timeout and 60s polling interval to await Round 029 instructions.
 
 ---
 

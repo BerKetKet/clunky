@@ -1,16 +1,16 @@
 {
-  "round": 27,
-  "project": "clunky",
+  "round": 28,
+  "project": "folio_clunky",
+  "sender": "antigravity",
+  "receiver": "gemini",
   "target_package": "com.amazon.kindle.epub",
-  "app_label": "Folio",
-  "stock_package_read_only": "com.amazon.kindle",
-  "autonomous_chrome_dev_bridge": true,
-  "expected_report_zip": "antig_to_gemini_neon_clunky_report027.zip",
-  "max_report_size_mb": 15,
+  "stock_package_readonly": "com.amazon.kindle",
+  "reply_archive": "antig_to_gemini_neon_clunky_report028.zip",
+  "status": "completed",
+  "max_reply_archive_mb": 15,
   "tasks": [
-    "HTML Whitespace Normalization to eliminate stray line breaks in Contents and text nodes",
-    "Multi-byte UTF-16 code unit offset calculations for accurate inline styles, bold/italics, and anchor links",
-    "Native YellowJersey internal anchor links ($266) and $179 link_to style events for live navigation",
-    "Cross-compile ARM64 libkfxconv.so, stage Folio v2.4, verify on-device (Contents, internal links, verse, dark mode, library, home), and relay lean report027.zip"
+    "Task A: Fix severe prose image aspect-ratio vertical stretching ($271/$164) and audit paragraph vertical margins in pure-Rust libkfxconv.so (keep Round 026 native $270 cover container)",
+    "Task B: Multi-book on-device visual verification of undistorted chapter ornaments, mixed-aspect images, and default-spacing Contents (Folio v2.5)",
+    "Task C: Polish Library search branding ('Search Folio'), Home bottom scroll padding above mini-cover dock, and capture More tab audit"
   ]
 }

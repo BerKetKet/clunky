@@ -109,7 +109,8 @@ public final class OpenCatalogView {
                 CharSequence hint = ((TextView) c).getHint();
                 String s1 = txt != null ? txt.toString() : "";
                 String s2 = hint != null ? hint.toString() : "";
-                if (s1.contains("Search Kindle") || s2.contains("Search Kindle")) {
+                if (s1.contains("Search Kindle") || s2.contains("Search Kindle")
+                        || s1.contains("Search Folio") || s2.contains("Search Folio")) {
                     View target = c;
                     if (c.getParent() instanceof View && c.getParent() != vg.getRootView()) {
                         target = (View) c.getParent();
@@ -145,13 +146,15 @@ public final class OpenCatalogView {
         ScrollView mainScroll = new ScrollView(ctx);
         mainScroll.setBackgroundColor(BG_DARK);
         mainScroll.setFillViewport(true);
+        mainScroll.setClipToPadding(false);
+        mainScroll.setPadding(0, 0, 0, dp(d, 80));
         mainScroll.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         final LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(BG_DARK);
-        root.setPadding(dp(d, 16), dp(d, 18), dp(d, 16), dp(d, 84));
+        root.setPadding(dp(d, 16), dp(d, 18), dp(d, 16), dp(d, 24));
         mainScroll.addView(root);
 
         // --- Top Brand Header ---
