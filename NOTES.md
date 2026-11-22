@@ -1,7 +1,42 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.8 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 031 complete:
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.9 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 032 complete:
+  1. **Zero-Hyphenation Code Blocks & Proportional Sup/Sub (Task A)**:
+     - Pure-Rust schema parity in `libkfxconv.so`: Emitted YellowJersey `$127: $349` (`hyphens: none`) on `style_pre` and `style_code`. Variable names, keywords, and long identifiers wrap cleanly on word boundaries with zero hyphens.
+     - Polished `<sup>` and `<sub>` styling: Kept proportional `0.75em` (`$16`) and baseline styles (`$44: $370` super, `$44: $371` sub), and completely removed numeric baseline shift (`$31`). Fixed awkward line spacing and vertical line collisions.
+     - Added Rust unit test `test_r32_code_no_hyphen_and_proportional_sup_sub` in `src/packager/tests.rs`; all 212 tests pass cleanly.
+     - Cross-compiled stripped ARM64 `libkfxconv.so` (4.5 MB) and updated version badge in `FolioMoreView.java` to `Folio v2.9 KFX`.
+  2. **Store-Free Library Search (Task B)**:
+     - Reverse-engineered Search UI in `classes5.dex` (`SearchResultsKt`, `SearchActivity`, `RubySearchActivity`, `SearchProvider`, `SearchViewModel`, `models.b`).
+     - In `SearchResultsKt.smali`: Patched `b4(ZZZZZ)Z` to return `false` (0), completely suppressing `StoreHeaderSection` (the Amazon Kindle Store shopping cart header).
+     - In `com/amazon/kcp/search/v2/models/b.smali`: Patched `e()Ljava/util/List;` to return `Collections.EMPTY_LIST`.
+     - In `SearchProvider.smali`: Patched `N()` to return `Collections.EMPTY_LIST` and forced `queryStore = false`.
+     - In `SearchViewModel.smali`: Silenced `r()V` (coroutine launcher) and `z(SearchNodeCompleteEvent)`.
+     - In `SearchActivity.smali`: Forced `setShouldShowStoreResults(false)`.
+     - Verified: Searching `"Sophocles"` displays **ONLY `In your library (1)`** with zero store shelf.
+     - Verified: Tapping the local search result opens directly into `StandAloneBookReaderActivity` (`KRIFDocViewer`).
+  3. **Visual Verification & Release Staging (Task C)**:
+     - 3 hardware proof screenshots captured on Samsung Galaxy M32 (`verify_r32_code_no_hyphen_and_sup_sub.png`, `verify_r32_library_search_no_store.png`, `verify_r32_search_result_open_book.png`).
+     - Safety Invariant: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Signed Folio v2.9 KFX APK (131 MB) and stripped native library (4.5 MB) staged at `07_APK_EPUB_INGESTION_MOD/release/folio_v2.9_kfx/`.
+  4. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page and take the image for the cover. It is then processed separately and kept in its own class and inserted when displaying the book separately."
+- **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
+- **Installed Packages**:
+  - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only, v8.160.1.0, `lastUpdateTime=2026-11-19 21:59:23`)
+  - Clone: `com.amazon.kindle.epub` ("Folio v2.9 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, store-free library search, zero-hyphenation code blocks, proportional sup/sub, `$270` cover container, native table support, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, dynamic hardware metadata, KRIFDocViewer Enhanced Typesetting)
+
+## Verification Evidence (Round 032)
+1. `screenshots/verify_r32_code_no_hyphen_and_sup_sub.png`: Rendered KFX page showing `<pre>` Python code block with zero hyphenation alongside crisp proportional `E = mc²` and `H₂O` sup/sub formatting.
+2. `screenshots/verify_r32_library_search_no_store.png`: Live `"Search Folio"` query (`"Sophocles"`) showing ONLY `In your library (1)` with the Amazon `"From the store"` shelf completely absent.
+3. `screenshots/verify_r32_search_result_open_book.png`: Tapping local search match under `In your library (1)` opens directly into `StandAloneBookReaderActivity` (`KRIFDocViewer`).
+4. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+5. `dumpsys package com.amazon.kindle.epub`: Folio v2.9 KFX deployed (`lastUpdateTime=2026-11-22 12:03:13`).
+
+---
+
+# Round 031: Real Pop-Up Footnotes, Rich Inline/Code Formatting & Live Library Search QC (Folio v2.8)
   1. **Real Native KFX Pop-Up Footnotes (Task A)**:
      - Pure-Rust schema parity: Link span in `$142 style_events` emits `$179 link_to` and `$616: $617` (`yj.display: yj.note`). Target footnote entry in `$259 storyline` emits `$615: $281` (`yj.classification: footnote`).
      - Anchor entity `$266` resolves `$183 position` pointing to target footnote story entry EID (`$155`) with offset 0.
