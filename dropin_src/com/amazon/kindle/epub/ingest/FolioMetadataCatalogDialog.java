@@ -386,7 +386,8 @@ public final class FolioMetadataCatalogDialog {
                 chipList.add("All");
                 if ("MISSING_COVER".equalsIgnoreCase(selectedGenre[0])
                         || "MISSING_GENRES".equalsIgnoreCase(selectedGenre[0])
-                        || "MISSING_SYNOPSIS".equalsIgnoreCase(selectedGenre[0])) {
+                        || "MISSING_SYNOPSIS".equalsIgnoreCase(selectedGenre[0])
+                        || selectedGenre[0].startsWith("ERA:")) {
                     chipList.add(selectedGenre[0]);
                 }
                 if (queueCount > 0) chipList.add("Queue");
@@ -407,16 +408,17 @@ public final class FolioMetadataCatalogDialog {
                     boolean isFavChip = "Favorites".equalsIgnoreCase(g);
                     boolean isNotesChip = "Notes".equalsIgnoreCase(g);
                     boolean isShelfChip = g.startsWith("SHELF:");
+                    boolean isEraChip = g.startsWith("ERA:");
                     boolean isAuditChip = "MISSING_COVER".equalsIgnoreCase(g)
                             || "MISSING_GENRES".equalsIgnoreCase(g)
                             || "MISSING_SYNOPSIS".equalsIgnoreCase(g);
                     boolean isStatusChip = "Reading".equalsIgnoreCase(g)
                             || "Finished".equalsIgnoreCase(g)
                             || "Unread".equalsIgnoreCase(g);
-                    String labelText = isQueueChip ? "Up Next" : (isShelfChip ? g.substring(6)
+                    String labelText = isQueueChip ? "Up Next" : (isEraChip ? g.substring(4) : (isShelfChip ? g.substring(6)
                             : ("MISSING_COVER".equalsIgnoreCase(g) ? "Missing Cover"
                             : ("MISSING_GENRES".equalsIgnoreCase(g) ? "Missing Genres"
-                            : ("MISSING_SYNOPSIS".equalsIgnoreCase(g) ? "Missing Synopsis" : g))));
+                            : ("MISSING_SYNOPSIS".equalsIgnoreCase(g) ? "Missing Synopsis" : g)))));
                     int gCount;
                     if ("All".equalsIgnoreCase(g)) gCount = allBooks.size();
                     else if (isQueueChip) gCount = queueCount;
@@ -424,13 +426,14 @@ public final class FolioMetadataCatalogDialog {
                     else if (isNotesChip) gCount = notesCount;
                     else if (isShelfChip) gCount = shelfCounts.containsKey(labelText) ? shelfCounts.get(labelText) : 0;
                     else if (isAuditChip) gCount = countAuditMatches(allBooks, g);
+                    else if (isEraChip) gCount = countEraMatches(allBooks, g.substring(4));
                     else if ("Reading".equalsIgnoreCase(g)) gCount = readingCount;
                     else if ("Finished".equalsIgnoreCase(g)) gCount = finishedCount;
                     else if ("Unread".equalsIgnoreCase(g)) gCount = unreadCount;
                     else gCount = countBooksInGenre(allBooks, g);
 
                     TextView chip = new TextView(ctx);
-                    String chipPrefix = isQueueChip ? "📌 " : (isFavChip ? "★ " : (isNotesChip ? "📝 " : (isShelfChip ? "🏷 " : (isAuditChip ? "🩺 " : ""))));
+                    String chipPrefix = isQueueChip ? "📌 " : (isEraChip ? "📅 " : (isFavChip ? "★ " : (isNotesChip ? "📝 " : (isShelfChip ? "🏷 " : (isAuditChip ? "🩺 " : "")))));
                     chip.setText(chipPrefix + labelText + " (" + gCount + ")");
                     chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                     chip.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
@@ -479,6 +482,8 @@ public final class FolioMetadataCatalogDialog {
                         if (getProgress(progressMap, rec.kfxPath) < 100) continue;
                     } else if ("Unread".equalsIgnoreCase(selectedGenre[0])) {
                         if (getProgress(progressMap, rec.kfxPath) > 0) continue;
+                    } else if (selectedGenre[0].startsWith("ERA:")) {
+                        if (!matchesEraFilter(rec, selectedGenre[0].substring(4))) continue;
                     } else if ("MISSING_COVER".equalsIgnoreCase(selectedGenre[0])
                             || "MISSING_GENRES".equalsIgnoreCase(selectedGenre[0])
                             || "MISSING_SYNOPSIS".equalsIgnoreCase(selectedGenre[0])) {
@@ -2589,6 +2594,39 @@ public final class FolioMetadataCatalogDialog {
             db.close();
         }
         return count;
+    }
+
+    public static int parseBookYear(String pubDate) {
+        if (pubDate == null || pubDate.isEmpty()) return -1;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(1[5-9]\\d{2}|20\\d{2})").matcher(pubDate);
+        if (m.find()) {
+            try { return Integer.parseInt(m.group(1)); } catch (Throwable ignored) {}
+        }
+        return -1;
+    }
+
+    public static String eraBucketForYear(int yr) {
+        if (yr < 0) return "";
+        if (yr < 1900) return "Pre-1900";
+        if (yr < 1950) return "1900–1949";
+        if (yr < 2000) return "1950–1999";
+        if (yr < 2010) return "2000–2009";
+        if (yr < 2020) return "2010–2019";
+        return "2020+";
+    }
+
+    private static boolean matchesEraFilter(FolioMetadataDb.BookRecord rec, String targetEra) {
+        if (rec == null || targetEra == null) return false;
+        int yr = parseBookYear(rec.pubDate);
+        return targetEra.equals(eraBucketForYear(yr));
+    }
+
+    private static int countEraMatches(List<FolioMetadataDb.BookRecord> all, String targetEra) {
+        int n = 0;
+        for (FolioMetadataDb.BookRecord r : all) {
+            if (matchesEraFilter(r, targetEra)) n++;
+        }
+        return n;
     }
 
     private static boolean matchesAuditFilter(FolioMetadataDb.BookRecord rec, String auditKey) {

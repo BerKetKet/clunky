@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v9.2 KFX");
+        badgeTv.setText("Folio v9.3 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2201,6 +2201,10 @@ public final class FolioMoreView {
         final java.util.Map<String, String> pubLabel = new java.util.HashMap<>();
         int favs = 0, noted = 0, shelved = 0, ratedCount = 0, ratingSum = 0;
         int missingCover = 0, missingGenre = 0, missingDesc = 0;
+        final java.util.LinkedHashMap<String, Integer> eraFreq = new java.util.LinkedHashMap<>();
+        String[] eraOrder = new String[] { "Pre-1900", "1900–1949", "1950–1999", "2000–2009", "2010–2019", "2020+" };
+        for (String eo : eraOrder) eraFreq.put(eo, 0);
+        int minYear = Integer.MAX_VALUE, maxYear = Integer.MIN_VALUE, datedCount = 0;
 
         for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : all) {
             String aDisp = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
@@ -2215,6 +2219,14 @@ public final class FolioMoreView {
                 hasCov = covF.exists() && covF.length() >= 64;
             }
             if (!hasCov) missingCover++;
+            int bYr = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.parseBookYear(r.pubDate);
+            if (bYr > 0) {
+                datedCount++;
+                if (bYr < minYear) minYear = bYr;
+                if (bYr > maxYear) maxYear = bYr;
+                String eb = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.eraBucketForYear(bYr);
+                if (eraFreq.containsKey(eb)) eraFreq.put(eb, eraFreq.get(eb) + 1);
+            }
             if (r.description == null || r.description.trim().isEmpty()) missingDesc++;
             boolean hasCleanG = false;
             if (r.genres != null && !r.genres.isEmpty()) {
@@ -2537,6 +2549,34 @@ public final class FolioMoreView {
             }
         }
 
+        // Section 3b: Publication Eras Bar Chart (tap any era to filter catalog)
+        if (datedCount > 0) {
+            TextView eHdr = new TextView(ctx);
+            eHdr.setText("PUBLICATION ERAS · " + minYear + "–" + maxYear + " (TAP TO FILTER)");
+            eHdr.setTextColor(0xFFC084FC);
+            eHdr.setTextSize(11);
+            eHdr.setTypeface(Typeface.DEFAULT_BOLD);
+            eHdr.setPadding(0, dp(d, 14), 0, dp(d, 8));
+            content.addView(eHdr);
+
+            int maxE = 1;
+            for (Integer ec : eraFreq.values()) {
+                if (ec > maxE) maxE = ec;
+            }
+            for (java.util.Map.Entry<String, Integer> ee : eraFreq.entrySet()) {
+                final String eraName = ee.getKey();
+                int eCnt = ee.getValue();
+                if (eCnt <= 0) continue;
+                content.addView(makeInsightBarRow(ctx, d, "📅 " + eraName, eCnt, maxE, 0xFFC084FC,
+                        new View.OnClickListener() {
+                            @Override public void onClick(View v) {
+                                if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
+                                com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "ERA:" + eraName);
+                            }
+                        }));
+            }
+        }
+
         // Section 4: Top Publishers Bar Chart
         if (!pubFreq.isEmpty()) {
             java.util.List<String> topPubs = new java.util.ArrayList<>(pubFreq.keySet());
@@ -2829,7 +2869,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v9.2 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v9.3 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
