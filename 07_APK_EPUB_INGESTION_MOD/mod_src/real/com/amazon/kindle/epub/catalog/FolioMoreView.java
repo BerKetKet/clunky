@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v4.5 KFX");
+        badgeTv.setText("Folio v5.0 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -431,16 +431,37 @@ public final class FolioMoreView {
     private static void showAboutDialog(final Context ctx) {
         // Collect live stats
         int indexedBooks = 0;
+        int booksInProgress = 0;
+        int booksFinished = 0;
         try {
             File dbFile = new File(ctx.getApplicationInfo().dataDir, "databases/kindle_library.db");
             if (dbFile.exists()) {
                 SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
-                Cursor c = db.rawQuery("SELECT COUNT(*) FROM KindleContent WHERE TITLE IS NOT NULL AND TITLE != ''", null);
-                if (c != null && c.moveToFirst()) {
-                    indexedBooks = c.getInt(0);
-                    c.close();
+                try {
+                    Cursor c = db.rawQuery("SELECT COUNT(*) FROM KindleContent WHERE TITLE IS NOT NULL AND TITLE != ''", null);
+                    if (c != null) {
+                        if (c.moveToFirst()) indexedBooks = c.getInt(0);
+                        c.close();
+                    }
+                    try {
+                        Cursor cFin = db.rawQuery("SELECT COUNT(*) FROM KindleContent WHERE READ_STATE > 0", null);
+                        if (cFin != null) {
+                            if (cFin.moveToFirst()) booksFinished = cFin.getInt(0);
+                            cFin.close();
+                        }
+                    } catch (Throwable ignored) {}
+                    try {
+                        Cursor cProg = db.rawQuery(
+                                "SELECT COUNT(*) FROM UserContent u JOIN KindleContent k ON u.KEY = k.ID "
+                                + "WHERE u.READING_PROGRESS > 0 AND (k.READ_STATE IS NULL OR k.READ_STATE = 0)", null);
+                        if (cProg != null) {
+                            if (cProg.moveToFirst()) booksInProgress = cProg.getInt(0);
+                            cProg.close();
+                        }
+                    } catch (Throwable ignored) {}
+                } finally {
+                    db.close();
                 }
-                db.close();
             }
         } catch (Throwable ignored) {}
 
@@ -466,7 +487,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v4.5 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v5.0 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
@@ -498,6 +519,7 @@ public final class FolioMoreView {
         sb.append("Live Library & Storage Stats:\n");
         sb.append("• Indexed Library Books: ").append(indexedBooks).append("\n");
         sb.append("• Enriched Metadata Records: ").append(metaRecords).append("\n");
+        sb.append("• Reading Progress: ").append(booksInProgress).append(" in progress · ").append(booksFinished).append(" finished\n");
         sb.append("• App Library Storage: ").append(String.format("%.1f", appLibMb)).append(" MB\n");
         sb.append("• Legacy /sdcard/kindle: ").append(String.format("%.1f", sdKindleMb)).append(" MB\n");
         sb.append("• Temp Open-Once Cache: ").append(String.format("%.1f", tempCacheMb)).append(" MB\n");

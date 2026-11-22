@@ -330,7 +330,8 @@ public final class FolioMetadataCatalogDialog {
                 String c = g.trim();
                 if (c.length() >= 3 && c.length() <= 22
                         && !c.contains("--")
-                        && !EpubMetadataExtractor.isNoiseTag(c)) {
+                        && !EpubMetadataExtractor.isNoiseTag(c)
+                        && !isCatalogMetaTag(c)) {
                     String key = c.toLowerCase(Locale.ROOT);
                     if (seenInBook.add(key)) {
                         freq.put(key, (freq.containsKey(key) ? freq.get(key) : 0) + 1);
@@ -752,15 +753,43 @@ public final class FolioMetadataCatalogDialog {
         return v != null ? v : 0;
     }
 
+    private static boolean isCatalogMetaTag(String tag) {
+        if (tag == null) return true;
+        String lower = tag.trim().toLowerCase(Locale.ROOT);
+        return lower.isEmpty()
+                || lower.startsWith("early works")
+                || lower.startsWith("translations into")
+                || lower.contains("textbooks for")
+                || lower.contains("protected daisy")
+                || lower.contains("accessible book")
+                || lower.contains("in library")
+                || lower.contains("internet archive")
+                || lower.contains("lending library")
+                || lower.equals("general");
+    }
+
     private static String cleanGenresForDisplay(String raw) {
         if (raw == null || raw.trim().isEmpty()) return "";
-        StringBuilder sb = new StringBuilder();
+        Set<String> seen = new LinkedHashSet<>();
+        List<String> clean = new ArrayList<>();
+        List<String> fallback = new ArrayList<>();
         for (String part : raw.split(",")) {
             String c = part.trim();
-            if (!c.isEmpty() && !EpubMetadataExtractor.isNoiseTag(c)) {
-                if (sb.length() > 0) sb.append(", ");
-                sb.append(c);
+            if (c.isEmpty() || EpubMetadataExtractor.isNoiseTag(c) || isCatalogMetaTag(c)) continue;
+            String key = c.toLowerCase(Locale.ROOT);
+            if (!seen.add(key)) continue;
+            if (!c.contains("--")) {
+                clean.add(toTitleCase(c));
+            } else {
+                fallback.add(c);
             }
+        }
+        List<String> chosen = !clean.isEmpty() ? clean : fallback;
+        StringBuilder sb = new StringBuilder();
+        int limit = Math.min(chosen.size(), 6);
+        for (int i = 0; i < limit; i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(chosen.get(i));
         }
         return sb.toString();
     }
