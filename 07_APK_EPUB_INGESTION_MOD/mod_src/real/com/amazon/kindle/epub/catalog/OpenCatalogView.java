@@ -397,7 +397,25 @@ public final class OpenCatalogView {
                         public void run() {
                             libSection.setVisibility(View.VISIBLE);
                             libSection.removeAllViews();
-                            libSection.addView(makeSectionTitle(ctx, d, "Continue Reading"));
+                            LinearLayout crHeader = new LinearLayout(ctx);
+                            crHeader.setOrientation(LinearLayout.HORIZONTAL);
+                            crHeader.setGravity(Gravity.CENTER_VERTICAL);
+                            TextView crTitle = makeSectionTitle(ctx, d, "Continue Reading");
+                            crHeader.addView(crTitle, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                            TextView allMetaLink = new TextView(ctx);
+                            allMetaLink.setText("All Metadata ›");
+                            allMetaLink.setTextColor(ACCENT_TEAL);
+                            allMetaLink.setTextSize(13f);
+                            allMetaLink.setTypeface(Typeface.DEFAULT_BOLD);
+                            allMetaLink.setPadding(dp(d, 8), dp(d, 4), dp(d, 2), dp(d, 4));
+                            allMetaLink.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx);
+                                }
+                            });
+                            crHeader.addView(allMetaLink);
+                            libSection.addView(crHeader);
                             HorizontalScrollView hs = new HorizontalScrollView(ctx);
                             hs.setHorizontalScrollBarEnabled(false);
                             LinearLayout row = new LinearLayout(ctx);

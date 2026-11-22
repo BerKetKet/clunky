@@ -3,6 +3,7 @@ package com.amazon.kindle.epub.ingest;
 import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -13,6 +14,7 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -494,6 +496,27 @@ public final class FolioMetadataCatalogDialog {
             box.addView(descTv);
         }
 
+        TextView removeBtn = new TextView(ctx);
+        removeBtn.setText("🗑 Remove from Folio Library");
+        removeBtn.setTextColor(Color.parseColor("#EF4444"));
+        removeBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        removeBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        removeBtn.setPadding(0, dp(ctx, 16), 0, dp(ctx, 4));
+        removeBtn.setOnClickListener(v -> {
+            new AlertDialog.Builder(ctx)
+                    .setTitle("Remove from Library?")
+                    .setMessage("Remove \"" + rec.title + "\" from Folio Library?\n\nOriginal files on storage will not be deleted.")
+                    .setPositiveButton("Remove", (diag, which) -> {
+                        removeBookFromLibrary(ctx, rec);
+                        Toast.makeText(ctx, "Removed \"" + rec.title + "\" from Folio", Toast.LENGTH_SHORT).show();
+                        if (parentDialog != null) parentDialog.dismiss();
+                        if (onMetadataEdited != null) onMetadataEdited.run();
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+        box.addView(removeBtn);
+
         ScrollView detailSv = new ScrollView(ctx);
         detailSv.addView(box);
 
@@ -581,6 +604,50 @@ public final class FolioMetadataCatalogDialog {
         et.setBackground(bg);
         parent.addView(et);
         return et;
+    }
+
+    private static void removeBookFromLibrary(final Context ctx, final FolioMetadataDb.BookRecord rec) {
+        try {
+            FolioMetadataDb db = new FolioMetadataDb(ctx);
+            try {
+                db.getWritableDatabase().delete("books_metadata", "id = ?", new String[] { String.valueOf(rec.id) });
+            } finally {
+                db.close();
+            }
+        } catch (Throwable t) {
+            Log.e("FolioCatalog", "Failed to delete from folio_metadata.db", t);
+        }
+
+        try {
+            File klDbFile = new File("/data/data/com.amazon.kindle.epub/databases/kindle_library.db");
+            if (klDbFile.exists()) {
+                SQLiteDatabase kldb = SQLiteDatabase.openDatabase(klDbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+                try {
+                    if (rec.kfxPath != null && !rec.kfxPath.isEmpty()) {
+                        kldb.delete("LocalContent", "FILE_PATH = ?", new String[] { rec.kfxPath });
+                    }
+                    if (rec.bookKey != null && !rec.bookKey.isEmpty()) {
+                        kldb.delete("KindleContent", "KEY = ? OR CONTENT_ID = ?", new String[] { rec.bookKey, rec.bookKey });
+                        kldb.delete("UserContent", "KEY = ?", new String[] { rec.bookKey });
+                    }
+                } finally {
+                    kldb.close();
+                }
+            }
+        } catch (Throwable t) {
+            Log.e("FolioCatalog", "Failed to delete from kindle_library.db", t);
+        }
+
+        try {
+            if (rec.kfxPath != null && rec.kfxPath.contains("files/folio_library")) {
+                File kfxFile = new File(rec.kfxPath);
+                if (kfxFile.exists()) kfxFile.delete();
+            }
+            if (rec.coverPath != null && rec.coverPath.contains("files/folio_covers")) {
+                File coverFile = new File(rec.coverPath);
+                if (coverFile.exists()) coverFile.delete();
+            }
+        } catch (Throwable ignored) {}
     }
 
     private static int dp(Context ctx, int v) {
