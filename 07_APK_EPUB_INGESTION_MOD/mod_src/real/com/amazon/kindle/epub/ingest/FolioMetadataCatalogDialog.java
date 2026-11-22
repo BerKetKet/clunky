@@ -1443,22 +1443,31 @@ public final class FolioMetadataCatalogDialog {
         final EditText etPublisher = addField(ctx, form, "Publisher", rec.publisher);
         final EditText etGenres = addField(ctx, form, "Genres (comma-separated)", rec.genres);
         final EditText etIsbn = addField(ctx, form, "ISBN", rec.isbn);
+        final EditText etDesc = addField(ctx, form, "Description / Synopsis", rec.description);
+        etDesc.setSingleLine(false);
+        etDesc.setMinLines(2);
+        etDesc.setMaxLines(5);
+        etDesc.setGravity(Gravity.TOP | Gravity.START);
 
         new AlertDialog.Builder(ctx)
                 .setView(sv)
                 .setPositiveButton("Save", (d, w) -> {
+                    String newTitle = etTitle.getText().toString().trim();
+                    String newAuthor = etAuthor.getText().toString().trim();
                     FolioMetadataDb db = new FolioMetadataDb(ctx);
                     try {
                         ContentValues cv = new ContentValues();
-                        cv.put("title", etTitle.getText().toString().trim());
-                        cv.put("author", etAuthor.getText().toString().trim());
+                        cv.put("title", newTitle);
+                        cv.put("author", newAuthor);
                         cv.put("pub_date", etPubDate.getText().toString().trim());
                         cv.put("publisher", etPublisher.getText().toString().trim());
                         cv.put("genres", etGenres.getText().toString().trim());
                         cv.put("isbn", etIsbn.getText().toString().trim());
+                        cv.put("description", etDesc.getText().toString().trim());
                         db.getWritableDatabase().update(
                                 "books_metadata", cv, "id = ?", new String[] { String.valueOf(rec.id) });
-                        Toast.makeText(ctx, "Saved metadata changes", Toast.LENGTH_SHORT).show();
+                        syncTitleAuthorToKindleDb(ctx, rec.kfxPath, newTitle, newAuthor);
+                        Toast.makeText(ctx, "Saved & synced metadata", Toast.LENGTH_SHORT).show();
                         if (onSaved != null) onSaved.run();
                     } finally {
                         db.close();
@@ -1466,6 +1475,41 @@ public final class FolioMetadataCatalogDialog {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private static void syncTitleAuthorToKindleDb(Context ctx, String kfxPath, String title, String author) {
+        if (kfxPath == null || kfxPath.isEmpty()) return;
+        try {
+            File kdbFile = ctx.getDatabasePath("kindle_library.db");
+            if (kdbFile == null || !kdbFile.exists()) return;
+            android.database.sqlite.SQLiteDatabase kdb =
+                    android.database.sqlite.SQLiteDatabase.openDatabase(
+                            kdbFile.getAbsolutePath(), null,
+                            android.database.sqlite.SQLiteDatabase.OPEN_READWRITE);
+            try {
+                String key = null;
+                android.database.Cursor c = kdb.rawQuery(
+                        "SELECT KEY FROM LocalContent WHERE FILE_PATH = ?",
+                        new String[] { kfxPath });
+                try {
+                    if (c.moveToFirst()) key = c.getString(0);
+                } finally {
+                    c.close();
+                }
+                if (key != null && !key.isEmpty()) {
+                    if (title != null && !title.isEmpty()) {
+                        kdb.execSQL("UPDATE KindleContent SET TITLE = ? WHERE ID = ?",
+                                new Object[] { title, key });
+                    }
+                    if (author != null && !author.isEmpty()) {
+                        kdb.execSQL("UPDATE KindleContent SET AUTHOR = ? WHERE ID = ?",
+                                new Object[] { author, key });
+                    }
+                }
+            } finally {
+                kdb.close();
+            }
+        } catch (Throwable ignored) {}
     }
 
     private static EditText addField(Context ctx, LinearLayout parent, String label, String value) {
