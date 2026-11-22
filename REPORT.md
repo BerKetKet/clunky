@@ -1,62 +1,52 @@
-# Folio Milestone Release Report: Up Next Queue Export, Backup & Telemetry (Round 091)
+# Folio Milestone Release Report: Pinned Folder Bookmarks in Batch Importer (Round 092)
 
 **Date:** 2026-11-23  
-**Target Package:** `com.amazon.kindle.epub` (Folio v9.1 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v9.2 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v9.1_kfx/base.apk` (132 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v9.2_kfx/base.apk` (132 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 091, Folio advanced to **Folio v9.1 KFX**. Drop-in updates were integrated into `FolioMetadataBackup.java`, `FolioMetadataCatalogDialog.java`, and `FolioMoreView.java`. Antigravity resolved a missing import (`java.util.ArrayList`) in `FolioMetadataBackup.java`, compiled Dalvik DEX (`classes9.dex`, 320,780 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **Full Queue Backup & Export (`FolioMetadataBackup.java`)**:
-   - JSON Backup & Restore preserves `in_queue` state across full library backups and restores.
-   - Markdown Reading Log (`folio_reading_log.md`) dynamically appends a dedicated **`## 📌 Up Next Queue (N)`** section listing all queued volumes with formatted author citations.
-   - RFC-4180 CSV Export (`folio_library.csv`) includes an **`In Queue`** column (`Yes` / empty).
-2. **Catalog List Queue Prefix Badge (`FolioMetadataCatalogDialog.java`)**:
-   - Book titles in catalog list view now display a `📌 ` prefix badge when queued (alongside `★ ` for favorites and `📝 ` for personal notes).
-3. **Library Insights Queue Telemetry & Version Bump (`FolioMoreView.java`)**:
-   - Library Insights header summary line now integrates live queued telemetry:
-     `27 cataloged · 5 reading · 1 finished`  
-     `1 fav · 1 noted · 1 shelved · 1 queued · 5.0★ avg (1 rated)`
-   - Control Center version badge and About Folio dialog bumped to **Folio v9.1 KFX (Enhanced Typesetting)**.
+In Round 092, Folio advanced to **Folio v9.2 KFX**. Drop-in updates were integrated into `FolioFolderBrowserDialog.java` and `FolioMoreView.java`. Antigravity compiled Dalvik DEX (`classes9.dex`, 323,520 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **★ Pinned Folder Bookmarks & Quick Jump (`FolioFolderBrowserDialog.java`)**:
+   - Integrated compact **`☆` / `★`** toggle button right beside `Open` in the Batch EPUB Importer path bar.
+   - Pinned directories are persisted in `SharedPreferences("folio_ui_prefs", "pinned_import_dirs")` as a linked set.
+   - Pinned directories render at the head of the horizontal quick-jump chip strip with a gold **`★`** prefix (e.g. `★ en/0`).
+2. **Active Folder Highlight (`FolioFolderBrowserDialog.java`)**:
+   - Dynamic detection checks if the currently browsed path matches a quick-jump or pinned chip.
+   - Highlights the matching chip with an active amber background (`#F59E0B`), dark high-contrast text (`#111827`), and bold typography.
+3. **Control Center & About Version Bump (`FolioMoreView.java`)**:
+   - Bumped Control Center header badge and About Folio dialog string to **Folio v9.2 KFX (Enhanced Typesetting)**.
 4. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Folio v9.1 KFX
+## 2. Integrated Features in Folio v9.2 KFX
 
-### A. Reading Log Markdown Export with Queue Section (`FolioMetadataBackup.java`)
-- Appends queued books to reading log export:
+### A. Folder Pinning Subsystem (`FolioFolderBrowserDialog.java`)
+- Storage & State Management:
   ```java
-  List<FolioMetadataDb.BookRecord> qBooks = new ArrayList<>();
-  for (FolioMetadataDb.BookRecord r : all) {
-      if (r.kfxPath != null && FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath)) {
-          qBooks.add(r);
-      }
-  }
-  if (!qBooks.isEmpty()) {
-      md.append("## 📌 Up Next Queue (").append(qBooks.size()).append(")\n\n");
-      for (FolioMetadataDb.BookRecord r : qBooks) {
-          String ca = FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
-          md.append("- **").append(r.title != null ? r.title : "Untitled").append("**");
-          if (!ca.isEmpty()) md.append(" — ").append(ca);
-          md.append("\n");
-      }
-      md.append("\n");
+  private static java.util.LinkedHashSet<String> loadPinnedDirs(Context ctx) {
+      java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>();
+      try {
+          String raw = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                  .getString("pinned_import_dirs", "");
+          if (raw != null && !raw.isEmpty()) {
+              for (String line : raw.split("\n")) {
+                  String s = line.trim();
+                  if (!s.isEmpty()) set.add(s);
+              }
+          }
+      } catch (Throwable ignored) {}
+      return set;
   }
   ```
-
-### B. Library Insights Queue Counter (`FolioMoreView.java`)
-- Header summary string enriched:
-  ```java
-  summaryTv.setText(all.size() + " cataloged · " + qs[1] + " reading · " + qs[2] + " finished\n"
-          + favs + " fav · " + noted + " noted · " + shelved + " shelved · " 
-          + com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.countQueue(ctx) 
-          + " queued · " + avgStr);
-  ```
+- Interactive Chip Ordering & Highlighting:
+  - Pinned folders are always prepended before the default directory list (`QUICK_DIRS`).
+  - Active directory chip is styled with `#F59E0B` amber fill for instant visual confirmation of the current directory scope.
 
 ---
 
@@ -64,8 +54,8 @@ In Round 091, Folio advanced to **Folio v9.1 KFX**. Drop-in updates were integra
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Reading Log Up Next Section** | Reading Log Modal | `verify_r91_reading_log_up_next.png` | **VERIFIED**: Opened `📄 Reading Log & Export`; scrolled to bottom of preview; verified `## 📌 Up Next Queue (1)` section with `- **Animal farm: a fairy story** — George Orwell` rendered in markdown. |
-| **Library Insights Queue Telemetry** | Library Insights Modal | `verify_r91_insights_queued_v91.png` | **VERIFIED**: Opened `📊 Library Insights`; verified header summary displays `1 fav · 1 noted · 1 shelved · 1 queued · 5.0★ avg (1 rated)`. |
+| **Pinned Folder Importer** | Batch EPUB Importer Modal | `verify_r92_pinned_folder_importer.png` | **VERIFIED**: Opened `Import EPUBs from Storage` (`/sdcard/en/0`); tapped `☆` to pin it; verified active gold **`★`** button (`[915, 558][1002, 645]`) and highlighted gold **`★ en/0`** chip (`[83, 667][220, 734]`) at the front of the quick-jump strip. |
+| **About Folio v9.2 KFX** | About Folio Modal | `verify_r92_about_v92.png` | **VERIFIED**: Tapped Control Center version badge; verified modal confirming `Version: Folio v9.2 KFX (Enhanced Typesetting)` and live stats. |
 | **Stock Kindle Invariant** | Android OS PackageManager | CLI `dumpsys package com.amazon.kindle` | **VERIFIED**: `lastUpdateTime=2026-11-19 21:59:23` completely untouched. |
 
 ---

@@ -983,3 +983,26 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.1_kfx/base.apk` (132 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report091.zip`
+
+
+---
+
+# Round 092: Pinned Folder Bookmarks in Batch Importer (Folio v9.2 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v9.2 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 092 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioFolderBrowserDialog.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Added compact `☆` / `★` pin toggle button right beside `Open` in the Batch EPUB Importer path bar.
+     - Persisted pinned folder bookmarks in `SharedPreferences("folio_ui_prefs", "pinned_import_dirs")`.
+     - Preprended pinned folder chips with `★ ` prefix at the head of the quick-jump strip.
+     - Added dynamic active folder highlight with amber fill (`#F59E0B`) matching the currently browsed path.
+     - Bumped version to `Folio v9.2 KFX (Enhanced Typesetting)`.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.2_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `verify_r92_pinned_folder_importer.png`: Proves Batch EPUB Importer displaying active gold `★` pin button and highlighted gold `★ en/0` chip at the front of the quick-jump strip.
+     - `verify_r92_about_v92.png`: Proves About Folio dialog displaying `Version: Folio v9.2 KFX (Enhanced Typesetting)` and live stats.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.2_kfx/base.apk` (132 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report092.zip`
