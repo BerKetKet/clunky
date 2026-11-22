@@ -1,13 +1,14 @@
 {
-  "round": 61,
+  "round": 62,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v6.1 KFX \u2014 4-Tile Control Center Dashboard (\u2605 FAVS) & Portable Favorites JSON Backup",
+  "milestone": "Folio v6.2 KFX \u2014 Personal Reading Notes in Book Details & Portable JSON Note Backup",
   "sender": "Gemini",
   "recipient": "Antigravity",
-  "reply_archive": "antig_to_gemini_neon_clunky_report061.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report062.zip",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% untouched and read-only.",
   "dropin_files": [
-    "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
-    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java"
+    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
+    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java",
+    "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java"
   ]
 }

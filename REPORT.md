@@ -1,39 +1,45 @@
-# Folio Milestone Release Report: Control Center 4-Tile Stats Strip with ★ FAVS Deep-Link & Version 2 JSON Backup (Round 061)
+# Folio Milestone Release Report: Persistent Personal Reading Notes, Catalog Note Badges & Version 6.2 (Round 062)
 
 **Date:** 2026-11-22  
-**Target Package:** `com.amazon.kindle.epub` (Folio v6.1 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v6.2 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v6.1_kfx/base.apk` (131 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v6.2_kfx/base.apk` (131 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 061, Folio advanced to **Folio v6.1 KFX**. Gemini pre-authored drop-in Java updates for `FolioMoreView.java` and `FolioMetadataBackup.java`. Antigravity integrated both files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 218,448 B), built, aligned, signed, and deployed the updated APK to Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **Control Center 4-Tile Dashboard Strip**: Expanded the live stats strip into a beautifully balanced 4-tile row: **`29 BOOKS`** (amber) · **`5 READING`** (teal) · **`1 FINISHED`** (emerald) · **`1 ★ FAVS`** (gold `#FBBF24`), maintaining symmetric layout padding and live auto-refresh on catalog dismissal.
-2. **1-Tap Deep-Link into Favorites**: Tapping the gold **`1 ★ FAVS`** tile launches `FolioMetadataCatalogDialog` pre-filtered directly to the gold **`★ Favorites (1)`** chip, instantly displaying `Library Metadata & Genres (1 of 27)` and the starred **`★ 1984`** card.
-3. **Version 2 Portable JSON Backup**: Upgraded `FolioMetadataBackup.java` to format version 2, exporting each book's `is_favorite` boolean state alongside title, author, genres, dates, and ISBN, and seamlessly restoring favorited flags without DB schema modifications.
-4. **Control Center Version Bump**: Header badge and About Folio dialog bumped to **`Folio v6.1 KFX (Enhanced Typesetting)`**.
-5. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
+In Round 062, Folio advanced to **Folio v6.2 KFX**. Gemini pre-authored drop-in Java updates for `FolioMetadataCatalogDialog.java`, `FolioMetadataBackup.java`, and `FolioMoreView.java`. Antigravity integrated all 3 files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 222,100 B), built, aligned, signed, and deployed the updated APK to Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **Persistent Personal Reading Notes**: Added an inline personal notes card inside Book Details (`ⓘ`), stored safely in app-private `SharedPreferences("folio_notes")` with zero DB schema migration risk. Shows `📝 Add a Personal Reading Note ›` when empty, and an amber-accented `📝 Personal Note (tap to edit)` card with formatted note text once saved.
+2. **Inline Note Editor Dialog**: Tapping the note card opens a dedicated dark editor dialog (`Personal Note · <Title>`) featuring a multi-line `EditText`, `SAVE NOTE`, `CLEAR NOTE` (when a note exists), and `CANCEL`.
+3. **Combined Catalog Card Indicators**: Books with personal notes surface a `📝` badge on their catalog list card, combining cleanly with the favorite indicator (verified on *1984*, rendering `★ 📝 1984`).
+4. **Portable JSON Backup Integration**: `FolioMetadataBackup.java` exports `personal_note` alongside metadata and favorites in portable JSON backups and automatically restores notes on import.
+5. **Control Center Version Bump**: Header badge and About Folio dialog bumped to **`Folio v6.2 KFX (Enhanced Typesetting)`**.
+6. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Folio v6.1 KFX
+## 2. Integrated Features in Folio v6.2 KFX
 
-### A. 4-Tile Stats Strip with Favorites Deep-Link (`FolioMoreView.java`)
-- `statNums` expanded from 3 to 4 elements.
-- `readQuickStats(ctx)` now evaluates `FolioMetadataCatalogDialog.countFavorites(ctx)` and returns `int[] { indexed, reading, finished, favs }`.
-- Added the 4th stat tile (`★ FAVS`) styled in `#FBBF24` gold with rounded corners and dark navy background (`#1A1F2E`).
-- Tapping `★ FAVS` deep-links directly into `FolioMetadataCatalogDialog.show(ctx, "Favorites", refreshStats)`.
-- Re-proportioned horizontal padding (`dp(d, 6)`) and right margins (`dp(d, 8)`) so all 4 tiles fit cleanly on one row on mobile screens.
+### A. Personal Reading Notes Subsystem (`FolioMetadataCatalogDialog.java`)
+- Implemented static helpers `getNote(Context, String kfxPath)`, `setNote(Context, String kfxPath, String note)`, and `showEditNoteDialog(...)`.
+- Storage is localized to `folio_notes.xml` preferences, keyed by `kfxPath`.
+- In `buildDetailDialog`, an interactive `noteBox` container renders:
+  - Header: `📝 Add a Personal Reading Note ›` (slate `#94A3B8`) when blank, or `📝 Personal Note (tap to edit)` (amber `#F59E0B`) with an amber stroke border (`#66F59E0B`).
+  - Body: Saved note text formatted in `#E2E8F0` (`13sp`).
+- Tapping triggers `showEditNoteDialog`: saving updates preferences, shows a confirmation Toast, refreshes catalog list cards, and reflects changes immediately.
 
-### B. Version 2 Portable Metadata Backup (`FolioMetadataBackup.java`)
-- Export: Writes `"version": 2` into backup JSON and serializes `"is_favorite": boolean` per book record.
-- Restore: Reads `obj.optBoolean("is_favorite", false)` and automatically synchronizes into `SharedPreferences("folio_favorites")`.
+### B. Catalog List Card Indicators (`FolioMetadataCatalogDialog.java`)
+- Computes title prefix: `(isFavorite ? "★ " : "") + (!getNote.isEmpty() ? "📝 " : "")`.
+- Formats list cards with clear multi-badge visual hierarchy (e.g., `★ 📝 1984`).
 
-### C. Version Bump & Telemetry (`FolioMoreView.java`)
-- Bumped Control Center badge and About Folio dialog string to **`Folio v6.1 KFX (Enhanced Typesetting)`**.
+### C. Portable Backup & Restore (`FolioMetadataBackup.java`)
+- Serializes `"personal_note": string` into book JSON objects during export.
+- Deserializes `"personal_note"` on restore and synchronizes into `SharedPreferences("folio_notes")`.
+
+### D. Version Bump & Telemetry (`FolioMoreView.java`)
+- Bumped Control Center badge and About Folio dialog string to **`Folio v6.2 KFX (Enhanced Typesetting)`**.
 
 ---
 
@@ -41,8 +47,8 @@ In Round 061, Folio advanced to **Folio v6.1 KFX**. Gemini pre-authored drop-in 
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Control Center 4-Tile Stats Strip** | More tab (Control Center) | `screenshots/verify_r61_control_center_4tile_favs.png` | **PASS** — Control Center displays `Folio v6.1 KFX` header badge and the 4-tile live stats strip (`29 BOOKS` · `5 READING` · `1 FINISHED` · `1 ★ FAVS`) aligned cleanly on one row. |
-| **1-Tap Deep-Link into Favorites** | Tap `1 ★ FAVS` tile | `screenshots/verify_r61_favs_tile_deeplink.png` | **PASS** — Tapping `1 ★ FAVS` launched catalog pre-filtered to active gold `★ Favorites (1)` chip displaying `Library Metadata & Genres (1 of 27)` with starred `★ 1984` card. |
+| **Personal Note Saved in Book Details** | Book Details (`ⓘ` on *1984*) | `screenshots/verify_r62_personal_note_saved.png` | **PASS** — Book Details popup renders amber-bordered `📝 Personal Note (tap to edit)` card displaying `"Essential dystopian classic - reread Part 3"` above Remove action. |
+| **Combined Catalog Card Indicators** | Catalog List Cards | `screenshots/verify_r62_card_note_badge.png` | **PASS** — Catalog card for *1984* clearly renders combined `★ 📝 1984` favorite and personal note indicators. |
 | **Stock Package Safety Invariant** | Android Package Manager | `lastUpdateTime=2026-11-19 21:59:23` | **PASS** — Stock `com.amazon.kindle` remains 100% untouched, intact, and read-only. |
 
 ---
@@ -56,10 +62,10 @@ As instructed by the Project Lead, the following architectural directive is reaf
 
 ## 5. Artifacts and Deliverables
 
-- `antig_to_gemini_neon_clunky_report061.zip`:
+- `antig_to_gemini_neon_clunky_report062.zip`:
   - `REPORT.md`
-  - `INSTRUCTIONS_ROUND_061.md`
+  - `INSTRUCTIONS_ROUND_062.md`
   - `protocol.json`
-  - `screenshots/verify_r61_control_center_4tile_favs.png`
-  - `screenshots/verify_r61_favs_tile_deeplink.png`
-- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v6.1_kfx/base.apk` (131 MB)
+  - `screenshots/verify_r62_personal_note_saved.png`
+  - `screenshots/verify_r62_card_note_badge.png`
+- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v6.2_kfx/base.apk` (131 MB)
