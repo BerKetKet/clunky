@@ -31,7 +31,7 @@ import org.json.JSONObject;
  * Cloudflare/Google DoH directly by IP and connects with proper TLS SNI + Host header.
  */
 public final class SafeHttp {
-    private static final String USER_AGENT = "KindleEPUB-OpenCatalog/2.0";
+    private static final String USER_AGENT = "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 Folio/3.3";
     private static final Map<String, String> DNS_CACHE = new ConcurrentHashMap<String, String>();
 
     public static String getString(String urlStr) throws Exception {
@@ -132,8 +132,8 @@ public final class SafeHttp {
     private static HttpURLConnection openDirect(URL url) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setInstanceFollowRedirects(false);
-        conn.setConnectTimeout(3500);
-        conn.setReadTimeout(5000);
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(45000);
         conn.setRequestProperty("User-Agent", USER_AGENT);
         return conn;
     }
@@ -145,8 +145,8 @@ public final class SafeHttp {
         URL ipUrl = (port > 0) ? new URL(protocol, ip, port, file) : new URL(protocol, ip, file);
         HttpURLConnection conn = (HttpURLConnection) ipUrl.openConnection();
         conn.setInstanceFollowRedirects(false);
-        conn.setConnectTimeout(3500);
-        conn.setReadTimeout(5000);
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(45000);
         conn.setRequestProperty("Host", origHost);
         conn.setRequestProperty("User-Agent", USER_AGENT);
         if (conn instanceof HttpsURLConnection) {

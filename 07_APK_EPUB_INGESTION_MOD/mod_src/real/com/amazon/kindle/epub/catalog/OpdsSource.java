@@ -52,6 +52,18 @@ public final class OpdsSource implements BookSource {
             }
             String coverUrl = extractLinkByType(entry, "image/jpeg");
             if (coverUrl.isEmpty()) coverUrl = extractLinkByType(entry, "image/png");
+            if (coverUrl.isEmpty()) {
+                Matcher thumbM = Pattern.compile("<(?:media:)?thumbnail\\b[^>]*\\burl=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE).matcher(entry);
+                if (thumbM.find()) {
+                    coverUrl = thumbM.group(1).replace("&amp;", "&");
+                }
+            }
+            if (coverUrl.isEmpty()) {
+                Matcher linkThumbM = Pattern.compile("<link\\b[^>]*\\brel=[\"'][^\"']*thumbnail[^\"']*[\"'][^>]*\\bhref=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE).matcher(entry);
+                if (linkThumbM.find()) {
+                    coverUrl = linkThumbM.group(1).replace("&amp;", "&");
+                }
+            }
             if (coverUrl.startsWith("/")) {
                 int schemeEnd = feedUrl.indexOf("://");
                 int hostEnd = feedUrl.indexOf('/', schemeEnd + 3);

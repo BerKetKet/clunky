@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -769,7 +770,7 @@ public final class OpenCatalogView {
         input.setText(prefs.getString(KEY_CUSTOM_OPDS, ""));
 
         final String[][] presets = new String[][]{
-            {"Feedbooks Public Domain", "https://catalog.feedbooks.com/publicdomain/browse/top.atom"},
+            {"Standard Ebooks", "https://standardebooks.org/feeds/atom/new-releases"},
             {"Project Gutenberg OPDS", "https://m.gutenberg.org/ebooks.opds/"},
             {"Internet Archive OPDS", "https://bookserver.archive.org/catalog/"}
         };
@@ -1140,13 +1141,24 @@ public final class OpenCatalogView {
                         throw (lastErr != null) ? lastErr : new java.io.IOException("All download mirrors failed");
                     }
 
+                    final File kfxFile = new File(outDir, safeName + "_" + book.id + ".kfx");
+                    boolean kfxOk = com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubFile, kfxFile);
+                    if (kfxOk) {
+                        registerDownloadedBook(ctx, book.title, book.author, kfxFile);
+                    }
+
                     mainHandler.post(new Runnable() {
                         @Override
                         public void run() {
+                            try {
+                                android.os.StrictMode.class.getMethod("disableDeathOnFileUriExposure").invoke(null);
+                            } catch (Throwable ignored) {}
                             Toast.makeText(ctx, "Opening in Folio...", Toast.LENGTH_SHORT).show();
                             Intent openIntent = new Intent(Intent.ACTION_VIEW);
                             openIntent.setClassName(ctx.getPackageName(), "com.amazon.kindle.ThirdPartyUpgradePage");
-                            openIntent.setDataAndType(Uri.fromFile(epubFile), "application/epub+zip");
+                            File target = kfxFile.exists() ? kfxFile : epubFile;
+                            String mime = kfxFile.exists() ? "application/x-kfx" : "application/epub+zip";
+                            openIntent.setDataAndType(Uri.fromFile(target), mime);
                             openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                             ctx.startActivity(openIntent);
                         }
@@ -1161,5 +1173,45 @@ public final class OpenCatalogView {
                 }
             }
         }).start();
+    }
+
+    public static void registerDownloadedBook(Context ctx, String title, String author, File kfxFile) {
+        try {
+            File dbFile = new File(ctx.getApplicationInfo().dataDir, "databases/kindle_library.db");
+            if (!dbFile.exists()) return;
+            SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+            String asin = "CR!" + Math.abs(title.hashCode()) + "KFX";
+            String key = "AMZNID0/" + asin + "/0/";
+            long now = System.currentTimeMillis();
+            long size = kfxFile.exists() ? kfxFile.length() : 1048576;
+
+            db.beginTransaction();
+            try {
+                db.execSQL(
+                    "INSERT OR REPLACE INTO KindleContent (" +
+                    "ID, STATE, ARCHIVABLE, HAS_READ_ALONG, TYPE, KEPT, CONTENT_TYPE, TITLE, AUTHOR, HAS_XRAY, DICTIONARY_TYPE, TITLE_ORDER, AUTHOR_ORDER, AUTHOR_ORDER_REVERSED, READ_STATE, READ_STATE_ORIGIN, HAS_LOADED_COVER, IS_HIDDEN, IS_HIDDEN_BY_USER" +
+                    ") VALUES (?, 'LOCAL', 0, 0, 'BT_EBOOK', 0, 'application/x-kfx-ebook', ?, ?, 0, 'NONE', -1, -1, -1, 'UNREAD', 'OTHER', 1, 0, 0)",
+                    new Object[]{key, title, author}
+                );
+                db.execSQL(
+                    "INSERT OR REPLACE INTO LocalContent (" +
+                    "KEY, FILE_PATH, GUID, LAST_MODIFIED, OWNERSHIP_TYPE, FILE_SIZE" +
+                    ") VALUES (?, ?, ?, ?, 'Unknown', ?)",
+                    new Object[]{key, kfxFile.getAbsolutePath(), asin, now, size}
+                );
+                db.execSQL(
+                    "INSERT OR REPLACE INTO UserContent (" +
+                    "KEY, USER_ID, LAST_ACCESSED, LPR, MRPR, FPR, MLT_LASTUPDATED, READING_PROGRESS, IS_IN_CAROUSEL, CLIPPING_BALANCE, HAS_UNMIGRATED_ANNOTATION" +
+                    ") VALUES (?, 'MASTER', ?, 0, 0, 0, -1, 0, 1, 0, 0)",
+                    new Object[]{key, now}
+                );
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+                db.close();
+            }
+        } catch (Throwable t) {
+            android.util.Log.w("OpenCatalogView", "registerDownloadedBook failed: " + t.getMessage());
+        }
     }
 }

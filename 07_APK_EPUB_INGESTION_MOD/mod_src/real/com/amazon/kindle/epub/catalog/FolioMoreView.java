@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v3.2 KFX");
+        badgeTv.setText("Folio v3.3 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -273,7 +273,7 @@ public final class FolioMoreView {
 
         final String[][] presets = {
                 {"Project Gutenberg", "https://m.gutenberg.org/ebooks.opds/"},
-                {"Standard Ebooks", "https://standardebooks.org/opds/all"},
+                {"Standard Ebooks", "https://standardebooks.org/feeds/atom/new-releases"},
                 {"Internet Archive", "https://bookserver.archive.org/catalog/"}
         };
 
