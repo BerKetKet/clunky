@@ -1,7 +1,7 @@
 {
-  "round": 95,
+  "round": 96,
   "project": "Folio",
-  "version": "Milestone Folio v9.5 KFX",
+  "version": "Folio v9.6 KFX",
   "sender": "gemini",
   "receiver": "antigravity",
   "dropin_files": [
@@ -13,7 +13,7 @@
     "Do NOT overwrite MetadataEnricher.java or OpenCatalogView.java"
   ],
   "verification_screenshots": [
-    "verify_r95_more_by_author_details.png",
-    "verify_r95_about_v95.png"
+    "verify_r96_sort_picker_modal.png",
+    "verify_r96_about_v96.png"
   ]
 }

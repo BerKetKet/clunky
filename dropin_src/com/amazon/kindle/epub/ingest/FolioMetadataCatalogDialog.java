@@ -50,7 +50,7 @@ public final class FolioMetadataCatalogDialog {
         void onFilterByAuthor(String author);
     }
 
-    private static final String[] SORT_MODES = new String[] { "Recent", "Title", "Author", "Year", "Progress", "Favorites", "Rating" };
+    private static final String[] SORT_MODES = new String[] { "Recent", "Title", "Author", "Year", "Progress", "Favorites", "Rating", "Size", "Up Next" };
 
     private FolioMetadataCatalogDialog() {}
 
@@ -349,12 +349,15 @@ public final class FolioMetadataCatalogDialog {
         final String initQ = initialQuery != null ? initialQuery.trim() : "";
         final String[] queryText = new String[] { initQ };
         int savedSort = 0;
+        boolean savedRev = false;
         try {
-            savedSort = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
-                    .getInt("catalog_sort_idx", 0);
+            android.content.SharedPreferences uiP = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE);
+            savedSort = uiP.getInt("catalog_sort_idx", 0);
             if (savedSort < 0 || savedSort >= SORT_MODES.length) savedSort = 0;
+            savedRev = uiP.getBoolean("catalog_sort_rev", false);
         } catch (Throwable ignored) {}
         final int[] sortIdx = new int[] { savedSort };
+        final boolean[] sortRev = new boolean[] { savedRev };
 
         final List<FolioMetadataDb.BookRecord> lastFiltered = new ArrayList<>();
         final Runnable[] renderRef = new Runnable[1];
@@ -362,7 +365,7 @@ public final class FolioMetadataCatalogDialog {
             @Override
             public void run() {
                 heading.setText("Library Metadata & Genres (" + allBooks.size() + ")");
-                btnSort.setText("Sort: " + SORT_MODES[sortIdx[0]]);
+                btnSort.setText("Sort: " + SORT_MODES[sortIdx[0]] + (sortRev[0] ? " ↑" : " ↓"));
 
                 int readingCount = 0;
                 int finishedCount = 0;
@@ -502,7 +505,7 @@ public final class FolioMetadataCatalogDialog {
                         ? "Library Metadata & Genres (" + filtered.size() + " of " + allBooks.size() + ")"
                         : "Library Metadata & Genres (" + allBooks.size() + ")");
 
-                sortBooks(ctx, filtered, sortIdx[0], progressMap);
+                sortBooks(ctx, filtered, sortIdx[0], sortRev[0], progressMap);
                 lastFiltered.clear();
                 lastFiltered.addAll(filtered);
 
@@ -612,12 +615,18 @@ public final class FolioMetadataCatalogDialog {
         });
 
         btnSort.setOnClickListener(v -> {
-            sortIdx[0] = (sortIdx[0] + 1) % SORT_MODES.length;
-            try {
-                ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
-                        .edit().putInt("catalog_sort_idx", sortIdx[0]).apply();
-            } catch (Throwable ignored) {}
-            renderRef[0].run();
+            showSortPickerDialog(ctx, sortIdx[0], sortRev[0], (newIdx, newRev) -> {
+                sortIdx[0] = newIdx;
+                sortRev[0] = newRev;
+                try {
+                    ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                            .edit()
+                            .putInt("catalog_sort_idx", sortIdx[0])
+                            .putBoolean("catalog_sort_rev", sortRev[0])
+                            .apply();
+                } catch (Throwable ignored) {}
+                renderRef[0].run();
+            });
         });
 
         searchBox.addTextChangedListener(new TextWatcher() {
@@ -819,7 +828,124 @@ public final class FolioMetadataCatalogDialog {
         dialog.show();
     }
 
-    private static void sortBooks(final Context ctx, List<FolioMetadataDb.BookRecord> list, final int mode, final Map<String, Integer> progressMap) {
+    private interface SortPickCallback {
+        void onPicked(int sortIndex, boolean reversed);
+    }
+
+    private static void showSortPickerDialog(
+            final Context ctx, final int curIdx, final boolean curRev, final SortPickCallback cb) {
+        LinearLayout root = new LinearLayout(ctx);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.parseColor("#11131A"));
+        root.setPadding(dp(ctx, 18), dp(ctx, 16), dp(ctx, 18), dp(ctx, 12));
+
+        LinearLayout hdrRow = new LinearLayout(ctx);
+        hdrRow.setOrientation(LinearLayout.HORIZONTAL);
+        hdrRow.setGravity(Gravity.CENTER_VERTICAL);
+        hdrRow.setPadding(0, 0, 0, dp(ctx, 12));
+
+        TextView titleTv = new TextView(ctx);
+        titleTv.setText("Sort Catalog");
+        titleTv.setTextColor(Color.WHITE);
+        titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        titleTv.setTypeface(Typeface.DEFAULT_BOLD);
+        titleTv.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        hdrRow.addView(titleTv);
+
+        final boolean[] revState = new boolean[] { curRev };
+        final TextView dirPill = new TextView(ctx);
+        dirPill.setText(revState[0] ? "↑ Reversed" : "↓ Standard");
+        dirPill.setTextColor(Color.parseColor(revState[0] ? "#FBBF24" : "#38BDF8"));
+        dirPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        dirPill.setTypeface(Typeface.DEFAULT_BOLD);
+        dirPill.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
+        final GradientDrawable dBg = new GradientDrawable();
+        dBg.setColor(Color.parseColor(revState[0] ? "#2D2312" : "#152638"));
+        dBg.setCornerRadius(dp(ctx, 12));
+        dBg.setStroke(dp(ctx, 1), Color.parseColor(revState[0] ? "#B45309" : "#1E4E75"));
+        dirPill.setBackground(dBg);
+        hdrRow.addView(dirPill);
+        root.addView(hdrRow);
+
+        final AlertDialog[] dlgRef = new AlertDialog[1];
+        dirPill.setOnClickListener(v -> {
+            revState[0] = !revState[0];
+            dirPill.setText(revState[0] ? "↑ Reversed" : "↓ Standard");
+            dirPill.setTextColor(Color.parseColor(revState[0] ? "#FBBF24" : "#38BDF8"));
+            dBg.setColor(Color.parseColor(revState[0] ? "#2D2312" : "#152638"));
+            dBg.setStroke(dp(ctx, 1), Color.parseColor(revState[0] ? "#B45309" : "#1E4E75"));
+            cb.onPicked(curIdx, revState[0]);
+        });
+
+        String[] descLabels = new String[] {
+            "Recently Added", "Title (A–Z)", "Author (A–Z)", "Publication Year",
+            "Reading Progress", "Favorites First", "Star Rating", "File Size (Largest)", "📌 Up Next Queue First"
+        };
+
+        ScrollView sv = new ScrollView(ctx);
+        sv.setVerticalScrollBarEnabled(false);
+        LinearLayout listBox = new LinearLayout(ctx);
+        listBox.setOrientation(LinearLayout.VERTICAL);
+
+        for (int i = 0; i < SORT_MODES.length; i++) {
+            final int idx = i;
+            boolean active = (i == curIdx);
+            LinearLayout row = new LinearLayout(ctx);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10));
+            GradientDrawable rBg = new GradientDrawable();
+            rBg.setColor(Color.parseColor(active ? "#1E2642" : "#1A1F2E"));
+            rBg.setCornerRadius(dp(ctx, 9));
+            rBg.setStroke(dp(ctx, 1), Color.parseColor(active ? "#F59E0B" : "#262D3F"));
+            row.setBackground(rBg);
+            LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            rLp.setMargins(0, 0, 0, dp(ctx, 6));
+            row.setLayoutParams(rLp);
+
+            TextView lbl = new TextView(ctx);
+            lbl.setText(descLabels[i]);
+            lbl.setTextColor(Color.parseColor(active ? "#FBBF24" : "#E2E8F0"));
+            lbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+            lbl.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            lbl.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            row.addView(lbl);
+
+            if (active) {
+                TextView chk = new TextView(ctx);
+                chk.setText("✓");
+                chk.setTextColor(Color.parseColor("#FBBF24"));
+                chk.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                chk.setTypeface(Typeface.DEFAULT_BOLD);
+                row.addView(chk);
+            }
+
+            row.setOnClickListener(v -> {
+                if (dlgRef[0] != null) dlgRef[0].dismiss();
+                cb.onPicked(idx, revState[0]);
+            });
+            listBox.addView(row);
+        }
+        sv.addView(listBox);
+        root.addView(sv);
+
+        dlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setView(root)
+                .setPositiveButton("Close", null)
+                .show();
+    }
+
+    private static void sortBooks(final Context ctx, List<FolioMetadataDb.BookRecord> list, final int mode, final boolean reversed, final Map<String, Integer> progressMap) {
+        final Map<String, Long> sizeCache = new HashMap<>();
+        if (mode == 7) {
+            for (FolioMetadataDb.BookRecord r : list) {
+                if (r.kfxPath != null && !r.kfxPath.isEmpty()) {
+                    File f = new File(r.kfxPath);
+                    sizeCache.put(r.kfxPath, f.exists() ? f.length() : 0L);
+                }
+            }
+        }
         Collections.sort(list, new Comparator<FolioMetadataDb.BookRecord>() {
             @Override
             public int compare(FolioMetadataDb.BookRecord a, FolioMetadataDb.BookRecord b) {
@@ -850,11 +976,26 @@ public final class FolioMetadataCatalogDialog {
                     boolean fb = isFavorite(ctx, b.kfxPath);
                     if (fa != fb) return fa ? -1 : 1;
                     return Long.compare(b.addedAt, a.addedAt);
+                } else if (mode == 7) { // File Size (largest first)
+                    long sa = (a.kfxPath != null && sizeCache.containsKey(a.kfxPath)) ? sizeCache.get(a.kfxPath) : 0L;
+                    long sb = (b.kfxPath != null && sizeCache.containsKey(b.kfxPath)) ? sizeCache.get(b.kfxPath) : 0L;
+                    if (sa != sb) return Long.compare(sb, sa);
+                    return safeLower(a.title).compareTo(safeLower(b.title));
+                } else if (mode == 8) { // Up Next Queue first (FIFO)
+                    long qa = getQueueTimestamp(ctx, a.kfxPath);
+                    long qb = getQueueTimestamp(ctx, b.kfxPath);
+                    boolean ha = qa > 0L, hb = qb > 0L;
+                    if (ha != hb) return ha ? -1 : 1;
+                    if (ha) return Long.compare(qa, qb);
+                    return Long.compare(b.addedAt, a.addedAt);
                 }
                 // Default 0: Recent (descending addedAt)
                 return Long.compare(b.addedAt, a.addedAt);
             }
         });
+        if (reversed) {
+            Collections.reverse(list);
+        }
     }
 
     private static int parseYear(String pubDate) {
