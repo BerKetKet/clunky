@@ -30,6 +30,24 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
   const startTime = Date.now();
   let checkCount = 0;
 
+  // First check if target zip is ALREADY in ~/Downloads from user or previous click
+  const existingMatches = fs.readdirSync(DOWNLOAD_DIR)
+    .filter(f => f.startsWith(targetLabel) && f.endsWith('.zip'))
+    .sort((a, b) => fs.statSync(path.join(DOWNLOAD_DIR, b)).mtimeMs - fs.statSync(path.join(DOWNLOAD_DIR, a)).mtimeMs);
+  if (existingMatches.length > 0) {
+    const mtime = fs.statSync(path.join(DOWNLOAD_DIR, existingMatches[0])).mtimeMs;
+    // If downloaded within the last 30 minutes, accept it
+    if ((Date.now() - mtime) < 1800000) {
+      const targetZip = path.join(DOWNLOAD_DIR, existingMatches[0]);
+      console.log(`[Monitor] Found existing recently downloaded target: ${targetZip}!`);
+      const destZip = path.join(WORKDIR, `${targetLabel}.zip`);
+      fs.copyFileSync(targetZip, destZip);
+      execSync(`unzip -o ${destZip} -d ${WORKDIR}`, { stdio: 'inherit' });
+      console.log(`[Monitor] Staged and extracted ${destZip}!`);
+      return { success: true, round: roundNum, zip: destZip };
+    }
+  }
+
   while ((Date.now() - startTime) < (maxWaitSec * 1000)) {
     checkCount++;
     const elapsedSec = Math.round((Date.now() - startTime) / 1000);
@@ -38,23 +56,27 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
       const isGenerating = !!document.querySelector('button[aria-label*="Stop" i]');
       const scroller = document.querySelector('infinite-scroller.chat-history');
       if (scroller) scroller.scrollTop = scroller.scrollHeight;
-      
-      // Look for any button, a, or chip matching target round
-      const candidates = Array.from(document.querySelectorAll('button, a, div.chip-lr, [aria-label*="round_${roundTag}" i]')).map(b => ({
+
+      // 1. Check direct download button
+      const dlBtn = document.querySelector('button[aria-label*="Download ${targetLabel}" i]') ||
+                    document.querySelector('button[aria-label*="${targetLabel}" i]');
+
+      // 2. Check candidate containers
+      const candidates = Array.from(document.querySelectorAll('button, a, div.chip-lr, generated-file, [aria-label*="round_${roundTag}" i]')).map(b => ({
         aria: b.getAttribute('aria-label') || '',
         text: b.innerText || ''
       }));
-      
-      const hasTarget = candidates.some(c => 
+
+      const hasTarget = !!dlBtn || candidates.some(c => 
         (c.aria && c.aria.toLowerCase().includes("${targetLabel}".toLowerCase())) ||
         (c.text && c.text.toLowerCase().includes("${targetLabel}".toLowerCase())) ||
         (c.aria && c.aria.toLowerCase().includes("round_${roundTag}".toLowerCase())) ||
         (c.text && c.text.toLowerCase().includes("round_${roundTag}".toLowerCase()))
       );
-      
+
       const msgEls = document.querySelectorAll('message-content, model-response, .model-response-text');
       const lastMsg = msgEls.length ? msgEls[msgEls.length - 1].innerText : '';
-      return { isGenerating, hasTarget, lastMsg: lastMsg.slice(-300) };
+      return { isGenerating, hasTarget, dlBtnFound: !!dlBtn, lastMsg: lastMsg.slice(-300) };
     })()`;
 
     const raw = runCli(`eval id:${TAB_ID} -`, evalScript);
@@ -70,7 +92,16 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
     if (state.hasTarget) {
       console.log(`\n[Monitor @ ${elapsedSec}s] Found target ${targetLabel}! Triggering download...`);
       const clickScript = `(() => {
-        let el = Array.from(document.querySelectorAll('button, a, div.chip-lr, [aria-label*="round_${roundTag}" i]')).find(b => {
+        // Try exact download button first
+        const dlBtn = document.querySelector('button[aria-label*="Download ${targetLabel}" i]') ||
+                      document.querySelector('button[aria-label*="${targetLabel}" i]');
+        if (dlBtn) {
+          dlBtn.click();
+          return 'clicked_dl_button';
+        }
+
+        // Fallback to container or inner button
+        let el = Array.from(document.querySelectorAll('button, a, div.chip-lr, generated-file, [aria-label*="round_${roundTag}" i]')).find(b => {
           const aria = b.getAttribute('aria-label') || '';
           const text = b.innerText || '';
           return aria.toLowerCase().includes("${targetLabel}".toLowerCase()) ||
@@ -82,7 +113,7 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
           const innerBtn = el.tagName === 'BUTTON' ? el : el.querySelector('button');
           const target = innerBtn || el;
           target.click();
-          return 'clicked';
+          return 'clicked_fallback';
         }
         return 'not_found';
       })()`;
@@ -91,7 +122,7 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
 
       // Wait for file in ~/Downloads
       console.log(`[Monitor] Waiting for file matching ${targetLabel}*.zip in ${DOWNLOAD_DIR}...`);
-      for (let w = 0; w < 25; w++) {
+      for (let w = 0; w < 30; w++) {
         await sleep(1000);
         const matches = fs.readdirSync(DOWNLOAD_DIR)
           .filter(f => f.startsWith(targetLabel) && f.endsWith('.zip'))
@@ -106,7 +137,7 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
           return { success: true, round: roundNum, zip: destZip };
         }
       }
-      return { success: false, reason: 'download_timeout' };
+      console.log(`[Monitor] Download timed out after 30s. Will re-poll.`);
     }
 
     if (state.isGenerating) {
@@ -124,7 +155,7 @@ async function waitForRound(roundNum, maxWaitSec = 2000) {
 }
 
 async function main() {
-  const round = parseInt(process.argv[2] || '20', 10);
+  const round = parseInt(process.argv[2] || '32', 10);
   const maxWait = parseInt(process.argv[3] || '2000', 10);
   const res = await waitForRound(round, maxWait);
   console.log('[Monitor Output]:', JSON.stringify(res));
