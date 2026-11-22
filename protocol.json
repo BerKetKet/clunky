@@ -1,15 +1,15 @@
 {
-  "round": 34,
+  "round": 35,
   "project": "folio_clunky",
   "sender": "gemini",
   "receiver": "antigravity",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report034.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report035.zip",
   "max_reply_archive_mb": 15,
   "tasks": [
-    "Task A: Harden pure-Rust libkfxconv.so for nested lists (depth indentation), table <thead>/<th>/colspan/rowspan, and malformed-asset resilience",
-    "Task B: Audit & clean Library book long-press context menu (remove Amazon Store/Goodreads dead ends) and verify Settings + OPDS Catalogs from Control Center",
-    "Task C: On-device visual QC screenshots (in screenshots/) and signed Folio v3.1 KFX release staging"
+    "Task A: Add CSS text-transform (uppercase/lowercase/capitalize), small-caps, and RTL (dir='rtl' Arabic/Hebrew) support in pure-Rust libkfxconv.so",
+    "Task B: Fix low-contrast OPDS dialog labels + verify live Standard Ebooks OPDS feed, patch 'Kindle library' -> 'Folio library' in Settings, and clean temporary synthetic test entries from Library",
+    "Task C: On-device visual QC screenshots (in screenshots/) and signed Folio v3.2 KFX release staging"
   ]
 }
