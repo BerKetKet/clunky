@@ -1,47 +1,40 @@
-# Folio Milestone Release Report: RFC-4180 CSV Library Export & Reading Goal in Markdown/JSON Backup (Round 072)
+# Folio Milestone Release Report: Authors Directory Modal (👤) with Book Counts & 1-Tap Author Filtering (Round 073)
 
 **Date:** 2026-11-22  
-**Target Package:** `com.amazon.kindle.epub` (Folio v7.2 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v7.3 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v7.2_kfx/base.apk` (132 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v7.3_kfx/base.apk` (132 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 072, Folio advanced to **Folio v7.2 KFX**. Gemini pre-authored drop-in Java updates for `FolioMetadataBackup.java` and `FolioMoreView.java`. Antigravity integrated both files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 245,752 B), built, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **RFC-4180 CSV Library Export (`FolioMetadataBackup.java`)**: Added `exportLibraryCsv(Context)` producing a structured CSV spreadsheet saved directly to `/sdcard/kindle/backups/folio_library.csv` (verified 3,289 bytes). Includes columns `Title,Author,Year,Publisher,ISBN,Status,Shelf,Rating,Favorite,Note` with strict CSV quote escaping.
-2. **Reading Goal in Markdown & JSON Backup (`FolioMetadataBackup.java`)**: Injected `**<Year> Reading Goal:** <finished> / <target> books finished (<pct>%)` directly into the Markdown Reading Log header. Serialized `reading_goal_target` in portable JSON metadata export and restore.
-3. **1-Tap `📊 Export CSV` in Reading Log Header (`FolioMoreView.java`)**: Surfaced an amber `📊 Export CSV` pill inside the top bar of the Reading Log preview dialog. Tapping it triggers on-device CSV generation, updates the status banner live to `Saved CSV: /sdcard/kindle/backups/folio_library.csv`, and displays a Toast confirmation.
-4. **Control Center Version Bump**: Header badge and About Folio dialog bumped to **`Folio v7.2 KFX (Enhanced Typesetting)`**.
-5. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
+In Round 073, Folio advanced to **Folio v7.3 KFX**. Gemini pre-authored drop-in Java updates for `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`. Antigravity integrated both files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 248,776 B), built, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **Authors Directory Modal (`FolioMetadataCatalogDialog.java`)**: Added a compact **`👤`** (Authors Directory) button beside `🎲` in the catalog top bar. Tapping it opens a dark `Authors Directory (23)` dialog listing every author in the user's library sorted by book count descending with amber `X books ›` / `X book ›` badges (`showAuthorsDirectoryDialog`).
+2. **1-Tap Author Filtering (`FolioMetadataCatalogDialog.java`)**: Tapping any author row (e.g. `Aldous Huxley · 4 books ›`) automatically dismisses the directory modal, resets the genre filter to "All", and populates the search query with the author name, instantly narrowing the catalog display to `(4 of 27)` books.
+3. **Control Center Version Bump (`FolioMoreView.java`)**: Bumped Control Center badge and About Folio dialog string to **`Folio v7.3 KFX (Enhanced Typesetting)`**.
+4. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Folio v7.2 KFX
+## 2. Integrated Features in Folio v7.3 KFX
 
-### A. Full Library CSV Spreadsheet Export (`FolioMetadataBackup.java`)
-- `exportLibraryCsv(Context)` gathers all library books and active reading progress.
-- Compiles standard CSV formatted row data:
-  `csv.append("Title,Author,Year,Publisher,ISBN,Status,Shelf,Rating,Favorite,Note\n");`
-- `csvEsc` sanitizes internal commas, double quotes, and CRLF line breaks per RFC-4180 standards.
-- Writes to `/sdcard/kindle/backups/folio_library.csv` via UTF-8 `FileOutputStream`.
+### A. Compact `👤` Authors Directory Button (`FolioMetadataCatalogDialog.java`)
+- Positioned in the catalog top bar immediately left of `🎲`:
+  `topRow.addView(btnAuthors);`
+- Styled with dark `#1E2433` pill background, `#334155` border stroke, 14dp rounded corners, and `#E2E8F0` icon.
+- Tapping triggers `showAuthorsDirectoryDialog(ctx, allBooks, author -> { selectedGenre[0] = "All"; searchBox.setText(author); searchBox.setSelection(author.length()); });`.
 
-### B. Reading Goal Markdown & Portable Backup Persistence (`FolioMetadataBackup.java`)
-- Queries `reading_goal_target` from `SharedPreferences("folio_ui_prefs")`.
-- Emits formatted Reading Goal status into Markdown log:
-  `**2026 Reading Goal:** 1 / 5 books finished (20%)`.
-- Adds `"reading_goal_target"` key to portable JSON metadata backup root object and restores it during JSON import.
+### B. Authors Directory Modal & Frequency Aggregation (`FolioMetadataCatalogDialog.java`)
+- Aggregates library authors via normalized display names (`formatAuthorForDisplay(r.author)`), mapping case-insensitive keys to counts.
+- Sorts authors descending by book count (`Integer.compare(cb, ca)`), breaking ties alphabetically (`a.compareTo(b)`).
+- Dynamically populates a vertical scroll list of dark card rows (`#1A1F2E` fill, `#2A3142` border, 10dp radius).
+- Left: bold white author name (`nameTv`). Right: amber pill text (`#F59E0B`, `n + (n == 1 ? " book ›" : " books ›")`).
+- Tapping any row dismisses the dialog via `dlgRef[0].dismiss()` and fires `onPick.onFilterByAuthor(name)`.
 
-### C. Reading Log Header Bar CSV Action (`FolioMoreView.java`)
-- Configured horizontal header row in `showReadingLogDialog(Context)` containing:
-  - Saved path banner (`weight: 1f`).
-  - Amber `📊 Export CSV` button (`#F59E0B` text on `#282216` fill with `#66F59E0B` border).
-- Clicking `📊 Export CSV` calls `exportLibraryCsv(ctx)`, updates banner text, and shows Toast.
-
-### D. Version Bump (`FolioMoreView.java`)
-- Bumped Control Center badge and About Folio dialog string to **`Folio v7.2 KFX (Enhanced Typesetting)`**.
+### C. Version Bump (`FolioMoreView.java`)
+- Bumped Control Center badge and About Folio dialog string to **`Folio v7.3 KFX (Enhanced Typesetting)`**.
 
 ---
 
@@ -49,25 +42,13 @@ In Round 072, Folio advanced to **Folio v7.2 KFX**. Gemini pre-authored drop-in 
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Reading Log Goal & Export CSV Pill** | Reading Log Dialog | `screenshots/verify_r72_reading_log_goal_and_csv_btn.png` | **PASS** — Monospace dialog renders `**2026 Reading Goal:** 1 / 5 books finished (20%)`, `- **Shelf:** Classics` under *1984*, and amber `📊 Export CSV` pill in header bar. |
-| **Live CSV Export & Updated Banner** | Reading Log Dialog | `screenshots/verify_r72_csv_exported_banner.png` | **PASS** — Tapping `📊 Export CSV` updates banner to `Saved CSV: /sdcard/kindle/backups/folio_library.csv`. File verified on device storage (3,289 B). |
-| **Stock Package Safety Invariant** | Android Package Manager | `lastUpdateTime=2026-11-19 21:59:23` | **PASS** — Stock `com.amazon.kindle` remains 100% untouched, intact, and read-only. |
+| **Authors Directory Modal (`👤`)** | All Metadata › top bar `👤` | `screenshots/verify_r73_authors_directory_modal.png` | **VERIFIED**: Tapped `👤` beside `🎲`; dark `Authors Directory (23)` opened listing `Aldous Huxley (4 books ›)`, `George Orwell (2 books ›)`, `Aeschylus (1 book ›)`, etc. |
+| **1-Tap Author Filtering** | Authors Directory row selection | `screenshots/verify_r73_author_selected_filter.png` | **VERIFIED**: Tapped `Aldous Huxley`; modal dismissed; catalog dynamically filtered to `Library Metadata & Genres (4 of 27)` with search query `Aldous Huxley`. |
+| **Stock Kindle Invariant** | Android OS PackageManager | CLI `dumpsys package com.amazon.kindle` | **VERIFIED**: `lastUpdateTime=2026-11-19 21:59:23` completely untouched. |
 
 ---
 
-## 4. Project Lead Architectural Directive on Cover Handling
+## 4. Architectural Directive for Manager AI (Cover Rendering Path)
 
-As instructed by the Project Lead, the following architectural directive is reaffirmed:
+> **MANDATORY ARCHITECTURAL DIRECTIVE (Reiterated Verbatim):**  
 > *"The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."*
-
----
-
-## 5. Artifacts and Deliverables
-
-- `antig_to_gemini_neon_clunky_report072.zip`:
-  - `REPORT.md`
-  - `INSTRUCTIONS_ROUND_072.md`
-  - `protocol.json`
-  - `screenshots/verify_r72_reading_log_goal_and_csv_btn.png`
-  - `screenshots/verify_r72_csv_exported_banner.png`
-- Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v7.2_kfx/base.apk` (132 MB)
