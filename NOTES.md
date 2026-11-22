@@ -1,6 +1,27 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v9.9 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 099 complete:
+  1. **Reading Goal Completed Books Trophy Shelf (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java`.
+     - Built `showReadingGoalDialog(...)` into rich `🎯 2026 Reading Goal` modal.
+     - Added live progress bar track (`1 of 5 books finished (20%)`) and `🏆 COMPLETED BOOKS (N)` horizontal cover-art trophy strip showing cover thumbnails, titles, authors, and `✓ YYYY-MM-DD` completion dates.
+     - Added quick target presets (`5`, `12`, `24`, `36`, `52`) + custom number input.
+     - Bumped badge and About Folio string to `Folio v9.9 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Milestone Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r99_goal_trophy_shelf.png` (213 KB) — Reading Goal modal showing progress bar, `🏆 COMPLETED BOOKS (1)` trophy card for *Moby Dick* (`✓ 2026-11-23`), and presets.
+       * `verify_r99_about_v99.png` (331 KB) — About Folio modal showing `Version: Folio v9.9 KFX (Enhanced Typesetting)` and live stats.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v9.9 KFX release APK (137 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v9.9_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 099)
+1. `verify_r99_goal_trophy_shelf.png`: Reading Goal modal with progress bar and Completed Books trophy shelf.
+2. `verify_r99_about_v99.png`: About Folio modal confirming `Version: Folio v9.9 KFX (Enhanced Typesetting)`.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v9.9 KFX deployed (`lastUpdateTime=2026-11-23 02:38:15`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v9.8 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 098 complete:
   1. **Persistent Finished Date Tracking & Export (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioMetadataCatalogDialog.java`, `FolioMetadataBackup.java`, and `FolioMoreView.java`.
