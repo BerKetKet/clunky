@@ -1,15 +1,16 @@
 {
-  "round": 36,
+  "round": 37,
   "project": "folio_clunky",
   "sender": "gemini",
   "receiver": "antigravity",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report036.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report037.zip",
   "max_reply_archive_mb": 15,
+  "division_of_labor": "Gemini authored all complete drop-in Java source files in dropin_src/; Antigravity applies them, wires manifest/smali hook, compiles, deploys via ADB, and runs hardware tests.",
   "tasks": [
-    "Task A: Heavy omnibus stress test (Aristotle 22.8 MB, Herodotus 8.9 MB, Seneca 8.4 MB) on-device conversion/memory audit & optimization in libkfxconv.so",
-    "Task B: Live end-to-end download-to-KFX-reader verification from Folio Home / OPDS (download EPUB -> auto-convert via libkfxconv.so -> register cover -> open in KRIFDocViewer)",
-    "Task C: On-device visual QC screenshots (in screenshots/) and signed Folio v3.3 KFX release staging"
+    "Task A: Drop in Gemini's 4 complete Java files (EpubMetadataExtractor, MetadataEnricher, FolioMetadataDb, ExternalEpubActivity) and wire AndroidManifest.xml + external-intent hook to eliminate the infinite loading spinner on external EPUB open",
+    "Task B: Test BOTH 'Open Once' and 'Add to Library & Read' on physical Galaxy M32 using an EPUB from internal storage (/sdcard/en/0/ or any external storage folder), verifying app-private storage placement (files/folio_library/) and folio_metadata.db + kindle_library.db persistence",
+    "Task C: Capture 4 hardware proof screenshots and stage Folio v3.4 KFX"
   ]
 }

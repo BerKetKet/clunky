@@ -1,43 +1,41 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v3.3 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 036 complete:
-  1. **Heavy Commercial Omnibus Stress Test & Memory Audit (Task A)**:
-     - Benchmarked largest real commercial EPUB omnibuses on physical Galaxy M32:
-       * **Aristotle (Delphi)**: 22.8 MB, 1,438 sections, 63 TOC entries, converted in **4.05s** (5.63 MB/s), peak memory `VmHWM` **128.7 MB**, resident `VmRSS` **10.2 MB**. Output KFX: 22.75 MB. Fullscreen `$270` cover displayed perfectly; TOC drawer opened smoothly; jumped straight to `Physics (184a)` (location 4,300 of 56,861) with zero lag or crash.
-       * **Seneca (Delphi)**: 11.0 MB, 1,459 sections, 32 TOC entries, converted in **2.05s** (5.33 MB/s), peak memory `VmHWM` **67.8 MB**, resident `VmRSS` **7.8 MB**. Output KFX: 8.38 MB.
-       * **Herodotus (Delphi)**: 8.7 MB, 48 sections, 10 TOC entries, converted in **2.00s** (4.35 MB/s), peak memory `VmHWM` **58.9 MB**, resident `VmRSS` **7.8 MB**. Output KFX: 8.87 MB.
-     - Added TOC count telemetry and `/proc/self/status` high-water mark memory reporting (`VmHWM`, `VmRSS`) to `kfx_converter` in `src/pipeline.rs` and `src/main.rs`.
-     - Ran `cargo test --all-targets`: **210 passed, 0 failed** (100% green across all 5 test suites).
-     - Cross-compiled stripped ARM64 `libkfxconv.so` (4.6 MB) via NDK 26 Clang.
-  2. **End-to-End Live Catalog Download → On-Device KFX → `KRIFDocViewer` Flow (Task B)**:
-     - Configured live Standard Ebooks New Releases Atom feed (`https://standardebooks.org/feeds/atom/new-releases`).
-     - Added regex parsing for `<media:thumbnail>` and `<link rel="*thumbnail*">` in `OpdsSource.java`.
-     - Hardened network timeouts in `SafeHttp.java` (15s connect, 45s read) to eliminate socket timeout aborts on larger titles; modernized User-Agent.
-     - Added `registerDownloadedBook` in `OpenCatalogView.java` to auto-transcode downloaded EPUB to KFX via `libkfxconv.so`, extract companion `.cover.jpg`, register book transactionally into `kindle_library.db` (`KindleContent`, `LocalContent`, `UserContent`), and launch reader with `StrictMode.disableDeathOnFileUriExposure()`.
-     - Browsed live catalog and downloaded *Confessions of Zeno* (875 KB EPUB), auto-transcoded to KFX (992 KB, 380 chunks) on-device, registered in library, and launched directly into `StandAloneBookReaderActivity` (`KRIFDocViewer`, `format: YJBINARY`).
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v3.4 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 037 complete:
+  1. **Fix External EPUB Infinite Spinner & Intent Interception (Task A)**:
+     - Root cause: `ThirdPartyUpgradePage` passed external EPUB intents to `ContentSchemeBookOpenHelperActivity` which only handles `.pdf` and `.prc` (MOBI), causing an infinite loading spinner.
+     - Dropped in Gemini's 4 Java classes: `EpubMetadataExtractor.java`, `MetadataEnricher.java`, `FolioMetadataDb.java`, `ExternalEpubActivity.java`.
+     - Registered `ExternalEpubActivity` in `AndroidManifest.xml` with priority 999 for `application/epub+zip` and `*.epub`.
+     - Disassembled `classes5.dex` and injected `ExternalEpubActivity.interceptIfExternalEpub` hook into `ThirdPartyUpgradePage.smali` and `ContentSchemeBookOpenHelperActivity.smali` immediately after `super.onCreate` (fixing `SuperNotCalledException`).
+     - Aligned `FolioMetadataDb.java` with Kindle database schema (`ID`, `STATE='LOCAL'`, `TYPE='BT_EBOOK'`, `CONTENT_TYPE='application/x-kfx-ebook'`, `USER_ID='MASTER'`).
+     - Compiled into `classes9.dex` (146 KB) and injected as `classes4.dex`, bumped version badge to **Folio v3.4 KFX** in `FolioMoreView.java`.
+  2. **Physical Hardware Verification of Both Flows (Task B)**:
+     - Tested on physical Samsung Galaxy M32 (`32001776e8e82623`) with `/sdcard/en/0/Aldous Huxley - Brave New World.epub`:
+       * Dark **FOLIO EPUB IMPORT** dialog appeared immediately with extracted title and author. Zero loading wheel!
+       * **Flow 1 ("Open Once")**: Tapped "Open Once (Don't Add)". Converted into `/data/data/com.amazon.kindle.epub/cache/folio_once/` (`.kfx` 987 KB, `.cover.jpg` 68 KB, `.sdr` directory) and opened directly into `KRIFDocViewer` (`format: YJBINARY`, `StandAloneBookReaderActivity`). Verified 0 rows added to `folio_metadata.db` or `kindle_library.db`.
+       * **Flow 2 ("Add to Library & Read")**: Re-triggered external open intent and tapped "Add to Library & Read". Converted into app-private `/data/data/com.amazon.kindle.epub/files/folio_library/` (`.kfx` + `.cover.jpg`), enriched metadata from Open Library Search API (`/works/OL64365W`, publisher HarperCollins, ISBN 9780062368232, genres "Utopias, Brainwashing, Moral and ethical aspects of Science..."), saved to `folio_metadata.db` (`books_metadata` table), and transactionally registered in `kindle_library.db` (`KindleContent`, `LocalContent`, `UserContent`). Book appeared at the top of Library tab and Continue Reading carousel with its real cover and opened directly in `KRIFDocViewer`.
   3. **Visual Verification & Milestone Release Staging (Task C)**:
-     - 4 hardware proof screenshots captured on Samsung Galaxy M32 (`32001776e8e82623`):
-       - `screenshots/verify_r36_aristotle_22mb_cover.png`: Native fullscreen `#000000` `$270` cover for 22.8 MB Aristotle in `KRIFDocViewer`.
-       - `screenshots/verify_r36_aristotle_22mb_toc_and_prose.png`: Slide-out TOC drawer and deep jump to `Physics (184a)` (location 4,300 of 56,861).
-       - `screenshots/verify_r36_live_download_kfx_reader.png`: Freshly downloaded *Confessions of Zeno* auto-converted to KFX on-device and open in `KRIFDocViewer`.
-       - `screenshots/verify_r36_home_continue_reading_updated.png`: Folio Home screen showing **Continue Reading** carousel cleanly updated with real covers.
+     - 4 hardware proof screenshots captured on Samsung Galaxy M32:
+       - `screenshots/verify_r37_external_import_dialog.png`: Dark **FOLIO EPUB IMPORT** dialog showing extracted metadata and action buttons.
+       - `screenshots/verify_r37_open_once_reader.png`: Book opened directly in `KRIFDocViewer` after "Open Once".
+       - `screenshots/verify_r37_add_to_library_reader.png`: Book opened directly in `KRIFDocViewer` after "Add to Library & Read".
+       - `screenshots/verify_r37_library_imported_book.png`: Folio Library tab showing the newly imported book with its real cover.
      - Safety Invariant: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
-     - Staged signed Folio v3.3 KFX APK (131 MB) and stripped native library (4.6 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v3.3_kfx/`.
+     - Staged signed Folio v3.4 KFX release APK (131 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v3.4_kfx/base.apk`.
   4. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
      "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page and take the image for the cover. It is then processed separately and kept in its own class and inserted when displaying the book separately."
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
 - **Installed Packages**:
   - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only, v8.160.1.0, `lastUpdateTime=2026-11-19 21:59:23`)
-  - Clone: `com.amazon.kindle.epub` ("Folio v3.3 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, live OPDS/Atom feed download with auto-KFX transcode and library registration, heavy omnibus stress-tested up to 23 MB / 1,450 sections, CSS text-transform uppercase/lowercase/capitalize, font-variant small-caps, RTL Arabic/Hebrew direction and right alignment, multi-level nested lists, native tables with thead/colspan/rowspan, malformed asset resilience, full HTML4/HTML5 entity decoding, store-free library search, zero-hyphenation code blocks, proportional sup/sub, `$270` cover container, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, dynamic hardware metadata, KRIFDocViewer Enhanced Typesetting)
+  - Clone: `com.amazon.kindle.epub` ("Folio v3.4 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, external EPUB intent import dialog with "Add to Library & Read" vs "Open Once", persistent `folio_metadata.db`, Open Library metadata enrichment, live OPDS/Atom feed download, heavy omnibus stress-tested up to 23 MB / 1,450 sections, CSS text-transform uppercase/lowercase/capitalize, font-variant small-caps, RTL Arabic/Hebrew direction and right alignment, multi-level nested lists, native tables with thead/colspan/rowspan, malformed asset resilience, full HTML4/HTML5 entity decoding, store-free library search, zero-hyphenation code blocks, proportional sup/sub, `$270` cover container, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, dynamic hardware metadata, KRIFDocViewer Enhanced Typesetting)
 
-## Verification Evidence (Round 036)
-1. `screenshots/verify_r36_aristotle_22mb_cover.png`: Native fullscreen `#000000` `$270` cover for 22.8 MB Aristotle in `KRIFDocViewer`.
-2. `screenshots/verify_r36_aristotle_22mb_toc_and_prose.png`: Slide-out TOC drawer and deep jump to `Physics (184a)` (location 4,300 of 56,861).
-3. `screenshots/verify_r36_live_download_kfx_reader.png`: Freshly downloaded *Confessions of Zeno* auto-converted to KFX on-device and open in `KRIFDocViewer`.
-4. `screenshots/verify_r36_home_continue_reading_updated.png`: Folio Home screen showing **Continue Reading** carousel cleanly updated with real covers.
+## Verification Evidence (Round 037)
+1. `screenshots/verify_r37_external_import_dialog.png`: Dark **FOLIO EPUB IMPORT** dialog showing extracted metadata and action buttons.
+2. `screenshots/verify_r37_open_once_reader.png`: Book opened directly in `KRIFDocViewer` after "Open Once".
+3. `screenshots/verify_r37_add_to_library_reader.png`: Book opened directly in `KRIFDocViewer` after "Add to Library & Read".
+4. `screenshots/verify_r37_library_imported_book.png`: Folio Library tab showing the newly imported book with its real cover.
 5. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
-6. `dumpsys package com.amazon.kindle.epub`: Folio v3.3 KFX deployed (`lastUpdateTime=2026-11-22 16:24:28`).
+6. `dumpsys package com.amazon.kindle.epub`: Folio v3.4 KFX deployed (`lastUpdateTime=2026-11-22 16:49:43`).
 
 ---
 
