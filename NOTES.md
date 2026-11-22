@@ -694,3 +694,25 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.2_kfx/base.apk` (132 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report082.zip`
+
+
+---
+
+# Round 083: Custom Shelves Manager & 1-Tap Filter Drill-Down (Folio v8.3 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.3 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 083 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMoreView.java` from `dropin_src/`.
+     - Added `🏷 Manage Shelves` action card directly under `📊 Library Insights` on Control Center.
+     - Added interactive Manage Shelves modal listing shelves sorted descending, with 1-tap catalog drill-down (`SHELF:Classics`), in-place Rename/Merge, and safe shelf Removal.
+     - Bumped version badge to `Folio v8.3 KFX (Enhanced Typesetting)`.
+     - Built `classes9.dex` (274,900 B), fast-rebuilt APK, signed, and deployed to Galaxy M32 (`lastUpdateTime=2026-11-23 00:34:05`).
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.3_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `screenshots/verify_r83_control_center_v83.png`: Proves Control Center displays `🏷 Manage Shelves` card under `📊 Library Insights`.
+     - `screenshots/verify_r83_manage_shelves.png`: Proves Manage Shelves modal displaying `🏷 Classics` (`1 book ›`) with `Rename` and `Remove` pills, and tapping `🏷 Classics` opens the catalog filtered to `🏷 Classics (1)`.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.3_kfx/base.apk` (132 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report083.zip`
