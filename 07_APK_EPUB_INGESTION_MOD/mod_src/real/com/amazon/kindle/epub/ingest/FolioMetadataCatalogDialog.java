@@ -678,9 +678,9 @@ public final class FolioMetadataCatalogDialog {
 
         ImageView cover = new ImageView(ctx);
         cover.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 128)));
-        cover.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        cover.setBackgroundColor(Color.parseColor("#262B38"));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 132)));
+        cover.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        cover.setBackgroundColor(Color.parseColor("#0D1017"));
         if (rec.coverPath != null && !rec.coverPath.isEmpty()) {
             File cf = new File(rec.coverPath);
             if (cf.exists()) {
@@ -698,12 +698,31 @@ public final class FolioMetadataCatalogDialog {
         tTv.setTextColor(Color.WHITE);
         tTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         tTv.setTypeface(Typeface.DEFAULT_BOLD);
+        tTv.setMinLines(2);
         tTv.setMaxLines(2);
         tTv.setEllipsize(TextUtils.TruncateAt.END);
         tTv.setPadding(0, dp(ctx, 6), 0, dp(ctx, 2));
-        tile.addView(tTv);
 
         int pct = getProgress(progressMap, rec.kfxPath);
+        LinearLayout miniTrack = new LinearLayout(ctx);
+        miniTrack.setOrientation(LinearLayout.HORIZONTAL);
+        miniTrack.setBackgroundColor(Color.parseColor("#242938"));
+        LinearLayout.LayoutParams mtLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 3));
+        mtLp.setMargins(0, dp(ctx, 4), 0, 0);
+        miniTrack.setLayoutParams(mtLp);
+        if (pct > 0) {
+            float ratio = Math.max(0.08f, Math.min(1f, pct / 100f));
+            View mFill = new View(ctx);
+            mFill.setBackgroundColor(Color.parseColor(pct >= 100 ? "#34D399" : "#38BDF8"));
+            mFill.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, ratio));
+            miniTrack.addView(mFill);
+            View mRest = new View(ctx);
+            mRest.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, Math.max(0f, 1f - ratio)));
+            miniTrack.addView(mRest);
+        }
+        tile.addView(miniTrack);
+        tile.addView(tTv);
         int stars = getRating(ctx, rec.kfxPath);
         LinearLayout metaRow = new LinearLayout(ctx);
         metaRow.setOrientation(LinearLayout.HORIZONTAL);
