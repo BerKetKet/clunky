@@ -1,15 +1,15 @@
 {
-  "round": 35,
+  "round": 36,
   "project": "folio_clunky",
   "sender": "gemini",
   "receiver": "antigravity",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report035.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report036.zip",
   "max_reply_archive_mb": 15,
   "tasks": [
-    "Task A: Add CSS text-transform (uppercase/lowercase/capitalize), small-caps, and RTL (dir='rtl' Arabic/Hebrew) support in pure-Rust libkfxconv.so",
-    "Task B: Fix low-contrast OPDS dialog labels + verify live Standard Ebooks OPDS feed, patch 'Kindle library' -> 'Folio library' in Settings, and clean temporary synthetic test entries from Library",
-    "Task C: On-device visual QC screenshots (in screenshots/) and signed Folio v3.2 KFX release staging"
+    "Task A: Heavy omnibus stress test (Aristotle 22.8 MB, Herodotus 8.9 MB, Seneca 8.4 MB) on-device conversion/memory audit & optimization in libkfxconv.so",
+    "Task B: Live end-to-end download-to-KFX-reader verification from Folio Home / OPDS (download EPUB -> auto-convert via libkfxconv.so -> register cover -> open in KRIFDocViewer)",
+    "Task C: On-device visual QC screenshots (in screenshots/) and signed Folio v3.3 KFX release staging"
   ]
 }
