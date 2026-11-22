@@ -1006,3 +1006,25 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.2_kfx/base.apk` (132 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report092.zip`
+
+
+---
+
+# Round 093: Publication Eras Timeline Chart & Era Filtering (Folio v9.3 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v9.3 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 093 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMetadataCatalogDialog.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Built `PUBLICATION ERAS · YYYY–YYYY (TAP TO FILTER)` section in Library Insights plotting chronological era bars (`Pre-1900`, `1900–1949`, `1950–1999`, `2000–2009`, `2010–2019`, `2020+`).
+     - Added 1-tap drilldown dismissing Insights and opening catalog filtered to `ERA:<bucket>`.
+     - Added smart `📅 <Era> (N)` active filter chip in catalog with exact year-range filtering.
+     - Bumped version to `Folio v9.3 KFX (Enhanced Typesetting)`.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.3_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `verify_r93_insights_pub_eras.png`: Proves Library Insights modal displaying `PUBLICATION ERAS · 1531–2017 (TAP TO FILTER)` violet bar chart.
+     - `verify_r93_era_filter_drilldown.png`: Proves catalog modal filtered to `📅 2000–2009 (4)` with active violet chip and matching books.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.3_kfx/base.apk` (132 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report093.zip`

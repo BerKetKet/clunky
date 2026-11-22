@@ -1,52 +1,47 @@
-# Folio Milestone Release Report: Pinned Folder Bookmarks in Batch Importer (Round 092)
+# Folio Milestone Release Report: Publication Eras Chart & Era Filtering (Round 093)
 
 **Date:** 2026-11-23  
-**Target Package:** `com.amazon.kindle.epub` (Folio v9.2 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v9.3 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v9.2_kfx/base.apk` (132 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v9.3_kfx/base.apk` (132 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 092, Folio advanced to **Folio v9.2 KFX**. Drop-in updates were integrated into `FolioFolderBrowserDialog.java` and `FolioMoreView.java`. Antigravity compiled Dalvik DEX (`classes9.dex`, 323,520 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **★ Pinned Folder Bookmarks & Quick Jump (`FolioFolderBrowserDialog.java`)**:
-   - Integrated compact **`☆` / `★`** toggle button right beside `Open` in the Batch EPUB Importer path bar.
-   - Pinned directories are persisted in `SharedPreferences("folio_ui_prefs", "pinned_import_dirs")` as a linked set.
-   - Pinned directories render at the head of the horizontal quick-jump chip strip with a gold **`★`** prefix (e.g. `★ en/0`).
-2. **Active Folder Highlight (`FolioFolderBrowserDialog.java`)**:
-   - Dynamic detection checks if the currently browsed path matches a quick-jump or pinned chip.
-   - Highlights the matching chip with an active amber background (`#F59E0B`), dark high-contrast text (`#111827`), and bold typography.
+In Round 093, Folio advanced to **Folio v9.3 KFX**. Drop-in updates were integrated into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`. Antigravity compiled Dalvik DEX (`classes9.dex`, 325,684 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **📅 Publication Eras Timeline Bar Chart (`FolioMoreView.java`)**:
+   - Parses valid publication years across all cataloged books, computes library historical span (`PUBLICATION ERAS · 1531–2017 (TAP TO FILTER)`), and plots proportional violet horizontal bars across chronological eras (`Pre-1900`, `1900–1949`, `1950–1999`, `2000–2009`, `2010–2019`, `2020+`).
+   - Tapping any era bar dismisses Insights and jumps straight into the catalog filtered to that exact publication era.
+2. **Smart `ERA:` Filter Chip & Query Parsing (`FolioMetadataCatalogDialog.java`)**:
+   - Supports `ERA:<bucket>` deep-links with a dedicated active `📅 <Era> (N)` filter chip and exact year-range filtering.
 3. **Control Center & About Version Bump (`FolioMoreView.java`)**:
-   - Bumped Control Center header badge and About Folio dialog string to **Folio v9.2 KFX (Enhanced Typesetting)**.
+   - Bumped Control Center header badge and About Folio dialog string to **Folio v9.3 KFX (Enhanced Typesetting)**.
 4. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Folio v9.2 KFX
+## 2. Integrated Features in Folio v9.3 KFX
 
-### A. Folder Pinning Subsystem (`FolioFolderBrowserDialog.java`)
-- Storage & State Management:
+### A. Publication Eras Timeline Bar Chart (`FolioMoreView.java`)
+- Chronological Year Parsing & Era Bucketing:
   ```java
-  private static java.util.LinkedHashSet<String> loadPinnedDirs(Context ctx) {
-      java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>();
-      try {
-          String raw = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
-                  .getString("pinned_import_dirs", "");
-          if (raw != null && !raw.isEmpty()) {
-              for (String line : raw.split("\n")) {
-                  String s = line.trim();
-                  if (!s.isEmpty()) set.add(s);
-              }
-          }
-      } catch (Throwable ignored) {}
-      return set;
+  int bYr = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.parseBookYear(r.pubDate);
+  if (bYr > 0) {
+      datedCount++;
+      if (bYr < minYear) minYear = bYr;
+      if (bYr > maxYear) maxYear = bYr;
+      String eb = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.eraBucketForYear(bYr);
+      if (eraFreq.containsKey(eb)) eraFreq.put(eb, eraFreq.get(eb) + 1);
   }
   ```
-- Interactive Chip Ordering & Highlighting:
-  - Pinned folders are always prepended before the default directory list (`QUICK_DIRS`).
-  - Active directory chip is styled with `#F59E0B` amber fill for instant visual confirmation of the current directory scope.
+- 1-Tap Era Drilldown:
+  - Tapping any era bar navigates to `FolioMetadataCatalogDialog.show(ctx, "ERA:" + eraName)`.
+
+### B. Smart Era Catalog Filtering (`FolioMetadataCatalogDialog.java`)
+- Filter chip displays `📅 <Era> (N)` with violet border styling (`#C084FC`).
+- Matches records via `matchesEraFilter(rec, era)`.
 
 ---
 
@@ -54,8 +49,8 @@ In Round 092, Folio advanced to **Folio v9.2 KFX**. Drop-in updates were integra
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Pinned Folder Importer** | Batch EPUB Importer Modal | `verify_r92_pinned_folder_importer.png` | **VERIFIED**: Opened `Import EPUBs from Storage` (`/sdcard/en/0`); tapped `☆` to pin it; verified active gold **`★`** button (`[915, 558][1002, 645]`) and highlighted gold **`★ en/0`** chip (`[83, 667][220, 734]`) at the front of the quick-jump strip. |
-| **About Folio v9.2 KFX** | About Folio Modal | `verify_r92_about_v92.png` | **VERIFIED**: Tapped Control Center version badge; verified modal confirming `Version: Folio v9.2 KFX (Enhanced Typesetting)` and live stats. |
+| **Publication Eras Chart** | Library Insights Modal | `verify_r93_insights_pub_eras.png` | **VERIFIED**: Opened `📊 Library Insights` and scrolled down; verified `PUBLICATION ERAS · 1531–2017 (TAP TO FILTER)` section displaying violet bar chart with `Pre-1900` (13), `1900–1949` (1), `1950–1999` (4), `2000–2009` (4), and `2010–2019` (5). |
+| **Era Filter Drilldown** | Catalog Modal | `verify_r93_era_filter_drilldown.png` | **VERIFIED**: Tapped `📅 2000–2009` bar; verified catalog opens with active violet `📅 2000–2009 (4)` chip and filters down to *1984*, *Moby Dick*, and *Animal Farm*. |
 | **Stock Kindle Invariant** | Android OS PackageManager | CLI `dumpsys package com.amazon.kindle` | **VERIFIED**: `lastUpdateTime=2026-11-19 21:59:23` completely untouched. |
 
 ---
