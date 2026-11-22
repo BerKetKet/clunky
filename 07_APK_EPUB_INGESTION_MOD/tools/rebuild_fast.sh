@@ -25,11 +25,11 @@ else
     adb install -r -d "${WORK_DIR}/signed_splits/base.apk"
 fi
 
-echo "[5/5] Staging Folio v1.2 release..."
-mkdir -p "${MOD_ROOT}/release/folio_v1.2"
-cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/folio_v1.2/base.apk"
+echo "[5/5] Staging Folio v2.7 KFX release..."
+mkdir -p "${MOD_ROOT}/release/folio_v2.7_kfx"
+cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/folio_v2.7_kfx/base.apk"
 if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
-    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/folio_v1.2/base.apk.idsig"
+    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/folio_v2.7_kfx/base.apk.idsig"
 fi
 
-echo "Fast rebuild, deploy, and Folio v1.2 staging successful!"
+echo "Fast rebuild, deploy, and Folio v2.7 KFX staging successful!"

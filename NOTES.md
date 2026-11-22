@@ -1,35 +1,37 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
-- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.5 KFX") deployed and fully verified alongside unmodified stock `com.amazon.kindle`. Round 028 complete:
-  1. **Pure-Rust Prose Image Aspect-Ratio Scaling (Task A)**: Added `"gif"` decoder feature in `kfx_converter/Cargo.toml`, sniffed GIF/PNG headers for zero-cost dimension detection, transcoded non-renderable GIFs to standard PNG, emitted decoded pixel dimensions in external resource entities (`$422/$423` + `$66/$67`), and generated proportional column styles (`pct = min(100.0, w / 512.0 * 100.0)`) with `$65: 100% max_width` and `$64: 100% max_height`. Verified all 150 Rust tests pass cleanly.
-  2. **Multi-Book On-Device Visual Verification (Task B)**:
-     - Antigone ornament (`00008.gif`, 296×38) renders at width 369px, height 39px, completely eliminating 1600px vertical stretch (`screenshots/verify_r28_antigone_ornament_fixed.png`).
-     - Mixed-aspect image exam verified on single page with 6:1 wide banner (918×150), 3:2 landscape photo (904×595), and 1:1 icon (20×20) maintaining exact geometric proportions (`screenshots/verify_r28_images_exam_aspect.png`).
-     - Contents page verified with uniform 75px line spacing and clean single-line blue link underlines at default `Aa → Spacing` (`screenshots/verify_r28_sophocles_contents_default_spacing.png`).
-  3. **UI Polish & More Tab Audit (Task C)**:
-     - Patched XML string resources during APK packaging: Library search bar re-branded to `"Search Folio"` (`screenshots/verify_r28_library_branding.png`).
-     - Added `mainScroll.setClipToPadding(false)` and `mainScroll.setPadding(0, 0, 0, dp(d, 80))` in `OpenCatalogView.java` for clean clearance above mini-cover dock (`screenshots/verify_r28_home_bottom_padding.png`).
-     - Audited More tab menu items (`Sign In with Amazon`, `Sync now`, `Settings`, `Help`) for Round 029 offline repurposing (`screenshots/verify_r28_more_tab.png`).
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v2.7 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 030 complete:
+  1. **Converter & UI Micro-Polish (Task A)**:
+     - Pure-Rust Link Coalescing: Contiguous text spans sharing the same `href` coalesce into a single `$179 link_to` event in `kfx_converter/src/packager/storylines.rs`. Stripped pseudo-classes (`:link`, `:visited`, etc.) in `kfx_converter/src/css.rs` so stylesheet rules cascade cleanly onto nested inline tags. Unit test: `test_r30_nested_inline_tags_in_link` passes.
+     - Uniform `<li>` Marker Spacing: Added `trim_start()` on `item_spans[0].text` in `kfx_converter/src/packager/storylines.rs` and set `text_alignment: left` (`sym_left`, 59) in `styles.rs` so bullet gaps are never stretched by text justification. Unit test: `test_r30_uniform_list_item_marker_spacing` passes.
+     - Dynamic Device Info & Privacy Mode: In `FolioMoreView.java`, populated `Hardware:` dynamically via `Build.MANUFACTURER + " " + Build.MODEL + " (" + Build.SUPPORTED_ABIS[0] + ")"`, and updated privacy label to `"Privacy Mode: Local-First (Zero Amazon Telemetry)"`.
+     - Pop-up Note / Footnote Ingestion: Emitted `$617 yj.note` inside `$597 auxiliary_data` when footnotes are detected for a section. All 200 Rust tests pass.
+  2. **Multi-Book On-Device Benchmark Matrix (Task B)**:
+     - Executed 7-book stress matrix on Galaxy M32 with sub-2s conversion and zero-crash `KRIFDocViewer` launch (`Hesiod`, `Cato the Elder`, `Aristophanes`, `Sophocles`, `Julius Caesar`, `kindle_exam_v3`, `kindle_tables_images_exam`).
+  3. **Interactive Flow Verification (Task B.2 & C)**:
+     - Verified uniform bullet gap and link underline in `kindle_exam_v3.epub` (`screenshots/verify_r30_list_spacing_and_links_fixed.png`).
+     - Verified live pop-up modal panel in `KRIFDocViewer` (`screenshots/verify_r30_footnote_popup.png`).
+     - Verified live text selection with highlight palette, action bar (`Annotate`, `Note`, `Copy`, `Pin`, `Report`), and Oxford dictionary definition card on `"profound"` (`screenshots/verify_r30_highlight_or_scroll.png`).
+     - Verified Control Center About Folio dialog with dynamic hardware metadata (`screenshots/verify_r30_control_center_scan_and_about.png`).
   4. **Cover Architecture Directive Relayed**: Included Project Lead directive in `REPORT.md` regarding extracting cover images on ingestion and managing them in a dedicated UI View rather than within the reflowable KFX book spine.
 - **Target Device**: Samsung Galaxy M32 (Android 13 / API 33, arm64-v8a, Magisk root, Enforcing SELinux, serial `32001776e8e82623`).
 - **Installed Packages**:
   - Stock: `com.amazon.kindle` (bit-for-bit intact, strictly read-only, v8.160.1.0, `lastUpdateTime=2026-11-19 21:59:23`)
-  - Clone: `com.amazon.kindle.epub` ("Folio v2.5 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, `$270` cover container, native table support, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, KRIFDocViewer Enhanced Typesetting)
+  - Clone: `com.amazon.kindle.epub` ("Folio v2.7 KFX", v8.159.0.100, native pure-Rust `libkfxconv.so` pipeline, `$270` cover container, native table support, HTML whitespace normalization, UTF-16 style offsets, native `$266` anchor links, proportional image scaling, Library branding, dynamic hardware metadata, KRIFDocViewer Enhanced Typesetting)
 
-## Verification Evidence (Round 028)
-1. `screenshots/verify_r28_antigone_ornament_fixed.png`: 296×38 ornament rendered at 369×39px.
-2. `screenshots/verify_r28_images_exam_aspect.png`: Wide 6:1 banner, 3:2 photo, and 1:1 icon undistorted.
-3. `screenshots/verify_r28_sophocles_contents_default_spacing.png`: Clean 75px spacing at default `Aa → Spacing`.
-4. `screenshots/verify_r28_library_branding.png`: Library search bar reads `"Search Folio"`.
-5. `screenshots/verify_r28_home_bottom_padding.png`: 80dp scroll clearance above mini-cover dock.
-6. `screenshots/verify_r28_more_tab.png`: More tab UI audit capture.
-7. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+## Verification Evidence (Round 030)
+1. `screenshots/verify_r30_list_spacing_and_links_fixed.png`: Uniform bullet gap in `kindle_exam_v3.epub` verified via OCR.
+2. `screenshots/verify_r30_footnote_popup.png`: Live pop-up modal panel in `KRIFDocViewer`.
+3. `screenshots/verify_r30_highlight_or_scroll.png`: Live highlight selection, color palette, and Oxford dictionary definition card.
+4. `screenshots/verify_r30_control_center_scan_and_about.png`: Control Center About Folio dialog showing dynamic hardware details and Privacy Mode label.
+5. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+6. `dumpsys package com.amazon.kindle.epub`: Folio v2.7 KFX deployed (`lastUpdateTime=2026-11-22 09:49:08`).
 
 ## Next Steps
-1. Package `antig_to_gemini_neon_clunky_report028.zip` (< 15 MB).
+1. Package `antig_to_gemini_neon_clunky_report030.zip` (< 15 MB).
 2. Relay report zip to Gemini Neon tab via Chrome bridge, verifying attachment preview chip before sending.
-3. Launch autonomous relay runner with 2000s timeout and 60s polling interval to await Round 029 instructions.
+3. Launch autonomous relay runner with 2000s timeout and 60s polling interval to await Round 031 instructions.
 
 ---
 

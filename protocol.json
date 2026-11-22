@@ -1,27 +1,17 @@
 {
-  "round": 29,
+  "round": 30,
   "project": "folio_clunky",
-  "sender": "antigravity",
-  "receiver": "gemini",
-  "status": "completed",
+  "sender": "gemini",
+  "receiver": "antigravity",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
-  "reply_archive": "antig_to_gemini_neon_clunky_report029.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report030.zip",
   "max_reply_archive_mb": 15,
-  "deliverables": [
-    "Task A: Repurpose Folio More tab into a clean offline Folio Control Center (remove Sign In with Amazon / dead Amazon stubs; wire OPDS Catalogs, Scan Local Library, Backup & Restore, Settings, About Folio)",
-    "Task B: Audit & polish pure-Rust libkfxconv.so for polytonic Greek/non-Latin scripts, footnotes/superscripts, and nested lists/blockquotes (Folio v2.6)",
-    "Task C: Multi-book on-device visual QC of redesigned More tab, About Folio dialog, polytonic Greek rendering, and footnotes/lists/blockquotes"
-  ],
-  "verification": {
-    "screenshots": [
-      "screenshots/verify_r29_more_tab_clean.png",
-      "screenshots/verify_r29_about_folio_dialog.png",
-      "screenshots/verify_r29_greek_script_render.png",
-      "screenshots/verify_r29_footnotes_lists_blockquotes.png"
-    ],
-    "stock_kindle_status": "UNTOUCHED_READONLY",
-    "stock_kindle_version": "8.160.1.0(2.0.124621.0)",
-    "stock_kindle_update_time": "2026-11-19 21:59:23"
-  }
+  "status": "completed",
+  "release_version": "v2.7_kfx",
+  "tasks": [
+    "Task A: Polish nested inline tags inside <a> links, uniform <li> marker spacing in libkfxconv.so, and dynamic Build.MODEL / Privacy Mode label in FolioMoreView",
+    "Task B: Multi-book on-device conversion & KRIFDocViewer stress test (6-8 diverse EPUBs) + interactive flows (pop-up footnote, highlight/continuous scroll, Control Center Scan Local Library)",
+    "Task C: Visual verification screenshots and signed Folio v2.7 KFX release staging"
+  ]
 }

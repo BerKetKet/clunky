@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v2.6 KFX");
+        badgeTv.setText("Folio v2.7 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -408,8 +408,11 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: 2.6 KFX (Enhanced Typesetting)\n");
-        sb.append("Hardware: Samsung Galaxy M32 (ARM64)\n\n");
+        sb.append("Version: 2.7 KFX (Enhanced Typesetting)\n");
+        String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
+                ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
+        sb.append("Hardware: ").append(android.os.Build.MANUFACTURER).append(" ").append(android.os.Build.MODEL)
+                .append(" (").append(arch).append(")\n\n");
 
         sb.append("Pure-Rust Engine (libkfxconv.so):\n");
         sb.append("• Standalone $270 Cover Container (#000000, 0% margin)\n");
@@ -424,7 +427,7 @@ public final class FolioMoreView {
         sb.append("Live Library & Cache Stats:\n");
         sb.append("• Indexed Library Books: ").append(indexedBooks).append("\n");
         sb.append("• Local Storage Cache: ").append(String.format("%.1f", cacheMb)).append(" MB\n");
-        sb.append("• Network Mode: 100% Offline (Zero Amazon Telemetry)\n");
+        sb.append("• Privacy Mode: Local-First (Zero Amazon Telemetry)\n");
 
         new AlertDialog.Builder(ctx)
                 .setTitle("About Folio")
