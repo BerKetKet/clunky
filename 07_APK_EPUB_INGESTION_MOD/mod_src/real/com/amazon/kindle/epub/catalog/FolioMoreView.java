@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v5.6 KFX");
+        badgeTv.setText("Folio v5.7 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -97,6 +97,9 @@ public final class FolioMoreView {
         badgeBg.setCornerRadius(dp(d, 12));
         badgeBg.setStroke(dp(d, 1), 0x66E6A23C);
         badgeTv.setBackground(badgeBg);
+        badgeTv.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showAboutDialog(ctx); }
+        });
         headerRow.addView(badgeTv);
         container.addView(headerRow);
 
@@ -107,7 +110,17 @@ public final class FolioMoreView {
         subTv.setPadding(0, 0, 0, dp(d, 14));
         container.addView(subTv);
 
-        // 1b. Live Reading Stats Strip (1-tap deep-links into Catalog filters)
+        // 1b. Live Reading Stats Strip (1-tap deep-links + auto-refresh on dialog dismiss)
+        final TextView[] statNums = new TextView[3];
+        final Runnable refreshStats = new Runnable() {
+            @Override public void run() {
+                int[] s = readQuickStats(ctx);
+                if (statNums[0] != null) statNums[0].setText(String.valueOf(s[0]));
+                if (statNums[1] != null) statNums[1].setText(String.valueOf(s[1]));
+                if (statNums[2] != null) statNums[2].setText(String.valueOf(s[2]));
+            }
+        };
+
         int[] stats = readQuickStats(ctx);
         LinearLayout statsRow = new LinearLayout(ctx);
         statsRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -117,21 +130,24 @@ public final class FolioMoreView {
         statsRow.setLayoutParams(srLp);
 
         statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[0]), "BOOKS", 0xFFF59E0B, true,
+                statNums, 0,
                 new View.OnClickListener() {
                     @Override public void onClick(View v) {
-                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "All");
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "All", refreshStats);
                     }
                 }));
         statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[1]), "READING", 0xFF5EEAD4, true,
+                statNums, 1,
                 new View.OnClickListener() {
                     @Override public void onClick(View v) {
-                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Reading");
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Reading", refreshStats);
                     }
                 }));
         statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[2]), "FINISHED", 0xFF34D399, false,
+                statNums, 2,
                 new View.OnClickListener() {
                     @Override public void onClick(View v) {
-                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Finished");
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Finished", refreshStats);
                     }
                 }));
         container.addView(statsRow);
@@ -145,7 +161,7 @@ public final class FolioMoreView {
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx);
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "All", refreshStats);
                     }
                 }
         ));
@@ -262,7 +278,8 @@ public final class FolioMoreView {
     }
 
     private static View makeStatTile(Context ctx, float d, String count, String label,
-                                     int accentColor, boolean addRightGap, View.OnClickListener listener) {
+                                     int accentColor, boolean addRightGap,
+                                     TextView[] numSlot, int slotIdx, View.OnClickListener listener) {
         LinearLayout tile = new LinearLayout(ctx);
         tile.setOrientation(LinearLayout.VERTICAL);
         tile.setGravity(Gravity.CENTER);
@@ -283,6 +300,7 @@ public final class FolioMoreView {
         numTv.setTextColor(accentColor);
         numTv.setTypeface(Typeface.DEFAULT_BOLD);
         numTv.setGravity(Gravity.CENTER);
+        if (numSlot != null && slotIdx >= 0 && slotIdx < numSlot.length) numSlot[slotIdx] = numTv;
         tile.addView(numTv);
 
         TextView lblTv = new TextView(ctx);
@@ -586,7 +604,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v5.6 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v5.7 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

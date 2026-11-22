@@ -54,10 +54,14 @@ public final class FolioMetadataCatalogDialog {
     private FolioMetadataCatalogDialog() {}
 
     public static void show(final Context ctx) {
-        show(ctx, "All");
+        show(ctx, "All", null);
     }
 
     public static void show(final Context ctx, final String initialFilter) {
+        show(ctx, initialFilter, null);
+    }
+
+    public static void show(final Context ctx, final String initialFilter, final Runnable onDismiss) {
         final Handler mainHandler = new Handler(Looper.getMainLooper());
         final List<FolioMetadataDb.BookRecord> allBooks = new ArrayList<>();
         final List<String> genres = new ArrayList<>();
@@ -188,6 +192,9 @@ public final class FolioMetadataCatalogDialog {
                 .setView(root)
                 .setPositiveButton("Close", null)
                 .create();
+        if (onDismiss != null) {
+            dialog.setOnDismissListener(d -> onDismiss.run());
+        }
 
         final String[] selectedGenre = new String[] { (initialFilter != null && !initialFilter.trim().isEmpty()) ? initialFilter.trim() : "All" };
         final String[] queryText = new String[] { "" };
@@ -596,7 +603,6 @@ public final class FolioMetadataCatalogDialog {
         if (!rec.publisher.isEmpty()) details.append("Publisher: ").append(rec.publisher).append("\n");
         if (!rec.isbn.isEmpty()) details.append("ISBN: ").append(rec.isbn).append("\n");
         String cleanDetGenres = cleanGenresForDisplay(rec.genres);
-        if (!cleanDetGenres.isEmpty()) details.append("Genres: ").append(cleanDetGenres).append("\n");
         if (!rec.language.isEmpty() && !"und".equalsIgnoreCase(rec.language.trim())
                 && !"undetermined".equalsIgnoreCase(rec.language.trim())) {
             details.append("Language: ").append(rec.language).append("\n");
@@ -608,6 +614,46 @@ public final class FolioMetadataCatalogDialog {
         metaTv.setTextColor(Color.parseColor("#CBD5E1"));
         metaTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         box.addView(metaTv);
+
+        if (!cleanDetGenres.isEmpty()) {
+            HorizontalScrollView gScroll = new HorizontalScrollView(ctx);
+            gScroll.setHorizontalScrollBarEnabled(false);
+            LinearLayout.LayoutParams gsLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            gsLp.setMargins(0, dp(ctx, 10), 0, dp(ctx, 2));
+            gScroll.setLayoutParams(gsLp);
+
+            LinearLayout gRow = new LinearLayout(ctx);
+            gRow.setOrientation(LinearLayout.HORIZONTAL);
+            for (String rawG : cleanDetGenres.split(",")) {
+                final String gTag = rawG.trim();
+                if (gTag.isEmpty()) continue;
+                TextView pill = new TextView(ctx);
+                pill.setText(gTag);
+                pill.setTextColor(Color.parseColor("#60A5FA"));
+                pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                pill.setTypeface(Typeface.DEFAULT_BOLD);
+                pill.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
+                GradientDrawable pBg = new GradientDrawable();
+                pBg.setColor(Color.parseColor("#1E2433"));
+                pBg.setCornerRadius(dp(ctx, 14));
+                pBg.setStroke(dp(ctx, 1), Color.parseColor("#2A354D"));
+                pill.setBackground(pBg);
+                LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                pLp.setMargins(0, 0, dp(ctx, 6), 0);
+                pill.setLayoutParams(pLp);
+                if (onAuthorFilter != null) {
+                    pill.setOnClickListener(v -> {
+                        if (detailDlgRef[0] != null) detailDlgRef[0].dismiss();
+                        onAuthorFilter.onFilterByAuthor(gTag);
+                    });
+                }
+                gRow.addView(pill);
+            }
+            gScroll.addView(gRow);
+            box.addView(gScroll);
+        }
 
         if (!rec.description.isEmpty()) {
             TextView descTv = new TextView(ctx);
