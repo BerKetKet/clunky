@@ -148,6 +148,23 @@ public final class FolioFolderBrowserDialog {
         goLp.setMargins(dp(ctx, 8), 0, 0, 0);
         btnGo.setLayoutParams(goLp);
         pathRow.addView(btnGo);
+
+        final TextView btnPinDir = new TextView(ctx);
+        btnPinDir.setText("☆");
+        btnPinDir.setTextColor(Color.parseColor("#94A3B8"));
+        btnPinDir.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        btnPinDir.setTypeface(Typeface.DEFAULT_BOLD);
+        btnPinDir.setPadding(dp(ctx, 10), dp(ctx, 6), dp(ctx, 10), dp(ctx, 6));
+        final GradientDrawable pinBg = new GradientDrawable();
+        pinBg.setColor(Color.parseColor("#1E2433"));
+        pinBg.setCornerRadius(dp(ctx, 8));
+        pinBg.setStroke(dp(ctx, 1), Color.parseColor("#334155"));
+        btnPinDir.setBackground(pinBg);
+        LinearLayout.LayoutParams pinLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        pinLp.setMargins(dp(ctx, 6), 0, 0, 0);
+        btnPinDir.setLayoutParams(pinLp);
+        pathRow.addView(btnPinDir);
         root.addView(pathRow);
 
         // Quick directory chips
@@ -432,26 +449,75 @@ public final class FolioFolderBrowserDialog {
             renderList.run();
         };
 
-        for (final String qd : QUICK_DIRS) {
-            TextView chip = new TextView(ctx);
-            chip.setText(qd.replace("/sdcard/", ""));
-            chip.setTextColor(Color.parseColor("#CBD5E1"));
-            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-            chip.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
-            GradientDrawable cbg = new GradientDrawable();
-            cbg.setColor(Color.parseColor("#1E2433"));
-            cbg.setCornerRadius(dp(ctx, 14));
-            chip.setBackground(cbg);
-            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            clp.setMargins(0, 0, dp(ctx, 6), 0);
-            chip.setLayoutParams(clp);
-            chip.setOnClickListener(v -> {
-                etPath.setText(qd);
-                loadDir.run();
-            });
-            chipRow.addView(chip);
-        }
+        final Runnable[] refreshDirChipsRef = new Runnable[1];
+        refreshDirChipsRef[0] = () -> {
+            chipRow.removeAllViews();
+            String curDir = etPath.getText() != null ? etPath.getText().toString().trim() : "";
+            java.util.LinkedHashSet<String> pinned = loadPinnedDirs(ctx);
+            boolean curIsPinned = !curDir.isEmpty() && pinned.contains(curDir);
+            btnPinDir.setText(curIsPinned ? "★" : "☆");
+            btnPinDir.setTextColor(Color.parseColor(curIsPinned ? "#FBBF24" : "#94A3B8"));
+            pinBg.setColor(Color.parseColor(curIsPinned ? "#2D2312" : "#1E2433"));
+            pinBg.setStroke(dp(ctx, 1), Color.parseColor(curIsPinned ? "#B45309" : "#334155"));
+
+            java.util.LinkedHashMap<String, Boolean> allDirs = new java.util.LinkedHashMap<>();
+            for (String pd : pinned) allDirs.put(pd, Boolean.TRUE);
+            for (String qd : QUICK_DIRS) {
+                if (!allDirs.containsKey(qd)) allDirs.put(qd, Boolean.FALSE);
+            }
+            for (java.util.Map.Entry<String, Boolean> ent : allDirs.entrySet()) {
+                final String qd = ent.getKey();
+                final boolean isPin = Boolean.TRUE.equals(ent.getValue());
+                final boolean isCur = qd.equals(curDir);
+                TextView chip = new TextView(ctx);
+                String shortLbl = qd.replace("/sdcard/", "");
+                if (shortLbl.isEmpty()) shortLbl = qd;
+                chip.setText((isPin ? "★ " : "") + shortLbl);
+                chip.setTextColor(Color.parseColor(isCur ? "#111827" : (isPin ? "#FBBF24" : "#CBD5E1")));
+                chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                chip.setTypeface(isCur || isPin ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+                chip.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
+                GradientDrawable cbg = new GradientDrawable();
+                cbg.setColor(Color.parseColor(isCur ? "#F59E0B" : (isPin ? "#251F14" : "#1E2433")));
+                cbg.setCornerRadius(dp(ctx, 14));
+                if (isPin && !isCur) cbg.setStroke(dp(ctx, 1), Color.parseColor("#78501A"));
+                chip.setBackground(cbg);
+                LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                clp.setMargins(0, 0, dp(ctx, 6), 0);
+                chip.setLayoutParams(clp);
+                chip.setOnClickListener(v -> {
+                    etPath.setText(qd);
+                    loadDir.run();
+                    refreshDirChipsRef[0].run();
+                });
+                chipRow.addView(chip);
+            }
+        };
+
+        btnPinDir.setOnClickListener(v -> {
+            String curDir = etPath.getText() != null ? etPath.getText().toString().trim() : "";
+            if (curDir.isEmpty() || !new File(curDir).isDirectory()) {
+                Toast.makeText(ctx, "Open a valid folder to pin it", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            java.util.LinkedHashSet<String> pinned = loadPinnedDirs(ctx);
+            boolean nowPinned;
+            if (pinned.contains(curDir)) {
+                pinned.remove(curDir);
+                nowPinned = false;
+            } else {
+                pinned.add(curDir);
+                nowPinned = true;
+            }
+            savePinnedDirs(ctx, pinned);
+            refreshDirChipsRef[0].run();
+            Toast.makeText(ctx,
+                    (nowPinned ? "★ Pinned folder: " : "Removed pin: ") + curDir.replace("/sdcard/", ""),
+                    Toast.LENGTH_SHORT).show();
+        });
+
+        refreshDirChipsRef[0].run();
 
         btnSortFolder.setOnClickListener(v -> {
             folderSortIdx[0] = (folderSortIdx[0] + 1) % folderSortLabels.length;
@@ -497,7 +563,7 @@ public final class FolioFolderBrowserDialog {
             @Override public void afterTextChanged(Editable s) {}
         });
 
-        btnGo.setOnClickListener(v -> loadDir.run());
+        btnGo.setOnClickListener(v -> { loadDir.run(); refreshDirChipsRef[0].run(); });
 
         btnImport.setOnClickListener(v -> {
             if (selectedFiles.isEmpty()) {
@@ -585,6 +651,33 @@ public final class FolioFolderBrowserDialog {
             db.close();
         }
         return set;
+    }
+
+    private static java.util.LinkedHashSet<String> loadPinnedDirs(Context ctx) {
+        java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>();
+        try {
+            String raw = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .getString("pinned_import_dirs", "");
+            if (raw != null && !raw.isEmpty()) {
+                for (String line : raw.split("\n")) {
+                    String s = line.trim();
+                    if (!s.isEmpty()) set.add(s);
+                }
+            }
+        } catch (Throwable ignored) {}
+        return set;
+    }
+
+    private static void savePinnedDirs(Context ctx, java.util.Set<String> dirs) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            for (String d : dirs) {
+                if (sb.length() > 0) sb.append("\n");
+                sb.append(d);
+            }
+            ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .edit().putString("pinned_import_dirs", sb.toString()).apply();
+        } catch (Throwable ignored) {}
     }
 
     private static String pickDefaultDir() {
