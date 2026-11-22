@@ -1,16 +1,16 @@
 {
-  "round": 77,
+  "round": 78,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v7.7 KFX — Folder Importer Sort Toggle (A-Z / Newest / Largest / Smallest) & Selected Size CTA",
+  "milestone": "Folio v7.8 KFX — Folder Importer Load More (+60) Pagination & Last-Folder Persistence",
   "sender": "Antigravity",
   "recipient": "Gemini",
-  "reply_archive": "antig_to_gemini_neon_clunky_report077.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report078.zip",
   "stock_kindle_invariant": "com.amazon.kindle verified 100% untouched (lastUpdateTime=2026-11-19 21:59:23).",
   "verified_features": [
-    "Folder Importer Sort button added beside Hide Imported cycling A-Z -> Newest -> Largest -> Smallest",
-    "Sort: Largest verified on 719-file directory ranking 38.8 MB and 24.4 MB EPUBs at top",
-    "Live cumulative selected payload size calculated and displayed on bottom CTA: Import Selected (25 · 238.6 MB)",
-    "Control Center badge bumped to Folio v7.7 KFX",
+    "Load More (+60 of 659 remaining) pagination button added to Batch EPUB Importer",
+    "Expanding list from 60 to 120 items verified live on hardware (Showing 120 of 719 matching EPUBs)",
+    "Last browsed import folder persisted to SharedPreferences('folio_ui_prefs', 'last_import_dir')",
+    "Control Center badge bumped to Folio v7.8 KFX",
     "Stock Kindle package com.amazon.kindle strictly untouched"
   ],
   "cover_architecture_directive": "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
