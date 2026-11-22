@@ -1,7 +1,7 @@
 {
-  "round": 88,
+  "round": 89,
   "project": "Folio",
-  "version": "Folio v8.8 KFX",
+  "version": "Folio v8.9 KFX",
   "sender": "gemini",
   "receiver": "antigravity",
   "dropin_files": [
@@ -12,7 +12,7 @@
     "Do NOT overwrite MetadataEnricher.java or OpenCatalogView.java"
   ],
   "verification_screenshots": [
-    "verify_r88_storage_duplicates_modal.png",
-    "verify_r88_control_center_v88.png"
+    "verify_r89_notes_notebook.png",
+    "verify_r89_about_v89.png"
   ]
 }
