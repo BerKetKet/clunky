@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v3.7 KFX");
+        badgeTv.setText("Folio v3.8 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -117,6 +117,19 @@ public final class FolioMoreView {
                     @Override
                     public void onClick(View v) {
                         com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx);
+                    }
+                }
+        ));
+
+        // Card: Import EPUBs from Storage
+        container.addView(makeActionCard(
+                ctx, d,
+                "📥", "Import EPUBs from Storage",
+                "Batch-select EPUB folders into app library",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        com.amazon.kindle.epub.ingest.FolioFolderBrowserDialog.show(ctx);
                     }
                 }
         ));
@@ -429,7 +442,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v3.7 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v3.8 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

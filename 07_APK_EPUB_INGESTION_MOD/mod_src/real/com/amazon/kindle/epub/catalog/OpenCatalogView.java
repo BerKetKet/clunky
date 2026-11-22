@@ -1026,7 +1026,13 @@ public final class OpenCatalogView {
                     restored++;
                 }
             }
-            Toast.makeText(ctx, "Restored " + restored + " DB(s). Restart Folio to apply.", Toast.LENGTH_LONG).show();
+            int restoredMeta = com.amazon.kindle.epub.ingest.FolioMetadataBackup.restoreFromJson(ctx);
+            String msg = "Restored " + restored + " DB(s)";
+            if (restoredMeta >= 0) {
+                msg += " & " + restoredMeta + " metadata record(s)";
+            }
+            msg += ". Restart Folio to apply.";
+            Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show();
         } catch (Throwable t) {
             Toast.makeText(ctx, "Restore error: " + t.getMessage(), Toast.LENGTH_LONG).show();
         }
@@ -1046,7 +1052,13 @@ public final class OpenCatalogView {
                     copied++;
                 }
             }
-            Toast.makeText(ctx, "Backed up " + copied + " DB(s) to /sdcard/kindle/backups/", Toast.LENGTH_LONG).show();
+            int metaCount = com.amazon.kindle.epub.ingest.FolioMetadataBackup.exportToJson(ctx);
+            String msg = "Backed up " + copied + " DB(s)";
+            if (metaCount >= 0) {
+                msg += " & " + metaCount + " metadata record(s)";
+            }
+            msg += " to /sdcard/kindle/backups/";
+            Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show();
         } catch (Throwable t) {
             Toast.makeText(ctx, "Backup error: " + t.getMessage(), Toast.LENGTH_LONG).show();
         }
