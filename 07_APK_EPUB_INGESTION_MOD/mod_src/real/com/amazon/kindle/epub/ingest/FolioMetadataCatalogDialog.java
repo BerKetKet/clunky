@@ -49,7 +49,7 @@ public final class FolioMetadataCatalogDialog {
         void onFilterByAuthor(String author);
     }
 
-    private static final String[] SORT_MODES = new String[] { "Recent", "Title", "Author", "Year", "Progress", "Favorites" };
+    private static final String[] SORT_MODES = new String[] { "Recent", "Title", "Author", "Year", "Progress", "Favorites", "Rating" };
 
     private FolioMetadataCatalogDialog() {}
 
@@ -86,6 +86,22 @@ public final class FolioMetadataCatalogDialog {
         eyebrow.setTypeface(Typeface.DEFAULT_BOLD);
         eyebrow.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         topRow.addView(eyebrow);
+
+        final TextView btnRandom = new TextView(ctx);
+        btnRandom.setText("🎲");
+        btnRandom.setTextColor(Color.parseColor("#E2E8F0"));
+        btnRandom.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        btnRandom.setPadding(dp(ctx, 8), dp(ctx, 4), dp(ctx, 8), dp(ctx, 4));
+        GradientDrawable randBg = new GradientDrawable();
+        randBg.setColor(Color.parseColor("#1E2433"));
+        randBg.setCornerRadius(dp(ctx, 14));
+        randBg.setStroke(dp(ctx, 1), Color.parseColor("#334155"));
+        btnRandom.setBackground(randBg);
+        LinearLayout.LayoutParams randLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        randLp.setMargins(0, 0, dp(ctx, 6), 0);
+        btnRandom.setLayoutParams(randLp);
+        topRow.addView(btnRandom);
 
         final TextView btnSort = new TextView(ctx);
         btnSort.setText("Sort: Recent");
@@ -206,6 +222,7 @@ public final class FolioMetadataCatalogDialog {
         } catch (Throwable ignored) {}
         final int[] sortIdx = new int[] { savedSort };
 
+        final List<FolioMetadataDb.BookRecord> lastFiltered = new ArrayList<>();
         final Runnable[] renderRef = new Runnable[1];
         renderRef[0] = new Runnable() {
             @Override
@@ -298,6 +315,8 @@ public final class FolioMetadataCatalogDialog {
                         : "Library Metadata & Genres (" + allBooks.size() + ")");
 
                 sortBooks(ctx, filtered, sortIdx[0], progressMap);
+                lastFiltered.clear();
+                lastFiltered.addAll(filtered);
 
                 final AuthorFilterCallback onAuthorFilter = author -> {
                     selectedGenre[0] = "All";
@@ -326,6 +345,32 @@ public final class FolioMetadataCatalogDialog {
                 }
             }
         };
+
+        btnRandom.setOnClickListener(v -> {
+            List<FolioMetadataDb.BookRecord> pool = new ArrayList<>();
+            for (FolioMetadataDb.BookRecord r : lastFiltered) {
+                if (getProgress(progressMap, r.kfxPath) == 0) pool.add(r);
+            }
+            if (pool.isEmpty()) pool.addAll(lastFiltered);
+            if (pool.isEmpty()) {
+                Toast.makeText(ctx, "No books in current filter to pick from", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            FolioMetadataDb.BookRecord pick = pool.get(new java.util.Random().nextInt(pool.size()));
+            Toast.makeText(ctx, "Picked for you: " + pick.title, Toast.LENGTH_SHORT).show();
+            showBookDetailDialog(ctx, pick, getProgress(progressMap, pick.kfxPath), dialog,
+                    () -> {
+                        loadFromDb(ctx, allBooks, genres);
+                        progressMap.clear();
+                        progressMap.putAll(loadProgressMap(ctx));
+                        renderRef[0].run();
+                    },
+                    author -> {
+                        selectedGenre[0] = "All";
+                        searchBox.setText(author);
+                        searchBox.setSelection(author.length());
+                    });
+        });
 
         btnSort.setOnClickListener(v -> {
             sortIdx[0] = (sortIdx[0] + 1) % SORT_MODES.length;
@@ -395,6 +440,14 @@ public final class FolioMetadataCatalogDialog {
                     if (pa != pb) return Integer.compare(pb, pa);
                     return safeLower(a.title).compareTo(safeLower(b.title));
                 } else if (mode == 5) { // Favorites first
+                    boolean fa = isFavorite(ctx, a.kfxPath);
+                    boolean fb = isFavorite(ctx, b.kfxPath);
+                    if (fa != fb) return fa ? -1 : 1;
+                    return Long.compare(b.addedAt, a.addedAt);
+                } else if (mode == 6) { // Highest star rating first
+                    int ra = getRating(ctx, a.kfxPath);
+                    int rb = getRating(ctx, b.kfxPath);
+                    if (ra != rb) return Integer.compare(rb, ra);
                     boolean fa = isFavorite(ctx, a.kfxPath);
                     boolean fb = isFavorite(ctx, b.kfxPath);
                     if (fa != fb) return fa ? -1 : 1;
