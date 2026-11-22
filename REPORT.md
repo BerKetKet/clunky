@@ -1,63 +1,62 @@
-# Folio Milestone Release Report: Up Next Reading Queue (Round 090)
+# Folio Milestone Release Report: Up Next Queue Export, Backup & Telemetry (Round 091)
 
 **Date:** 2026-11-23  
-**Target Package:** `com.amazon.kindle.epub` (Folio v9.0 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v9.1 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v9.0_kfx/base.apk` (132 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v9.1_kfx/base.apk` (132 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Milestone Round 090, Folio advanced to **Milestone Folio v9.0 KFX**. Drop-in updates were integrated into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`. Antigravity resolved a minor syntax quote escaping issue in `FolioMetadataCatalogDialog.java` (line 1515), compiled Dalvik DEX (`classes9.dex`, 320,168 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **📌 Up Next Reading Queue Core (`FolioMetadataCatalogDialog.java`)**:
-   - Backed by persistent `SharedPreferences("folio_queue")` storing book paths with insertion timestamps for FIFO ordering.
-   - Helper methods implemented: `isInQueue(ctx, kfxPath)`, `setInQueue(ctx, kfxPath, inQ)`, `loadQueuePaths(ctx)`, `loadQueueMap(ctx)`.
-2. **Book Details Queue Toggle Pill (`FolioMetadataCatalogDialog.java`)**:
-   - Integrated dynamic violet pill right beside the Custom Shelf pill:
-     * Unqueued state: **`📌 Up Next`** (`#2E1065` fill, `#7C3AED` border).
-     * Queued state: **`📌 Queued`** (`#4C1D95` fill, `#A78BFA` border).
-   - Tapping toggles status with live Toast confirmation and catalog refresh.
-3. **Dynamic Catalog Queue Filter Strip (`FolioMetadataCatalogDialog.java`)**:
-   - Whenever 1+ books are queued, the horizontal filter strip automatically injects a violet **`📌 Up Next (N)`** chip.
-   - 1-tap filtering isolates queued books.
-4. **Control Center `📌 Up Next Queue` Carousel (`FolioMoreView.java`)**:
-   - Located on Control Center directly below `📖 Continue Reading`.
-   - When empty, presents a compact `+ Pick ›` prompt.
-   - When books are queued, displays a horizontal carousel featuring cover thumbnail, book title, author, **`Start Reading ›`** (1-tap instant launch into KFX reader), an inline **`✕`** unqueue button, and header **`See All (N) ›`** deep-link directly into the catalog queue filter.
-5. **Version Bump (`FolioMoreView.java`)**:
-   - Bumped Control Center badge and About Folio dialog string to **`Milestone Folio v9.0 KFX (Enhanced Typesetting)`**.
-6. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
+In Round 091, Folio advanced to **Folio v9.1 KFX**. Drop-in updates were integrated into `FolioMetadataBackup.java`, `FolioMetadataCatalogDialog.java`, and `FolioMoreView.java`. Antigravity resolved a missing import (`java.util.ArrayList`) in `FolioMetadataBackup.java`, compiled Dalvik DEX (`classes9.dex`, 320,780 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **Full Queue Backup & Export (`FolioMetadataBackup.java`)**:
+   - JSON Backup & Restore preserves `in_queue` state across full library backups and restores.
+   - Markdown Reading Log (`folio_reading_log.md`) dynamically appends a dedicated **`## 📌 Up Next Queue (N)`** section listing all queued volumes with formatted author citations.
+   - RFC-4180 CSV Export (`folio_library.csv`) includes an **`In Queue`** column (`Yes` / empty).
+2. **Catalog List Queue Prefix Badge (`FolioMetadataCatalogDialog.java`)**:
+   - Book titles in catalog list view now display a `📌 ` prefix badge when queued (alongside `★ ` for favorites and `📝 ` for personal notes).
+3. **Library Insights Queue Telemetry & Version Bump (`FolioMoreView.java`)**:
+   - Library Insights header summary line now integrates live queued telemetry:
+     `27 cataloged · 5 reading · 1 finished`  
+     `1 fav · 1 noted · 1 shelved · 1 queued · 5.0★ avg (1 rated)`
+   - Control Center version badge and About Folio dialog bumped to **Folio v9.1 KFX (Enhanced Typesetting)**.
+4. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Folio v9.0 KFX
+## 2. Integrated Features in Folio v9.1 KFX
 
-### A. Up Next Reading Queue Architecture (`FolioMetadataCatalogDialog.java` & `FolioMoreView.java`)
-- Storage & Retrieval:
+### A. Reading Log Markdown Export with Queue Section (`FolioMetadataBackup.java`)
+- Appends queued books to reading log export:
   ```java
-  public static boolean isInQueue(Context ctx, String kfxPath) {
-      if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return false;
-      try {
-          return ctx.getSharedPreferences("folio_queue", Context.MODE_PRIVATE).contains(kfxPath);
-      } catch (Throwable ignored) { return false; }
+  List<FolioMetadataDb.BookRecord> qBooks = new ArrayList<>();
+  for (FolioMetadataDb.BookRecord r : all) {
+      if (r.kfxPath != null && FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath)) {
+          qBooks.add(r);
+      }
   }
-  public static void setInQueue(Context ctx, String kfxPath, boolean inQ) {
-      if (ctx == null || kfxPath == null || kfxPath.isEmpty()) return;
-      try {
-          SharedPreferences.Editor ed = ctx.getSharedPreferences("folio_queue", Context.MODE_PRIVATE).edit();
-          if (inQ) ed.putLong(kfxPath, System.currentTimeMillis());
-          else ed.remove(kfxPath);
-          ed.apply();
-      } catch (Throwable ignored) {}
+  if (!qBooks.isEmpty()) {
+      md.append("## 📌 Up Next Queue (").append(qBooks.size()).append(")\n\n");
+      for (FolioMetadataDb.BookRecord r : qBooks) {
+          String ca = FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
+          md.append("- **").append(r.title != null ? r.title : "Untitled").append("**");
+          if (!ca.isEmpty()) md.append(" — ").append(ca);
+          md.append("\n");
+      }
+      md.append("\n");
   }
   ```
-- Carousel UI in Control Center:
-  - Dynamically sorts queued books by FIFO insertion timestamp.
-  - Resolves cover art from `.cover.jpg` sidecar or fallback placeholder.
-  - Launches reader via `OpenCatalogView.launchReaderForFile(ctx, rec.kfxPath)`.
-  - Inline `✕` allows instant unqueuing without opening the book details modal.
+
+### B. Library Insights Queue Counter (`FolioMoreView.java`)
+- Header summary string enriched:
+  ```java
+  summaryTv.setText(all.size() + " cataloged · " + qs[1] + " reading · " + qs[2] + " finished\n"
+          + favs + " fav · " + noted + " noted · " + shelved + " shelved · " 
+          + com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.countQueue(ctx) 
+          + " queued · " + avgStr);
+  ```
 
 ---
 
@@ -65,8 +64,8 @@ In Milestone Round 090, Folio advanced to **Milestone Folio v9.0 KFX**. Drop-in 
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Book Details Up Next Queue** | Book Details Modal | `verify_r90_book_details_queue_v90.png` | **VERIFIED**: Opened *Animal Farm* Details (`ⓘ`); tapped `📌 Up Next` to queue it; verified active violet **`📌 Queued`** pill alongside Custom Shelf pill (`[455, 1499][655, 1569]`). |
-| **Control Center Up Next Carousel** | Control Center (More Tab) | `verify_r90_up_next_control_center.png` | **VERIFIED**: Switched to More tab; verified top header showing **`Folio v9.0 KFX`** badge, `📖 Continue Reading` carousel, and live **`📌 Up Next Queue`** carousel card with cover thumbnail, *Animal Farm*, *George Orwell*, **`Start Reading ›`**, and **`✕`** unqueue button. |
+| **Reading Log Up Next Section** | Reading Log Modal | `verify_r91_reading_log_up_next.png` | **VERIFIED**: Opened `📄 Reading Log & Export`; scrolled to bottom of preview; verified `## 📌 Up Next Queue (1)` section with `- **Animal farm: a fairy story** — George Orwell` rendered in markdown. |
+| **Library Insights Queue Telemetry** | Library Insights Modal | `verify_r91_insights_queued_v91.png` | **VERIFIED**: Opened `📊 Library Insights`; verified header summary displays `1 fav · 1 noted · 1 shelved · 1 queued · 5.0★ avg (1 rated)`. |
 | **Stock Kindle Invariant** | Android OS PackageManager | CLI `dumpsys package com.amazon.kindle` | **VERIFIED**: `lastUpdateTime=2026-11-19 21:59:23` completely untouched. |
 
 ---

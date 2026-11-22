@@ -958,3 +958,28 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.0_kfx/base.apk` (132 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report090.zip`
+
+
+---
+
+# Round 091: Up Next Queue Export, Backup & Telemetry (Folio v9.1 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v9.1 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 091 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMetadataCatalogDialog.java`, `FolioMetadataBackup.java`, and `FolioMoreView.java` from `dropin_src/`.
+     - Resolved missing `import java.util.ArrayList;` in `FolioMetadataBackup.java`.
+     - Added `in_queue` boolean to JSON backup & restore.
+     - Appended `## 📌 Up Next Queue (N)` section to Markdown Reading Log export.
+     - Added `In Queue` column to RFC-4180 CSV export.
+     - Added `📌 ` prefix badge to book titles in catalog list view when queued.
+     - Integrated live queued count into Library Insights header summary (`1 queued`).
+     - Bumped version to `Folio v9.1 KFX (Enhanced Typesetting)`.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.1_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `verify_r91_reading_log_up_next.png`: Proves Reading Log preview displaying `## 📌 Up Next Queue (1)` with `- **Animal farm: a fairy story** — George Orwell`.
+     - `verify_r91_insights_queued_v91.png`: Proves Library Insights modal header summary displays `1 fav · 1 noted · 1 shelved · 1 queued · 5.0★ avg (1 rated)`.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.1_kfx/base.apk` (132 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report091.zip`
