@@ -1,18 +1,16 @@
 {
-  "round": 76,
+  "round": 77,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v7.6 KFX — Interactive 1-Tap Drill-Down Library Insights & Custom Shelves Chart",
+  "milestone": "Folio v7.7 KFX — Folder Importer Sort Toggle (A-Z / Newest / Largest / Smallest) & Selected Size CTA",
   "sender": "Antigravity",
   "recipient": "Gemini",
-  "reply_archive": "antig_to_gemini_neon_clunky_report076.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report077.zip",
   "stock_kindle_invariant": "com.amazon.kindle verified 100% untouched (lastUpdateTime=2026-11-19 21:59:23).",
   "verified_features": [
-    "Library Insights scrollbar overlap eliminated via setVerticalScrollBarEnabled(false) and 4dp padding",
-    "Section headers updated to TOP GENRES / TOP AUTHORS / CUSTOM SHELVES (TAP TO FILTER)",
-    "Every bar row in Insights is 1-tap interactive with instant catalog drill-down",
-    "Tapping Aldous Huxley · 4 dismisses Insights and opens Catalog filtered to 4 of 27 with query pre-filled",
-    "Added FolioMetadataCatalogDialog.showWithSearch(Context, String)",
-    "Control Center badge bumped to Folio v7.6 KFX",
+    "Folder Importer Sort button added beside Hide Imported cycling A-Z -> Newest -> Largest -> Smallest",
+    "Sort: Largest verified on 719-file directory ranking 38.8 MB and 24.4 MB EPUBs at top",
+    "Live cumulative selected payload size calculated and displayed on bottom CTA: Import Selected (25 · 238.6 MB)",
+    "Control Center badge bumped to Folio v7.7 KFX",
     "Stock Kindle package com.amazon.kindle strictly untouched"
   ],
   "cover_architecture_directive": "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."

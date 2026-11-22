@@ -1,44 +1,44 @@
-# Folio Milestone Release Report: Interactive 1-Tap Drill-Down Library Insights & Custom Shelves Chart (Round 076)
+# Folio Milestone Release Report: Folder Importer Sort Toggle & Selected Size CTA (Round 077)
 
 **Date:** 2026-11-22  
-**Target Package:** `com.amazon.kindle.epub` (Folio v7.6 KFX)  
+**Target Package:** `com.amazon.kindle.epub` (Folio v7.7 KFX)  
 **Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
 **Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v7.6_kfx/base.apk` (132 MB)
+**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v7.7_kfx/base.apk` (132 MB)
 
 ---
 
 ## 1. Executive Summary
 
-In Round 076, Folio advanced to **Folio v7.6 KFX**. Gemini pre-authored drop-in Java updates for `FolioMoreView.java` and `FolioMetadataCatalogDialog.java`. Antigravity integrated both files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 256,808 B), built, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **Interactive 1-Tap Drill-Down in Library Insights (`FolioMoreView.java` & `FolioMetadataCatalogDialog.java`)**: Made every bar row in **TOP GENRES** (blue), **TOP AUTHORS** (amber), and **CUSTOM SHELVES** (indigo) 1-tap clickable. Tapping an author row (e.g. `Aldous Huxley · 4`) dismisses Insights and immediately launches the catalog pre-filtered to `(4 of 27)` books via `FolioMetadataCatalogDialog.showWithSearch(ctx, aName)`.
-2. **Scrollbar Overlap Elimination & Header Polish (`FolioMoreView.java`)**: Configured `sv.setVerticalScrollBarEnabled(false)` and `4dp` right container padding, completely eliminating right-side scrollbar overlap over bar count numbers (`7`, `5`, `4`). Updated section headers to `TOP GENRES (TAP TO FILTER)`, `TOP AUTHORS (TAP TO FILTER)`, and `CUSTOM SHELVES (TAP TO FILTER)`.
-3. **Control Center Version Bump (`FolioMoreView.java`)**: Bumped Control Center badge and About Folio dialog string to **`Folio v7.6 KFX (Enhanced Typesetting)`**.
+In Round 077, Folio advanced to **Folio v7.7 KFX**. Gemini pre-authored drop-in Java updates for `FolioFolderBrowserDialog.java` and `FolioMoreView.java`. Antigravity integrated both files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`, compiled Dalvik DEX (`classes9.dex`, 258,456 B), built, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
+1. **Folder Importer Sort Toggle (`FolioFolderBrowserDialog.java`)**: Added a 4-mode cycling sort button (`btnSortFolder`) right beside `Hide Imported: OFF` in the Batch EPUB Importer header (`Sort: A–Z → Newest → Largest → Smallest`). When set to `Sort: Largest`, multi-MB EPUBs (*The 4-Hour Body* at 38.8 MB, *The 4-Hour Chef* at 24.4 MB) sort cleanly to the top of the 719-file directory.
+2. **Live Cumulative Selected Payload Size CTA (`FolioFolderBrowserDialog.java`)**: Enhanced `updateImportLabel` to compute cumulative byte size across `selectedFiles`. Displays formatted payload size directly on the emerald bottom import button (`Import Selected (25 · 238.6 MB)`).
+3. **Control Center Version Bump (`FolioMoreView.java`)**: Bumped Control Center badge and About Folio dialog string to **`Folio v7.7 KFX (Enhanced Typesetting)`**.
 4. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 2. Integrated Features in Folio v7.6 KFX
+## 2. Integrated Features in Folio v7.7 KFX
 
-### A. 1-Tap Catalog Drill-Down Navigation (`FolioMoreView.java`)
-- Attached `View.OnClickListener` handlers to `makeInsightBarRow`:
-  - **Top Genres**: Tapping calls `FolioMetadataCatalogDialog.show(ctx, gName)`.
-  - **Top Authors**: Tapping calls `FolioMetadataCatalogDialog.showWithSearch(ctx, aName)`.
-  - **Custom Shelves**: Tapping calls `FolioMetadataCatalogDialog.show(ctx, "SHELF:" + sh)`.
-- Automatically dismisses `insightDlgRef[0]` prior to catalog launch for smooth 0ms transition.
+### A. 4-Way Folder Sorting (`FolioFolderBrowserDialog.java`)
+- Positioned `btnSortFolder` in the top header row:
+  - Modes: `folderSortLabels = new String[] { "A–Z", "Newest", "Largest", "Smallest" }`.
+  - Tapping advances index modulo 4 and invokes `renderList.run()`.
+  - Comparator sorts filtered files:
+    - `sMode == 1`: `Long.compare(b.lastModified(), a.lastModified())` (Newest first).
+    - `sMode == 2`: `Long.compare(b.length(), a.length())` (Largest first).
+    - `sMode == 3`: `Long.compare(a.length(), b.length())` (Smallest first).
+    - `default`: Case-insensitive filename alphabetical sort.
 
-### B. Pre-Filtered Catalog Entrypoint (`FolioMetadataCatalogDialog.java`)
-- Added public static overloaded entrypoints:
-  ```java
-  public static void showWithSearch(final Context ctx, final String initialQuery) {
-      show(ctx, "All", initialQuery, null);
-  }
-  public static void show(final Context ctx, final String initialFilter, final String initialQuery, final Runnable onDismiss)
-  ```
-- Automatically pre-populates `searchBox.setText(initQ)`, sets cursor to end, reveals clear button `✕`, and fires initial query filtering.
+### B. Live Cumulative Size Calculation (`FolioFolderBrowserDialog.java`)
+- Computes sum of `sf.length()` for all files in `selectedFiles`.
+- Formats bytes dynamically:
+  - $\ge 1\text{ MB}$: `String.format(Locale.US, "%.1f MB", totalBytes / (1024.0 * 1024.0))`.
+  - $< 1\text{ MB}$: `Math.max(1L, totalBytes / 1024L) + " KB"`.
+- Updates button label live: `btnImport.setText("Import Selected (" + nSel + " · " + szStr + ")");`.
 
 ### C. Version Bump (`FolioMoreView.java`)
-- Bumped Control Center badge and About Folio dialog string to **`Folio v7.6 KFX (Enhanced Typesetting)`**.
+- Bumped Control Center badge and About Folio dialog string to **`Folio v7.7 KFX (Enhanced Typesetting)`**.
 
 ---
 
@@ -46,8 +46,8 @@ In Round 076, Folio advanced to **Folio v7.6 KFX**. Gemini pre-authored drop-in 
 
 | Verification Item | Target Screen | Evidence | Result |
 | :--- | :--- | :--- | :--- |
-| **Clean Bars & Filter Headers** | Control Center → 📊 Library Insights | `screenshots/verify_r76_insights_clean_bars.png` | **VERIFIED**: Opened Insights; confirmed zero scrollbar overlap over count digits (`7`, `5`, `4`) and interactive headers `(TAP TO FILTER)`. |
-| **Author Bar Drill-Down** | Insights → `Aldous Huxley · 4` tap | `screenshots/verify_r76_insights_author_drilldown.png` | **VERIFIED**: Tapped `Aldous Huxley · 4` amber bar; Insights dismissed and opened `Library Metadata & Genres (4 of 27)` with search box pre-filled to `Aldous Huxley`. |
+| **Folder Importer `Sort: Largest`** | Home → Import → `Sort: Largest` | `screenshots/verify_r77_folder_sort_largest.png` | **VERIFIED**: Tapped Sort button twice to `Sort: Largest`; 719-file list sorted descending by size, placing 38.8 MB and 24.4 MB EPUBs at the top. |
+| **Selected Size CTA** | Batch EPUB Importer | `screenshots/verify_r77_selected_size_cta.png` | **VERIFIED**: Tapped `Select New`; emerald CTA updated live to `Import Selected (25 · 238.6 MB)`. |
 | **Stock Kindle Invariant** | Android OS PackageManager | CLI `dumpsys package com.amazon.kindle` | **VERIFIED**: `lastUpdateTime=2026-11-19 21:59:23` completely untouched. |
 
 ---
