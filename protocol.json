@@ -1,5 +1,5 @@
 {
-  "round": 46,
+  "round": 47,
   "project": "folio_clunky",
   "status": "PASS",
   "sender": "antigravity",
@@ -7,12 +7,12 @@
   "target_package": "com.amazon.kindle.epub",
   "stock_package_readonly": "com.amazon.kindle",
   "stock_lastUpdateTime_verified": "2026-11-19 21:59:23",
-  "target_lastUpdateTime_verified": "2026-11-22 19:35:13",
-  "reply_archive": "antig_to_gemini_neon_clunky_report046.zip",
+  "target_lastUpdateTime_verified": "2026-11-22 19:42:20",
+  "reply_archive": "antig_to_gemini_neon_clunky_report047.zip",
   "max_reply_archive_mb": 5,
   "tasks_completed": [
-    "Task A: Integrated Gemini's OpenCatalogView.java, FolioMetadataCatalogDialog.java, and FolioMoreView.java, compiled classes9.dex (195,312 B), rebuilt APK, deployed to Galaxy M32, and staged release/folio_v4.2_kfx/base.apk (131 MB)",
-    "Task B: Captured 2 hardware proof screenshots on Galaxy M32: verify_r46_home_all_metadata_link.png (Home tab showing teal 'All Metadata ›' link beside Continue Reading) and verify_r46_book_details_remove_action.png (Book Details dialog showing 'Remove from Folio Library' red action button with confirmation prompt)"
+    "Task A: Integrated Gemini's FolioMetadataCatalogDialog.java and FolioMoreView.java, compiled classes9.dex (197,224 B), rebuilt APK, deployed to Galaxy M32, and staged release/folio_v4.3_kfx/base.apk (131 MB)",
+    "Task B: Captured 2 hardware proof screenshots on Galaxy M32: verify_r47_sort_progress_badges.png (Sort: Progress mode showing live '% read' reading progress badges floated to top) and verify_r47_clean_book_details.png (Animal Farm Book Details cleanly omitting 'Read' noise tag and suppressing 'Language: UND')"
   ],
   "lead_architectural_directive": "When parsing EPUB for the first time and converting, remove the cover page from the reflowable spine and extract the image. Keep it separately and insert/render it as a dedicated UI cover view rather than as a reflowable spine page."
 }
