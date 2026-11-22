@@ -137,20 +137,39 @@ public final class FolioFolderBrowserDialog {
         chipScroll.addView(chipRow);
         root.addView(chipScroll);
 
-        // Inline filename search bar (filters ALL EPUBs in directory, e.g. 719+)
+        // Inline filename search bar + Clear (✕) button (filters ALL EPUBs in directory, e.g. 719+)
+        LinearLayout filterRow = new LinearLayout(ctx);
+        filterRow.setOrientation(LinearLayout.HORIZONTAL);
+        filterRow.setGravity(Gravity.CENTER_VERTICAL);
+        filterRow.setBackground(makeInputBg(ctx));
+        LinearLayout.LayoutParams fLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        fLp.setMargins(0, 0, 0, dp(ctx, 8));
+        filterRow.setLayoutParams(fLp);
+
         final EditText etFilter = new EditText(ctx);
         etFilter.setHint("Search EPUB filenames in this folder...");
         etFilter.setHintTextColor(Color.parseColor("#64748B"));
         etFilter.setTextColor(Color.WHITE);
         etFilter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         etFilter.setSingleLine(true);
-        etFilter.setPadding(dp(ctx, 10), dp(ctx, 8), dp(ctx, 10), dp(ctx, 8));
-        etFilter.setBackground(makeInputBg(ctx));
-        LinearLayout.LayoutParams fLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        fLp.setMargins(0, 0, 0, dp(ctx, 8));
-        etFilter.setLayoutParams(fLp);
-        root.addView(etFilter);
+        etFilter.setBackgroundColor(Color.TRANSPARENT);
+        etFilter.setPadding(dp(ctx, 10), dp(ctx, 8), dp(ctx, 6), dp(ctx, 8));
+        etFilter.setLayoutParams(new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        filterRow.addView(etFilter);
+
+        final TextView btnClearFilter = new TextView(ctx);
+        btnClearFilter.setText("✕");
+        btnClearFilter.setTextColor(Color.parseColor("#94A3B8"));
+        btnClearFilter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        btnClearFilter.setTypeface(Typeface.DEFAULT_BOLD);
+        btnClearFilter.setPadding(dp(ctx, 10), dp(ctx, 7), dp(ctx, 12), dp(ctx, 7));
+        btnClearFilter.setVisibility(View.GONE);
+        btnClearFilter.setOnClickListener(v -> etFilter.setText(""));
+        filterRow.addView(btnClearFilter);
+
+        root.addView(filterRow);
 
         final TextView statusTv = new TextView(ctx);
         statusTv.setTextColor(Color.parseColor("#94A3B8"));
@@ -331,6 +350,7 @@ public final class FolioFolderBrowserDialog {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 filterQuery[0] = s != null ? s.toString() : "";
+                btnClearFilter.setVisibility(filterQuery[0].trim().isEmpty() ? View.GONE : View.VISIBLE);
                 renderList.run();
             }
             @Override public void afterTextChanged(Editable s) {}

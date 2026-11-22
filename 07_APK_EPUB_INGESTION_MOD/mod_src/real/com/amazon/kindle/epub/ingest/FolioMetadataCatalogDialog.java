@@ -257,6 +257,11 @@ public final class FolioMetadataCatalogDialog {
                     filtered.add(rec);
                 }
 
+                boolean isFiltered = !"All".equalsIgnoreCase(selectedGenre[0]) || !q.isEmpty();
+                heading.setText(isFiltered
+                        ? "Library Metadata & Genres (" + filtered.size() + " of " + allBooks.size() + ")"
+                        : "Library Metadata & Genres (" + allBooks.size() + ")");
+
                 sortBooks(filtered, sortIdx[0], progressMap);
 
                 final AuthorFilterCallback onAuthorFilter = author -> {
