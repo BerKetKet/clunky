@@ -18,20 +18,28 @@ import java.nio.charset.StandardCharsets;
  */
 public final class MetadataEnricher {
 
-    private static final int CONNECT_TIMEOUT_MS = 4000;
-    private static final int READ_TIMEOUT_MS = 5000;
+    private static final int CONNECT_TIMEOUT_MS = 15000;
+    private static final int READ_TIMEOUT_MS = 15000;
 
     private MetadataEnricher() {}
 
     public static void enrichInPlace(EpubMetadataExtractor.BookMeta meta) {
         if (meta == null) return;
+        for (int i = meta.genres.size() - 1; i >= 0; i--) {
+            String g = meta.genres.get(i);
+            if (g == null || g.trim().isEmpty()) {
+                meta.genres.remove(i);
+            }
+        }
         boolean needsAuthor = EpubMetadataExtractor.isBlank(meta.author)
                 || "Unknown Author".equalsIgnoreCase(meta.author.trim());
         boolean needsPubDate = EpubMetadataExtractor.isBlank(meta.pubDate);
         boolean needsGenres = meta.genres.isEmpty();
         boolean needsPublisher = EpubMetadataExtractor.isBlank(meta.publisher);
+        android.util.Log.i("MetadataEnricher", "enrichInPlace title=" + meta.title + " author=" + meta.author + " needsGenres=" + needsGenres + " genresCount=" + meta.genres.size());
 
         if (!needsAuthor && !needsPubDate && !needsGenres && !needsPublisher) {
+            android.util.Log.i("MetadataEnricher", "All fields already populated, skipping Open Library");
             return;
         }
         if (EpubMetadataExtractor.isBlank(meta.title) && EpubMetadataExtractor.isBlank(meta.isbn)) {
@@ -41,18 +49,19 @@ public final class MetadataEnricher {
         HttpURLConnection conn = null;
         try {
             StringBuilder urlSb = new StringBuilder("https://openlibrary.org/search.json?");
-            if (!EpubMetadataExtractor.isBlank(meta.isbn)) {
-                urlSb.append("isbn=").append(URLEncoder.encode(meta.isbn, "UTF-8"));
-            } else {
+            if (!EpubMetadataExtractor.isBlank(meta.title)) {
                 urlSb.append("title=").append(URLEncoder.encode(meta.title, "UTF-8"));
-                if (!needsAuthor) {
+                if (!EpubMetadataExtractor.isBlank(meta.author) && !"Unknown Author".equalsIgnoreCase(meta.author.trim())) {
                     String primaryAuthor = meta.author.split(";")[0].trim();
                     if (!primaryAuthor.isEmpty()) {
                         urlSb.append("&author=").append(URLEncoder.encode(primaryAuthor, "UTF-8"));
                     }
                 }
+            } else if (!EpubMetadataExtractor.isBlank(meta.isbn)) {
+                urlSb.append("isbn=").append(URLEncoder.encode(meta.isbn, "UTF-8"));
             }
             urlSb.append("&fields=key,title,author_name,first_publish_year,subject,publisher,isbn&limit=1");
+            android.util.Log.i("MetadataEnricher", "Requesting: " + urlSb.toString());
 
             URL url = new URL(urlSb.toString());
             conn = (HttpURLConnection) url.openConnection();
@@ -63,6 +72,7 @@ public final class MetadataEnricher {
             conn.setRequestProperty("Accept", "application/json");
 
             int code = conn.getResponseCode();
+            android.util.Log.i("MetadataEnricher", "Response code: " + code);
             if (code != 200) return;
 
             StringBuilder body = new StringBuilder();
@@ -127,8 +137,8 @@ public final class MetadataEnricher {
             if (!key.isEmpty()) {
                 meta.openLibraryKey = key;
             }
-        } catch (Throwable ignored) {
-            // Offline or network error: proceed cleanly with embedded OPF metadata
+        } catch (Throwable t) {
+            android.util.Log.w("MetadataEnricher", "Open Library enrich error: " + t.getMessage(), t);
         } finally {
             if (conn != null) {
                 try { conn.disconnect(); } catch (Throwable ignored) {}

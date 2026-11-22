@@ -9,21 +9,53 @@ import android.util.Log;
 
 import java.io.File;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
 /**
  * Persistent local metadata store (folio_metadata.db) recording rich EPUB
  * details (title, author, publisher, pub_date, genres, language, isbn,
- * description, open_library_key, app-private kfx_path, cover_path), plus
- * schema-safe transactional registration into kindle_library.db.
+ * description, open_library_key, app-private kfx_path, cover_path), duplicate
+ * lookup, genre aggregation, and schema-safe registration into kindle_library.db.
  */
 public final class FolioMetadataDb extends SQLiteOpenHelper {
 
     private static final String TAG = "FolioMetadataDb";
     private static final String DB_NAME = "folio_metadata.db";
     private static final int DB_VERSION = 1;
+
+    public static final class BookRecord {
+        public long id;
+        public String bookKey = "";
+        public String kfxPath = "";
+        public String coverPath = "";
+        public String sourceName = "";
+        public String title = "";
+        public String author = "";
+        public String publisher = "";
+        public String pubDate = "";
+        public String genres = "";
+        public String language = "";
+        public String isbn = "";
+        public String description = "";
+        public String openLibraryKey = "";
+        public long addedAt;
+
+        public boolean hasGenre(String target) {
+            if (target == null || target.isEmpty() || "All".equalsIgnoreCase(target)) return true;
+            if (genres == null || genres.isEmpty()) return false;
+            String needle = target.trim().toLowerCase(Locale.ROOT);
+            for (String part : genres.split(",")) {
+                if (part.trim().toLowerCase(Locale.ROOT).equals(needle)) return true;
+            }
+            return false;
+        }
+    }
 
     public FolioMetadataDb(Context context) {
         super(context.getApplicationContext(), DB_NAME, null, DB_VERSION);
@@ -52,11 +84,24 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Forward-compatible additive migrations go here
     }
 
     public void upsertBook(String bookKey, File kfxFile, File coverFile,
                            String sourceName, EpubMetadataExtractor.BookMeta meta) {
+        BookRecord prior = findExisting(bookKey, meta.title, meta.author);
+        String genres = meta.genresCsv();
+        if (genres.isEmpty() && prior != null && !prior.genres.isEmpty()) {
+            genres = prior.genres;
+        }
+        String publisher = meta.publisher != null && !meta.publisher.isEmpty()
+                ? meta.publisher : (prior != null ? prior.publisher : "");
+        String pubDate = meta.pubDate != null && !meta.pubDate.isEmpty()
+                ? meta.pubDate : (prior != null ? prior.pubDate : "");
+        String isbn = meta.isbn != null && !meta.isbn.isEmpty()
+                ? meta.isbn : (prior != null ? prior.isbn : "");
+        String olKey = meta.openLibraryKey != null && !meta.openLibraryKey.isEmpty()
+                ? meta.openLibraryKey : (prior != null ? prior.openLibraryKey : "");
+
         SQLiteDatabase db = getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put("book_key", bookKey);
@@ -65,21 +110,117 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         cv.put("source_name", sourceName != null ? sourceName : kfxFile.getName());
         cv.put("title", meta.title != null ? meta.title : kfxFile.getName());
         cv.put("author", meta.author != null ? meta.author : "Unknown Author");
-        cv.put("publisher", meta.publisher != null ? meta.publisher : "");
-        cv.put("pub_date", meta.pubDate != null ? meta.pubDate : "");
-        cv.put("genres", meta.genresCsv());
+        cv.put("publisher", publisher);
+        cv.put("pub_date", pubDate);
+        cv.put("genres", genres);
         cv.put("language", meta.language != null ? meta.language : "");
-        cv.put("isbn", meta.isbn != null ? meta.isbn : "");
+        cv.put("isbn", isbn);
         cv.put("description", meta.description != null ? meta.description : "");
-        cv.put("open_library_key", meta.openLibraryKey != null ? meta.openLibraryKey : "");
+        cv.put("open_library_key", olKey);
         cv.put("added_at", System.currentTimeMillis());
         db.insertWithOnConflict("books_metadata", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
     /**
-     * Schema-adaptive registration into Kindle's kindle_library.db so the book
-     * appears immediately in Library and Continue Reading with its real cover
-     * and BT_EBOOK_PDOC classification (zero Amazon Store stubs).
+     * Finds an existing imported book by book_key OR case-insensitive title+author
+     * whose kfx_path still exists on disk.
+     */
+    public BookRecord findExisting(String bookKey, String title, String author) {
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor c = null;
+        try {
+            c = db.rawQuery(
+                    "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
+                    + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
+                    + "FROM books_metadata "
+                    + "WHERE book_key = ? OR (LOWER(TRIM(title)) = LOWER(TRIM(?)) AND LOWER(TRIM(author)) = LOWER(TRIM(?))) "
+                    + "ORDER BY added_at DESC LIMIT 1",
+                    new String[] {
+                        bookKey != null ? bookKey : "",
+                        title != null ? title : "",
+                        author != null ? author : ""
+                    });
+            if (c.moveToFirst()) {
+                BookRecord rec = readRow(c);
+                if (rec.kfxPath != null && new File(rec.kfxPath).exists()) {
+                    return rec;
+                }
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "findExisting query failed", t);
+        } finally {
+            if (c != null) c.close();
+        }
+        return null;
+    }
+
+    public List<BookRecord> getAllBooks() {
+        List<BookRecord> out = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor c = null;
+        try {
+            c = db.rawQuery(
+                    "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
+                    + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
+                    + "FROM books_metadata ORDER BY added_at DESC", null);
+            while (c.moveToNext()) {
+                out.add(readRow(c));
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "getAllBooks failed", t);
+        } finally {
+            if (c != null) c.close();
+        }
+        return out;
+    }
+
+    public List<String> getDistinctGenres(List<BookRecord> books) {
+        Set<String> set = new LinkedHashSet<>();
+        set.add("All");
+        if (books != null) {
+            for (BookRecord r : books) {
+                if (r.genres == null || r.genres.isEmpty()) continue;
+                for (String g : r.genres.split(",")) {
+                    String clean = g.trim();
+                    if (!clean.isEmpty() && clean.length() <= 32) {
+                        set.add(clean);
+                        if (set.size() >= 12) break;
+                    }
+                }
+                if (set.size() >= 12) break;
+            }
+        }
+        return new ArrayList<>(set);
+    }
+
+    private static BookRecord readRow(Cursor c) {
+        BookRecord r = new BookRecord();
+        r.id = c.getLong(0);
+        r.bookKey = safeStr(c.getString(1));
+        r.kfxPath = safeStr(c.getString(2));
+        r.coverPath = safeStr(c.getString(3));
+        r.sourceName = safeStr(c.getString(4));
+        r.title = safeStr(c.getString(5));
+        r.author = safeStr(c.getString(6));
+        r.publisher = safeStr(c.getString(7));
+        r.pubDate = safeStr(c.getString(8));
+        r.genres = safeStr(c.getString(9));
+        r.language = safeStr(c.getString(10));
+        r.isbn = safeStr(c.getString(11));
+        r.description = safeStr(c.getString(12));
+        r.openLibraryKey = safeStr(c.getString(13));
+        r.addedAt = c.getLong(14);
+        return r;
+    }
+
+    private static String safeStr(String s) {
+        return s == null ? "" : s;
+    }
+
+    /**
+     * Schema-adaptive transactional registration into kindle_library.db aligned
+     * with Kindle v8.159 NOT NULL columns so imported books appear immediately
+     * in Library and Continue Reading with real covers.
      */
     public static boolean registerInKindleLibraryDb(
             Context ctx, String bookKey, File kfxFile, File coverFile,
@@ -98,39 +239,35 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             String coverPath = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "";
             String title = !EpubMetadataExtractor.isBlank(meta.title) ? meta.title : kfxFile.getName();
             String author = !EpubMetadataExtractor.isBlank(meta.author) ? meta.author : "Unknown Author";
+            String asin = "CR!" + bookKey.replace("FOLIO_", "") + "KFX";
+            String amznId = "AMZNID0/" + asin + "/0/";
+            int hasCover = coverPath.isEmpty() ? 0 : 1;
 
-            String asin = bookKey.startsWith("CR!") ? bookKey : ("CR!" + Math.abs(bookKey.hashCode()) + "KFX");
-            String key = "AMZNID0/" + asin + "/0/";
+            // Remove any prior row pointing to the exact same path to prevent duplicates
+            try {
+                db.delete("LocalContent", "FILE_PATH = ?", new String[] { path });
+            } catch (Throwable ignored) {}
 
             // 1. KindleContent
             Set<String> kcCols = tableColumns(db, "KindleContent");
             if (!kcCols.isEmpty()) {
                 ContentValues kc = new ContentValues();
-                putIfPresent(kc, kcCols, "ID", key);
-                putIfPresent(kc, kcCols, "KEY", key);
-                putIfPresent(kc, kcCols, "CONTENT_ID", key);
+                putIfPresent(kc, kcCols, "ID", amznId);
+                putIfPresent(kc, kcCols, "KEY", bookKey);
+                putIfPresent(kc, kcCols, "CONTENT_ID", bookKey);
                 putIfPresent(kc, kcCols, "ASIN", asin);
-                putIfPresent(kc, kcCols, "STATE", "LOCAL");
-                putIfPresent(kc, kcCols, "ARCHIVABLE", 0);
-                putIfPresent(kc, kcCols, "HAS_READ_ALONG", 0);
-                putIfPresent(kc, kcCols, "TYPE", "BT_EBOOK");
-                putIfPresent(kc, kcCols, "CONTENT_TYPE", "application/x-kfx-ebook");
-                putIfPresent(kc, kcCols, "MIME_TYPE", "application/x-kfx-ebook");
                 putIfPresent(kc, kcCols, "TITLE", title);
                 putIfPresent(kc, kcCols, "TITLE_SORT", title.toLowerCase(Locale.ROOT));
                 putIfPresent(kc, kcCols, "AUTHOR", author);
                 putIfPresent(kc, kcCols, "AUTHORS", author);
                 putIfPresent(kc, kcCols, "AUTHOR_SORT", author.toLowerCase(Locale.ROOT));
-                putIfPresent(kc, kcCols, "HAS_XRAY", 0);
-                putIfPresent(kc, kcCols, "DICTIONARY_TYPE", "NONE");
-                putIfPresent(kc, kcCols, "TITLE_ORDER", -1);
-                putIfPresent(kc, kcCols, "AUTHOR_ORDER", -1);
-                putIfPresent(kc, kcCols, "AUTHOR_ORDER_REVERSED", -1);
-                putIfPresent(kc, kcCols, "READ_STATE", "UNREAD");
-                putIfPresent(kc, kcCols, "READ_STATE_ORIGIN", "OTHER");
-                putIfPresent(kc, kcCols, "HAS_LOADED_COVER", 1);
-                putIfPresent(kc, kcCols, "IS_HIDDEN", 0);
-                putIfPresent(kc, kcCols, "IS_HIDDEN_BY_USER", 0);
+                putIfPresent(kc, kcCols, "TYPE", "BT_EBOOK_PDOC");
+                putIfPresent(kc, kcCols, "CONTENT_TYPE", "application/x-kfx-ebook");
+                putIfPresent(kc, kcCols, "MIME_TYPE", "application/x-kfx-ebook");
+                putIfPresent(kc, kcCols, "STATE", "LOCAL");
+                putIfPresent(kc, kcCols, "ARCHIVABLE", 0);
+                putIfPresent(kc, kcCols, "HAS_READ_ALONG", 0);
+                putIfPresent(kc, kcCols, "HAS_LOADED_COVER", hasCover);
                 putIfPresent(kc, kcCols, "FILE_PATH", path);
                 putIfPresent(kc, kcCols, "COVER_URL", coverPath);
                 putIfPresent(kc, kcCols, "PUBLISHER", meta.publisher);
@@ -148,8 +285,8 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             Set<String> lcCols = tableColumns(db, "LocalContent");
             if (!lcCols.isEmpty()) {
                 ContentValues lc = new ContentValues();
-                putIfPresent(lc, lcCols, "KEY", key);
-                putIfPresent(lc, lcCols, "CONTENT_ID", key);
+                putIfPresent(lc, lcCols, "KEY", amznId);
+                putIfPresent(lc, lcCols, "CONTENT_ID", amznId);
                 putIfPresent(lc, lcCols, "FILE_PATH", path);
                 putIfPresent(lc, lcCols, "GUID", asin);
                 putIfPresent(lc, lcCols, "COVER_PATH", coverPath);
@@ -164,17 +301,13 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             Set<String> ucCols = tableColumns(db, "UserContent");
             if (!ucCols.isEmpty()) {
                 ContentValues uc = new ContentValues();
-                putIfPresent(uc, ucCols, "KEY", key);
-                putIfPresent(uc, ucCols, "CONTENT_ID", key);
+                putIfPresent(uc, ucCols, "KEY", amznId);
                 putIfPresent(uc, ucCols, "USER_ID", "MASTER");
                 putIfPresent(uc, ucCols, "LAST_ACCESSED", now);
                 putIfPresent(uc, ucCols, "LAST_ACCESS_TIME", now);
-                putIfPresent(uc, ucCols, "PERCENT_COMPLETE", 0.0);
-                putIfPresent(uc, ucCols, "READING_PROGRESS", 0);
                 putIfPresent(uc, ucCols, "IS_IN_CAROUSEL", 1);
                 putIfPresent(uc, ucCols, "CLIPPING_BALANCE", 0);
-                putIfPresent(uc, ucCols, "HAS_UNMIGRATED_ANNOTATION", 0);
-                putIfPresent(uc, ucCols, "IS_READ", 0);
+                putIfPresent(uc, ucCols, "READING_PROGRESS", 0);
                 db.insertWithOnConflict("UserContent", null, uc, SQLiteDatabase.CONFLICT_REPLACE);
             }
 

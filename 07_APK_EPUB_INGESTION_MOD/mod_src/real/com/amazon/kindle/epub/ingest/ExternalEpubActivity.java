@@ -37,14 +37,8 @@ import java.util.Locale;
 /**
  * Cleanly intercepts external EPUB open intents (file:// or content:// from ANY
  * storage directory), eliminating Kindle's hanging external-source loading wheel.
- *
- * Presents a dark Folio dialog offering:
- *   1. "Add to Library & Read" — converts via libkfxconv.so into app-private
- *      storage (files/folio_library/), extracts OPF metadata + enriches missing
- *      fields via Open Library, saves rich metadata to folio_metadata.db,
- *      registers in kindle_library.db, and opens in KRIFDocViewer.
- *   2. "Open Once" — converts into app temp cache (cache/folio_once/) and opens
- *      directly in KRIFDocViewer without adding to the Library database.
+ * Includes duplicate library detection: if already imported, offers instant
+ * "Open Existing Copy" alongside "Re-Import & Replace" and "Open Once".
  */
 public class ExternalEpubActivity extends Activity {
 
@@ -52,11 +46,6 @@ public class ExternalEpubActivity extends Activity {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private AlertDialog activeDialog;
 
-    /**
-     * Optional entry hook for existing Kindle intent-receiver activities
-     * (e.g. ThirdPartyUpgradePage / StandAloneBookReaderActivity.onCreate).
-     * Returns true if the intent is an external EPUB and was redirected here.
-     */
     public static boolean interceptIfExternalEpub(Activity caller, Intent intent) {
         if (caller == null || intent == null) return false;
         if (intent.getBooleanExtra("folio_bypass_intercept", false)) return false;
@@ -101,8 +90,18 @@ public class ExternalEpubActivity extends Activity {
 
                 final EpubMetadataExtractor.BookMeta meta =
                         EpubMetadataExtractor.extract(stagedEpub, displayName);
+                final String bookKey = FolioMetadataDb.computeBookKey(meta.title, stagedEpub.length());
 
-                mainHandler.post(() -> showChoiceDialog(stagedEpub, displayName, meta));
+                FolioMetadataDb.BookRecord existing = null;
+                FolioMetadataDb db = new FolioMetadataDb(this);
+                try {
+                    existing = db.findExisting(bookKey, meta.title, meta.author);
+                } finally {
+                    db.close();
+                }
+
+                final FolioMetadataDb.BookRecord finalExisting = existing;
+                mainHandler.post(() -> showChoiceDialog(stagedEpub, displayName, meta, finalExisting));
             } catch (Throwable t) {
                 Log.e(TAG, "Failed to inspect incoming EPUB", t);
                 mainHandler.post(() -> {
@@ -115,7 +114,8 @@ public class ExternalEpubActivity extends Activity {
     }
 
     private void showChoiceDialog(final File stagedEpub, final String displayName,
-                                  final EpubMetadataExtractor.BookMeta meta) {
+                                  final EpubMetadataExtractor.BookMeta meta,
+                                  final FolioMetadataDb.BookRecord existing) {
         dismissActiveDialog();
         if (isFinishing()) return;
 
@@ -126,8 +126,8 @@ public class ExternalEpubActivity extends Activity {
         root.setBackgroundColor(Color.parseColor("#161922"));
 
         TextView badge = new TextView(this);
-        badge.setText("FOLIO EPUB IMPORT");
-        badge.setTextColor(Color.parseColor("#F59E0B"));
+        badge.setText(existing != null ? "ALREADY IN FOLIO LIBRARY" : "FOLIO EPUB IMPORT");
+        badge.setTextColor(Color.parseColor(existing != null ? "#34D399" : "#F59E0B"));
         badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         badge.setTypeface(Typeface.DEFAULT_BOLD);
         root.addView(badge);
@@ -153,23 +153,46 @@ public class ExternalEpubActivity extends Activity {
         root.addView(authorView);
 
         TextView desc = new TextView(this);
-        desc.setText("Add to your Folio library (saves converted book & metadata in app storage) or open once without saving.");
+        if (existing != null) {
+            desc.setText("This book is already saved in Folio's app storage. Open your existing copy instantly, or re-import and replace it.");
+        } else {
+            desc.setText("Add to your Folio library (saves converted book & metadata in app storage) or open once without saving.");
+        }
         desc.setTextColor(Color.parseColor("#94A3B8"));
         desc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         desc.setPadding(0, 0, 0, dp(18));
         root.addView(desc);
 
-        TextView btnAdd = makeButton("Add to Library & Read", "#F59E0B", "#111827");
-        btnAdd.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
-        root.addView(btnAdd);
+        if (existing != null) {
+            TextView btnOpenExisting = makeButton("Open Existing Copy", "#34D399", "#0F172A");
+            btnOpenExisting.setOnClickListener(v -> {
+                stagedEpub.delete();
+                dismissActiveDialog();
+                launchKfxReader(this, new File(existing.kfxPath));
+                finish();
+            });
+            root.addView(btnOpenExisting);
 
-        View spacer = new View(this);
-        spacer.setLayoutParams(new LinearLayout.LayoutParams(1, dp(10)));
-        root.addView(spacer);
+            View sp0 = new View(this);
+            sp0.setLayoutParams(new LinearLayout.LayoutParams(1, dp(10)));
+            root.addView(sp0);
 
-        TextView btnOnce = makeButton("Open Once (Don't Add)", "#262B38", "#F8FAFC");
-        btnOnce.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, false));
-        root.addView(btnOnce);
+            TextView btnReimport = makeButton("Re-Import & Replace", "#262B38", "#F8FAFC");
+            btnReimport.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
+            root.addView(btnReimport);
+        } else {
+            TextView btnAdd = makeButton("Add to Library & Read", "#F59E0B", "#111827");
+            btnAdd.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
+            root.addView(btnAdd);
+
+            View spacer = new View(this);
+            spacer.setLayoutParams(new LinearLayout.LayoutParams(1, dp(10)));
+            root.addView(spacer);
+
+            TextView btnOnce = makeButton("Open Once (Don't Add)", "#262B38", "#F8FAFC");
+            btnOnce.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, false));
+            root.addView(btnOnce);
+        }
 
         View spacer2 = new View(this);
         spacer2.setLayoutParams(new LinearLayout.LayoutParams(1, dp(8)));
@@ -219,13 +242,11 @@ public class ExternalEpubActivity extends Activity {
                 File outKfx = new File(targetDir, safeBase + ".kfx");
                 File outCover = new File(outKfx.getAbsolutePath() + ".cover.jpg");
 
-                // 1. Convert EPUB -> KFX using embedded pure-Rust libkfxconv.so
                 boolean ok = convertEpubToKfx(this, stagedEpub, outKfx);
                 if (!ok || !outKfx.exists() || outKfx.length() < 128) {
                     throw new IllegalStateException("KFX conversion failed");
                 }
 
-                // 2. If Add to Library: enrich missing metadata & persist to SQLite DBs
                 if (addToLibrary) {
                     MetadataEnricher.enrichInPlace(meta);
                     FolioMetadataDb metaDb = new FolioMetadataDb(this);
@@ -237,10 +258,8 @@ public class ExternalEpubActivity extends Activity {
                     FolioMetadataDb.registerInKindleLibraryDb(this, bookKey, outKfx, outCover, meta);
                 }
 
-                // Clean up temporary staged EPUB
                 stagedEpub.delete();
 
-                // 3. Launch directly into KRIFDocViewer (StandAloneBookReaderActivity)
                 mainHandler.post(() -> {
                     dismissActiveDialog();
                     if (addToLibrary) {
@@ -261,7 +280,7 @@ public class ExternalEpubActivity extends Activity {
         }, "folio-epub-convert").start();
     }
 
-    private static boolean convertEpubToKfx(Context ctx, File epubIn, File kfxOut) {
+    public static boolean convertEpubToKfx(Context ctx, File epubIn, File kfxOut) {
         try {
             if (com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubIn, kfxOut)) {
                 return true;
@@ -270,17 +289,15 @@ public class ExternalEpubActivity extends Activity {
             Log.w(TAG, "EpubTranscoder direct call failed: " + t.getMessage());
         }
 
-        // Direct pure-Rust libkfxconv.so execution fallback
         File bin = new File(ctx.getApplicationInfo().nativeLibraryDir, "libkfxconv.so");
         if (!bin.exists()) {
             bin = new File("/data/local/tmp/kfx-conv");
         }
         if (!bin.exists()) {
-            Log.e(TAG, "libkfxconv.so missing");
+            Log.e(TAG, "libkfxconv.so missing at " + bin.getAbsolutePath());
             return false;
         }
         String[][] argVariants = new String[][] {
-            { bin.getAbsolutePath(), epubIn.getAbsolutePath(), "-o", kfxOut.getAbsolutePath(), "-w", "false", "-c", "EBOK" },
             { bin.getAbsolutePath(), epubIn.getAbsolutePath(), "-o", kfxOut.getAbsolutePath() },
             { bin.getAbsolutePath(), epubIn.getAbsolutePath(), kfxOut.getAbsolutePath() }
         };
@@ -309,7 +326,7 @@ public class ExternalEpubActivity extends Activity {
         return false;
     }
 
-    private static void launchKfxReader(Context ctx, File kfxFile) {
+    public static void launchKfxReader(Context ctx, File kfxFile) {
         try {
             android.os.StrictMode.class.getMethod("disableDeathOnFileUriExposure").invoke(null);
         } catch (Throwable ignored) {}

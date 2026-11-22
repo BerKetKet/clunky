@@ -185,7 +185,7 @@ public final class EpubMetadataExtractor {
                             } else if ("language".equals(name) && isBlank(meta.language)) {
                                 meta.language = val;
                             } else if ("subject".equals(name)) {
-                                if (val.length() <= 60 && genreSet.size() < 8) {
+                                if (!isBlank(val) && val.length() <= 60 && genreSet.size() < 8) {
                                     genreSet.add(val);
                                 }
                             } else if ("description".equals(name) && isBlank(meta.description)) {

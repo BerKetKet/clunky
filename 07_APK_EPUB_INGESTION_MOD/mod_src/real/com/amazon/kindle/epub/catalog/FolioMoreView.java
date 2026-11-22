@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v3.4 KFX");
+        badgeTv.setText("Folio v3.5 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -108,6 +108,19 @@ public final class FolioMoreView {
         container.addView(subTv);
 
         // 2. Action Cards
+        // Card: Library Metadata & Genres
+        container.addView(makeActionCard(
+                ctx, d,
+                "📚", "Library Metadata & Genres",
+                "Browse saved authors, pub dates, ISBNs & genres",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx);
+                    }
+                }
+        ));
+
         // Card A: OPDS Catalogs
         container.addView(makeActionCard(
                 ctx, d,
