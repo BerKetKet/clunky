@@ -87,7 +87,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v8.7 KFX");
+        badgeTv.setText("Folio v8.8 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -351,6 +351,19 @@ public final class FolioMoreView {
                     @Override
                     public void onClick(View v) {
                         showManageShelvesDialog(ctx);
+                    }
+                }
+        ));
+
+        // Card C5: Storage & Duplicates Manager
+        container.addView(makeActionCard(
+                ctx, d,
+                "💾", "Storage & Duplicates",
+                "Inspect largest KFX books, cache size & duplicate titles",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showStorageDuplicatesDialog(ctx);
                     }
                 }
         ));
@@ -1017,6 +1030,304 @@ public final class FolioMoreView {
         } catch (Throwable ignored) {
             return null;
         }
+    }
+
+    private static String formatBytesShort(long bytes) {
+        if (bytes < 1024L) return bytes + " B";
+        if (bytes < 1024L * 1024L) return String.format(java.util.Locale.US, "%.0f KB", bytes / 1024.0);
+        return String.format(java.util.Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0));
+    }
+
+    private static void showStorageDuplicatesDialog(final Context ctx) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        long appLibBytes = dirSizeBytes(new File(ctx.getFilesDir(), "folio_library"))
+                + dirSizeBytes(new File(ctx.getFilesDir(), "folio_covers"));
+        long backupBytes = dirSizeBytes(new File("/sdcard/kindle/backups"));
+        long tempCacheBytes = dirSizeBytes(new File(ctx.getCacheDir(), "folio_once"))
+                + dirSizeBytes(new File(ctx.getCacheDir(), "folio_staging"));
+
+        java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> all = new java.util.ArrayList<>();
+        com.amazon.kindle.epub.ingest.FolioMetadataDb mdb = new com.amazon.kindle.epub.ingest.FolioMetadataDb(ctx);
+        try {
+            all.addAll(mdb.getAllBooks());
+        } catch (Throwable ignored) {
+        } finally {
+            mdb.close();
+        }
+
+        // Measure each book's KFX + cover size and check normalized title duplicates
+        final java.util.Map<String, Long> sizeMap = new java.util.HashMap<>();
+        java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> sizedBooks = new java.util.ArrayList<>();
+        final java.util.Map<String, Integer> normCounts = new java.util.HashMap<>();
+        final java.util.Map<String, String> normLabel = new java.util.HashMap<>();
+        long totalBookBytes = 0L;
+
+        for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : all) {
+            if (r.kfxPath != null && !r.kfxPath.isEmpty()) {
+                File f = new File(r.kfxPath);
+                long sz = f.exists() ? f.length() : 0L;
+                File cov = new File(r.kfxPath + ".cover.jpg");
+                if (cov.exists()) sz += cov.length();
+                if (sz > 0L) {
+                    sizeMap.put(r.kfxPath, sz);
+                    sizedBooks.add(r);
+                    totalBookBytes += sz;
+                }
+            }
+            if (r.title != null && !r.title.trim().isEmpty()) {
+                String norm = r.title.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", " ").trim();
+                if (!norm.isEmpty()) {
+                    normCounts.put(norm, (normCounts.containsKey(norm) ? normCounts.get(norm) : 0) + 1);
+                    if (!normLabel.containsKey(norm)) normLabel.put(norm, r.title.trim());
+                }
+            }
+        }
+
+        java.util.Collections.sort(sizedBooks, new java.util.Comparator<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord>() {
+            @Override
+            public int compare(com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord a,
+                               com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord b) {
+                long sa = sizeMap.containsKey(a.kfxPath) ? sizeMap.get(a.kfxPath) : 0L;
+                long sb = sizeMap.containsKey(b.kfxPath) ? sizeMap.get(b.kfxPath) : 0L;
+                return Long.compare(sb, sa);
+            }
+        });
+
+        java.util.List<String> dupKeys = new java.util.ArrayList<>();
+        for (java.util.Map.Entry<String, Integer> e : normCounts.entrySet()) {
+            if (e.getValue() > 1) dupKeys.add(e.getKey());
+        }
+        java.util.Collections.sort(dupKeys, new java.util.Comparator<String>() {
+            @Override
+            public int compare(String a, String b) {
+                return Integer.compare(normCounts.get(b), normCounts.get(a));
+            }
+        });
+
+        LinearLayout root = new LinearLayout(ctx);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(0xFF11131A);
+        root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
+
+        TextView titleTv = new TextView(ctx);
+        titleTv.setText("💾 Storage & Duplicates");
+        titleTv.setTextColor(TEXT_PRIMARY);
+        titleTv.setTextSize(18);
+        titleTv.setTypeface(Typeface.DEFAULT_BOLD);
+        titleTv.setPadding(0, 0, 0, dp(d, 4));
+        root.addView(titleTv);
+
+        TextView subTv = new TextView(ctx);
+        subTv.setText(all.size() + " cataloged books (" + formatBytesShort(totalBookBytes)
+                + " indexed) · " + dupKeys.size() + (dupKeys.size() == 1 ? " duplicate group" : " duplicate groups"));
+        subTv.setTextColor(TEXT_MUTED);
+        subTv.setTextSize(12);
+        subTv.setPadding(0, 0, 0, dp(d, 14));
+        root.addView(subTv);
+
+        final AlertDialog[] storDlgRef = new AlertDialog[1];
+
+        ScrollView sv = new ScrollView(ctx);
+        sv.setVerticalScrollBarEnabled(false);
+        sv.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 360)));
+        LinearLayout content = new LinearLayout(ctx);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(0, 0, dp(d, 4), 0);
+
+        // Section 1: 3-Tile Storage Footprint Breakdown
+        TextView sHdr = new TextView(ctx);
+        sHdr.setText("STORAGE FOOTPRINT");
+        sHdr.setTextColor(0xFF38BDF8);
+        sHdr.setTextSize(11);
+        sHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        sHdr.setPadding(0, 0, 0, dp(d, 8));
+        content.addView(sHdr);
+
+        LinearLayout tileRow = new LinearLayout(ctx);
+        tileRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams trLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        trLp.bottomMargin = dp(d, 16);
+        tileRow.setLayoutParams(trLp);
+
+        tileRow.addView(makeHealthBadge(ctx, d, "App Library", formatBytesShort(appLibBytes),
+                0xFF38BDF8, 0xFF152638, true, null));
+        tileRow.addView(makeHealthBadge(ctx, d, "Backups", formatBytesShort(backupBytes),
+                0xFF34D399, 0xFF122B24, true, null));
+        tileRow.addView(makeHealthBadge(ctx, d, "Temp Cache", formatBytesShort(tempCacheBytes),
+                0xFFFBBF24, 0xFF2E2414, false, null));
+        content.addView(tileRow);
+
+        // Section 2: Top 5 Largest Books (tap to locate in catalog)
+        TextView lHdr = new TextView(ctx);
+        lHdr.setText("LARGEST BOOKS (TAP TO LOCATE)");
+        lHdr.setTextColor(0xFFF59E0B);
+        lHdr.setTextSize(11);
+        lHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        lHdr.setPadding(0, 0, 0, dp(d, 8));
+        content.addView(lHdr);
+
+        if (sizedBooks.isEmpty()) {
+            TextView noneTv = new TextView(ctx);
+            noneTv.setText("No local KFX files measured yet.");
+            noneTv.setTextColor(TEXT_MUTED);
+            noneTv.setTextSize(12);
+            noneTv.setPadding(0, 0, 0, dp(d, 12));
+            content.addView(noneTv);
+        } else {
+            long maxBytes = Math.max(1L, sizeMap.get(sizedBooks.get(0).kfxPath));
+            int topN = Math.min(5, sizedBooks.size());
+            for (int i = 0; i < topN; i++) {
+                final com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec = sizedBooks.get(i);
+                long sz = sizeMap.get(rec.kfxPath);
+                String tLabel = (rec.title != null && !rec.title.isEmpty()) ? rec.title : "Untitled";
+                String szLabel = formatBytesShort(sz);
+                float frac = Math.max(0.06f, (float) sz / (float) maxBytes);
+
+                LinearLayout row = new LinearLayout(ctx);
+                row.setOrientation(LinearLayout.VERTICAL);
+                row.setPadding(0, dp(d, 3), 0, dp(d, 7));
+
+                LinearLayout topR = new LinearLayout(ctx);
+                topR.setOrientation(LinearLayout.HORIZONTAL);
+                TextView nameTv = new TextView(ctx);
+                nameTv.setText(tLabel);
+                nameTv.setTextColor(TEXT_PRIMARY);
+                nameTv.setTextSize(12.5f);
+                nameTv.setSingleLine(true);
+                nameTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                nameTv.setPadding(0, 0, dp(d, 8), 0);
+                nameTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                topR.addView(nameTv);
+
+                TextView szTv = new TextView(ctx);
+                szTv.setText(szLabel);
+                szTv.setTextColor(0xFFF59E0B);
+                szTv.setTextSize(12);
+                szTv.setTypeface(Typeface.DEFAULT_BOLD);
+                topR.addView(szTv);
+                row.addView(topR);
+
+                LinearLayout barTrack = new LinearLayout(ctx);
+                barTrack.setOrientation(LinearLayout.HORIZONTAL);
+                GradientDrawable tbBg = new GradientDrawable();
+                tbBg.setColor(0xFF1F2433);
+                tbBg.setCornerRadius(dp(d, 3));
+                barTrack.setBackground(tbBg);
+                LinearLayout.LayoutParams btLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 5));
+                btLp.topMargin = dp(d, 4);
+                barTrack.setLayoutParams(btLp);
+
+                View barFill = new View(ctx);
+                GradientDrawable bfBg = new GradientDrawable();
+                bfBg.setColor(0xFFF59E0B);
+                bfBg.setCornerRadius(dp(d, 3));
+                barFill.setBackground(bfBg);
+                barFill.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, frac));
+                barTrack.addView(barFill);
+
+                View barRest = new View(ctx);
+                barRest.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f - frac));
+                barTrack.addView(barRest);
+                row.addView(barTrack);
+
+                final String searchTarget = tLabel;
+                row.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        if (storDlgRef[0] != null) storDlgRef[0].dismiss();
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.showWithSearch(ctx, searchTarget);
+                    }
+                });
+                content.addView(row);
+            }
+        }
+
+        // Section 3: Duplicate Titles Audit
+        TextView dHdr = new TextView(ctx);
+        dHdr.setText("DUPLICATE TITLES AUDIT");
+        dHdr.setTextColor(dupKeys.isEmpty() ? 0xFF34D399 : 0xFFF87171);
+        dHdr.setTextSize(11);
+        dHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        dHdr.setPadding(0, dp(d, 12), 0, dp(d, 8));
+        content.addView(dHdr);
+
+        if (dupKeys.isEmpty()) {
+            TextView okTv = new TextView(ctx);
+            okTv.setText("✓ No duplicate titles found across " + all.size() + " cataloged books");
+            okTv.setTextColor(0xFF34D399);
+            okTv.setTextSize(12.5f);
+            okTv.setTypeface(Typeface.DEFAULT_BOLD);
+            okTv.setPadding(dp(d, 12), dp(d, 10), dp(d, 12), dp(d, 10));
+            GradientDrawable okBg = new GradientDrawable();
+            okBg.setColor(0xFF122B24);
+            okBg.setCornerRadius(dp(d, 8));
+            okBg.setStroke(dp(d, 1), 0xFF1E5C47);
+            okTv.setBackground(okBg);
+            content.addView(okTv);
+        } else {
+            for (String dk : dupKeys) {
+                final String dTitle = normLabel.get(dk);
+                int cnt = normCounts.get(dk);
+                LinearLayout dRow = new LinearLayout(ctx);
+                dRow.setOrientation(LinearLayout.HORIZONTAL);
+                dRow.setGravity(Gravity.CENTER_VERTICAL);
+                dRow.setPadding(dp(d, 12), dp(d, 9), dp(d, 12), dp(d, 9));
+                GradientDrawable dBg = new GradientDrawable();
+                dBg.setColor(0xFF2B181E);
+                dBg.setCornerRadius(dp(d, 8));
+                dBg.setStroke(dp(d, 1), 0xFF5C262E);
+                dRow.setBackground(dBg);
+                LinearLayout.LayoutParams drLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                drLp.bottomMargin = dp(d, 6);
+                dRow.setLayoutParams(drLp);
+
+                TextView dtTv = new TextView(ctx);
+                dtTv.setText(dTitle);
+                dtTv.setTextColor(TEXT_PRIMARY);
+                dtTv.setTextSize(12.5f);
+                dtTv.setSingleLine(true);
+                dtTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                dtTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                dRow.addView(dtTv);
+
+                TextView dcTv = new TextView(ctx);
+                dcTv.setText(cnt + " copies ›");
+                dcTv.setTextColor(0xFFF87171);
+                dcTv.setTextSize(12);
+                dcTv.setTypeface(Typeface.DEFAULT_BOLD);
+                dRow.addView(dcTv);
+
+                dRow.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        if (storDlgRef[0] != null) storDlgRef[0].dismiss();
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.showWithSearch(ctx, dTitle);
+                    }
+                });
+                content.addView(dRow);
+            }
+        }
+
+        sv.addView(content);
+        root.addView(sv);
+
+        storDlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setView(root)
+                .setNeutralButton("Clear Temp Cache", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        long freed = clearDirContents(new File(ctx.getCacheDir(), "folio_once"))
+                                + clearDirContents(new File(ctx.getCacheDir(), "folio_staging"));
+                        Toast.makeText(ctx,
+                                "Cleared " + formatBytesShort(freed) + " of temporary cache",
+                                Toast.LENGTH_SHORT).show();
+                        showStorageDuplicatesDialog(ctx);
+                    }
+                })
+                .setPositiveButton("Close", null)
+                .show();
     }
 
     private static void showManageShelvesDialog(final Context ctx) {
@@ -1930,7 +2241,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v8.7 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v8.8 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
