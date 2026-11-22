@@ -672,3 +672,25 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.1_kfx/base.apk` (132 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report081.zip`
+
+
+---
+
+# Round 082: Editable Synopsis Field & Live Kindle DB Title/Author Sync (Folio v8.2 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v8.2 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 082 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMetadataCatalogDialog.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Added multiline `Description / Synopsis` field to Edit Book Metadata dialog (`setMinLines(2)`, `setMaxLines(5)`).
+     - Added `syncTitleAuthorToKindleDb(...)` on Save, ensuring edited title and author immediately propagate to `kindle_library.db` (`KindleContent`).
+     - Bumped version badge to `Folio v8.2 KFX (Enhanced Typesetting)`.
+     - Built `classes9.dex` (268,112 B), fast-rebuilt APK, signed, and deployed to Galaxy M32 (`lastUpdateTime=2026-11-23 00:26:18`).
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.2_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `screenshots/verify_r82_edit_metadata_synopsis.png`: Proves Edit Book Metadata form on *1984* displaying multiline `Description / Synopsis` field with full synopsis.
+     - `screenshots/verify_r82_about_v82.png`: Proves About Folio dialog displaying `Version: Folio v8.2 KFX (Enhanced Typesetting)`.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v8.2_kfx/base.apk` (132 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report082.zip`

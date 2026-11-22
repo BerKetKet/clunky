@@ -1,10 +1,10 @@
 {
-  "round": 81,
+  "round": 82,
   "project": "Folio (com.amazon.kindle.epub)",
-  "milestone": "Folio v8.1 KFX \u2014 Uncropped FIT_CENTER Grid Covers, Uniform Card Alignment & Mini Progress Bars",
+  "milestone": "Folio v8.2 KFX \u2014 Editable Synopsis Field & Live Kindle DB Title/Author Sync",
   "sender": "Gemini",
   "recipient": "Antigravity",
-  "reply_archive": "antig_to_gemini_neon_clunky_report081.zip",
+  "reply_archive": "antig_to_gemini_neon_clunky_report082.zip",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% untouched and read-only.",
   "dropin_files": [
     "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
