@@ -1335,3 +1335,37 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.7_kfx/base.apk` (137 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report107.zip` (includes 6 Fight Club side-by-side screenshots)
+
+
+---
+
+# Round 108: Publisher CSS Fidelity Fix for Fight Club Parity (Folio v10.8 KFX)
+
+- **Current State**: Task A (Rust Engine + Java UI build and staging) 100% complete. Physical device verification (Task B) awaiting Samsung Galaxy M32 USB/WiFi reconnection.
+  1. **Engine & Java Integration (Task A - COMPLETE)**:
+     - Integrated `dropin_rust/src/epub/css_style.rs`, `dropin_rust/src/packager/styles.rs`, and `dropin_rust/src/packager/storylines.rs` into `kfx_converter`.
+     - Added support for publisher CSS fidelity:
+       * `font-family`: `sans-serif` mapped to `font_sans`, `monospace` mapped to `font_mono`.
+       * Vertical margins: `margin-top` / `margin-bottom` parsed and quantized to 0.5em steps (`mt_`, `mb_`).
+       * `border-bottom`: parsed and mapped to YellowJersey `$solid` border with weight and padding.
+       * `letter-spacing`: wide uppercase tracking token `letter_wide` mapped to letterspacing override.
+       * Dynamic style overrides (`style_ov_1`, `style_ov_2`, etc.) generated and bound in YellowJersey storylines.
+     - Ran full `cargo test` suite in `kfx_converter/`: all 210 tests passed (164 unit, 13 CLI, 16 container, 8 pipeline, 9 sync sanitize).
+     - Cross-compiled release binary for `aarch64-linux-android`, stripped with Android NDK `llvm-strip`, and staged to `07_APK_EPUB_INGESTION_MOD/lib/arm64-v8a/libkfxconv.so` (4.6 MB).
+     - Integrated `FolioMoreView.java` with version bump to `Folio v10.8 KFX (Enhanced Typesetting)`. Preserved `MetadataEnricher.java` and `OpenCatalogView.java`.
+     - Recompiled `classes9.dex` (366,228 bytes), repacked into base APK as `classes4.dex`, aligned with `zipalign`, and signed with `apksigner`.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.8_kfx/base.apk` (132 MB).
+     - Tested host conversion on *Fight Club* EPUB: verified generation and binding of `style_ov_1` and `style_ov_2`.
+  2. **Device Hardware Status**:
+     - Samsung Galaxy M32 (`32001776e8e82623`) was disconnected at `00:50:58` (kernel log: `usb 1-5: USB disconnect`).
+     - Network discovery shows laptop tethered to Pixel 2 XL (`192.168.147.224`), which is NOT the target device (strictly per user safety rule).
+     - Galaxy M32 must be re-plugged into USB or paired over adb to proceed with live Task B deployment and screenshot capture.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Next Steps**:
+     - Re-connect Samsung Galaxy M32 via USB.
+     - Run `adb install -r -d 07_APK_EPUB_INGESTION_MOD/release/folio_v10.8_kfx/base.apk`.
+     - Re-convert *Fight Club* on device.
+     - Capture `verify_r108_fight_club_page2.png` and `verify_r108_fight_club_page3.png` under Compact/White/Bookerly theme.
+     - Package `antig_to_gemini_neon_clunky_report108.zip`, submit to Gemini Neon, and trigger autonomous runner for Round 109.
+
