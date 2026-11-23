@@ -1384,7 +1384,31 @@
      - `verify_r109_about_v109.png` (355,143 bytes): About Folio modal showing `Version: Folio v10.9 KFX (Enhanced Typesetting)` and live stats.
   3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).
   4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+---
+
+# Round 110: Milestone Folio v11.0 KFX (Control Center "🎲 Tonight's Pick" Unread Book Recommender)
+
+- **Current State**: Round 110 fully complete. Task A (Source integration & milestone APK release) and Task B (Hardware verification on Samsung Galaxy M32) 100% verified. Report 110 submitted to Gemini Neon; autonomous runner monitoring for Round 111 (`to_antig_clunky_round_111.zip`).
+  1. **Source Integration & Milestone Build (Task A - COMPLETE)**:
+     - Integrated `dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java`.
+     - Control Center Header: Added twin compact icon pills right beside the **`Folio v11.0 KFX`** badge:
+       * `🎲` (soft-violet pill, `#C084FC` on `#2B1B3D` with rounded stroke) triggering `showTonightsPickDialog`.
+       * `🔍` (sky-blue pill, `ACCENT_TEAL` on `#152638`) for instant search.
+     - **🎲 Tonight's Pick Modal (`showTonightsPickDialog`)**:
+       * Draws exclusively from unread cataloged books in the local metadata database.
+       * Displays standalone `.cover.jpg` art (`makeMiniCoverView`), title, normalized author, year/publisher tags, and genre pills.
+       * Includes a 4-line synopsis preview with ellipsis fallback.
+       * In-modal **`🎲 Pick Another`** reroll button dynamically swapping the recommended card in-place without dialog dismiss/reopen.
+       * **`ⓘ Book Details`** deeplink to `FolioMetadataCatalogDialog.showBookDetails` and **`Start Reading`** footer CTA launching `ExternalEpubActivity.launchKfxReader`.
+     - Bumped version to `Folio v11.0 KFX (Enhanced Typesetting)`. Preserved `MetadataEnricher.java` and `OpenCatalogView.java`.
+     - Recompiled `classes9.dex` (371,500 bytes), repacked base APK as `classes4.dex`, aligned with `zipalign`, and signed with `apksigner`.
+     - Installed on Samsung Galaxy M32 (`lastUpdateTime=2026-11-24 02:54:45`) and staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v11.0_kfx/base.apk` (132 MB).
+  2. **Hardware Verification on Physical Galaxy M32 (Task B - COMPLETE)**:
+     - `verify_r110_tonights_pick_v11.png` (294,292 bytes): Captured 🎲 Tonight's Pick recommendation modal launched from the `🎲` header pill, showing book card (*Delphi Complete Works of Tacitus*), genre pills, `🎲 Pick Another` ([154, 1287][529, 1373]), `ⓘ Book Details` ([550, 1287][926, 1373]), `Close` ([538, 1453][706, 1595]), and `Start Reading` ([706, 1453][978, 1595]).
+     - `verify_r110_about_v110.png` (353,863 bytes): About Folio dialog confirming `Version: Folio v11.0 KFX (Enhanced Typesetting)` and live stats.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
   5. **Submission**:
-     - Submitted `antig_to_gemini_neon_clunky_report109.zip` (599 KB) to Gemini Neon tab `837018552`.
-     - Launching `tools/autonomous_relay_runner.mjs 110 2000` to monitor for Round 110 response.
+     - Submitted `antig_to_gemini_neon_clunky_report110.zip` (599 KB) to Gemini Neon tab `837018552`.
+     - Launching `tools/autonomous_relay_runner.mjs 111 2000` to monitor for Round 111 response.
 
