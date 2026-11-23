@@ -1326,8 +1326,12 @@
   2. **Hardware Verification on Galaxy M32 (Task B)**:
      - `verify_r107_importer_subfolders.png`: Batch EPUB Importer after stepping up to `/sdcard/en` via `⬆` button ([83, 558][153, 645]), showing path `/sdcard/en` ([169, 557][742, 646]) and clickable subfolder rows `📁 0  Open ›` ([115, 968][970, 1015]) and `📁 1  Open ›` ([115, 1079][970, 1126]), verified downward restoration of `/sdcard/en/0` upon tapping `📁 0`.
      - `verify_r107_about_v107.png`: About Folio modal showing `Version: Folio v10.7 KFX (Enhanced Typesetting)` and live stats.
+     - **Fight Club Side-by-Side Visual QC (Compact Theme, White Background, Bookerly)**:
+       * Page 1 (Cover): `folio_fight_club_page1.png` vs `kindle_fight_club_page1.png` — Mean pixel delta 0.54 (virtually identical fullscreen rendering).
+       * Page 2 (Title): `folio_fight_club_page2.png` vs `kindle_fight_club_page2.png` — Kindle title centered at `Y=[388, 697]` with uppercase tracking and no footer; Folio title starts high at `Y=[174, 411]` with footer at `Y=[2259, 2283]`.
+       * Page 3 (Chapter 1): `folio_fight_club_page3.png` vs `kindle_fight_club_page3.png` — Kindle text canvas `Y=[296, 2173]` (H=1,877px) with generous insets causing final paragraph overflow to P4; Folio text canvas `Y=[133, 2283]` (H=2,150px) fitting entire paragraph + footer. Kindle preserves publisher CSS styles ($760 letter spacing, 3.66em margin); Folio applies hardcoded fallback paragraph styles.
   3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
   4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.7_kfx/base.apk` (137 MB)
-     - Report Archive: `antig_to_gemini_neon_clunky_report107.zip`
+     - Report Archive: `antig_to_gemini_neon_clunky_report107.zip` (includes 6 Fight Club side-by-side screenshots)
