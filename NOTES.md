@@ -1341,7 +1341,7 @@
 
 # Round 108: Publisher CSS Fidelity Fix for Fight Club Parity (Folio v10.8 KFX)
 
-- **Current State**: Task A (Rust Engine + Java UI build and staging) 100% complete. Physical device verification (Task B) awaiting Samsung Galaxy M32 USB/WiFi reconnection.
+- **Current State**: Round 108 fully complete. Task A (Rust engine + Java UI build and staging) and Task B (Hardware verification on Samsung Galaxy M32) 100% verified. Report 108 submitted to Gemini Neon; autonomous runner monitoring for Round 109 (`to_antig_clunky_round_109.zip`).
   1. **Engine & Java Integration (Task A - COMPLETE)**:
      - Integrated `dropin_rust/src/epub/css_style.rs`, `dropin_rust/src/packager/styles.rs`, and `dropin_rust/src/packager/storylines.rs` into `kfx_converter`.
      - Added support for publisher CSS fidelity:
@@ -1354,18 +1354,15 @@
      - Cross-compiled release binary for `aarch64-linux-android`, stripped with Android NDK `llvm-strip`, and staged to `07_APK_EPUB_INGESTION_MOD/lib/arm64-v8a/libkfxconv.so` (4.6 MB).
      - Integrated `FolioMoreView.java` with version bump to `Folio v10.8 KFX (Enhanced Typesetting)`. Preserved `MetadataEnricher.java` and `OpenCatalogView.java`.
      - Recompiled `classes9.dex` (366,228 bytes), repacked into base APK as `classes4.dex`, aligned with `zipalign`, and signed with `apksigner`.
-     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.8_kfx/base.apk` (132 MB).
-     - Tested host conversion on *Fight Club* EPUB: verified generation and binding of `style_ov_1` and `style_ov_2`.
-  2. **Device Hardware Status**:
-     - Samsung Galaxy M32 (`32001776e8e82623`) was disconnected at `00:50:58` (kernel log: `usb 1-5: USB disconnect`).
-     - Network discovery shows laptop tethered to Pixel 2 XL (`192.168.147.224`), which is NOT the target device (strictly per user safety rule).
-     - Galaxy M32 must be re-plugged into USB or paired over adb to proceed with live Task B deployment and screenshot capture.
-  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Installed on Samsung Galaxy M32 (`lastUpdateTime=2026-11-24 02:28:46`) and staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.8_kfx/base.apk` (132 MB).
+     - Verified host and on-device conversion of *Fight Club* EPUB (226.62ms) generating clean KFX with interned `style_ov_1` and `style_ov_2`.
+  2. **Hardware Verification on Physical Galaxy M32 (Task B - COMPLETE)**:
+     - `verify_r108_fight_club_page2.png` (26,484 bytes): Title Page (`FIGHT CLUB / Chuck Palahniuk`) verifying sans-serif typography, wide uppercase tracking, vertical margin shift down to `Y = 261` (closer to Stock Kindle's `Y = 388`), and clean layout without reading footer stamp.
+     - `verify_r108_fight_club_page3.png` (336,379 bytes): Chapter 1 (`CHAPTER 1`) verifying sans-serif heading starting at `Y = 218` (shifted down from `Y = 133`), text bounds ending at `Y = 2179` (matching Stock Kindle's `Y = 2173` within 6 pixels), and total vertical canvas height of 1,961 px (down from 2,150 px).
+     - `verify_r108_about_v108.png` (355,115 bytes): About Folio modal showing `Version: Folio v10.8 KFX (Enhanced Typesetting)` and `Publisher CSS Fidelity (sans-serif, margins, border-bottom & tracking)` line.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).
   4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
-  5. **Next Steps**:
-     - Re-connect Samsung Galaxy M32 via USB.
-     - Run `adb install -r -d 07_APK_EPUB_INGESTION_MOD/release/folio_v10.8_kfx/base.apk`.
-     - Re-convert *Fight Club* on device.
-     - Capture `verify_r108_fight_club_page2.png` and `verify_r108_fight_club_page3.png` under Compact/White/Bookerly theme.
-     - Package `antig_to_gemini_neon_clunky_report108.zip`, submit to Gemini Neon, and trigger autonomous runner for Round 109.
+  5. **Submission**:
+     - Submitted `antig_to_gemini_neon_clunky_report108.zip` (629 KB) to Gemini Neon tab `837018552`.
+     - Launched `tools/autonomous_relay_runner.mjs 109 2000` to monitor for Round 109 response.
 
