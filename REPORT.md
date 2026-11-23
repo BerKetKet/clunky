@@ -1,34 +1,34 @@
-# Round 103 Deliverables Report — Folio v10.3 KFX
+# Round 104 Deliverables Report — Folio v10.4 KFX
 **Environment**: Samsung Galaxy M32 (`32001776e8e82623`), TrebleDroid Android 13 (arm64-v8a).  
 **Stock Kindle Invariant**: Package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Folio Version**: `Folio v10.3 KFX (Enhanced Typesetting)` installed at `2026-11-23 03:07:47`.
+**Folio Version**: `Folio v10.4 KFX (Enhanced Typesetting)` installed at `2026-11-23 03:14:33`.
 
 ---
 
 ## 1. Task A: Drop-In Code Integration & Release Staging
 1. **Drop-In Files Integrated**:
-   - `dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java` -> `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java`:
-     - **1-Tap `↗ Share` Book Card Pill**: Added a sky-blue `↗ Share` pill (`#38BDF8` text, `#152638` pill background, `#1E4E75` border) right beside `📋 Copy` in the Book Details footer action bar. It summons Android's native `ACTION_SEND` share sheet (`Intent.createChooser`) with a formatted text recommendation containing title, author, publication date, publisher, ISBN, finished date or reading progress %, shelf, star rating, and personal note.
-     - **Null-Safe Dialog Dismissal**: Hardened `parentDialog.dismiss()` with null checks on `Read Now` action to ensure clean execution when Book Details is opened directly from external search surfaces.
    - `dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java` -> `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java`:
-     - **Unified `📖` Cover Art Placeholder**: Extended the rounded `#0D1017` frame with centered `📖` fallback glyph across the **Continue Reading** and **Up Next Queue** horizontal carousels via `makeMiniCoverView(...)`.
-     - **Version Bump**: Bumped badge and About Folio dialog to `Folio v10.3 KFX (Enhanced Typesetting)`.
+     - **Star Ratings Distribution Bar Chart**: Built a gold `STAR RATINGS · 5.0★ AVG (1 RATED) (TAP TO BROWSE)` distribution section at the base of `📊 Library Insights` showing per-star ratings breakdown (`★★★★★ (5★)` down to `★ (1★)`) with interactive drill-down browsing.
+     - **Shareable Library Insights Summary**: Added comprehensive plaintext snapshot generation (total books, status breakdown, annual reading goal %, curation metrics, metadata health %, publication span `1531–2017`, top genres, top authors).
+     - **1-Tap `COPY SUMMARY` & `SHARE` Buttons**: Added neutral `COPY SUMMARY` (clipboard) and negative `SHARE` (`ACTION_SEND` chooser) buttons to the Library Insights dialog footer.
+     - **Version Bump**: Bumped badge and About Folio dialog to `Folio v10.4 KFX (Enhanced Typesetting)`.
    - Invariant: `MetadataEnricher.java` and `OpenCatalogView.java` were strictly preserved and not overwritten.
 
 2. **Compilation, Packaging & Deployment**:
-   - Rebuilt `classes9.dex` (354,156 B) via `d8`.
+   - Rebuilt `classes9.dex` (357,084 B) via `d8`.
    - Reassembled APK with `apktool b`, aligned via `zipalign -f -p 4`, and signed with `apksigner`.
    - Streamed APK install to physical Samsung Galaxy M32 (`32001776e8e82623`).
-   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.3_kfx/base.apk` (137,473,734 B).
+   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.4_kfx/base.apk` (137,477,830 B).
 
 ---
 
 ## 2. Task B: Hardware Verification on Physical Galaxy M32
-1. **`verify_r103_details_share_pill.png` (285,937 bytes)**:
-   - Captured Book Details dialog for *1984*.
-   - Verified the updated footer action bar showing `Remove from Folio Library` alongside `📋 Copy` and sky-blue `↗ Share` pills ([842, 1936][996, 2004]).
-2. **`verify_r103_about_v103.png` (341,954 bytes)**:
-   - Captured About Folio dialog confirming `Version: Folio v10.3 KFX (Enhanced Typesetting)`.
+1. **`verify_r104_insights_ratings_share.png` (135,189 bytes)**:
+   - Captured scrolled `📊 Library Insights` dialog.
+   - Verified the gold `STAR RATINGS · 5.0★ AVG (1 RATED) (TAP TO BROWSE)` header ([83, 1491][991, 1590]) with `★★★★★ (5★)` distribution row ([83, 1590][977, 1637]).
+   - Verified the updated 3-button footer row: `CLOSE`, `COPY SUMMARY`, and `SHARE` ([41, 1754][1044, 1880]).
+2. **`verify_r104_about_v104.png` (341,437 bytes)**:
+   - Captured About Folio dialog confirming `Version: Folio v10.4 KFX (Enhanced Typesetting)`.
    - Live telemetry: 29 indexed books, 27 enriched records, 5 in progress, 1 finished, 1 queued.
 3. **Stock Kindle Package Invariant**:
    - `adb shell dumpsys package com.amazon.kindle | grep -E "versionName|lastUpdateTime"`
@@ -44,5 +44,5 @@ Reiterating the project lead directive verbatim:
 ---
 
 ## 4. Deliverables Staging
-- Release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.3_kfx/base.apk`
-- Archive: `antig_to_gemini_neon_clunky_report103.zip` containing `REPORT.md`, `INSTRUCTIONS_ROUND_103.md`, `protocol.json`, `verify_r103_details_share_pill.png`, and `verify_r103_about_v103.png`.
+- Release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.4_kfx/base.apk`
+- Archive: `antig_to_gemini_neon_clunky_report104.zip` containing `REPORT.md`, `INSTRUCTIONS_ROUND_104.md`, `protocol.json`, `verify_r104_insights_ratings_share.png`, and `verify_r104_about_v104.png`.
