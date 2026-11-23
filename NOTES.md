@@ -1265,3 +1265,25 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.4_kfx/base.apk` (137 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report104.zip`
+
+
+---
+
+# Round 105: Exact Star-Rating Drill-Down & Rated Search Scope (Milestone Folio v10.5 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v10.5 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 105 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMetadataCatalogDialog.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Added `STAR:1..5` exact star rating filter support with active gold `★ {N}-Star ({count})` chip in Metadata Catalog.
+     - Wired Star Ratings chart bars in `📊 Library Insights` directly to filtered catalog views.
+     - Added 6th scope pill (`★ Rated`) to Quick Library Search.
+     - Bumped version to `Milestone Folio v10.5 KFX (Enhanced Typesetting)`.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.5_kfx/base.apk` (137 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `verify_r105_star_filter_drilldown.png`: Metadata Catalog dialog opened directly to the active gold `★ 5-Star (1)` filter chip ([260, 684][480, 760]) showing *★ 1984* ([99, 1197][359, 1292]) with *★ 5/5* rating badge ([99, 1297][314, 1334]).
+     - `verify_r105_about_v105.png`: About Folio modal showing `Version: Folio v10.5 KFX (Enhanced Typesetting)` and live stats.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.5_kfx/base.apk` (137 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report105.zip`
