@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v10.4 KFX");
+        badgeTv.setText("Folio v10.5 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1580,8 +1580,8 @@ public final class FolioMoreView {
         root.addView(searchWrap);
 
         // Quick-Filter Scope Pills (All, Reading, Notes, Queue, Shelves)
-        final String[] scopeKeys = new String[] { "ALL", "READING", "NOTES", "QUEUE", "SHELVES" };
-        final String[] scopeLabels = new String[] { "All", "📖 Reading", "📝 Notes", "📌 Queue", "🏷 Shelves" };
+        final String[] scopeKeys = new String[] { "ALL", "READING", "RATED", "NOTES", "QUEUE", "SHELVES" };
+        final String[] scopeLabels = new String[] { "All", "📖 Reading", "★ Rated", "📝 Notes", "📌 Queue", "🏷 Shelves" };
         final String[] activeScope = new String[] { "ALL" };
 
         android.widget.HorizontalScrollView scopeScroll = new android.widget.HorizontalScrollView(ctx);
@@ -1758,6 +1758,10 @@ public final class FolioMoreView {
                 boolean showBooks = !"SHELVES".equals(activeScope[0]);
                 for (final com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec : all) {
                     if (!showBooks) break;
+                    if ("RATED".equals(activeScope[0])
+                            && com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getRating(ctx, rec.kfxPath) <= 0) {
+                        continue;
+                    }
                     if ("NOTES".equals(activeScope[0])
                             && com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getNote(ctx, rec.kfxPath).isEmpty()) {
                         continue;
@@ -3293,7 +3297,7 @@ public final class FolioMoreView {
         // Section 5: Star Ratings Distribution (when rated books exist)
         if (ratedCount > 0) {
             TextView rHdr = new TextView(ctx);
-            rHdr.setText("STAR RATINGS · " + avgStr.toUpperCase(java.util.Locale.US) + " (TAP TO BROWSE)");
+            rHdr.setText("STAR RATINGS · " + avgStr.toUpperCase(java.util.Locale.US) + " (TAP TO FILTER)");
             rHdr.setTextColor(0xFFFBBF24);
             rHdr.setTextSize(11);
             rHdr.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3304,6 +3308,7 @@ public final class FolioMoreView {
             for (int s = 1; s <= 5; s++) if (starBuckets[s] > maxR) maxR = starBuckets[s];
             for (int s = 5; s >= 1; s--) {
                 if (starBuckets[s] <= 0) continue;
+                final int starTarget = s;
                 StringBuilder stLbl = new StringBuilder();
                 for (int k = 0; k < s; k++) stLbl.append("★");
                 stLbl.append(" (").append(s).append("★)");
@@ -3311,7 +3316,7 @@ public final class FolioMoreView {
                         new View.OnClickListener() {
                             @Override public void onClick(View v) {
                                 if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
-                                com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "All");
+                                com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "STAR:" + starTarget);
                             }
                         }));
             }
@@ -3679,7 +3684,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v10.4 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v10.5 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
