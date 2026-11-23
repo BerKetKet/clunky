@@ -86,12 +86,30 @@ public final class FolioMoreView {
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
         headerRow.addView(titleTv, tlp);
 
+        TextView diceBtn = new TextView(ctx);
+        diceBtn.setText("🎲");
+        diceBtn.setTextSize(12);
+        diceBtn.setTextColor(0xFFC084FC);
+        diceBtn.setPadding(dp(d, 8), dp(d, 4), dp(d, 8), dp(d, 4));
+        GradientDrawable diceBg = new GradientDrawable();
+        diceBg.setColor(0xFF2B1B3D);
+        diceBg.setCornerRadius(dp(d, 12));
+        diceBg.setStroke(dp(d, 1), 0x66A855F7);
+        diceBtn.setBackground(diceBg);
+        LinearLayout.LayoutParams diceLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        diceLp.rightMargin = dp(d, 6);
+        diceBtn.setLayoutParams(diceLp);
+        diceBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showTonightsPickDialog(ctx); }
+        });
+        headerRow.addView(diceBtn);
+
         TextView quickSearchBtn = new TextView(ctx);
-        quickSearchBtn.setText("🔍 Search");
-        quickSearchBtn.setTextSize(11);
+        quickSearchBtn.setText("🔍");
+        quickSearchBtn.setTextSize(12);
         quickSearchBtn.setTextColor(ACCENT_TEAL);
-        quickSearchBtn.setTypeface(Typeface.DEFAULT_BOLD);
-        quickSearchBtn.setPadding(dp(d, 10), dp(d, 4), dp(d, 10), dp(d, 4));
+        quickSearchBtn.setPadding(dp(d, 8), dp(d, 4), dp(d, 8), dp(d, 4));
         GradientDrawable qsBg = new GradientDrawable();
         qsBg.setColor(0xFF152638);
         qsBg.setCornerRadius(dp(d, 12));
@@ -107,7 +125,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v10.9 KFX");
+        badgeTv.setText("Folio v11.0 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1455,6 +1473,252 @@ public final class FolioMoreView {
         } catch (Throwable ignored) {
             return null;
         }
+    }
+
+    private static void showTonightsPickDialog(final Context ctx) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> all = new java.util.ArrayList<>();
+        com.amazon.kindle.epub.ingest.FolioMetadataDb mdb = new com.amazon.kindle.epub.ingest.FolioMetadataDb(ctx);
+        try {
+            all.addAll(mdb.getAllBooks());
+        } catch (Throwable ignored) {
+        } finally {
+            mdb.close();
+        }
+        if (all.isEmpty()) {
+            Toast.makeText(ctx, "No books indexed yet", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        final java.util.Map<String, Integer> progMap =
+                com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.loadProgressMap(ctx);
+
+        // Prefer unread books; fall back to all books if every book is started/finished
+        final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> pool = new java.util.ArrayList<>();
+        for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : all) {
+            Integer pv = (r.kfxPath != null) ? progMap.get(r.kfxPath) : null;
+            int p = pv != null ? pv : 0;
+            if (p == 0) pool.add(r);
+        }
+        if (pool.isEmpty()) pool.addAll(all);
+
+        final java.util.Random rng = new java.util.Random();
+        final int[] curIdx = new int[] { rng.nextInt(pool.size()) };
+
+        LinearLayout root = new LinearLayout(ctx);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(0xFF11131A);
+        root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
+
+        LinearLayout hdrRow = new LinearLayout(ctx);
+        hdrRow.setOrientation(LinearLayout.HORIZONTAL);
+        hdrRow.setGravity(Gravity.CENTER_VERTICAL);
+        hdrRow.setPadding(0, 0, 0, dp(d, 12));
+
+        TextView titleHdr = new TextView(ctx);
+        titleHdr.setText("🎲 Tonight's Pick");
+        titleHdr.setTextColor(TEXT_PRIMARY);
+        titleHdr.setTextSize(18);
+        titleHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        titleHdr.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        hdrRow.addView(titleHdr);
+
+        TextView poolTag = new TextView(ctx);
+        poolTag.setText(pool.size() + " unread");
+        poolTag.setTextColor(0xFFC084FC);
+        poolTag.setTextSize(11);
+        poolTag.setTypeface(Typeface.DEFAULT_BOLD);
+        poolTag.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
+        GradientDrawable ptBg = new GradientDrawable();
+        ptBg.setColor(0xFF2B1B3D);
+        ptBg.setCornerRadius(dp(d, 10));
+        ptBg.setStroke(dp(d, 1), 0x66A855F7);
+        poolTag.setBackground(ptBg);
+        hdrRow.addView(poolTag);
+        root.addView(hdrRow);
+
+        final LinearLayout cardHost = new LinearLayout(ctx);
+        cardHost.setOrientation(LinearLayout.VERTICAL);
+        root.addView(cardHost);
+
+        final AlertDialog[] pickDlgRef = new AlertDialog[1];
+
+        final Runnable[] renderPickRef = new Runnable[1];
+        renderPickRef[0] = new Runnable() {
+            @Override
+            public void run() {
+                cardHost.removeAllViews();
+                final com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec = pool.get(curIdx[0]);
+                Integer pv = (rec.kfxPath != null) ? progMap.get(rec.kfxPath) : null;
+                final int pct = pv != null ? pv : 0;
+
+                LinearLayout card = new LinearLayout(ctx);
+                card.setOrientation(LinearLayout.VERTICAL);
+                card.setPadding(dp(d, 14), dp(d, 14), dp(d, 14), dp(d, 14));
+                GradientDrawable cBg = new GradientDrawable();
+                cBg.setColor(BG_CARD);
+                cBg.setCornerRadius(dp(d, 12));
+                cBg.setStroke(dp(d, 1), 0xFF3A2B54);
+                card.setBackground(cBg);
+
+                LinearLayout topRow = new LinearLayout(ctx);
+                topRow.setOrientation(LinearLayout.HORIZONTAL);
+                topRow.setGravity(Gravity.CENTER_VERTICAL);
+
+                topRow.addView(makeMiniCoverView(ctx, d, rec.kfxPath, 68, 98, 12));
+
+                LinearLayout mc = new LinearLayout(ctx);
+                mc.setOrientation(LinearLayout.VERTICAL);
+                mc.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+                TextView bTitle = new TextView(ctx);
+                bTitle.setText(rec.title != null && !rec.title.isEmpty() ? rec.title : "Untitled");
+                bTitle.setTextColor(TEXT_PRIMARY);
+                bTitle.setTextSize(15);
+                bTitle.setTypeface(Typeface.DEFAULT_BOLD);
+                bTitle.setMaxLines(3);
+                bTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                mc.addView(bTitle);
+
+                String aStr = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(rec.author);
+                TextView bAuthor = new TextView(ctx);
+                bAuthor.setText(!aStr.isEmpty() ? aStr : "Unknown Author");
+                bAuthor.setTextColor(ACCENT_AMBER);
+                bAuthor.setTextSize(12.5f);
+                bAuthor.setTypeface(Typeface.DEFAULT_BOLD);
+                bAuthor.setPadding(0, dp(d, 4), 0, dp(d, 4));
+                mc.addView(bAuthor);
+
+                int yr = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.parseBookYear(rec.pubDate);
+                StringBuilder metaLine = new StringBuilder();
+                if (yr > 0) metaLine.append(yr);
+                if (rec.publisher != null && !rec.publisher.trim().isEmpty()) {
+                    if (metaLine.length() > 0) metaLine.append(" · ");
+                    metaLine.append(rec.publisher.trim());
+                }
+                if (metaLine.length() > 0) {
+                    TextView bMeta = new TextView(ctx);
+                    bMeta.setText(metaLine.toString());
+                    bMeta.setTextColor(0xFF94A3B8);
+                    bMeta.setTextSize(11.5f);
+                    bMeta.setSingleLine(true);
+                    bMeta.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                    mc.addView(bMeta);
+                }
+
+                // Up to 2 clean genre pills
+                if (rec.genres != null && !rec.genres.trim().isEmpty()) {
+                    LinearLayout gRow = new LinearLayout(ctx);
+                    gRow.setOrientation(LinearLayout.HORIZONTAL);
+                    gRow.setPadding(0, dp(d, 6), 0, 0);
+                    int gShown = 0;
+                    for (String gPart : rec.genres.split(",")) {
+                        String g = gPart.trim();
+                        if (g.isEmpty() || g.length() > 22) continue;
+                        if (gShown++ >= 2) break;
+                        TextView gp = new TextView(ctx);
+                        gp.setText(g);
+                        gp.setTextColor(0xFF93C5FD);
+                        gp.setTextSize(10.5f);
+                        gp.setPadding(dp(d, 8), dp(d, 3), dp(d, 8), dp(d, 3));
+                        GradientDrawable gBg = new GradientDrawable();
+                        gBg.setColor(0xFF17253B);
+                        gBg.setCornerRadius(dp(d, 8));
+                        gp.setBackground(gBg);
+                        LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                        glp.rightMargin = dp(d, 5);
+                        gp.setLayoutParams(glp);
+                        gRow.addView(gp);
+                    }
+                    if (gShown > 0) mc.addView(gRow);
+                }
+                topRow.addView(mc);
+                card.addView(topRow);
+
+                if (rec.description != null && !rec.description.trim().isEmpty()) {
+                    TextView descTv = new TextView(ctx);
+                    descTv.setText(rec.description.trim());
+                    descTv.setTextColor(0xFFCBD5E1);
+                    descTv.setTextSize(12.5f);
+                    descTv.setMaxLines(4);
+                    descTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                    descTv.setPadding(0, dp(d, 10), 0, 0);
+                    card.addView(descTv);
+                }
+
+                // Inline Action Row: 🎲 Pick Another + ⓘ Details
+                LinearLayout actRow = new LinearLayout(ctx);
+                actRow.setOrientation(LinearLayout.HORIZONTAL);
+                actRow.setPadding(0, dp(d, 12), 0, 0);
+
+                TextView rerollBtn = new TextView(ctx);
+                rerollBtn.setText("🎲 Pick Another");
+                rerollBtn.setTextColor(0xFFC084FC);
+                rerollBtn.setTextSize(12);
+                rerollBtn.setTypeface(Typeface.DEFAULT_BOLD);
+                rerollBtn.setGravity(Gravity.CENTER);
+                rerollBtn.setPadding(dp(d, 12), dp(d, 8), dp(d, 12), dp(d, 8));
+                GradientDrawable rrBg = new GradientDrawable();
+                rrBg.setColor(0xFF2B1B3D);
+                rrBg.setCornerRadius(dp(d, 9));
+                rrBg.setStroke(dp(d, 1), 0xFF6B21A8);
+                rerollBtn.setBackground(rrBg);
+                LinearLayout.LayoutParams rrLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                rrLp.rightMargin = dp(d, 8);
+                rerollBtn.setLayoutParams(rrLp);
+                rerollBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        if (pool.size() > 1) {
+                            int next = rng.nextInt(pool.size());
+                            if (next == curIdx[0]) next = (next + 1) % pool.size();
+                            curIdx[0] = next;
+                            renderPickRef[0].run();
+                        }
+                    }
+                });
+                actRow.addView(rerollBtn);
+
+                TextView detBtn = new TextView(ctx);
+                detBtn.setText("ⓘ Book Details");
+                detBtn.setTextColor(ACCENT_TEAL);
+                detBtn.setTextSize(12);
+                detBtn.setTypeface(Typeface.DEFAULT_BOLD);
+                detBtn.setGravity(Gravity.CENTER);
+                detBtn.setPadding(dp(d, 12), dp(d, 8), dp(d, 12), dp(d, 8));
+                GradientDrawable dtBg = new GradientDrawable();
+                dtBg.setColor(0xFF152638);
+                dtBg.setCornerRadius(dp(d, 9));
+                dtBg.setStroke(dp(d, 1), 0xFF1E4E75);
+                detBtn.setBackground(dtBg);
+                detBtn.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                detBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        if (pickDlgRef[0] != null) pickDlgRef[0].dismiss();
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.showBookDetails(ctx, rec, pct);
+                    }
+                });
+                actRow.addView(detBtn);
+                card.addView(actRow);
+
+                cardHost.addView(card);
+            }
+        };
+
+        renderPickRef[0].run();
+
+        pickDlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setView(root)
+                .setPositiveButton("Start Reading", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec = pool.get(curIdx[0]);
+                        File f = new File(rec.kfxPath);
+                        if (f.exists()) {
+                            com.amazon.kindle.epub.ingest.ExternalEpubActivity.launchKfxReader(ctx, f);
+                        }
+                    }
+                })
+                .setNegativeButton("Close", null)
+                .show();
     }
 
     private static java.util.List<String> loadRecentSearches(Context ctx) {
@@ -3712,7 +3976,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v10.9 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v11.0 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
