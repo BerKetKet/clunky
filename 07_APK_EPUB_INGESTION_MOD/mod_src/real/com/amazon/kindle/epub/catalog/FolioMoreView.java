@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v10.2 KFX");
+        badgeTv.setText("Folio v10.3 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1123,20 +1123,8 @@ public final class FolioMoreView {
             topRow.setOrientation(LinearLayout.HORIZONTAL);
             topRow.setGravity(Gravity.CENTER_VERTICAL);
 
-            // Dedicated standalone cover thumbnail (FIT_CENTER on dark matte)
-            android.widget.ImageView covIv = new android.widget.ImageView(ctx);
-            covIv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-            covIv.setBackgroundColor(0xFF0D1017);
-            LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(d, 38), dp(d, 54));
-            ivLp.rightMargin = dp(d, 9);
-            covIv.setLayoutParams(ivLp);
-            android.graphics.Bitmap bmp = decodeMiniCover(rec.kfxPath, dp(d, 48));
-            if (bmp != null) {
-                covIv.setImageBitmap(bmp);
-            } else {
-                covIv.setBackgroundColor(0xFF1F2636);
-            }
-            topRow.addView(covIv);
+            // Dedicated standalone cover thumbnail (FIT_CENTER on dark matte or 📖 placeholder)
+            topRow.addView(makeMiniCoverView(ctx, d, rec.kfxPath, 38, 54, 9));
 
             LinearLayout metaCol = new LinearLayout(ctx);
             metaCol.setOrientation(LinearLayout.VERTICAL);
@@ -1357,15 +1345,7 @@ public final class FolioMoreView {
             if (i < limit - 1) cLp.rightMargin = dp(d, 10);
             card.setLayoutParams(cLp);
 
-            android.widget.ImageView covIv = new android.widget.ImageView(ctx);
-            covIv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-            covIv.setBackgroundColor(0xFF0D1017);
-            LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(d, 36), dp(d, 52));
-            ivLp.rightMargin = dp(d, 9);
-            covIv.setLayoutParams(ivLp);
-            android.graphics.Bitmap bmp = decodeMiniCover(rec.kfxPath, dp(d, 44));
-            if (bmp != null) covIv.setImageBitmap(bmp);
-            card.addView(covIv);
+            card.addView(makeMiniCoverView(ctx, d, rec.kfxPath, 36, 52, 9));
 
             LinearLayout metaCol = new LinearLayout(ctx);
             metaCol.setOrientation(LinearLayout.VERTICAL);
@@ -1426,6 +1406,34 @@ public final class FolioMoreView {
         hsv.addView(strip);
         wrapper.addView(hsv);
         host.addView(wrapper);
+    }
+
+    private static View makeMiniCoverView(Context ctx, float d, String kfxPath, int wDp, int hDp, int rightMarginDp) {
+        FrameLayout covFrame = new FrameLayout(ctx);
+        GradientDrawable cfBg = new GradientDrawable();
+        cfBg.setColor(0xFF0D1017);
+        cfBg.setCornerRadius(dp(d, 4));
+        cfBg.setStroke(dp(d, 1), 0xFF232A3A);
+        covFrame.setBackground(cfBg);
+        LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(d, wDp), dp(d, hDp));
+        ivLp.rightMargin = dp(d, rightMarginDp);
+        covFrame.setLayoutParams(ivLp);
+        android.graphics.Bitmap bmp = decodeMiniCover(kfxPath, dp(d, wDp + 8));
+        if (bmp != null) {
+            android.widget.ImageView covIv = new android.widget.ImageView(ctx);
+            covIv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+            covIv.setImageBitmap(bmp);
+            covFrame.addView(covIv, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        } else {
+            TextView phTv = new TextView(ctx);
+            phTv.setText("📖");
+            phTv.setTextSize(14);
+            phTv.setGravity(Gravity.CENTER);
+            covFrame.addView(phTv, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        }
+        return covFrame;
     }
 
     private static android.graphics.Bitmap decodeMiniCover(String kfxPath, int targetPx) {
@@ -3581,7 +3589,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v10.2 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v10.3 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

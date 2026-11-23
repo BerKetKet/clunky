@@ -1885,10 +1885,33 @@ public final class FolioMetadataCatalogDialog {
         });
         footerActionRow.addView(removeBtn);
 
+        final Runnable[] shareOrCopyBuilder = new Runnable[0];
+        final java.util.concurrent.Callable<String> buildCardText = () -> {
+            StringBuilder clip = new StringBuilder();
+            clip.append(rec.title);
+            if (!displayAuthor.isEmpty()) clip.append(" — ").append(displayAuthor);
+            if (!cleanDetailDate.isEmpty()) clip.append(" (").append(cleanDetailDate).append(")");
+            if (!rec.publisher.isEmpty()) clip.append("\nPublisher: ").append(rec.publisher);
+            if (!rec.isbn.isEmpty()) clip.append("\nISBN: ").append(rec.isbn);
+            if (currentProgress >= 100) {
+                String finDt = getFinishedDate(ctx, rec.kfxPath);
+                clip.append("\nStatus: ✓ Finished").append(finDt.isEmpty() ? "" : " (" + finDt + ")");
+            } else if (currentProgress > 0) {
+                clip.append("\nStatus: ").append(currentProgress).append("% read");
+            }
+            String shTxt = getShelf(ctx, rec.kfxPath);
+            if (!shTxt.isEmpty()) clip.append("\nShelf: ").append(shTxt);
+            int rStars = getRating(ctx, rec.kfxPath);
+            if (rStars > 0) clip.append("\nRating: ").append(rStars).append("/5");
+            String nTxt = getNote(ctx, rec.kfxPath);
+            if (!nTxt.isEmpty()) clip.append("\nNote: ").append(nTxt);
+            return clip.toString();
+        };
+
         TextView copyBtn = new TextView(ctx);
-        copyBtn.setText("📋 Copy Info");
+        copyBtn.setText("📋 Copy");
         copyBtn.setTextColor(Color.parseColor("#94A3B8"));
-        copyBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        copyBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         copyBtn.setTypeface(Typeface.DEFAULT_BOLD);
         copyBtn.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
         GradientDrawable copyBg = new GradientDrawable();
@@ -1896,28 +1919,42 @@ public final class FolioMetadataCatalogDialog {
         copyBg.setCornerRadius(dp(ctx, 10));
         copyBtn.setBackground(copyBg);
         copyBtn.setOnClickListener(v -> {
-            StringBuilder clip = new StringBuilder();
-            clip.append(rec.title);
-            if (!displayAuthor.isEmpty()) clip.append(" — ").append(displayAuthor);
-            if (!cleanDetailDate.isEmpty()) clip.append(" (").append(cleanDetailDate).append(")");
-            if (!rec.publisher.isEmpty()) clip.append("\nPublisher: ").append(rec.publisher);
-            if (!rec.isbn.isEmpty()) clip.append("\nISBN: ").append(rec.isbn);
-            String shTxt = getShelf(ctx, rec.kfxPath);
-            if (!shTxt.isEmpty()) clip.append("\nShelf: ").append(shTxt);
-            int rStars = getRating(ctx, rec.kfxPath);
-            if (rStars > 0) clip.append("\nRating: ").append(rStars).append("/5");
-            String nTxt = getNote(ctx, rec.kfxPath);
-            if (!nTxt.isEmpty()) clip.append("\nNote: ").append(nTxt);
             try {
                 android.content.ClipboardManager cm = (android.content.ClipboardManager)
                         ctx.getSystemService(Context.CLIPBOARD_SERVICE);
                 if (cm != null) {
-                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Folio Book Info", clip.toString()));
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Folio Book Info", buildCardText.call()));
                     Toast.makeText(ctx, "Copied book info to clipboard", Toast.LENGTH_SHORT).show();
                 }
             } catch (Throwable ignored) {}
         });
         footerActionRow.addView(copyBtn);
+
+        TextView shareBtn = new TextView(ctx);
+        shareBtn.setText("↗ Share");
+        shareBtn.setTextColor(Color.parseColor("#38BDF8"));
+        shareBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        shareBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        shareBtn.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
+        GradientDrawable shareBg = new GradientDrawable();
+        shareBg.setColor(Color.parseColor("#152638"));
+        shareBg.setCornerRadius(dp(ctx, 10));
+        shareBg.setStroke(dp(ctx, 1), Color.parseColor("#1E4E75"));
+        shareBtn.setBackground(shareBg);
+        LinearLayout.LayoutParams shBtnLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        shBtnLp.setMargins(dp(ctx, 6), 0, 0, 0);
+        shareBtn.setLayoutParams(shBtnLp);
+        shareBtn.setOnClickListener(v -> {
+            try {
+                android.content.Intent share = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                share.setType("text/plain");
+                share.putExtra(android.content.Intent.EXTRA_SUBJECT, rec.title != null ? rec.title : "Folio Book");
+                share.putExtra(android.content.Intent.EXTRA_TEXT, buildCardText.call());
+                ctx.startActivity(android.content.Intent.createChooser(share, "Share Book Details"));
+            } catch (Throwable ignored) {}
+        });
+        footerActionRow.addView(shareBtn);
         box.addView(footerActionRow);
 
         ScrollView detailSv = new ScrollView(ctx);
@@ -1928,7 +1965,7 @@ public final class FolioMetadataCatalogDialog {
                 .setPositiveButton("Read Now", (d, w) -> {
                     File f = new File(rec.kfxPath);
                     if (f.exists()) {
-                        parentDialog.dismiss();
+                        if (parentDialog != null) parentDialog.dismiss();
                         ExternalEpubActivity.launchKfxReader(ctx, f);
                     }
                 })
