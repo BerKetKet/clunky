@@ -131,6 +131,23 @@ public final class FolioFolderBrowserDialog {
         etPath.setPadding(dp(ctx, 10), dp(ctx, 8), dp(ctx, 10), dp(ctx, 8));
         etPath.setBackground(makeInputBg(ctx));
         etPath.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        final TextView btnUpDir = new TextView(ctx);
+        btnUpDir.setText("⬆");
+        btnUpDir.setTextColor(Color.parseColor("#CBD5E1"));
+        btnUpDir.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        btnUpDir.setTypeface(Typeface.DEFAULT_BOLD);
+        btnUpDir.setPadding(dp(ctx, 10), dp(ctx, 7), dp(ctx, 10), dp(ctx, 7));
+        GradientDrawable upBg = new GradientDrawable();
+        upBg.setColor(Color.parseColor("#1E2433"));
+        upBg.setCornerRadius(dp(ctx, 8));
+        upBg.setStroke(dp(ctx, 1), Color.parseColor("#334155"));
+        btnUpDir.setBackground(upBg);
+        LinearLayout.LayoutParams upLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        upLp.setMargins(0, 0, dp(ctx, 6), 0);
+        btnUpDir.setLayoutParams(upLp);
+        pathRow.addView(btnUpDir);
+
         pathRow.addView(etPath);
 
         TextView btnGo = new TextView(ctx);
@@ -277,6 +294,9 @@ public final class FolioFolderBrowserDialog {
                 .create();
 
         final List<File> currentVisible = new ArrayList<>();
+        final List<File> subDirsInDir = new ArrayList<>();
+        final Runnable[] loadDirRef = new Runnable[1];
+        final Runnable[] refreshChipsHolder = new Runnable[1];
         final Runnable updateImportLabel = () -> {
             int nSel = selectedFiles.size();
             if (nSel == 0) {
@@ -313,6 +333,50 @@ public final class FolioFolderBrowserDialog {
         final Runnable renderList = () -> {
             listContainer.removeAllViews();
             String q = filterQuery[0].trim().toLowerCase(Locale.ROOT);
+
+            // Render clickable 📁 Subfolder rows at top of list
+            int dirShown = 0;
+            for (final File sd : subDirsInDir) {
+                String dName = sd.getName();
+                if (!q.isEmpty() && !dName.toLowerCase(Locale.ROOT).contains(q)) continue;
+                if (dirShown++ >= 20) break;
+                LinearLayout dRow = new LinearLayout(ctx);
+                dRow.setOrientation(LinearLayout.HORIZONTAL);
+                dRow.setGravity(Gravity.CENTER_VERTICAL);
+                dRow.setPadding(dp(ctx, 12), dp(ctx, 9), dp(ctx, 12), dp(ctx, 9));
+                GradientDrawable dBg = new GradientDrawable();
+                dBg.setColor(Color.parseColor("#181D2B"));
+                dBg.setCornerRadius(dp(ctx, 8));
+                dBg.setStroke(dp(ctx, 1), Color.parseColor("#2B3347"));
+                dRow.setBackground(dBg);
+                LinearLayout.LayoutParams drLp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                drLp.setMargins(0, 0, 0, dp(ctx, 6));
+                dRow.setLayoutParams(drLp);
+
+                TextView dnTv = new TextView(ctx);
+                dnTv.setText("📁 " + dName);
+                dnTv.setTextColor(Color.parseColor("#FDE68A"));
+                dnTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+                dnTv.setTypeface(Typeface.DEFAULT_BOLD);
+                dnTv.setSingleLine(true);
+                dnTv.setEllipsize(TextUtils.TruncateAt.END);
+                dnTv.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+                dRow.addView(dnTv);
+
+                TextView goTv = new TextView(ctx);
+                goTv.setText("Open ›");
+                goTv.setTextColor(Color.parseColor("#94A3B8"));
+                goTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+                dRow.addView(goTv);
+
+                dRow.setOnClickListener(v -> {
+                    etPath.setText(sd.getAbsolutePath());
+                    if (loadDirRef[0] != null) loadDirRef[0].run();
+                    if (refreshChipsHolder[0] != null) refreshChipsHolder[0].run();
+                });
+                listContainer.addView(dRow);
+            }
             List<File> matched = new ArrayList<>();
             for (File f : allEpubsInDir) {
                 String lower = f.getName().toLowerCase(Locale.ROOT);
@@ -421,6 +485,7 @@ public final class FolioFolderBrowserDialog {
             displayLimit[0] = 60;
             selectedFiles.clear();
             allEpubsInDir.clear();
+            subDirsInDir.clear();
             updateImportLabel.run();
 
             String dirPath = etPath.getText().toString().trim();
@@ -441,13 +506,17 @@ public final class FolioFolderBrowserDialog {
                         .edit().putString("last_import_dir", dirPath).apply();
             } catch (Throwable ignored) {}
             for (File f : children) {
-                if (f.isFile() && f.getName().toLowerCase(Locale.ROOT).endsWith(".epub")) {
+                if (f.isDirectory() && !f.getName().startsWith(".")) {
+                    subDirsInDir.add(f);
+                } else if (f.isFile() && f.getName().toLowerCase(Locale.ROOT).endsWith(".epub")) {
                     allEpubsInDir.add(f);
                 }
             }
+            subDirsInDir.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
             allEpubsInDir.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
             renderList.run();
         };
+        loadDirRef[0] = loadDir;
 
         final Runnable[] refreshDirChipsRef = new Runnable[1];
         refreshDirChipsRef[0] = () -> {
@@ -494,6 +563,20 @@ public final class FolioFolderBrowserDialog {
                 chipRow.addView(chip);
             }
         };
+        refreshChipsHolder[0] = refreshDirChipsRef[0];
+
+        btnUpDir.setOnClickListener(v -> {
+            String cur = etPath.getText() != null ? etPath.getText().toString().trim() : "";
+            File curF = new File(cur);
+            File parent = curF.getParentFile();
+            if (parent != null && parent.isDirectory() && parent.canRead()) {
+                etPath.setText(parent.getAbsolutePath());
+                loadDir.run();
+                refreshDirChipsRef[0].run();
+            } else {
+                Toast.makeText(ctx, "Already at top readable folder", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         btnPinDir.setOnClickListener(v -> {
             String curDir = etPath.getText() != null ? etPath.getText().toString().trim() : "";
