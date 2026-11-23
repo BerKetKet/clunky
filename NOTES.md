@@ -1362,7 +1362,29 @@
      - `verify_r108_about_v108.png` (355,115 bytes): About Folio modal showing `Version: Folio v10.8 KFX (Enhanced Typesetting)` and `Publisher CSS Fidelity (sans-serif, margins, border-bottom & tracking)` line.
   3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).
   4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+---
+
+# Round 109: YellowJersey Border Color & Chapter Rule Parity (Folio v10.9 KFX)
+
+- **Current State**: Round 109 fully complete. Task A (Rust engine + Java UI build and staging) and Task B (Hardware verification on Samsung Galaxy M32) 100% verified. Report 109 submitted to Gemini Neon; autonomous runner monitoring for Round 110 (`to_antig_clunky_round_110.zip`).
+  1. **Engine & Java Integration (Task A - COMPLETE)**:
+     - Integrated `dropin_rust/src/epub/css_style.rs` and `dropin_rust/src/packager/styles.rs` into `kfx_converter`.
+     - Lowered quantized margin thresholds to `margin-top` min 1.0em and `margin-bottom` min 0.8em for accurate publisher chapter spacing.
+     - Emitted explicit `border_color_bottom` (`$86 = 0xFF808080`, neutral dark gray visible across both White and Dark themes) for YellowJersey `$solid` bottom border overrides.
+     - Automatically attached generous `1.2em` bottom margin under `border_bottom` blocks.
+     - Enhanced `<hr/>` rule (`hr_val`) with `border_style_bottom` (`$91`), `border_weight_bottom` (`$96`, 0.06em), and `border_color_bottom` (`$86`).
+     - Ran full `cargo test` suite in `kfx_converter/`: all 210 tests passed (164 unit, 13 CLI, 16 container, 8 pipeline, 9 sync sanitize).
+     - Cross-compiled release binary for `aarch64-linux-android`, stripped with Android NDK `llvm-strip` down to 4.6 MB, and staged to `07_APK_EPUB_INGESTION_MOD/lib/arm64-v8a/libkfxconv.so`.
+     - Integrated `FolioMoreView.java` with version bump to `Folio v10.9 KFX (Enhanced Typesetting)`. Preserved `MetadataEnricher.java` and `OpenCatalogView.java`.
+     - Recompiled `classes9.dex` (366,228 bytes), repacked base APK as `classes4.dex`, aligned with `zipalign`, and signed with `apksigner`.
+     - Installed on Samsung Galaxy M32 (`lastUpdateTime=2026-11-24 02:45:02`) and staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.9_kfx/base.apk` (132 MB).
+     - Re-converted `/sdcard/en/0/Chuck Palahniuk - Fight Club.epub` on device in 210.67ms (507,541 bytes).
+  2. **Hardware Verification on Physical Galaxy M32 (Task B - COMPLETE)**:
+     - `verify_r109_fight_club_page3_border.png` (315,025 bytes): Chapter 1 opening in Folio (Compact / White / Bookerly) confirming generous publisher top spacing (`CHAPTER 1` at `Y = 218`), `1.2em` bottom breathing room pushing opening body text to `Y = 358`, and body text ending at `Y = 2109` (total vertical text height 1,891 px, matching Stock Kindle's 1,877 px within 14 pixels).
+     - `verify_r109_about_v109.png` (355,143 bytes): About Folio modal showing `Version: Folio v10.9 KFX (Enhanced Typesetting)` and live stats.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
   5. **Submission**:
-     - Submitted `antig_to_gemini_neon_clunky_report108.zip` (629 KB) to Gemini Neon tab `837018552`.
-     - Launched `tools/autonomous_relay_runner.mjs 109 2000` to monitor for Round 109 response.
+     - Submitted `antig_to_gemini_neon_clunky_report109.zip` (599 KB) to Gemini Neon tab `837018552`.
+     - Launching `tools/autonomous_relay_runner.mjs 110 2000` to monitor for Round 110 response.
 
