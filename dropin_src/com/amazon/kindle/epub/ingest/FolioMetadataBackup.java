@@ -411,4 +411,120 @@ public final class FolioMetadataBackup {
             db.close();
         }
     }
+
+    public static File getHtmlFile(Context ctx) {
+        return new File(getBackupFile(ctx).getParentFile(), "folio_library.html");
+    }
+
+    private static String htmlEsc(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
+    }
+
+    public static File exportLibraryHtml(Context ctx) {
+        FolioMetadataDb db = new FolioMetadataDb(ctx);
+        try {
+            List<FolioMetadataDb.BookRecord> all = db.getAllBooks();
+            java.util.Map<String, Integer> progMap = FolioMetadataCatalogDialog.loadProgressMap(ctx);
+            int finished = 0, reading = 0, favs = 0, queued = 0;
+            for (FolioMetadataDb.BookRecord r : all) {
+                Integer pv = (r.kfxPath != null) ? progMap.get(r.kfxPath) : null;
+                int p = pv != null ? pv : 0;
+                if (p >= 100) finished++;
+                else if (p > 0) reading++;
+                if (FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath)) favs++;
+                if (FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath)) queued++;
+            }
+            int goalTarget = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .getInt("reading_goal_target", 12);
+            if (goalTarget <= 0) goalTarget = 12;
+            int goalPct = Math.min(100, Math.round((finished * 100f) / goalTarget));
+            String dateStr = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                    .format(new java.util.Date());
+
+            StringBuilder h = new StringBuilder();
+            h.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">");
+            h.append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
+            h.append("<title>Folio Offline Library Catalog</title>");
+            h.append("<style>body{margin:0;padding:24px;background:#0f1219;color:#f3f4f6;font-family:system-ui,-apple-system,sans-serif;}");
+            h.append(".wrap{max-width:900px;margin:0 auto;}h1{margin:0 0 6px;font-size:24px;}");
+            h.append(".sub{color:#94a3b8;font-size:13px;margin-bottom:16px;}");
+            h.append(".bar{height:8px;background:#1e2433;border-radius:6px;overflow:hidden;margin:8px 0 18px;}");
+            h.append(".fill{height:100%;background:#34d399;width:").append(goalPct).append("%;}");
+            h.append("#q{width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid #2a3142;background:#161b26;color:#fff;font-size:14px;margin-bottom:16px;}");
+            h.append(".card{background:#171c28;border:1px solid #262e40;border-radius:10px;padding:14px 16px;margin-bottom:10px;}");
+            h.append(".t{font-weight:700;font-size:15px;margin-bottom:3px;}.a{color:#94a3b8;font-size:12.5px;}");
+            h.append(".tags{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px;font-weight:700;}");
+            h.append(".tag{padding:2px 8px;border-radius:8px;background:#1e2433;color:#cbd5e1;}");
+            h.append(".done{background:#122b24;color:#34d399;}.rd{background:#152638;color:#38bdf8;}");
+            h.append(".q{background:#2b1b3d;color:#c084fc;}.sh{background:#1e223b;color:#a5b4fc;}");
+            h.append(".note{margin-top:8px;padding:8px 10px;background:#1f1b14;border-left:3px solid #f59e0b;color:#fde68a;font-size:12.5px;border-radius:4px;}");
+            h.append("</style></head><body><div class=\"wrap\">");
+            h.append("<h1>Folio Offline Library Catalog</h1>");
+            h.append("<div class=\"sub\">Exported ").append(dateStr).append(" · ")
+             .append(all.size()).append(" books · ").append(reading).append(" reading · ")
+             .append(finished).append(" finished · ").append(favs).append(" fav · ")
+             .append(queued).append(" queued · Goal ").append(finished).append("/").append(goalTarget)
+             .append(" (").append(goalPct).append("%)</div>");
+            h.append("<div class=\"bar\"><div class=\"fill\"></div></div>");
+            h.append("<input id=\"q\" placeholder=\"Filter books by title, author, shelf, or note...\" oninput=\"f()\">");
+            h.append("<div id=\"list\">");
+
+            for (FolioMetadataDb.BookRecord r : all) {
+                String t = r.title != null ? r.title : "Untitled";
+                String a = FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
+                String yr = EpubMetadataExtractor.normalizePubDate(r.pubDate);
+                Integer pv = (r.kfxPath != null) ? progMap.get(r.kfxPath) : null;
+                int pct = pv != null ? pv : 0;
+                boolean fav = FolioMetadataCatalogDialog.isFavorite(ctx, r.kfxPath);
+                boolean inQ = FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath);
+                int stars = FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath);
+                String sh = FolioMetadataCatalogDialog.getShelf(ctx, r.kfxPath);
+                String finDt = FolioMetadataCatalogDialog.getFinishedDate(ctx, r.kfxPath);
+                String note = FolioMetadataCatalogDialog.getNote(ctx, r.kfxPath);
+
+                h.append("<div class=\"card\">");
+                h.append("<div class=\"t\">").append(fav ? "★ " : "").append(htmlEsc(t)).append("</div>");
+                h.append("<div class=\"a\">").append(htmlEsc(a.isEmpty() ? "Unknown Author" : a));
+                if (!yr.isEmpty()) h.append(" · ").append(htmlEsc(yr));
+                if (r.publisher != null && !r.publisher.isEmpty()) h.append(" · ").append(htmlEsc(r.publisher));
+                h.append("</div><div class=\"tags\">");
+                if (pct >= 100) {
+                    h.append("<span class=\"tag done\">✓ Finished").append(finDt.isEmpty() ? "" : " " + htmlEsc(finDt)).append("</span>");
+                } else if (pct > 0) {
+                    h.append("<span class=\"tag rd\">").append(pct).append("% read</span>");
+                }
+                if (inQ) h.append("<span class=\"tag q\">📌 Up Next</span>");
+                if (stars > 0) h.append("<span class=\"tag\" style=\"color:#fbbf24\">★ ").append(stars).append("/5</span>");
+                if (!sh.isEmpty()) h.append("<span class=\"tag sh\">🏷 ").append(htmlEsc(sh)).append("</span>");
+                h.append("</div>");
+                if (!note.isEmpty()) {
+                    h.append("<div class=\"note\">").append(htmlEsc(note)).append("</div>");
+                }
+                h.append("</div>");
+            }
+            h.append("</div></div><script>function f(){var v=document.getElementById('q').value.toLowerCase();");
+            h.append("document.querySelectorAll('.card').forEach(function(c){c.style.display=c.textContent.toLowerCase().indexOf(v)>=0?'':'none';});}</script>");
+            h.append("</body></html>");
+
+            File out = getHtmlFile(ctx);
+            FileOutputStream fos = new FileOutputStream(out);
+            try {
+                fos.write(h.toString().getBytes(StandardCharsets.UTF_8));
+                fos.flush();
+            } finally {
+                fos.close();
+            }
+            Log.i(TAG, "Exported HTML catalog (" + all.size() + " books) to " + out.getAbsolutePath());
+            return out;
+        } catch (Throwable t) {
+            Log.e(TAG, "HTML export failed", t);
+            return null;
+        } finally {
+            db.close();
+        }
+    }
 }

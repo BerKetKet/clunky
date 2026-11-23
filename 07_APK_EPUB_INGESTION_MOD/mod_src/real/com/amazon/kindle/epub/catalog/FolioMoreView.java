@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v10.5 KFX");
+        badgeTv.setText("Folio v10.6 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3530,11 +3530,11 @@ public final class FolioMoreView {
         topExportRow.addView(spacer);
 
         TextView csvBtn = new TextView(ctx);
-        csvBtn.setText("📊 Export CSV");
+        csvBtn.setText("📊 CSV");
         csvBtn.setTextColor(0xFFF59E0B);
         csvBtn.setTextSize(11);
         csvBtn.setTypeface(Typeface.DEFAULT_BOLD);
-        csvBtn.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
+        csvBtn.setPadding(dp(d, 9), dp(d, 5), dp(d, 9), dp(d, 5));
         GradientDrawable csvBg = new GradientDrawable();
         csvBg.setColor(0xFF282216);
         csvBg.setCornerRadius(dp(d, 10));
@@ -3552,6 +3552,34 @@ public final class FolioMoreView {
             }
         });
         topExportRow.addView(csvBtn);
+
+        TextView htmlBtn = new TextView(ctx);
+        htmlBtn.setText("🌐 HTML");
+        htmlBtn.setTextColor(0xFF38BDF8);
+        htmlBtn.setTextSize(11);
+        htmlBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        htmlBtn.setPadding(dp(d, 9), dp(d, 5), dp(d, 9), dp(d, 5));
+        GradientDrawable htmlBg = new GradientDrawable();
+        htmlBg.setColor(0xFF152638);
+        htmlBg.setCornerRadius(dp(d, 10));
+        htmlBg.setStroke(dp(d, 1), 0x6638BDF8);
+        htmlBtn.setBackground(htmlBg);
+        LinearLayout.LayoutParams htmlLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        htmlLp.leftMargin = dp(d, 6);
+        htmlBtn.setLayoutParams(htmlLp);
+        htmlBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                File htmlFile = com.amazon.kindle.epub.ingest.FolioMetadataBackup.exportLibraryHtml(ctx);
+                if (htmlFile != null) {
+                    pathTv.setText("Saved HTML: " + htmlFile.getAbsolutePath());
+                    Toast.makeText(ctx, "Exported offline HTML catalog (" + htmlFile.getName() + ")", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(ctx, "HTML export failed", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        topExportRow.addView(htmlBtn);
         box.addView(topExportRow);
 
         ScrollView sv = new ScrollView(ctx);
@@ -3684,7 +3712,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v10.5 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v10.6 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
