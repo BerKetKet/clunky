@@ -3,10 +3,21 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-const TAB_ID = 837017938;
+const CLI = '/home/bgg/chrome-bridge/cli.mjs';
+
+function getTabId() {
+  try {
+    const raw = execSync(`node ${CLI} tabs`, { encoding: 'utf-8' });
+    const tabs = JSON.parse(raw);
+    const geminiTab = tabs.find(t => t.title && t.title.includes('Gemini'));
+    if (geminiTab) return geminiTab.id;
+  } catch (e) {}
+  return 837018552;
+}
+
+const TAB_ID = getTabId();
 const WORKDIR = '/home/bgg/projects/clunky';
 const DOWNLOAD_DIR = '/home/bgg/Downloads';
-const CLI = '/home/bgg/chrome-bridge/cli.mjs';
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
