@@ -1,19 +1,24 @@
 {
-  "round": 107,
+  "round": 108,
   "project": "Folio",
-  "version": "Folio v10.7 KFX",
+  "version": "Folio v10.8 KFX",
   "sender": "gemini",
   "receiver": "antigravity",
+  "dropin_rust_files": [
+    "dropin_rust/src/epub/css_style.rs",
+    "dropin_rust/src/packager/styles.rs",
+    "dropin_rust/src/packager/storylines.rs"
+  ],
   "dropin_files": [
-    "dropin_src/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java",
     "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java"
   ],
   "invariants": [
     "Stock com.amazon.kindle must remain 100% untouched",
-    "Do NOT overwrite MetadataEnricher.java or OpenCatalogView.java"
+    "Do NOT overwrite MetadataEnricher.java or OpenCatalogView.java",
+    "Cover Architecture: standalone $270 cover container + .cover.jpg sidecar (never reflowable spine page)"
   ],
   "verification_screenshots": [
-    "verify_r107_importer_subfolders.png",
-    "verify_r107_about_v107.png"
+    "verify_r108_fight_club_page2.png",
+    "verify_r108_fight_club_page3.png"
   ]
 }

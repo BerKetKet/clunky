@@ -28,17 +28,21 @@ zipalign -f -p 4 "${WORK_DIR}/base_cloned_raw.apk" "${WORK_DIR}/signed_splits/ba
 apksigner sign --ks "${KEYSTORE}" --ks-pass pass:android --ks-key-alias "${ALIAS}" --key-pass pass:android "${WORK_DIR}/signed_splits/base.apk"
 
 echo "[4/5] Streamed install to device..."
-if [[ $(ls -1 "${WORK_DIR}/signed_splits/"*.apk | wc -l) -gt 1 ]]; then
-    adb install-multiple -r -d "${WORK_DIR}/signed_splits/"*.apk
+if adb get-state >/dev/null 2>&1; then
+    if [[ $(ls -1 "${WORK_DIR}/signed_splits/"*.apk | wc -l) -gt 1 ]]; then
+        adb install-multiple -r -d "${WORK_DIR}/signed_splits/"*.apk
+    else
+        adb install -r -d "${WORK_DIR}/signed_splits/base.apk"
+    fi
 else
-    adb install -r -d "${WORK_DIR}/signed_splits/base.apk"
+    echo "Device not currently attached via adb; skipping install for now."
 fi
 
-echo "[5/5] Staging Folio v10.7 KFX release..."
-mkdir -p "${MOD_ROOT}/release/folio_v10.7_kfx"
-cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/folio_v10.7_kfx/base.apk"
+echo "[5/5] Staging Folio v10.8 KFX release..."
+mkdir -p "${MOD_ROOT}/release/folio_v10.8_kfx"
+cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/folio_v10.8_kfx/base.apk"
 if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
-    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/folio_v10.7_kfx/base.apk.idsig"
+    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/folio_v10.8_kfx/base.apk.idsig"
 fi
 
-echo "Fast rebuild, deploy, and Folio v10.7 KFX staging successful!"
+echo "Fast rebuild, deploy, and Folio v10.8 KFX staging successful!"

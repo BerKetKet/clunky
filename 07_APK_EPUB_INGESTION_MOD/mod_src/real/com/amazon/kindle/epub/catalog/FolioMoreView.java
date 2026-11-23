@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v10.7 KFX");
+        badgeTv.setText("Folio v10.8 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3712,7 +3712,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v10.7 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v10.8 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
@@ -3739,7 +3739,7 @@ public final class FolioMoreView {
         sb.append("• Enhanced Blockquote Spacing & Italic Typography\n");
         sb.append("• Native Pop-up Footnotes ($616/$617, $615/$281)\n");
         sb.append("• Rich Code Blocks (<pre>/<code>), <hr/> Rules & Inlines\n");
-        sb.append("• Native $266 Anchor Links & $179 Hyperlink Navigation\n\n");
+        sb.append("• Native $266 Anchor Links & $179 Hyperlink Navigation\n• Publisher CSS Fidelity (sans-serif, margins, border-bottom & tracking)\n\n");
 
         sb.append("Live Library & Storage Stats:\n");
         sb.append("• Indexed Library Books: ").append(indexedBooks).append("\n");
