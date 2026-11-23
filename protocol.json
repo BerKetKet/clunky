@@ -1,11 +1,10 @@
 {
-  "round": 103,
+  "round": 104,
   "project": "Folio",
-  "version": "Folio v10.3 KFX",
+  "version": "Folio v10.4 KFX",
   "sender": "gemini",
   "receiver": "antigravity",
   "dropin_files": [
-    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
     "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java"
   ],
   "invariants": [
@@ -13,7 +12,7 @@
     "Do NOT overwrite MetadataEnricher.java or OpenCatalogView.java"
   ],
   "verification_screenshots": [
-    "verify_r103_details_share_pill.png",
-    "verify_r103_about_v103.png"
+    "verify_r104_insights_ratings_share.png",
+    "verify_r104_about_v104.png"
   ]
 }

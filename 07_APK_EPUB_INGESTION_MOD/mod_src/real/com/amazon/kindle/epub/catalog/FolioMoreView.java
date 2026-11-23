@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v10.3 KFX");
+        badgeTv.setText("Folio v10.4 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2883,6 +2883,7 @@ public final class FolioMoreView {
         final java.util.Map<String, Integer> pubFreq = new java.util.HashMap<>();
         final java.util.Map<String, String> pubLabel = new java.util.HashMap<>();
         int favs = 0, noted = 0, shelved = 0, ratedCount = 0, ratingSum = 0;
+        final int[] starBuckets = new int[6];
         int missingCover = 0, missingGenre = 0, missingDesc = 0;
         final java.util.LinkedHashMap<String, Integer> eraFreq = new java.util.LinkedHashMap<>();
         String[] eraOrder = new String[] { "Pre-1900", "1900–1949", "1950–1999", "2000–2009", "2010–2019", "2020+" };
@@ -2950,7 +2951,7 @@ public final class FolioMoreView {
                 if (!pubLabel.containsKey(pk)) pubLabel.put(pk, pClean);
             }
             int st = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getRating(ctx, r.kfxPath);
-            if (st > 0) { ratedCount++; ratingSum += st; }
+            if (st >= 1 && st <= 5) { ratedCount++; ratingSum += st; starBuckets[st]++; }
         }
 
         java.util.List<String> topAuthors = new java.util.ArrayList<>(authorFreq.keySet());
@@ -3289,12 +3290,101 @@ public final class FolioMoreView {
             }
         }
 
+        // Section 5: Star Ratings Distribution (when rated books exist)
+        if (ratedCount > 0) {
+            TextView rHdr = new TextView(ctx);
+            rHdr.setText("STAR RATINGS · " + avgStr.toUpperCase(java.util.Locale.US) + " (TAP TO BROWSE)");
+            rHdr.setTextColor(0xFFFBBF24);
+            rHdr.setTextSize(11);
+            rHdr.setTypeface(Typeface.DEFAULT_BOLD);
+            rHdr.setPadding(0, dp(d, 14), 0, dp(d, 8));
+            content.addView(rHdr);
+
+            int maxR = 1;
+            for (int s = 1; s <= 5; s++) if (starBuckets[s] > maxR) maxR = starBuckets[s];
+            for (int s = 5; s >= 1; s--) {
+                if (starBuckets[s] <= 0) continue;
+                StringBuilder stLbl = new StringBuilder();
+                for (int k = 0; k < s; k++) stLbl.append("★");
+                stLbl.append(" (").append(s).append("★)");
+                content.addView(makeInsightBarRow(ctx, d, stLbl.toString(), starBuckets[s], maxR, 0xFFFBBF24,
+                        new View.OnClickListener() {
+                            @Override public void onClick(View v) {
+                                if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
+                                com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "All");
+                            }
+                        }));
+            }
+        }
+
         sv.addView(content);
         root.addView(sv);
+
+        // Build shareable Library Insights Snapshot text
+        int goalTgt = getReadingGoalTarget(ctx);
+        int goalPct = Math.min(100, Math.round((finCnt * 100f) / Math.max(1, goalTgt)));
+        int yrNow = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+        StringBuilder snap = new StringBuilder();
+        snap.append("📊 Folio Library Insights\n");
+        snap.append("Books: ").append(all.size()).append(" cataloged · ")
+            .append(readCnt).append(" reading · ").append(finCnt).append(" finished · ")
+            .append(unrdCnt).append(" unread\n");
+        snap.append(yrNow).append(" Goal: ").append(finCnt).append("/").append(goalTgt)
+            .append(" (").append(goalPct).append("%)\n");
+        snap.append("Curation: ").append(favs).append(" fav · ").append(noted).append(" noted · ")
+            .append(shelved).append(" shelved · ")
+            .append(com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.countQueue(ctx)).append(" queued · ")
+            .append(avgStr).append("\n");
+        snap.append("Metadata Health: ").append(healthPct).append("% complete\n");
+        if (datedCount > 0) {
+            snap.append("Publication Span: ").append(minYear).append("–").append(maxYear).append("\n");
+        }
+        if (!topGenres.isEmpty()) {
+            snap.append("Top Genres: ");
+            for (int i = 0; i < Math.min(3, topGenres.size()); i++) {
+                if (i > 0) snap.append(", ");
+                String gk = topGenres.get(i);
+                snap.append(genreLabel.get(gk)).append(" (").append(genreFreq.get(gk)).append(")");
+            }
+            snap.append("\n");
+        }
+        if (!topAuthors.isEmpty()) {
+            snap.append("Top Authors: ");
+            for (int i = 0; i < Math.min(3, topAuthors.size()); i++) {
+                if (i > 0) snap.append(", ");
+                String ak = topAuthors.get(i);
+                snap.append(authorLabel.get(ak)).append(" (").append(authorFreq.get(ak)).append(")");
+            }
+            snap.append("\n");
+        }
+        final String snapshotText = snap.toString().trim();
 
         insightDlgRef[0] = new AlertDialog.Builder(ctx)
                 .setView(root)
                 .setPositiveButton("Close", null)
+                .setNeutralButton("Copy Summary", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                                    ctx.getSystemService(Context.CLIPBOARD_SERVICE);
+                            if (cm != null) {
+                                cm.setPrimaryClip(android.content.ClipData.newPlainText("Folio Library Insights", snapshotText));
+                                Toast.makeText(ctx, "Copied Library Insights summary", Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+                })
+                .setNegativeButton("Share", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            Intent share = new Intent(Intent.ACTION_SEND);
+                            share.setType("text/plain");
+                            share.putExtra(Intent.EXTRA_SUBJECT, "Folio Library Insights");
+                            share.putExtra(Intent.EXTRA_TEXT, snapshotText);
+                            ctx.startActivity(Intent.createChooser(share, "Share Library Insights"));
+                        } catch (Throwable ignored) {}
+                    }
+                })
                 .show();
     }
 
@@ -3589,7 +3679,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v10.3 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v10.4 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
