@@ -1,62 +1,49 @@
-# Folio Release Report: Quick Search Scope Filter Pills & Recent Search History (Round 101)
-
-**Date:** 2026-11-23  
-**Target Package:** `com.amazon.kindle.epub` (Folio v10.1 KFX)  
-**Target Hardware:** Samsung Galaxy M32 (`32001776e8e82623`, Android 13 OneUI 5.1 arm64-v8a)  
-**Stock Invariant:** `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Staged Release APK:** `07_APK_EPUB_INGESTION_MOD/release/folio_v10.1_kfx/base.apk` (137 MB / 137,473,734 bytes)
+# Round 102 Deliverables Report — Folio v10.2 KFX
+**Environment**: Samsung Galaxy M32 (`32001776e8e82623`), TrebleDroid Android 13 (arm64-v8a).  
+**Stock Kindle Invariant**: Package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
+**Folio Version**: `Folio v10.2 KFX (Enhanced Typesetting)` installed at `2026-11-23 02:59:27`.
 
 ---
 
-## 1. Executive Summary
+## 1. Task A: Drop-In Code Integration & Release Staging
+1. **Drop-In Files Integrated**:
+   - `dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java` -> `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java`:
+     - Exposed public helper `FolioMetadataCatalogDialog.showBookDetails(final Context ctx, final FolioMetadataDb.BookRecord rec, final int currentProgress)` to open full book metadata details directly from external UI components.
+   - `dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java` -> `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java`:
+     - **1-Tap `ⓘ` Book Details Launcher**: Added dedicated slate-gray `ⓘ` button right beside `Read ›` on every Quick Library Search result row. Tapping `ⓘ` saves recent search query, dismisses search modal, and launches full Book Details dialog.
+     - **Styled `📖` Cover Art Placeholder**: Encapsulated cover art in rounded `#0D1017` `FrameLayout` (border `#232A3A`, 4dp radius). If a book has no `.cover.jpg` bitmap (e.g. *The 210th Day*), renders a crisp centered `📖` glyph, eliminating blank black squares.
+     - **Version Bump**: Bumped badge and About Folio dialog to `Folio v10.2 KFX (Enhanced Typesetting)`.
+   - Invariant: `MetadataEnricher.java` and `OpenCatalogView.java` were strictly preserved and not overwritten.
 
-In Round 101, Folio advanced to **Folio v10.1 KFX**. Drop-in updates were integrated into `FolioMoreView.java`. Antigravity compiled Dalvik DEX (`classes9.dex`, 351,208 B), rebuilt, aligned, signed, and deployed the updated APK to physical Samsung Galaxy M32 hardware. Physical hardware verification confirmed:
-1. **🔍 Quick Search Scope Filter Pills (`FolioMoreView.java`)**:
-   - Added an interactive horizontal strip of 5 quick scope filter pills directly below the search input:
-     - `All`
-     - `📖 Reading`
-     - `📝 Notes`
-     - `📌 Queue`
-     - `🏷 Shelves`
-   - Active scope pill renders with warm amber fill (`#F59E0B`) and dark text.
-   - Tapping any scope pill updates results immediately in real time, seamlessly combining with query text.
-2. **🕒 Persistent Recent Search History (`FolioMoreView.java`)**:
-   - Automatically stores up to 5 recent queries in `SharedPreferences("folio_ui_prefs", "recent_global_searches")`.
-   - When the search bar is empty, displays recent search chips with 1-tap recall and a `Clear` button.
-3. **Control Center & About Version Bump (`FolioMoreView.java`)**:
-   - Bumped Control Center header badge and About Folio dialog string to **Folio v10.1 KFX (Enhanced Typesetting)**.
-4. **Stock Package Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% untouched, intact, and read-only (`lastUpdateTime=2026-11-19 21:59:23`).
+2. **Compilation, Packaging & Deployment**:
+   - Rebuilt `classes9.dex` (352,404 B) via `d8`.
+   - Reassembled APK with `apktool b`, aligned via `zipalign -f -p 4`, and signed with `apksigner`.
+   - Streamed APK install to physical Samsung Galaxy M32 (`32001776e8e82623`).
+   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.2_kfx/base.apk` (137,473,734 B).
 
 ---
 
-## 2. Integrated Features in Folio v10.1 KFX
-
-### A. Quick Search Scope Filter Architecture (`FolioMoreView.java`)
-- Scope Pill Definition & Binding:
-  ```java
-  final String[] scopeKeys = new String[] { "ALL", "READING", "NOTES", "QUEUE", "SHELVES" };
-  final String[] scopeLabels = new String[] { "All", "📖 Reading", "📝 Notes", "📌 Queue", "🏷 Shelves" };
-  final String[] activeScope = new String[] { "ALL" };
-  ```
-- Instant Category Filtering in `renderResults`:
-  - `READING`: filters to books with active reading progress (`0 < pct < 100`).
-  - `NOTES`: filters to books containing personal annotations.
-  - `QUEUE`: filters to volumes present in `SharedPreferences("folio_queue")`.
-  - `SHELVES`: isolates custom shelf tags.
+## 2. Task B: Hardware Verification on Physical Galaxy M32
+1. **`verify_r102_search_info_placeholder.png` (294,642 bytes)**:
+   - Captured Quick Library Search modal with `📖 Reading` filter pill active.
+   - Verified *The 210th Day* displays the styled rounded frame with centered `📖` glyph fallback instead of an empty square.
+   - Verified new `ⓘ` button beside `Read ›` on every reading card row.
+2. **`verify_r102_about_v102.png` (341,699 bytes)**:
+   - Captured About Folio dialog confirming `Version: Folio v10.2 KFX (Enhanced Typesetting)`.
+   - Live telemetry: 29 indexed books, 27 enriched records, 5 in progress, 1 finished, 1 queued.
+3. **Stock Kindle Package Invariant**:
+   - `adb shell dumpsys package com.amazon.kindle | grep -E "versionName|lastUpdateTime"`
+   - `versionName=8.160.1.0(2.0.124621.0)`
+   - `lastUpdateTime=2026-11-19 21:59:23` (100% UNTOUCHED).
 
 ---
 
-## 3. Physical Hardware Verification on Galaxy M32
-
-| Verification Item | Target Screen | Evidence | Result |
-| :--- | :--- | :--- | :--- |
-| **Search Scope Pills** | Quick Search Modal | `verify_r101_search_scope_pills.png` | **VERIFIED**: Tapped `🔍 Search` in Control Center header; tapped `📖 Reading` scope pill; verified active amber fill on `📖 Reading` and instant category filtration displaying currently read volumes (*The 210th Day*, *Sophocles*, *Aristotle*, *Island*, *Brave New World*) with reading percentage badges and `Read ›` buttons (`[117, 508][963, 1882]`). |
-| **About Folio v10.1 KFX** | About Folio Modal | `verify_r101_about_v101.png` | **VERIFIED**: Tapped Control Center version badge; verified modal confirming `Version: Folio v10.1 KFX (Enhanced Typesetting)` and live stats. |
-| **Stock Kindle Invariant** | Android OS PackageManager | CLI `dumpsys package com.amazon.kindle` | **VERIFIED**: `lastUpdateTime=2026-11-19 21:59:23` completely untouched. |
+## 3. Project Lead Architectural Directive on Cover Architecture
+Reiterating the project lead directive verbatim:
+> "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 
 ---
 
-## 4. Architectural Directive for Manager AI (Cover Rendering Path)
-
-> **MANDATORY ARCHITECTURAL DIRECTIVE (Reiterated Verbatim):**  
-> *"The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."*
+## 4. Deliverables Staging
+- Release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.2_kfx/base.apk`
+- Archive: `antig_to_gemini_neon_clunky_report102.zip` containing `REPORT.md`, `INSTRUCTIONS_ROUND_102.md`, `protocol.json`, `verify_r102_search_info_placeholder.png`, and `verify_r102_about_v102.png`.

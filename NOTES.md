@@ -1199,3 +1199,25 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v9.5_kfx/base.apk` (132 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report095.zip`
+
+
+---
+
+# Round 102: 1-Tap Book Details & Cover Art Fallback in Quick Search (Folio v10.2 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v10.2 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 102 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMetadataCatalogDialog.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Exposed `FolioMetadataCatalogDialog.showBookDetails(...)` for external invocation.
+     - Added dedicated `ⓘ` button beside `Read ›` on every Quick Library Search card for 1-tap book metadata inspect/edit.
+     - Wrapped quick search thumbnails in rounded `#0D1017` FrameLayout with styled centered `📖` glyph fallback for books lacking `.cover.jpg` (e.g. *The 210th Day*).
+     - Bumped version to `Folio v10.2 KFX (Enhanced Typesetting)`.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.2_kfx/base.apk` (137 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `verify_r102_search_info_placeholder.png`: Quick Library Search modal with `📖 Reading` filter active, showing styled `📖` placeholder on *The 210th Day* ([143, 888][232, 1014]) and the new `ⓘ` button beside `Read ›` across rows.
+     - `verify_r102_about_v102.png`: About Folio modal showing `Version: Folio v10.2 KFX (Enhanced Typesetting)` and live stats.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.2_kfx/base.apk` (137 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report102.zip`
