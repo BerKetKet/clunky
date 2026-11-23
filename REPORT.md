@@ -1,39 +1,40 @@
-# Round 106 Deliverables Report — Folio v10.6 KFX
+# Round 107 Deliverables Report — Folio v10.7 KFX
 **Environment**: Samsung Galaxy M32 (`32001776e8e82623`), TrebleDroid Android 13 (arm64-v8a).  
 **Stock Kindle Invariant**: Package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Folio Version**: `Folio v10.6 KFX (Enhanced Typesetting)` installed at `2026-11-23 03:30:49`.
+**Folio Version**: `Folio v10.7 KFX (Enhanced Typesetting)` installed at `2026-11-23 03:41:09`.
 
 ---
 
 ## 1. Task A: Drop-In Code Integration & Release Staging
 1. **Drop-In Files Integrated**:
-   - `dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java` -> `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java`:
-     - **Self-Contained Offline HTML Catalog Exporter**: Added `exportLibraryHtml(Context ctx)` writing directly to `/sdcard/kindle/backups/folio_library.html` (verified 7,486 bytes).
-     - **Interactive Standalone Features**: Renders a dark-themed (`#0F1219`) responsive web catalog with embedded CSS, live annual reading goal progress bar (`#34D399`), status badges (`✓ Finished`, `X% read`, `📌 Up Next`, `🏷 Shelf`, `★ Rating`), personal notes in amber quote callouts, and an embedded zero-dependency instant client-side search bar (`#q`).
+   - `dropin_src/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java` -> `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java`:
+     - **⬆ Parent Folder Button**: Added a compact, styled `⬆` parent-directory button directly to the left of the path input, enabling 1-tap upward directory traversal (`/sdcard/en/0` -> `/sdcard/en` -> `/sdcard`).
+     - **Clickable 📁 Subfolder Rows**: Renders non-hidden subdirectories at the top of the folder list as clickable warm-amber `📁 <folderName>  Open ›` cards, allowing instant drilling into nested EPUB folders without typing paths manually.
+     - **Hardened Event Binding**: Cleanly decoupled `btnUpDir` click handling from the quick-chip loop so parent navigation works immediately upon dialog opening and dynamically refreshes pinned/quick directory chips.
    - `dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java` -> `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java`:
-     - **3-Pill Export Toolbar**: Added sky-blue `🌐 HTML` pill right beside `📊 CSV` and `✨ Scope: Curated Only` in the `Reading Log (.md)` dialog toolbar.
-     - **Path Feedback**: Updates file path label dynamically to `Saved HTML: /sdcard/kindle/backups/folio_library.html`.
-     - **Version Bump**: Bumped badge and About Folio dialog to `Folio v10.6 KFX (Enhanced Typesetting)`.
+     - **Version Bump**: Bumped badge and About Folio dialog to `Folio v10.7 KFX (Enhanced Typesetting)`.
    - Invariant: `MetadataEnricher.java` and `OpenCatalogView.java` were strictly preserved and not overwritten.
 
 2. **Compilation, Packaging & Deployment**:
-   - Rebuilt `classes9.dex` (363,488 B) via `d8`.
+   - Rebuilt `classes9.dex` (366,152 B) via `d8`.
    - Reassembled APK with `apktool b`, aligned via `zipalign -f -p 4`, and signed with `apksigner`.
    - Streamed APK install to physical Samsung Galaxy M32 (`32001776e8e82623`).
-   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.6_kfx/base.apk` (137,486,022 B).
+   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.7_kfx/base.apk` (137,486,022 B).
 
 ---
 
 ## 2. Task B: Hardware Verification on Physical Galaxy M32
-1. **`verify_r106_reading_log_html_export.png` (238,718 bytes)**:
-   - Captured `Reading Log (.md)` dialog after tapping `🌐 HTML`.
-   - Verified path label showing `Saved HTML: /sdcard/kindle/backups/folio_library.html` ([83, 678][1002, 740]) with the complete 3-pill export toolbar (`✨ Scope: Curated Only`, `📊 CSV`, `🌐 HTML` [840, 740][1002, 807]).
-2. **`verify_r106_about_v106.png` (342,053 bytes)**:
-   - Captured About Folio dialog confirming `Version: Folio v10.6 KFX (Enhanced Typesetting)`.
+1. **`verify_r107_importer_subfolders.png` (137,798 bytes)**:
+   - Captured Batch EPUB Importer after stepping up from `/sdcard/en/0` to `/sdcard/en` via the new `⬆` parent button ([83, 558][153, 645]).
+   - Verified path input updated to `/sdcard/en` ([169, 557][742, 646]).
+   - Verified clickable subfolder rows rendered at top of list:
+     - `📁 0  Open ›` ([115, 968][970, 1015])
+     - `📁 1  Open ›` ([115, 1079][970, 1126])
+   - Tapped `📁 0` to verify seamless downward navigation and restore `/sdcard/en/0` as `last_import_dir` (displaying all 719 EPUBs).
+2. **`verify_r107_about_v107.png` (341,434 bytes)**:
+   - Captured About Folio dialog confirming `Version: Folio v10.7 KFX (Enhanced Typesetting)`.
    - Live telemetry: 29 indexed books, 27 enriched records, 5 in progress, 1 finished, 1 queued.
-3. **Exported HTML Verification**:
-   - `/sdcard/kindle/backups/folio_library.html` verified intact on hardware: 7,486 bytes.
-4. **Stock Kindle Package Invariant**:
+3. **Stock Kindle Package Invariant**:
    - `adb shell dumpsys package com.amazon.kindle | grep -E "versionName|lastUpdateTime"`
    - `versionName=8.160.1.0(2.0.124621.0)`
    - `lastUpdateTime=2026-11-19 21:59:23` (100% UNTOUCHED).
@@ -47,5 +48,8 @@ Reiterating the project lead directive verbatim:
 ---
 
 ## 4. Deliverables Staging
-- Release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.6_kfx/base.apk`
-- Archive: `antig_to_gemini_neon_clunky_report106.zip` containing `REPORT.md`, `INSTRUCTIONS_ROUND_106.md`, `protocol.json`, `verify_r106_reading_log_html_export.png`, and `verify_r106_about_v106.png`.
+- Release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.7_kfx/base.apk`
+- Hardware Screenshots:
+  - `verify_r107_importer_subfolders.png`
+  - `verify_r107_about_v107.png`
+- Instructions & Protocol: `INSTRUCTIONS_ROUND_107.md`, `protocol.json`

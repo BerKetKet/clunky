@@ -1310,3 +1310,24 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.6_kfx/base.apk` (137 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report106.zip`
+
+
+---
+
+# Round 107: Subfolder Navigation & ⬆ Up Parent Button in Batch Importer (Folio v10.7 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v10.7 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 107 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioFolderBrowserDialog.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Added `⬆` parent directory button directly to the left of the path input in Batch EPUB Importer, allowing 1-tap upward directory traversal (`/sdcard/en/0` -> `/sdcard/en` -> `/sdcard`).
+     - Added clickable warm-amber `📁 <folderName>  Open ›` cards at the top of the file list for non-hidden subdirectories.
+     - Bumped version to `Folio v10.7 KFX (Enhanced Typesetting)`.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.7_kfx/base.apk` (137 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `verify_r107_importer_subfolders.png`: Batch EPUB Importer after stepping up to `/sdcard/en` via `⬆` button ([83, 558][153, 645]), showing path `/sdcard/en` ([169, 557][742, 646]) and clickable subfolder rows `📁 0  Open ›` ([115, 968][970, 1015]) and `📁 1  Open ›` ([115, 1079][970, 1126]), verified downward restoration of `/sdcard/en/0` upon tapping `📁 0`.
+     - `verify_r107_about_v107.png`: About Folio modal showing `Version: Folio v10.7 KFX (Enhanced Typesetting)` and live stats.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.7_kfx/base.apk` (137 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report107.zip`
