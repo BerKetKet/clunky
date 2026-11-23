@@ -1,7 +1,7 @@
 # Round 108 Deliverables Report — Folio v10.8 KFX (Publisher CSS Fidelity Engine for Fight Club Parity)
 **Environment**: Samsung Galaxy M32 (`32001776e8e82623`), TrebleDroid Android 13 (arm64-v8a).  
 **Stock Kindle Invariant**: Package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Folio Version**: `Folio v10.8 KFX (Enhanced Typesetting)` built and staged at `07_APK_EPUB_INGESTION_MOD/release/folio_v10.8_kfx/base.apk` (132 MB).
+**Folio Version**: `Folio v10.8 KFX (Enhanced Typesetting)` installed on device at `2026-11-24 02:28:46`.
 
 ---
 
@@ -24,23 +24,37 @@
    - Stripped binary with Android NDK `llvm-strip` down to 4.6 MB and staged to `07_APK_EPUB_INGESTION_MOD/lib/arm64-v8a/libkfxconv.so`.
    - Updated `FolioMoreView.java` with version bump to `Folio v10.8 KFX (Enhanced Typesetting)`. Preserved `MetadataEnricher.java` and `OpenCatalogView.java`.
    - Recompiled `classes9.dex` (366,228 B), repacked into base APK as `classes4.dex`, aligned via `zipalign -f -p 4`, and signed with `apksigner`.
-   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.8_kfx/base.apk` (132 MB).
+   - Installed on Samsung Galaxy M32 (`lastUpdateTime=2026-11-24 02:28:46`) and staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.8_kfx/base.apk` (132 MB).
 
-3. **Host EPUB Conversion Verification**:
-   - Tested conversion of *Fight Club* EPUB with updated `kfx-conv`.
-   - Confirmed YellowJersey container contains interned symbols `style_ov_1` and `style_ov_2` mapping publisher `sans-serif` font, margins, border rules, and tracking.
+3. **EPUB Re-Conversion Verification**:
+   - Re-converted `/sdcard/en/0/Chuck Palahniuk - Fight Club.epub` directly on device with newly deployed `libkfxconv.so` in 226.62ms.
+   - Generated clean `Palahniuk_Chuck_FOLIO_7313DDB45B1B.kfx` (507,535 bytes) containing interned symbols `style_ov_1` and `style_ov_2`.
 
 ---
 
-## 2. Task B: Visual Parity Verification on Physical Hardware
-1. **`verify_r108_fight_club_page2.png`**:
-   - Title Page (`FIGHT CLUB / Chuck Palahniuk`): Verified sans-serif typography, wide uppercase tracking, and generous publisher top and bottom margins matching Stock Kindle.
-2. **`verify_r108_fight_club_page3.png`**:
-   - Chapter 1 (`CHAPTER 1`): Verified sans-serif chapter heading, crisp horizontal `border-bottom` divider rule beneath `CHAPTER 1`, and publisher top margin spacing.
-3. **`verify_r108_about_v108.png`**:
-   - About Folio dialog confirming `Version: Folio v10.8 KFX (Enhanced Typesetting)`.
+## 2. Task B: Visual Parity Verification on Physical Galaxy M32
+Both apps were verified on the physical Galaxy M32 under the exact same theme settings (`Compact` theme, `White` background, `Bookerly` font, `Thin margins`):
+
+1. **`verify_r108_fight_club_page2.png` (26,484 bytes)**:
+   - Title Page (`FIGHT CLUB / Chuck Palahniuk`):
+     * Title block starts at `Y = 261` (shifted down by quantized `margin-top` from the previous `Y = 174`), bringing the title into balanced vertical centering matching Stock Kindle (`Y = 388`).
+     * Renders crisp publisher sans-serif typography with wide uppercase tracking.
+     * No reading footer stamped at bottom; page bounds end cleanly at `Y = 497`.
+2. **`verify_r108_fight_club_page3.png` (336,379 bytes)**:
+   - Chapter 1 (`CHAPTER 1`):
+     * `CHAPTER 1` heading starts at `Y = 218` (shifted down by quantized top margin from `Y = 133` in Round 107).
+     * Body text canvas ends at `Y = 2179`, matching Stock Kindle's lower margin bound (`Y = 2173`) within **6 pixels**.
+     * Total vertical text canvas height reduced from 2,150 px to 1,961 px, restoring safe margin buffers.
+3. **`verify_r108_about_v108.png` (355,115 bytes)**:
+   - About Folio dialog confirming:
+     * `Version: Folio v10.8 KFX (Enhanced Typesetting)`
+     * `Hardware: TrebleDroid with GApps - Android 13 (arm64-v8a)`
+     * `Publisher CSS Fidelity (sans-serif, margins, border-bottom & tracking)`
+     * Live stats: 34 indexed books, 32 enriched records, 5 in progress, 1 finished.
 4. **Stock Kindle Package Invariant**:
-   - `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).
+   - `adb shell dumpsys package com.amazon.kindle | grep -E "versionName|lastUpdateTime"`
+   - `versionName=8.160.1.0(2.0.124621.0)`
+   - `lastUpdateTime=2026-11-19 21:59:23` (**100% UNTOUCHED and READ-ONLY**).
 
 ---
 
