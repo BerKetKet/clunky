@@ -1344,6 +1344,11 @@ public final class FolioMetadataCatalogDialog {
         return card;
     }
 
+    public static void showBookDetails(final Context ctx, final FolioMetadataDb.BookRecord rec, final int currentProgress) {
+        if (ctx == null || rec == null) return;
+        showBookDetailDialog(ctx, rec, currentProgress, null, null, author -> showWithSearch(ctx, author));
+    }
+
     private static void showBookDetailDialog(final Context ctx, final FolioMetadataDb.BookRecord rec,
                                              final int currentProgress,
                                              final AlertDialog parentDialog, final Runnable onMetadataEdited,

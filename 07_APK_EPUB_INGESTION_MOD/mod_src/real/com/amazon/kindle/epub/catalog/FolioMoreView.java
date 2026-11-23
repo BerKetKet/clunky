@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v10.1 KFX");
+        badgeTv.setText("Folio v10.2 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1797,15 +1797,31 @@ public final class FolioMoreView {
                     cLp.bottomMargin = dp(d, 7);
                     card.setLayoutParams(cLp);
 
-                    android.widget.ImageView covIv = new android.widget.ImageView(ctx);
-                    covIv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-                    covIv.setBackgroundColor(0xFF0D1017);
-                    LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(d, 32), dp(d, 46));
+                    FrameLayout covFrame = new FrameLayout(ctx);
+                    GradientDrawable cfBg = new GradientDrawable();
+                    cfBg.setColor(0xFF0D1017);
+                    cfBg.setCornerRadius(dp(d, 4));
+                    cfBg.setStroke(dp(d, 1), 0xFF232A3A);
+                    covFrame.setBackground(cfBg);
+                    LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(d, 34), dp(d, 48));
                     ivLp.rightMargin = dp(d, 10);
-                    covIv.setLayoutParams(ivLp);
-                    android.graphics.Bitmap bmp = decodeMiniCover(rec.kfxPath, dp(d, 40));
-                    if (bmp != null) covIv.setImageBitmap(bmp);
-                    card.addView(covIv);
+                    covFrame.setLayoutParams(ivLp);
+                    android.graphics.Bitmap bmp = decodeMiniCover(rec.kfxPath, dp(d, 42));
+                    if (bmp != null) {
+                        android.widget.ImageView covIv = new android.widget.ImageView(ctx);
+                        covIv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+                        covIv.setImageBitmap(bmp);
+                        covFrame.addView(covIv, new FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                    } else {
+                        TextView phTv = new TextView(ctx);
+                        phTv.setText("📖");
+                        phTv.setTextSize(14);
+                        phTv.setGravity(Gravity.CENTER);
+                        covFrame.addView(phTv, new FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                    }
+                    card.addView(covFrame);
 
                     LinearLayout mc = new LinearLayout(ctx);
                     mc.setOrientation(LinearLayout.VERTICAL);
@@ -1842,12 +1858,28 @@ public final class FolioMoreView {
                     }
                     card.addView(mc);
 
+                    final int cardPct = pct;
+                    TextView infoPill = new TextView(ctx);
+                    infoPill.setText("ⓘ");
+                    infoPill.setTextColor(0xFF94A3B8);
+                    infoPill.setTextSize(14);
+                    infoPill.setPadding(dp(d, 8), dp(d, 6), dp(d, 6), dp(d, 6));
+                    infoPill.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            String curQ = searchEt.getText() != null ? searchEt.getText().toString().trim() : "";
+                            if (!curQ.isEmpty()) saveRecentSearch(ctx, curQ);
+                            if (gsDlgRef[0] != null) gsDlgRef[0].dismiss();
+                            com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.showBookDetails(ctx, rec, cardPct);
+                        }
+                    });
+                    card.addView(infoPill);
+
                     TextView readPill = new TextView(ctx);
                     readPill.setText("Read ›");
                     readPill.setTextColor(ACCENT_TEAL);
                     readPill.setTextSize(11);
                     readPill.setTypeface(Typeface.DEFAULT_BOLD);
-                    readPill.setPadding(dp(d, 8), dp(d, 4), dp(d, 2), dp(d, 4));
+                    readPill.setPadding(dp(d, 6), dp(d, 4), dp(d, 2), dp(d, 4));
                     card.addView(readPill);
 
                     card.setOnClickListener(new View.OnClickListener() {
@@ -3549,7 +3581,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v10.1 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v10.2 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
