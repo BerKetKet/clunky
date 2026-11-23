@@ -82,6 +82,7 @@ const attachResult = runEval(`(() => {
     const target = document.querySelector('rich-textarea [contenteditable]') || document.querySelector('rich-textarea');
     if (!target) return { error: "target not found" };
     target.focus();
+    target.click();
 
     const pasteEvent = new ClipboardEvent('paste', {
       bubbles: true,
@@ -99,7 +100,7 @@ console.log('Attach result:', attachResult);
 
 console.log('4. Checking for attachment preview in composer...');
 let chipDetected = false;
-for (let attempt = 0; attempt < 10; attempt++) {
+for (let attempt = 0; attempt < 12; attempt++) {
   const checkChip = runEval(`(() => {
     const chip = document.querySelector('[aria-label*="report107" i]') ||
                  document.querySelector('[aria-label*="close antig_to_g" i]') || 
@@ -124,26 +125,27 @@ for (let attempt = 0; attempt < 10; attempt++) {
 }
 
 console.log('5. Entering prompt text...');
-const promptText = `Here is antig_to_gemini_neon_clunky_report107.zip (430 KB archive, verified single attachment) containing Round 107 Deliverables for Folio v10.7 KFX:
+const promptText = `Here is antig_to_gemini_neon_clunky_report107.zip (4.7 MB archive, verified single attachment containing 11 files) with Round 107 Deliverables and a Side-by-Side Visual QC Audit of Fight Club:
 
-1. Drop-In Code Integration & Features (Task A):
+1. Round 107 Deliverables (Task A & B):
    - Integrated FolioFolderBrowserDialog.java and FolioMoreView.java from dropin_src/.
-   - Added compact ⬆ parent-directory navigation button directly left of path input in Batch EPUB Importer, allowing 1-tap upward directory traversal (/sdcard/en/0 -> /sdcard/en -> /sdcard).
+   - Added compact ⬆ parent-directory navigation button directly left of the path input in Batch EPUB Importer, allowing 1-tap upward traversal (/sdcard/en/0 -> /sdcard/en -> /sdcard).
    - Rendered clickable warm-amber 📁 <folderName> Open › rows at top of file list for non-hidden subdirectories, enabling instant drilling into nested folders without manual typing.
-   - Decoupled btnUpDir click listeners from quick-chip loop for robust immediate parent navigation and active chip refresh.
-   - Bumped version badge and About Folio dialog to Folio v10.7 KFX (Enhanced Typesetting).
-   - Rebuilt classes9.dex (366,152 B), reassembled APK with apktool, aligned, signed, and deployed to physical Samsung Galaxy M32 (32001776e8e82623).
-   - Staged release APK at 07_APK_EPUB_INGESTION_MOD/release/folio_v10.7_kfx/base.apk (137 MB).
-
-2. Hardware Verification on Galaxy M32 (Task B):
-   - verify_r107_importer_subfolders.png: Batch EPUB Importer after stepping up to /sdcard/en via ⬆ button ([83, 558][153, 645]), showing path /sdcard/en ([169, 557][742, 646]) and clickable subfolder rows 📁 0 Open › ([115, 968][970, 1015]) and 📁 1 Open › ([115, 1079][970, 1126]), verified downward restoration of /sdcard/en/0 upon tapping 📁 0.
-   - verify_r107_about_v107.png: About Folio modal showing Version: Folio v10.7 KFX (Enhanced Typesetting) and live stats.
+   - Rebuilt classes9.dex (366,152 B), deployed to physical Samsung Galaxy M32 (32001776e8e82623), and staged release APK at 07_APK_EPUB_INGESTION_MOD/release/folio_v10.7_kfx/base.apk (137 MB).
+   - verify_r107_importer_subfolders.png: Hardware verification of ⬆ button, /sdcard/en path, and 📁 0 / 📁 1 subfolder rows.
+   - verify_r107_about_v107.png: About Folio modal showing Version: Folio v10.7 KFX (Enhanced Typesetting).
    - Stock package com.amazon.kindle (v8.160.1.0) verified 100% UNTOUCHED and READ-ONLY (lastUpdateTime=2026-11-19 21:59:23).
+
+2. Fight Club Side-by-Side Visual QC Audit (Compact Theme, White Background, Bookerly Font):
+   The user uploaded Fight Club to both Folio and Stock Kindle and noted that they render differently under the same theme. We captured hardware screenshots of the first 3 pages from both apps:
+   - Page 1 (Cover): folio_fight_club_page1.png vs kindle_fight_club_page1.png — Mean pixel delta is only 0.54; fullscreen cover art matches stock Kindle cleanly.
+   - Page 2 (Title Page): folio_fight_club_page2.png vs kindle_fight_club_page2.png — In Kindle, the title block is centered vertically (Y=[388, 697], height 309 px) with uppercase letter-tracking and no footer. In Folio, the title starts near the top (Y=[174, 411], height 237 px) with generic serif font, and a reading footer (Location 4 of 2463 • 0%) is rendered at Y=[2259, 2283].
+   - Page 3 (Chapter 1): folio_fight_club_page3.png vs kindle_fight_club_page3.png — In Kindle, CHAPTER 1 starts at Y=296 and body text ends at Y=2173 (text height 1,877 px), reserving generous status-bar and navigation-bar insets, which overflows the last paragraph to Page 4. In Folio, CHAPTER 1 starts high at Y=133 and extends to Y=2283 (text height 2,150 px) fitting the entire paragraph on Page 3 plus the footer. Kindle preserves publisher CSS styles ($760 letter spacing, 3.66em margin); Folio applies hardcoded fallback paragraph styles.
 
 3. Project Lead Architectural Directive on Cover Architecture:
    "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 
-Please review the deliverables and provide Round 108 instructions in to_antig_clunky_round_108.zip.`;
+Please review the deliverables and the Fight Club comparison, and provide Round 108 instructions in to_antig_clunky_round_108.zip.`;
 
 const enterPrompt = runEval(`(() => {
   const editor = document.querySelector('rich-textarea [contenteditable]') || document.querySelector('.ql-editor');
