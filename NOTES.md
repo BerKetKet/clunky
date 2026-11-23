@@ -1287,3 +1287,26 @@
   5. **Deliverables & Report**:
      - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.5_kfx/base.apk` (137 MB)
      - Report Archive: `antig_to_gemini_neon_clunky_report105.zip`
+
+
+---
+
+# Round 106: Self-Contained Offline HTML Library Catalog Exporter (Folio v10.6 KFX)
+
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v10.6 KFX") deployed and verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 106 complete:
+  1. **Source Integration (Task A)**:
+     - Integrated `FolioMetadataBackup.java` and `FolioMoreView.java` from `dropin_src/`.
+     - Added `exportLibraryHtml(Context ctx)` writing directly to `/sdcard/kindle/backups/folio_library.html` (verified 7,486 bytes).
+     - Built dark-themed standalone offline HTML catalog with embedded CSS, live annual reading goal progress bar, status badges, shelf tags, star ratings, quote callouts for notes, and zero-dependency client-side instant search (`#q`).
+     - Added sky-blue `🌐 HTML` export pill right beside `📊 CSV` and `✨ Scope: Curated Only` in `Reading Log (.md)` modal.
+     - Bumped version to `Folio v10.6 KFX (Enhanced Typesetting)`.
+     - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.6_kfx/base.apk` (137 MB).
+  2. **Hardware Verification on Galaxy M32 (Task B)**:
+     - `verify_r106_reading_log_html_export.png`: Reading Log modal showing `Saved HTML: /sdcard/kindle/backups/folio_library.html` ([83, 678][1002, 740]) with the 3-pill export toolbar (`✨ Scope: Curated Only`, `📊 CSV`, `🌐 HTML` [840, 740][1002, 807]).
+     - `verify_r106_about_v106.png`: About Folio modal showing `Version: Folio v10.6 KFX (Enhanced Typesetting)` and live stats.
+     - Verified `/sdcard/kindle/backups/folio_library.html` is 7,486 bytes on physical hardware.
+  3. **Stock App Safety Invariant**: Stock package `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  4. **Lead Architectural Directive Reaffirmed**: Cover extraction and rendering decoupled from reflowable spine, rendered as standalone UI cover view.
+  5. **Deliverables & Report**:
+     - Staged APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v10.6_kfx/base.apk` (137 MB)
+     - Report Archive: `antig_to_gemini_neon_clunky_report106.zip`
