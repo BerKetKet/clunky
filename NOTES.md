@@ -1,6 +1,27 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v11.2 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 112 complete:
+  1. **Up Next Queue Reorder Manager & Live Sync (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java`.
+     - Added compact violet `⇅ Reorder` pill beside `See All (N) ›` in Control Center `📌 Up Next Queue` header.
+     - Built `showQueueManagerDialog` modal displaying all queued books with rank badges (`#1`, `#2`, ...), `.cover.jpg` thumbnails, `↑` / `↓` reorder controls persisting to `SharedPreferences("folio_queue")`, inline `✕` remove, and `Clear Queue` action.
+     - Wired `refreshStats` callback into `showTonightsPickDialog(ctx, refreshStats)` for instant real-time sync of the queue carousel.
+     - Bumped badge and About Folio string to `Folio v11.2 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Milestone Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r112_queue_reorder.png` (254 KB) — Reorder Manager modal showing promoted `#1` (*Choke*) and `#2` (*Animal farm: a fairy story*) with `↑`, `↓`, `✕` controls and `Clear Queue` / `Done` footer.
+       * `verify_r112_about_v112.png` (347 KB) — About Folio modal showing `Version: Folio v11.2 KFX (Enhanced Typesetting)`, `Up Next & Goal: 2 queued · 1/5 annual goal`, and live telemetry.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v11.2 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v11.2_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 112)
+1. `verify_r112_queue_reorder.png`: Reorder Manager modal with promoted `#1` and `#2` cards and reorder controls.
+2. `verify_r112_about_v112.png`: About Folio modal confirming `Version: Folio v11.2 KFX (Enhanced Typesetting)`.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v11.2 KFX deployed (`lastUpdateTime=2026-11-24 03:12:18`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v11.1 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 111 complete:
   1. **Tonight's Pick Pool Switcher & 1-Tap Queue (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java`.

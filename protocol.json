@@ -1,7 +1,7 @@
 {
-  "round": 111,
-  "version": "Folio v11.1 KFX",
-  "codename": "Tonight's Pick Pool Switcher & 1-Tap Queue",
+  "round": 112,
+  "version": "Folio v11.2 KFX",
+  "codename": "Up Next Queue Reorder Manager & Live Sync",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
@@ -10,9 +10,9 @@
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.1_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.2_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r111_tonights_pick_pools.png",
-    "verify_r111_about_v111.png"
+    "verify_r112_queue_reorder.png",
+    "verify_r112_about_v112.png"
   ]
 }
