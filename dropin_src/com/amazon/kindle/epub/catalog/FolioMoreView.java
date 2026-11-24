@@ -123,7 +123,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v11.5 KFX");
+        badgeTv.setText("Folio v11.6 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3050,26 +3050,6 @@ public final class FolioMoreView {
         AlertDialog.Builder b = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setView(root)
                 .setPositiveButton("Close", null);
-        if (!annotated.isEmpty()) {
-            b.setNeutralButton("Copy All", new DialogInterface.OnClickListener() {
-                @Override public void onClick(DialogInterface dialog, int which) {
-                    StringBuilder sb = new StringBuilder("# Folio Reading Notes\n\n");
-                    for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : annotated) {
-                        String t = (r.title != null && !r.title.isEmpty()) ? r.title : "Untitled";
-                        String a = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
-                        sb.append("## ").append(t);
-                        if (!a.isEmpty()) sb.append(" — ").append(a);
-                        sb.append("\n> ").append(noteMap.get(r.kfxPath)).append("\n\n");
-                    }
-                    android.content.ClipboardManager cm = (android.content.ClipboardManager)
-                            ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-                    if (cm != null) {
-                        cm.setPrimaryClip(android.content.ClipData.newPlainText("Folio Reading Notes", sb.toString()));
-                        Toast.makeText(ctx, "Copied " + annotated.size() + " note(s) as Markdown", Toast.LENGTH_SHORT).show();
-                    }
-                }
-            });
-        }
         nbDlgRef[0] = b.show();
     }
 
@@ -3574,6 +3554,7 @@ public final class FolioMoreView {
         final SharedPreferences shelfPrefs = ctx.getSharedPreferences("folio_shelves", Context.MODE_PRIVATE);
         final java.util.Map<String, ?> rawAll = shelfPrefs.getAll();
         final java.util.Map<String, Integer> shelfCounts = new java.util.HashMap<>();
+        final java.util.Map<String, String> shelfSamplePath = new java.util.HashMap<>();
         int totalShelved = 0;
         if (rawAll != null) {
             for (java.util.Map.Entry<String, ?> e : rawAll.entrySet()) {
@@ -3582,6 +3563,7 @@ public final class FolioMoreView {
                     String s = ((String) v).trim();
                     if (!s.isEmpty()) {
                         shelfCounts.put(s, (shelfCounts.containsKey(s) ? shelfCounts.get(s) : 0) + 1);
+                        if (!shelfSamplePath.containsKey(s)) shelfSamplePath.put(s, e.getKey());
                         totalShelved++;
                     }
                 }
@@ -3602,16 +3584,42 @@ public final class FolioMoreView {
         root.setBackgroundColor(0xFF11131A);
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
+        final AlertDialog[] mgrDlgRef = new AlertDialog[1];
+
+        LinearLayout hdrRow = new LinearLayout(ctx);
+        hdrRow.setOrientation(LinearLayout.HORIZONTAL);
+        hdrRow.setGravity(Gravity.CENTER_VERTICAL);
+        hdrRow.setPadding(0, 0, 0, dp(d, 4));
+
         TextView titleTv = new TextView(ctx);
         titleTv.setText("🏷 Manage Shelves");
         titleTv.setTextColor(TEXT_PRIMARY);
-        titleTv.setTextSize(18);
+        titleTv.setTextSize(17.5f);
         titleTv.setTypeface(Typeface.DEFAULT_BOLD);
-        titleTv.setPadding(0, 0, 0, dp(d, 4));
-        root.addView(titleTv);
+        titleTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        hdrRow.addView(titleTv);
+
+        TextView newShelfBtn = new TextView(ctx);
+        newShelfBtn.setText("+ New Shelf");
+        newShelfBtn.setTextColor(0xFFC084FC);
+        newShelfBtn.setTextSize(11.5f);
+        newShelfBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        newShelfBtn.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
+        GradientDrawable nsBg = new GradientDrawable();
+        nsBg.setColor(0xFF2B1B3D);
+        nsBg.setCornerRadius(dp(d, 9));
+        nsBg.setStroke(dp(d, 1), 0xFF6B21A8);
+        newShelfBtn.setBackground(nsBg);
+        newShelfBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                showShelfBookPickerDialog(ctx, "", mgrDlgRef[0]);
+            }
+        });
+        hdrRow.addView(newShelfBtn);
+        root.addView(hdrRow);
 
         String subText = shelves.isEmpty()
-                ? "No custom shelves yet"
+                ? "Tap + New Shelf to organize books into collections"
                 : shelves.size() + (shelves.size() == 1 ? " custom shelf · " : " custom shelves · ")
                         + totalShelved + (totalShelved == 1 ? " shelved book" : " shelved books")
                         + " — tap a shelf to browse";
@@ -3621,8 +3629,6 @@ public final class FolioMoreView {
         subTv.setTextSize(12);
         subTv.setPadding(0, 0, 0, dp(d, 14));
         root.addView(subTv);
-
-        final AlertDialog[] mgrDlgRef = new AlertDialog[1];
 
         if (shelves.isEmpty()) {
             TextView emptyTv = new TextView(ctx);
@@ -3659,16 +3665,19 @@ public final class FolioMoreView {
                 rowLp.bottomMargin = dp(d, 8);
                 row.setLayoutParams(rowLp);
 
+                String samplePath = shelfSamplePath.get(shelfName);
+                row.addView(makeMiniCoverView(ctx, d, samplePath, 30, 42, 10));
+
                 LinearLayout infoCol = new LinearLayout(ctx);
                 infoCol.setOrientation(LinearLayout.VERTICAL);
                 infoCol.setLayoutParams(new LinearLayout.LayoutParams(
                         0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-                infoCol.setPadding(0, 0, dp(d, 8), 0);
+                infoCol.setPadding(0, 0, dp(d, 6), 0);
 
                 TextView nameTv = new TextView(ctx);
-                nameTv.setText("🏷 " + shelfName);
+                nameTv.setText(shelfName);
                 nameTv.setTextColor(0xFFC7D2FE);
-                nameTv.setTextSize(14);
+                nameTv.setTextSize(13.5f);
                 nameTv.setTypeface(Typeface.DEFAULT_BOLD);
                 nameTv.setSingleLine(true);
                 nameTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -3689,13 +3698,35 @@ public final class FolioMoreView {
                 });
                 row.addView(infoCol);
 
+                // + Books pill
+                TextView addBBtn = new TextView(ctx);
+                addBBtn.setText("+ Books");
+                addBBtn.setTextColor(0xFF34D399);
+                addBBtn.setTextSize(11);
+                addBBtn.setTypeface(Typeface.DEFAULT_BOLD);
+                addBBtn.setPadding(dp(d, 8), dp(d, 6), dp(d, 8), dp(d, 6));
+                GradientDrawable abBg = new GradientDrawable();
+                abBg.setColor(0xFF0F2A22);
+                abBg.setCornerRadius(dp(d, 7));
+                abBg.setStroke(dp(d, 1), 0xFF1E6B52);
+                addBBtn.setBackground(abBg);
+                LinearLayout.LayoutParams abLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                abLp.rightMargin = dp(d, 5);
+                addBBtn.setLayoutParams(abLp);
+                addBBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        showShelfBookPickerDialog(ctx, shelfName, mgrDlgRef[0]);
+                    }
+                });
+                row.addView(addBBtn);
+
                 // Rename pill
                 TextView renBtn = new TextView(ctx);
-                renBtn.setText("Rename");
+                renBtn.setText("✏️");
                 renBtn.setTextColor(ACCENT_TEAL);
-                renBtn.setTextSize(11.5f);
-                renBtn.setTypeface(Typeface.DEFAULT_BOLD);
-                renBtn.setPadding(dp(d, 10), dp(d, 6), dp(d, 10), dp(d, 6));
+                renBtn.setTextSize(12);
+                renBtn.setPadding(dp(d, 8), dp(d, 5), dp(d, 8), dp(d, 5));
                 GradientDrawable renBg = new GradientDrawable();
                 renBg.setColor(0xFF172536);
                 renBg.setCornerRadius(dp(d, 7));
@@ -3703,7 +3734,7 @@ public final class FolioMoreView {
                 renBtn.setBackground(renBg);
                 LinearLayout.LayoutParams renLp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                renLp.rightMargin = dp(d, 6);
+                renLp.rightMargin = dp(d, 5);
                 renBtn.setLayoutParams(renLp);
                 renBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -3715,11 +3746,11 @@ public final class FolioMoreView {
 
                 // Remove pill
                 TextView delBtn = new TextView(ctx);
-                delBtn.setText("Remove");
+                delBtn.setText("✕");
                 delBtn.setTextColor(0xFFF87171);
-                delBtn.setTextSize(11.5f);
+                delBtn.setTextSize(12);
                 delBtn.setTypeface(Typeface.DEFAULT_BOLD);
-                delBtn.setPadding(dp(d, 10), dp(d, 6), dp(d, 10), dp(d, 6));
+                delBtn.setPadding(dp(d, 8), dp(d, 5), dp(d, 8), dp(d, 5));
                 GradientDrawable delBg = new GradientDrawable();
                 delBg.setColor(0xFF2A181C);
                 delBg.setCornerRadius(dp(d, 7));
@@ -3752,6 +3783,254 @@ public final class FolioMoreView {
                     }
                 })
                 .setPositiveButton("Close", null)
+                .show();
+    }
+
+    private static void showShelfBookPickerDialog(
+            final Context ctx, final String initialShelfName, final AlertDialog parentDlg) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        final boolean isEditExisting = initialShelfName != null && !initialShelfName.trim().isEmpty();
+        final android.content.SharedPreferences shelfPrefs =
+                ctx.getSharedPreferences("folio_shelves", Context.MODE_PRIVATE);
+
+        final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> all = new java.util.ArrayList<>();
+        com.amazon.kindle.epub.ingest.FolioMetadataDb mdb = new com.amazon.kindle.epub.ingest.FolioMetadataDb(ctx);
+        try {
+            all.addAll(mdb.getAllBooks());
+        } catch (Throwable ignored) {
+        } finally {
+            mdb.close();
+        }
+        java.util.Collections.sort(all, new java.util.Comparator<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord>() {
+            @Override
+            public int compare(com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord a,
+                               com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord b) {
+                String ta = a.title != null ? a.title : "";
+                String tb = b.title != null ? b.title : "";
+                return ta.compareToIgnoreCase(tb);
+            }
+        });
+
+        final java.util.Set<String> selected = new java.util.HashSet<>();
+        if (isEditExisting) {
+            for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : all) {
+                if (r.kfxPath != null && initialShelfName.equals(shelfPrefs.getString(r.kfxPath, ""))) {
+                    selected.add(r.kfxPath);
+                }
+            }
+        }
+
+        LinearLayout root = new LinearLayout(ctx);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(0xFF11131A);
+        root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
+
+        final TextView hdr = new TextView(ctx);
+        hdr.setText(isEditExisting ? ("🏷 Books in " + initialShelfName) : "🏷 Create New Shelf");
+        hdr.setTextColor(TEXT_PRIMARY);
+        hdr.setTextSize(17);
+        hdr.setTypeface(Typeface.DEFAULT_BOLD);
+        hdr.setPadding(0, 0, 0, dp(d, 8));
+        root.addView(hdr);
+
+        final EditText nameEt = new EditText(ctx);
+        nameEt.setHint("Shelf name (e.g. Philosophy, Sci-Fi, Study)...");
+        nameEt.setHintTextColor(0xFF64748B);
+        nameEt.setTextColor(TEXT_PRIMARY);
+        nameEt.setTextSize(13.5f);
+        nameEt.setSingleLine(true);
+        if (isEditExisting) nameEt.setText(initialShelfName);
+        nameEt.setPadding(dp(d, 12), dp(d, 8), dp(d, 12), dp(d, 8));
+        GradientDrawable nBg = new GradientDrawable();
+        nBg.setColor(0xFF1A1F2E);
+        nBg.setCornerRadius(dp(d, 8));
+        nBg.setStroke(dp(d, 1), 0xFF6B21A8);
+        nameEt.setBackground(nBg);
+        LinearLayout.LayoutParams nLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        nLp.bottomMargin = dp(d, 8);
+        nameEt.setLayoutParams(nLp);
+        if (!isEditExisting) {
+            root.addView(nameEt);
+            // Quick preset shelf chips
+            android.widget.HorizontalScrollView pHsv = new android.widget.HorizontalScrollView(ctx);
+            pHsv.setHorizontalScrollBarEnabled(false);
+            LinearLayout pRow = new LinearLayout(ctx);
+            pRow.setOrientation(LinearLayout.HORIZONTAL);
+            pRow.setPadding(0, 0, 0, dp(d, 8));
+            String[] presets = { "Philosophy", "Fiction", "Sci-Fi", "History", "Study" };
+            for (final String pr : presets) {
+                TextView pc = new TextView(ctx);
+                pc.setText(pr);
+                pc.setTextColor(0xFFC084FC);
+                pc.setTextSize(11);
+                pc.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
+                GradientDrawable pBg = new GradientDrawable();
+                pBg.setColor(0xFF2B1B3D);
+                pBg.setCornerRadius(dp(d, 8));
+                pBg.setStroke(dp(d, 1), 0x66A855F7);
+                pc.setBackground(pBg);
+                LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                pLp.rightMargin = dp(d, 6);
+                pc.setLayoutParams(pLp);
+                pc.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        nameEt.setText(pr);
+                        nameEt.setSelection(pr.length());
+                    }
+                });
+                pRow.addView(pc);
+            }
+            pHsv.addView(pRow);
+            root.addView(pHsv);
+        }
+
+        final EditText filterEt = new EditText(ctx);
+        filterEt.setHint("Filter books to include...");
+        filterEt.setHintTextColor(0xFF64748B);
+        filterEt.setTextColor(TEXT_PRIMARY);
+        filterEt.setTextSize(12.5f);
+        filterEt.setSingleLine(true);
+        filterEt.setPadding(dp(d, 12), dp(d, 7), dp(d, 12), dp(d, 7));
+        GradientDrawable fBg = new GradientDrawable();
+        fBg.setColor(0xFF1A1F2E);
+        fBg.setCornerRadius(dp(d, 8));
+        fBg.setStroke(dp(d, 1), 0xFF2A3142);
+        filterEt.setBackground(fBg);
+        LinearLayout.LayoutParams fLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        fLp.bottomMargin = dp(d, 8);
+        filterEt.setLayoutParams(fLp);
+        root.addView(filterEt);
+
+        final TextView selCountTv = new TextView(ctx);
+        selCountTv.setTextColor(0xFF34D399);
+        selCountTv.setTextSize(11.5f);
+        selCountTv.setTypeface(Typeface.DEFAULT_BOLD);
+        selCountTv.setPadding(0, 0, 0, dp(d, 6));
+        root.addView(selCountTv);
+
+        ScrollView sv = new ScrollView(ctx);
+        sv.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 260)));
+        final LinearLayout list = new LinearLayout(ctx);
+        list.setOrientation(LinearLayout.VERTICAL);
+        sv.addView(list);
+        root.addView(sv);
+
+        final Runnable[] renderListRef = new Runnable[1];
+        renderListRef[0] = new Runnable() {
+            @Override
+            public void run() {
+                list.removeAllViews();
+                selCountTv.setText(selected.size() + (selected.size() == 1 ? " book selected" : " books selected"));
+                String q = filterEt.getText() != null
+                        ? filterEt.getText().toString().trim().toLowerCase(java.util.Locale.ROOT)
+                        : "";
+                for (final com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec : all) {
+                    if (rec.kfxPath == null || rec.kfxPath.isEmpty()) continue;
+                    String titleStr = (rec.title != null && !rec.title.isEmpty()) ? rec.title : "Untitled";
+                    String authStr = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(rec.author);
+                    if (!q.isEmpty() && !(titleStr + " " + authStr).toLowerCase(java.util.Locale.ROOT).contains(q)) {
+                        continue;
+                    }
+                    final boolean isSel = selected.contains(rec.kfxPath);
+                    LinearLayout row = new LinearLayout(ctx);
+                    row.setOrientation(LinearLayout.HORIZONTAL);
+                    row.setGravity(Gravity.CENTER_VERTICAL);
+                    row.setPadding(dp(d, 10), dp(d, 8), dp(d, 10), dp(d, 8));
+                    GradientDrawable rBg = new GradientDrawable();
+                    rBg.setColor(isSel ? 0xFF152922 : BG_CARD);
+                    rBg.setCornerRadius(dp(d, 8));
+                    rBg.setStroke(dp(d, 1), isSel ? 0xFF10B981 : 0xFF2A3142);
+                    row.setBackground(rBg);
+                    LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    rLp.bottomMargin = dp(d, 6);
+                    row.setLayoutParams(rLp);
+
+                    TextView chk = new TextView(ctx);
+                    chk.setText(isSel ? "☑" : "☐");
+                    chk.setTextColor(isSel ? 0xFF34D399 : 0xFF64748B);
+                    chk.setTextSize(16);
+                    chk.setPadding(0, 0, dp(d, 10), 0);
+                    row.addView(chk);
+
+                    LinearLayout tc = new LinearLayout(ctx);
+                    tc.setOrientation(LinearLayout.VERTICAL);
+                    tc.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+                    TextView tTv = new TextView(ctx);
+                    tTv.setText(titleStr);
+                    tTv.setTextColor(TEXT_PRIMARY);
+                    tTv.setTextSize(12.5f);
+                    tTv.setTypeface(Typeface.DEFAULT_BOLD);
+                    tTv.setMaxLines(1);
+                    tTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                    tc.addView(tTv);
+
+                    TextView aTv = new TextView(ctx);
+                    aTv.setText(!authStr.isEmpty() ? authStr : "Unknown Author");
+                    aTv.setTextColor(0xFF94A3B8);
+                    aTv.setTextSize(11);
+                    aTv.setMaxLines(1);
+                    aTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                    tc.addView(aTv);
+                    row.addView(tc);
+
+                    row.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            if (selected.contains(rec.kfxPath)) selected.remove(rec.kfxPath);
+                            else selected.add(rec.kfxPath);
+                            renderListRef[0].run();
+                        }
+                    });
+                    list.addView(row);
+                }
+            }
+        };
+        renderListRef[0].run();
+        filterEt.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) { renderListRef[0].run(); }
+            @Override public void afterTextChanged(android.text.Editable s) {}
+        });
+
+        new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setView(root)
+                .setPositiveButton(isEditExisting ? "Save Shelf" : "Create Shelf", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        String shelfName = isEditExisting ? initialShelfName : nameEt.getText().toString().trim();
+                        if (shelfName.isEmpty()) {
+                            Toast.makeText(ctx, "Enter a shelf name", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        if (!isEditExisting && selected.isEmpty()) {
+                            Toast.makeText(ctx, "Select at least 1 book for the shelf", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        android.content.SharedPreferences.Editor ed = shelfPrefs.edit();
+                        if (isEditExisting) {
+                            java.util.Map<String, ?> curAll = shelfPrefs.getAll();
+                            if (curAll != null) {
+                                for (java.util.Map.Entry<String, ?> e : curAll.entrySet()) {
+                                    if (shelfName.equals(e.getValue()) && !selected.contains(e.getKey())) {
+                                        ed.remove(e.getKey());
+                                    }
+                                }
+                            }
+                        }
+                        for (String p : selected) {
+                            ed.putString(p, shelfName);
+                        }
+                        ed.apply();
+                        Toast.makeText(ctx, "Saved " + selected.size() + " book(s) to " + shelfName, Toast.LENGTH_SHORT).show();
+                        if (parentDlg != null) parentDlg.dismiss();
+                        showManageShelvesDialog(ctx);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
                 .show();
     }
 
@@ -4676,7 +4955,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v11.5 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v11.6 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
