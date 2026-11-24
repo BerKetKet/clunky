@@ -1,8 +1,8 @@
-# Round 130 Deliverables Report — Major Milestone Folio v13.0 KFX (Reading Speed WPM Calibration, Pure-Kindle Book Details & GitHub Sync)
+# Round 131 Deliverables Report — Folio v13.1 KFX (Library Insights Reading Time Portfolio & Kindle Theme)
 **Environment**: Samsung Galaxy M30 (`32001776e8e82623`), TrebleDroid Android 13 (arm64-v8a).  
 **Target Device**: Physical **Samsung Galaxy M30** (`32001776e8e82623`).  
 **Stock Kindle Invariant**: Package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Folio Version**: `Folio v13.0 KFX` installed on device at `2026-11-24 06:33:02`.
+**Folio Version**: `Folio v13.1 KFX` installed on device at `2026-11-24 23:21:14`.
 
 ---
 
@@ -13,46 +13,34 @@
 
 ## 1. Task A: Source Integration & Release Staging
 1. **Drop-In Source Integration**:
-   - **`FolioMoreView.java` (Reading Speed WPM Calibration & Milestone Bump)**:
-     * Added **`READING SPEED (WPM)`** 4-pill selector (`180 wpm`, `250 wpm`, `330 wpm`, `420 wpm`) inside the **2026 Reading Goal** dialog.
-     * Persisted reading speed in `SharedPreferences("folio_ui_prefs", "reading_speed_wpm")` (default: 250 WPM, bounds: 100–800 WPM).
-     * Repaired drop-in dialog theming: moved `FolioTheme.applyToDialog` post-`.show()` across reading goal, Up Next queue clear, cache clear, and About Folio dialogs.
-     * Bumped badge to **`Folio v13.0 KFX`** and updated `About Folio` version string to `Folio v13.0 KFX (Enhanced Typesetting)`.
-   - **`FolioMetadataCatalogDialog.java` (Calibrated Reading-Time & Pure-Kindle Blue-Slate Sweep)**:
-     * Dynamic reading-time scaling: scaled `Format: Enhanced KFX · 1.2 MB · ~7h 8m read` dynamically using user's configured `reading_speed_wpm` (`Math.round((bytes / 1024.0) * 0.34 * (250.0 / wpm))`).
-     * Unified remaining legacy indigo/amber borders across `Favorited` (`#2C5278`), `Shelf` (`#2C5278`), `Personal Note` (`#2C5278`), and bulk action bar (`Shelf`, `+Genre`, `+Queue` in `#2C5278` / `#162330`).
+   - **`FolioMoreView.java` (`showLibraryInsightsDialog`)**:
+     * Added **`READING TIME PORTFOLIO (250 WPM)`** 3-tile dashboard at the top of **Library Insights** showing **`TOTAL LIBRARY`** (`651h`), **`TIME READ`** (`14.9h`, weighted across finished and in-progress books in Kindle blue-slate `#162330` / `#2C5278` / `#4DA6FF`), and **`REMAINING`** (`636h`), scaled dynamically by `getReadingSpeedWpm(ctx)`.
+     * Repaired drop-in `FolioTheme.applyToDialog` placement: moved post-`.show()` for `insightDlgRef[0]`, `goalDlgRef[0]`, `dlgRef[0]`, `storDlgRef[0]`, and `aboutDlg` (`About Folio`) so Bookerly headings, Amazon Ember controls, and styled `#4DA6FF` / `#C4CBD2` / `#8E959C` footer buttons render immediately on dialog creation.
+     * Bumped Control Center badge and `About Folio` dialog version to **`Folio v13.1 KFX`** (`Folio v13.1 KFX (Enhanced Typesetting)`).
 
 2. **Compilation, Packaging & Deployment**:
-   - Recompiled `classes9.dex` (456,172 bytes) via `javac` and Android `d8`.
+   - Recompiled `classes9.dex` (457,600 bytes) via `javac` and Android `d8`.
    - Rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, signed with debug keystore.
-   - Streamed APK install to physical Samsung Galaxy M30 (`lastUpdateTime=2026-11-24 06:33:02`).
+   - Streamed APK install to physical Samsung Galaxy M30 (`lastUpdateTime=2026-11-24 23:21:14`).
    - Verified zero fatal crashes in `logcat` (`FATAL EXCEPTION` check clean).
-   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v13.0_kfx/base.apk` (137,740,774 bytes ~132 MB, SHA256: `332b90e59b0750fee936496d62d3d0ba677f4c8b7168bedb074882e4fffa3463`).
+   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v13.1_kfx/base.apk` (137,740,774 bytes ~132 MB, SHA256: `52745681d89e0a22f71306c335da927778de3146eb635d2f350de80c5bef7108`).
 
 ---
 
 ## 2. Task B: Hardware Verification on Physical Samsung Galaxy M30
 Verified on physical Samsung Galaxy M30 hardware (`32001776e8e82623`):
 
-1. **`verify_r130_reading_goal_wpm.png` (193,335 bytes)**:
-   - Captured **2026 Reading Goal** modal showing:
-     * Header `2026 Reading Goal`.
-     * Goal preset pills (`12`, `24`, `52`, `100` books) and target input.
-     * New section: **`READING SPEED (WPM)`** with 4 interactive pills (`180 wpm`, `250 wpm`, `330 wpm`, `420 wpm`) styled with active teal accent (`#26A69A`) and Kindle-themed dark backgrounds.
-     * Native buttons `Cancel` and `Save Goal`.
-2. **`verify_r130_book_details_pure_kindle.png` (267,884 bytes)**:
-   - Captured **Book Details (`ⓘ`)** for *1984* showing:
-     * Bookerly serif title (`1984`).
-     * Calibrated reading-time estimate: `Format: Enhanced KFX · 1.2 MB · ~7h 8m read`.
-     * Pure-Kindle blue-slate borders on `★ Favorited` (`#2C5278`), `Shelf: Classics ›` (`#2C5278`), and `Personal Note (tap to edit)` (`#2C5278`).
-     * Clean Kindle footer action buttons (`READ NOW`, `EDIT METADATA`, `CLOSE`).
+1. **`verify_r131_insights_reading_time.png` (174,011 bytes)**:
+   - Captured **Library Insights** modal showing:
+     * Bookerly serif heading (`Library Insights`).
+     * `READING TIME PORTFOLIO (250 WPM)` 3-tile strip (`651h TOTAL LIBRARY`, `14.9h TIME READ` highlighted in Kindle blue-slate `#162330`/`#2C5278`/`#4DA6FF`, `636h REMAINING`).
+     * Reading status stacked bar (`Finished (1)`, `Reading (5)`, `Unread (28)`), metadata health (`72% COMPLETE`), top genres, and styled Kindle footer buttons (`CLOSE`, `COPY SUMMARY`, `SHARE`).
+2. **`verify_r131_about_v131.png` (338,914 bytes)**:
+   - Captured **About Folio** modal showing:
+     * Bookerly/Ember typography.
+     * Version line: `Version: Folio v13.1 KFX (Enhanced Typesetting)`.
+     * Hardware info: `TrebleDroid with GApps · Android 13 (arm64-v8a)`.
+     * Styled footer buttons (`CLOSE`, `CLEAR TEMP CACHE`).
 3. **Safety Invariants**:
    - Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED and READ-ONLY (`lastUpdateTime=2026-11-19 21:59:23`).
    - Zero crashes logged for `com.amazon.kindle.epub`.
-
----
-
-## 3. GitHub Repository Synchronization
-- **Repository Remote**: `https://github.com/BerKetKet/clunky.git`
-- **Branch**: `master` (tracking `origin/master`)
-- **Commit**: `fbf7e48` ("Round 130: Major Milestone Folio v13.0 KFX — Reading Speed WPM Calibration, Pure-Kindle UI & GitHub Sync") pushed to `origin/master`.

@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v13.0 KFX");
+        badgeTv.setText("v13.1 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(TEXT_MUTED);
         badgeTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
@@ -4590,6 +4590,11 @@ public final class FolioMoreView {
         String[] eraOrder = new String[] { "Pre-1900", "1900–1949", "1950–1999", "2000–2009", "2010–2019", "2020+" };
         for (String eo : eraOrder) eraFreq.put(eo, 0);
         int minYear = Integer.MAX_VALUE, maxYear = Integer.MIN_VALUE, datedCount = 0;
+        final int userWpm = getReadingSpeedWpm(ctx);
+        final java.util.Map<String, Integer> insProgMap =
+                com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.loadProgressMap(ctx);
+        double totalLibMins = 0.0;
+        double readMinsSoFar = 0.0;
 
         for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : all) {
             String aDisp = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
@@ -4602,6 +4607,14 @@ public final class FolioMoreView {
             if (r.kfxPath != null && !r.kfxPath.isEmpty()) {
                 File covF = new File(r.kfxPath + ".cover.jpg");
                 hasCov = covF.exists() && covF.length() >= 64;
+                File kfxF = new File(r.kfxPath);
+                if (kfxF.exists() && kfxF.length() > 0) {
+                    double bMins = Math.max(15.0, Math.min(2400.0, (kfxF.length() / 1024.0) * 0.34 * (250.0 / userWpm)));
+                    totalLibMins += bMins;
+                    Integer pv = insProgMap.get(r.kfxPath);
+                    int p = (pv != null) ? Math.max(0, Math.min(100, pv)) : 0;
+                    readMinsSoFar += bMins * (p / 100.0);
+                }
             }
             if (!hasCov) missingCover++;
             int bYr = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.parseBookYear(r.pubDate);
@@ -4700,6 +4713,63 @@ public final class FolioMoreView {
         LinearLayout content = new LinearLayout(ctx);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(0, 0, dp(d, 4), 0);
+
+        // Section -1: Reading Time Portfolio (calibrated to user WPM)
+        double remMins = Math.max(0.0, totalLibMins - readMinsSoFar);
+        String totHrStr = totalLibMins >= 60.0 ? (Math.round(totalLibMins / 60.0) + "h") : (Math.round(totalLibMins) + "m");
+        String readHrStr = readMinsSoFar >= 60.0
+                ? String.format(java.util.Locale.US, "%.1fh", readMinsSoFar / 60.0)
+                : (Math.round(readMinsSoFar) + "m");
+        String remHrStr = remMins >= 60.0 ? (Math.round(remMins / 60.0) + "h") : (Math.round(remMins) + "m");
+
+        TextView rtHdr = new TextView(ctx);
+        rtHdr.setText("READING TIME PORTFOLIO (" + userWpm + " WPM)");
+        rtHdr.setTextColor(0xFF4DA6FF);
+        rtHdr.setTextSize(11);
+        rtHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        rtHdr.setPadding(0, 0, 0, dp(d, 7));
+        content.addView(rtHdr);
+
+        LinearLayout rtRow = new LinearLayout(ctx);
+        rtRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams rtRowLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rtRowLp.bottomMargin = dp(d, 14);
+        rtRow.setLayoutParams(rtRowLp);
+
+        String[] rtVals = new String[] { totHrStr, readHrStr, remHrStr };
+        String[] rtLbls = new String[] { "TOTAL LIBRARY", "TIME READ", "REMAINING" };
+        for (int ri = 0; ri < 3; ri++) {
+            LinearLayout rTile = new LinearLayout(ctx);
+            rTile.setOrientation(LinearLayout.VERTICAL);
+            rTile.setGravity(Gravity.CENTER);
+            rTile.setPadding(dp(d, 8), dp(d, 9), dp(d, 8), dp(d, 9));
+            GradientDrawable rtBg = new GradientDrawable();
+            rtBg.setColor(ri == 1 ? 0xFF162330 : BG_CARD);
+            rtBg.setCornerRadius(dp(d, 9));
+            rtBg.setStroke(dp(d, 1), ri == 1 ? 0xFF2C5278 : BORDER_HAIRLINE);
+            rTile.setBackground(rtBg);
+            LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            if (ri < 2) rLp.rightMargin = dp(d, 7);
+            rTile.setLayoutParams(rLp);
+
+            TextView rv = new TextView(ctx);
+            rv.setText(rtVals[ri]);
+            rv.setTextColor(ri == 1 ? 0xFF4DA6FF : TEXT_PRIMARY);
+            rv.setTextSize(16);
+            rv.setTypeface(Typeface.DEFAULT_BOLD);
+            rTile.addView(rv);
+
+            TextView rl = new TextView(ctx);
+            rl.setText(rtLbls[ri]);
+            rl.setTextColor(TEXT_MUTED);
+            rl.setTextSize(9.5f);
+            rl.setTypeface(Typeface.DEFAULT_BOLD);
+            rl.setPadding(0, dp(d, 2), 0, 0);
+            rTile.addView(rl);
+            rtRow.addView(rTile);
+        }
+        content.addView(rtRow);
 
         // Section 0: Interactive Reading Status Stacked Bar (Finished / Reading / Unread)
         int finCnt = qs[2];
@@ -5088,6 +5158,7 @@ public final class FolioMoreView {
                     }
                 })
                 .show();
+        FolioTheme.applyToDialog(ctx, insightDlgRef[0]);
     }
 
     private static View makeHealthBadge(
@@ -5409,7 +5480,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v13.0 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v13.1 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
