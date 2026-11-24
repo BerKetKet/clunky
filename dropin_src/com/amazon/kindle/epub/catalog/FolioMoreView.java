@@ -108,7 +108,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v15.0 KFX");
+        badgeTv.setText("v15.1 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(FolioTheme.ACCENT_SOFT_TEXT);
         badgeTv.setTypeface(FolioTheme.sansBold(ctx));
@@ -1389,8 +1389,8 @@ public final class FolioMoreView {
             card.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    File f = new File(rec.kfxPath);
-                    if (f.exists()) {
+                    File f = com.amazon.kindle.epub.ingest.ExternalEpubActivity.resolveExistingKfxFile(ctx, new File(rec.kfxPath));
+                    if (f != null && f.exists()) {
                         com.amazon.kindle.epub.ingest.ExternalEpubActivity.launchKfxReader(ctx, f);
                     } else {
                         Toast.makeText(ctx, "Book file not found", Toast.LENGTH_SHORT).show();
@@ -1615,8 +1615,8 @@ public final class FolioMoreView {
 
             card.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
-                    File f = new File(rec.kfxPath);
-                    if (f.exists()) {
+                    File f = com.amazon.kindle.epub.ingest.ExternalEpubActivity.resolveExistingKfxFile(ctx, new File(rec.kfxPath));
+                    if (f != null && f.exists()) {
                         com.amazon.kindle.epub.ingest.ExternalEpubActivity.launchKfxReader(ctx, f);
                     }
                 }
@@ -1871,8 +1871,8 @@ public final class FolioMoreView {
                     infoCol.setOnClickListener(new View.OnClickListener() {
                         @Override public void onClick(View v) {
                             if (dlgRef[0] != null) dlgRef[0].dismiss();
-                            File f = new File(rec.kfxPath);
-                            if (f.exists()) {
+                            File f = com.amazon.kindle.epub.ingest.ExternalEpubActivity.resolveExistingKfxFile(ctx, new File(rec.kfxPath));
+                            if (f != null && f.exists()) {
                                 com.amazon.kindle.epub.ingest.ExternalEpubActivity.launchKfxReader(ctx, f);
                             }
                         }
@@ -5541,7 +5541,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Azath — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Azath v15.0 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Azath v15.1 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

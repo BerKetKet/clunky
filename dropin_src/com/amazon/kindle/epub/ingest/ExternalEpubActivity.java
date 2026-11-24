@@ -123,18 +123,18 @@ public class ExternalEpubActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(20);
         root.setPadding(pad, pad, pad, dp(16));
-        root.setBackgroundColor(Color.parseColor("#161922"));
+        root.setBackgroundColor(Color.parseColor("#121010"));
 
         TextView badge = new TextView(this);
         badge.setText(existing != null ? "ALREADY IN FOLIO LIBRARY" : "FOLIO EPUB IMPORT");
-        badge.setTextColor(Color.parseColor(existing != null ? "#34D399" : "#F59E0B"));
+        badge.setTextColor(Color.parseColor(existing != null ? "#E05A47" : "#E05A47"));
         badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         badge.setTypeface(Typeface.DEFAULT_BOLD);
         root.addView(badge);
 
         TextView titleView = new TextView(this);
         titleView.setText(meta.title);
-        titleView.setTextColor(Color.WHITE);
+        titleView.setTextColor(Color.parseColor("#F2EFE9"));
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
         titleView.setTypeface(Typeface.DEFAULT_BOLD);
         titleView.setPadding(0, dp(6), 0, dp(4));
@@ -147,24 +147,24 @@ public class ExternalEpubActivity extends Activity {
         }
         TextView authorView = new TextView(this);
         authorView.setText(sub.toString());
-        authorView.setTextColor(Color.parseColor("#CBD5E1"));
+        authorView.setTextColor(Color.parseColor("#C4BDB5"));
         authorView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         authorView.setPadding(0, 0, 0, dp(12));
         root.addView(authorView);
 
         TextView desc = new TextView(this);
         if (existing != null) {
-            desc.setText("This book is already saved in Folio's app storage. Open your existing copy instantly, or re-import and replace it.");
+            desc.setText("This book is already saved in Azath's app storage. Open your existing copy instantly, or re-import and replace it.");
         } else {
-            desc.setText("Add to your Folio library (saves converted book & metadata in app storage) or open once without saving.");
+            desc.setText("Add to your Azath library (saves converted book & metadata in app storage) or open once without saving.");
         }
-        desc.setTextColor(Color.parseColor("#94A3B8"));
+        desc.setTextColor(Color.parseColor("#8E867E"));
         desc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         desc.setPadding(0, 0, 0, dp(18));
         root.addView(desc);
 
         if (existing != null) {
-            TextView btnOpenExisting = makeButton("Open Existing Copy", "#34D399", "#0F172A");
+            TextView btnOpenExisting = makeButton("Open Existing Copy", "#E05A47", "#0A0909");
             btnOpenExisting.setOnClickListener(v -> {
                 stagedEpub.delete();
                 dismissActiveDialog();
@@ -177,11 +177,11 @@ public class ExternalEpubActivity extends Activity {
             sp0.setLayoutParams(new LinearLayout.LayoutParams(1, dp(10)));
             root.addView(sp0);
 
-            TextView btnReimport = makeButton("Re-Import & Replace", "#262B38", "#F8FAFC");
+            TextView btnReimport = makeButton("Re-Import & Replace", "#211C1B", "#F2EFE9");
             btnReimport.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
             root.addView(btnReimport);
         } else {
-            TextView btnAdd = makeButton("Add to Library & Read", "#F59E0B", "#111827");
+            TextView btnAdd = makeButton("Add to Library & Read", "#E05A47", "#0A0909");
             btnAdd.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
             root.addView(btnAdd);
 
@@ -189,7 +189,7 @@ public class ExternalEpubActivity extends Activity {
             spacer.setLayoutParams(new LinearLayout.LayoutParams(1, dp(10)));
             root.addView(spacer);
 
-            TextView btnOnce = makeButton("Open Once (Don't Add)", "#262B38", "#F8FAFC");
+            TextView btnOnce = makeButton("Open Once (Don't Add)", "#211C1B", "#F2EFE9");
             btnOnce.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, false));
             root.addView(btnOnce);
         }
@@ -201,7 +201,7 @@ public class ExternalEpubActivity extends Activity {
         TextView btnCancel = new TextView(this);
         btnCancel.setText("Cancel");
         btnCancel.setGravity(Gravity.CENTER);
-        btnCancel.setTextColor(Color.parseColor("#94A3B8"));
+        btnCancel.setTextColor(Color.parseColor("#8E867E"));
         btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         btnCancel.setPadding(0, dp(10), 0, dp(6));
         btnCancel.setOnClickListener(v -> {
@@ -220,12 +220,13 @@ public class ExternalEpubActivity extends Activity {
                 })
                 .create();
         activeDialog.show();
+        com.amazon.kindle.epub.catalog.FolioTheme.applyToDialog(this, activeDialog);
     }
 
     private void processAndOpen(final File stagedEpub, final String displayName,
                                 final EpubMetadataExtractor.BookMeta meta, final boolean addToLibrary) {
         showProgressDialog(
-                addToLibrary ? "Adding to Folio Library..." : "Preparing Book...",
+                addToLibrary ? "Adding to Azath Library..." : "Preparing Book...",
                 addToLibrary ? "Converting to KFX & enriching book metadata"
                              : "Converting EPUB to native KFX");
 
@@ -263,7 +264,7 @@ public class ExternalEpubActivity extends Activity {
                 mainHandler.post(() -> {
                     dismissActiveDialog();
                     if (addToLibrary) {
-                        Toast.makeText(this, "Added \"" + meta.title + "\" to Folio Library", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Added \"" + meta.title + "\" to Azath Library", Toast.LENGTH_SHORT).show();
                     }
                     launchKfxReader(this, outKfx);
                     finish();
@@ -282,22 +283,17 @@ public class ExternalEpubActivity extends Activity {
 
     public static boolean convertEpubToKfx(Context ctx, File epubIn, File kfxOut) {
         try {
-            Class<?> cls = Class.forName("com.amazon.kindle.epub.EpubTranscoder");
-            for (Method m : cls.getDeclaredMethods()) {
-                if ("transcodeToKfx".equals(m.getName())) {
-                    Class<?>[] p = m.getParameterTypes();
-                    if (p.length == 3 && Context.class.isAssignableFrom(p[0])
-                            && p[1] == File.class && p[2] == File.class) {
-                        m.setAccessible(true);
-                        Object res = m.invoke(null, ctx, epubIn, kfxOut);
-                        if (kfxOut.exists() && kfxOut.length() > 128) return true;
-                        if (res instanceof Boolean && (Boolean) res && kfxOut.exists()) return true;
-                    }
-                }
+            if (com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubIn, kfxOut)) {
+                return true;
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {
+            Log.w(TAG, "EpubTranscoder direct call failed: " + t.getMessage());
+        }
 
         File bin = new File(ctx.getApplicationInfo().nativeLibraryDir, "libkfxconv.so");
+        if (!bin.exists()) {
+            bin = new File("/data/local/tmp/kfx-conv");
+        }
         if (!bin.exists()) {
             Log.e(TAG, "libkfxconv.so missing at " + bin.getAbsolutePath());
             return false;
@@ -331,27 +327,72 @@ public class ExternalEpubActivity extends Activity {
         return false;
     }
 
+    public static File resolveExistingKfxFile(Context ctx, File rawFile) {
+        if (rawFile == null) return null;
+        if (rawFile.exists() && rawFile.length() > 0) return rawFile;
+        String rawPath = rawFile.getAbsolutePath();
+        if (ctx != null && rawPath.contains("/com.amazon.kindle.epub/")) {
+            File migrated = new File(rawPath.replace("/com.amazon.kindle.epub/", "/" + ctx.getPackageName() + "/"));
+            if (migrated.exists() && migrated.length() > 0) return migrated;
+        }
+        String name = rawFile.getName();
+        if (name == null || name.isEmpty()) return rawFile;
+        File[] candidates = new File[] {
+                ctx != null ? new File(new File(ctx.getFilesDir(), "folio_library"), name) : null,
+                new File("/sdcard/kindle", name),
+                new File("/sdcard/kindle/imported", name)
+        };
+        for (File c : candidates) {
+            if (c != null && c.exists() && c.length() > 0) return c;
+        }
+        // Case-insensitive scan fallback
+        File[] dirs = new File[] {
+                ctx != null ? new File(ctx.getFilesDir(), "folio_library") : null,
+                new File("/sdcard/kindle")
+        };
+        for (File dir : dirs) {
+            if (dir == null || !dir.isDirectory()) continue;
+            File[] files = dir.listFiles();
+            if (files == null) continue;
+            for (File f : files) {
+                if (f.isFile() && f.getName().equalsIgnoreCase(name)) return f;
+            }
+        }
+        return rawFile;
+    }
+
     public static void launchKfxReader(Context ctx, File kfxFile) {
+        File resolved = resolveExistingKfxFile(ctx, kfxFile);
+        if (resolved == null || !resolved.exists()) {
+            Log.w(TAG, "launchKfxReader: file not found: " + (kfxFile != null ? kfxFile.getAbsolutePath() : "null"));
+            return;
+        }
+        kfxFile = resolved;
         try {
-            StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
-            StrictMode.setVmPolicy(builder.build());
+            android.os.StrictMode.class.getMethod("disableDeathOnFileUriExposure").invoke(null);
         } catch (Throwable ignored) {}
 
-        Intent reader = new Intent(Intent.ACTION_VIEW);
-        reader.setDataAndType(Uri.fromFile(kfxFile), "application/x-kfx-ebook");
-        reader.setComponent(new ComponentName(
-                ctx.getPackageName(),
-                "com.amazon.kindle.standalone.StandAloneBookReaderActivity"));
-        reader.putExtra("folio_bypass_intercept", true);
-        reader.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try {
+            Intent reader = new Intent(Intent.ACTION_VIEW);
+            reader.setClassName(ctx.getPackageName(), "com.amazon.kindle.ThirdPartyUpgradePage");
+            reader.setDataAndType(Uri.fromFile(kfxFile), "application/x-kfx");
+            reader.putExtra("folio_bypass_intercept", true);
+            reader.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
             ctx.startActivity(reader);
+            return;
         } catch (Throwable t) {
-            Log.w(TAG, "StandAloneBookReaderActivity direct launch failed, trying UpgradePage", t);
-            reader.setComponent(new ComponentName(
-                    ctx.getPackageName(),
-                    "com.amazon.kindle.UpgradePage"));
+            Log.w(TAG, "ThirdPartyUpgradePage launch failed, trying StandAloneBookReaderActivity", t);
+        }
+
+        try {
+            Intent reader = new Intent(Intent.ACTION_VIEW);
+            reader.setClassName(ctx.getPackageName(), "com.amazon.kcp.reader.StandAloneBookReaderActivity");
+            reader.setDataAndType(Uri.fromFile(kfxFile), "application/x-kfx");
+            reader.putExtra("folio_bypass_intercept", true);
+            reader.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
             ctx.startActivity(reader);
+        } catch (Throwable t2) {
+            Log.e(TAG, "Failed to launch KFX reader", t2);
         }
     }
 
@@ -363,7 +404,7 @@ public class ExternalEpubActivity extends Activity {
         box.setOrientation(LinearLayout.HORIZONTAL);
         box.setGravity(Gravity.CENTER_VERTICAL);
         box.setPadding(dp(20), dp(20), dp(20), dp(20));
-        box.setBackgroundColor(Color.parseColor("#161922"));
+        box.setBackgroundColor(Color.parseColor("#121010"));
 
         ProgressBar pb = new ProgressBar(this);
         pb.setIndeterminate(true);
@@ -375,14 +416,14 @@ public class ExternalEpubActivity extends Activity {
 
         TextView tvTitle = new TextView(this);
         tvTitle.setText(title);
-        tvTitle.setTextColor(Color.WHITE);
+        tvTitle.setTextColor(Color.parseColor("#F2EFE9"));
         tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
         textCol.addView(tvTitle);
 
         TextView tvSub = new TextView(this);
         tvSub.setText(subtitle);
-        tvSub.setTextColor(Color.parseColor("#94A3B8"));
+        tvSub.setTextColor(Color.parseColor("#8E867E"));
         tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         textCol.addView(tvSub);
 
@@ -393,6 +434,7 @@ public class ExternalEpubActivity extends Activity {
                 .setCancelable(false)
                 .create();
         activeDialog.show();
+        com.amazon.kindle.epub.catalog.FolioTheme.applyToDialog(this, activeDialog);
     }
 
     private void dismissActiveDialog() {

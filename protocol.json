@@ -1,12 +1,12 @@
 {
-  "round": 144,
+  "round": 145,
   "app_name": "Azath",
   "package_name": "com.azath.reader",
-  "version_label": "Azath v15.0 KFX",
-  "milestone": "Major Milestone \u2014 Unified Obsidian-Ivory-Crimson Editorial Edition",
+  "version_label": "Azath v15.1 KFX",
   "target_hardware": "Samsung Galaxy M30 (32001776e8e82623)",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% UNTOUCHED and READ-ONLY",
   "deliverables": [
+    "dropin_src/com/amazon/kindle/epub/ingest/ExternalEpubActivity.java",
     "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java"
   ]
 }
