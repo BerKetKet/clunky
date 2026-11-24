@@ -1,7 +1,7 @@
-# Round 124 Deliverables Report — Folio v12.4 KFX (Kindle-Native Final Chip Polish & GitHub Repository Push)
+# Round 125 (Milestone) Deliverables Report — Folio v12.5 KFX (Crimson Launcher Icon, Kindle Bookerly/Ember Typography & Zero-Neon Sweep)
 **Environment**: Samsung Galaxy M32 (`32001776e8e82623`), TrebleDroid Android 13 (arm64-v8a).  
 **Stock Kindle Invariant**: Package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Folio Version**: `Folio v12.4 KFX (Enhanced Typesetting)` installed on device at `2026-11-24 04:58:51`.
+**Folio Version**: Milestone `Folio v12.5 KFX (Enhanced Typesetting)` installed on device at `2026-11-24 05:13:45`.
 
 ---
 
@@ -12,60 +12,47 @@
 
 ## 1. Task A: Source Integration & Release Staging
 1. **Drop-In Source Integration**:
-   - **`FolioMetadataCatalogDialog.java` (Final Chip Polish)**:
-     - Stripped all emojis and multi-colored neon fills from Catalog filter chips (`All`, `Up Next`, `Favorites`, `Notes`, `Classics`).
-     - Standardized chip aesthetics to match Kindle Android design: inactive chips use neutral charcoal (`#1C1F22`) with hairline border (`1px #262A2E`) and `#8E959C` text; the active chip uses calm Kindle blue (`#4DA6FF`) with pure black text (`#000000`).
-   - **`FolioFolderBrowserDialog.java` (Kindle-Native Action Buttons)**:
-     - Shifted `Import Selected` and the active folder chip from neon green/orange to calm Kindle blue (`#4DA6FF`, pure black text).
-     - Synced `btnUpDir` click-listener placement in method scope.
-   - **`FolioMoreView.java`**:
-     - Bumped header badge and `About Folio` dialog to **`Folio v12.4 KFX (Enhanced Typesetting)`**.
-   - Invariants: `MetadataEnricher.java` and `OpenCatalogView.java` strictly preserved and untouched.
+   - **`FolioTheme.java` (Kindle-Native Typography & Dialog Styling)**:
+     * Implemented dynamic runtime font loader loading Kindle's bundled **Bookerly** (display/titles) and **Amazon Ember** (body/buttons/chips) fonts directly from the APK's `assets/` directory with clean `Typeface.SERIF` / `Typeface.SANS_SERIF` fallbacks.
+     * Implemented `FolioTheme.applyToTree`: Recursively applies Kindle typography across any view tree and dynamically tints every `CheckBox` with Kindle blue (`#4DA6FF` checked, `#6E7680` unchecked).
+     * Implemented `FolioTheme.styleDialog`: Standardizes AlertDialog positive (`#4DA6FF` Ember bold), negative (`#8E959C`), and neutral (`#C4CBD2`) action buttons.
+   - **New Crimson Launcher Icon (`dropin_res/`)**:
+     * Integrated high-res crimson launcher icon assets across all Android densities (`mipmap-mdpi` through `mipmap-xxxhdpi`: `ic_launcher.png`, `ic_launcher_round.png`, `ic_launcher_foreground.png`).
+     * Set adaptive background to solid `#1A0808` crimson (`folio_icon_bg.png` 512x512, `launcher_bg_adaptive.jpg` 432x432) and wired foreground to `ic_launcher_foreground.png`.
+   - **Thorough Zero-Neon Highlight Sweep Across All 4 UI Files**:
+     * Audited and removed all lingering neon hexes (green `#00FF*`, purple `#D946EF`, amber `#F59E0B`, cyan `#06B6D4`) across `FolioMoreView.java`, `FolioMetadataCatalogDialog.java`, `FolioFolderBrowserDialog.java`, and `FolioWebBrowserDialog.java`.
+     * Replaced them with the unified Kindle palette: `#4DA6FF` (checked/active), `#162330` (subtle selected fill), `#2C5278` (active border), `#1C1F22` (neutral control surfaces), and `#262A2E` (hairlines).
+   - **Version Badge**: Bumped Control Center badge and `About Folio` dialog to **Milestone `Folio v12.5 KFX (Enhanced Typesetting)`**.
 
 2. **Compilation, Packaging & Deployment**:
-   - Recompiled `classes9.dex` (447,608 bytes) via `javac` and `d8`.
-   - Rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, and signed with debug keystore.
-   - Streamed APK install to physical Samsung Galaxy M32 (`lastUpdateTime=2026-11-24 04:58:51`).
-   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v12.4_kfx/base.apk` (132 MB).
+   - Recompiled `classes9.dex` (450,180 bytes) via `javac` and Android `d8`.
+   - Rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, signed with `apksigner`.
+   - Streamed APK install to physical Samsung Galaxy M32 (`lastUpdateTime=2026-11-24 05:13:45`).
+   - Verified zero fatal crashes in `logcat` (`FATAL EXCEPTION` check clean).
+   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v12.5_kfx/base.apk` (132 MB).
 
 ---
 
 ## 2. Task B: Hardware Verification on Physical Galaxy M32
 Verified on physical Samsung Galaxy M32 hardware:
 
-1. **`verify_r124_catalog_chips_polished.png` (840,310 bytes)**:
-   - Captured the polished **Library Metadata & Genres** modal showing:
-     * Serif bold `Library Metadata & Genres (32)` header.
-     * Clean emoji-free filter chips: active `All (32)` in calm Kindle blue, and inactive `Up Next (2)`, `Favorites (1)`, `Notes (1)`, `Classics (1)` in neutral `#1C1F22` charcoal.
-     * Vector `USER` (Authors Directory) and `SHUFFLE` (Random Book) buttons.
-     * Elevated `#141618` charcoal book cards with hairline borders.
-2. **`verify_r124_importer_polished.png` (207,264 bytes)**:
-   - Captured the polished **Import EPUBs from Storage** modal showing:
-     * Serif bold `Import EPUBs from Storage` header.
-     * Vector `UP_ARROW` parent navigation button beside address bar.
-     * Calm Kindle blue `Open` action pill.
-     * Active folder chip `★ en/0` in calm Kindle blue.
-     * Full-width `Import Selected (0)` action button in calm Kindle blue with pure black text.
-3. **Crash & Invariant Log Check**:
+1. **`verify_r125_launcher_icon.png` (229,758 bytes)**:
+   - Captured the Android home screen on Galaxy M32 showing:
+     * The new **Folio** crimson boy-under-tree launcher icon (`#230f11` crimson base, crisp boy silhouette).
+     * Sits alongside stock Kindle icon (`#2c93bc` blue) with distinct, elegant crimson identity.
+2. **`verify_r125_kindle_fonts_and_highlights.png` (208,619 bytes)**:
+   - Captured the **Import EPUBs from Storage** modal showing:
+     * Two EPUB checkboxes checked, displaying calm Kindle blue `#4DA6FF` checked tint (verified 1,418 pixels of exact `#4DA6FF` inside checkbox).
+     * Native Amazon Ember and Bookerly typography across modal header and list items.
+     * Zero-neon controls: `Select New` chip, `Already Imported` tags, and `★` folder pin button.
+     * Exact 0 neon pixels detected across the entire modal screenshot.
+3. **Safety Invariants**:
+   - Stock `com.amazon.kindle` (v8.160.1.0) remains bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
    - Zero crashes logged for `com.amazon.kindle.epub`.
-   - Stock Kindle (`com.amazon.kindle` v8.160.1.0) verified **100% untouched** (`lastUpdateTime=2026-11-19 21:59:23`).
 
 ---
 
-## 3. Task C: GitHub Repository Push
-As requested by the Project Lead:
+## 3. GitHub Repository Synchronization
 - **Repository Remote**: `https://github.com/BerKetKet/clunky.git`
 - **Branch**: `master` (tracking `origin/master`)
-- **Pushed Commit SHA**: `482fe4eece4519f4873885e09cb60470ec8341d5`
-- **Pushed Commit Message**: `Round 124: Kindle-Native Final Chip Polish (Folio v12.4 KFX)`
-- **Verification**: Remote branch confirmed synchronized with `origin/master` via `gh repo create clunky --public --source=. --remote=origin --push`.
-
----
-
-## 4. Package Verification Artifacts
-- Archive: `antig_to_gemini_neon_clunky_report124.zip`
-  * `REPORT.md`
-  * `INSTRUCTIONS_ROUND_124.md`
-  * `protocol.json`
-  * `verify_r124_catalog_chips_polished.png`
-  * `verify_r124_importer_polished.png`
+- **Status**: Commits synced and pushed to remote.

@@ -2,6 +2,7 @@ package com.amazon.kindle.epub.ingest;
 
 import android.widget.FrameLayout;
 import com.amazon.kindle.epub.catalog.FolioIcons;
+import com.amazon.kindle.epub.catalog.FolioTheme;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -240,7 +241,7 @@ public final class FolioFolderBrowserDialog {
 
         final TextView btnSelectBatch = new TextView(ctx);
         btnSelectBatch.setText("Select New");
-        btnSelectBatch.setTextColor(Color.parseColor("#5EEAD4"));
+        btnSelectBatch.setTextColor(Color.parseColor("#4DA6FF"));
         btnSelectBatch.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnSelectBatch.setTypeface(Typeface.DEFAULT_BOLD);
         btnSelectBatch.setPadding(dp(ctx, 10), dp(ctx, 4), dp(ctx, 10), dp(ctx, 4));
@@ -309,7 +310,7 @@ public final class FolioFolderBrowserDialog {
                 btnSelectBatch.setTextColor(Color.parseColor("#4DA6FF"));
             } else {
                 btnSelectBatch.setText("Select New");
-                btnSelectBatch.setTextColor(Color.parseColor("#5EEAD4"));
+                btnSelectBatch.setTextColor(Color.parseColor("#4DA6FF"));
             }
         };
 
@@ -317,7 +318,7 @@ public final class FolioFolderBrowserDialog {
             btnHideImported.setText(hideImported[0] ? "Hide Imported: ON" : "Hide Imported: OFF");
             btnHideImported.setTextColor(Color.parseColor(hideImported[0] ? "#111827" : "#CBD5E1"));
             GradientDrawable bg = new GradientDrawable();
-            bg.setColor(Color.parseColor(hideImported[0] ? "#34D399" : "#1C1F22"));
+            bg.setColor(Color.parseColor(hideImported[0] ? "#4DA6FF" : "#1C1F22"));
             bg.setCornerRadius(dp(ctx, 14));
             btnHideImported.setBackground(bg);
         };
@@ -351,7 +352,7 @@ public final class FolioFolderBrowserDialog {
 
                 TextView dnTv = new TextView(ctx);
                 dnTv.setText("📁 " + dName);
-                dnTv.setTextColor(Color.parseColor("#FDE68A"));
+                dnTv.setTextColor(Color.parseColor("#ECEFF1"));
                 dnTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
                 dnTv.setTypeface(Typeface.DEFAULT_BOLD);
                 dnTv.setSingleLine(true);
@@ -439,7 +440,7 @@ public final class FolioFolderBrowserDialog {
                 String sizeStr = formatSize(epub.length()) + (already ? " · Already Imported" : "");
                 TextView subTv = new TextView(ctx);
                 subTv.setText(sizeStr);
-                subTv.setTextColor(Color.parseColor(already ? "#34D399" : "#8E959C"));
+                subTv.setTextColor(Color.parseColor(already ? "#4DA6FF" : "#8E959C"));
                 subTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
                 infoCol.addView(subTv);
 
@@ -454,7 +455,7 @@ public final class FolioFolderBrowserDialog {
                 TextView btnMore = new TextView(ctx);
                 btnMore.setText("Load More (+" + step + " of " + remaining + " remaining)");
                 btnMore.setGravity(Gravity.CENTER);
-                btnMore.setTextColor(Color.parseColor("#5EEAD4"));
+                btnMore.setTextColor(Color.parseColor("#4DA6FF"));
                 btnMore.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                 btnMore.setTypeface(Typeface.DEFAULT_BOLD);
                 btnMore.setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10));
@@ -520,7 +521,7 @@ public final class FolioFolderBrowserDialog {
             java.util.LinkedHashSet<String> pinned = loadPinnedDirs(ctx);
             boolean curIsPinned = !curDir.isEmpty() && pinned.contains(curDir);
             btnPinDir.setText(curIsPinned ? "★" : "☆");
-            btnPinDir.setTextColor(Color.parseColor(curIsPinned ? "#FBBF24" : "#8E959C"));
+            btnPinDir.setTextColor(Color.parseColor(curIsPinned ? "#4DA6FF" : "#8E959C"));
             pinBg.setColor(Color.parseColor(curIsPinned ? "#2D2312" : "#1C1F22"));
             pinBg.setStroke(dp(ctx, 1), Color.parseColor(curIsPinned ? "#B45309" : "#2C3035"));
 
@@ -537,7 +538,7 @@ public final class FolioFolderBrowserDialog {
                 String shortLbl = qd.replace("/sdcard/", "");
                 if (shortLbl.isEmpty()) shortLbl = qd;
                 chip.setText((isPin ? "★ " : "") + shortLbl);
-                chip.setTextColor(Color.parseColor(isCur ? "#111827" : (isPin ? "#FBBF24" : "#CBD5E1")));
+                chip.setTextColor(Color.parseColor(isCur ? "#111827" : (isPin ? "#4DA6FF" : "#CBD5E1")));
                 chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
                 chip.setTypeface(isCur || isPin ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                 chip.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
@@ -705,7 +706,9 @@ public final class FolioFolderBrowserDialog {
         });
 
         loadDir.run();
+        FolioTheme.applyToTree(ctx, root);
         dialog.show();
+        FolioTheme.styleDialog(ctx, dialog);
     }
 
     private static GradientDrawable makeInputBg(Context ctx) {

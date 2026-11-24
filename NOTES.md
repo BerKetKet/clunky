@@ -1,6 +1,30 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.5 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Milestone Round 125 complete:
+  1. **Crimson Launcher Icon, Kindle Bookerly/Ember Typography & Zero-Neon Sweep (Task A)**:
+     - Integrated `FolioTheme.java` into `mod_src/real/` (dynamic runtime loader for Kindle's bundled Bookerly and Amazon Ember fonts from `assets/` with Serif/Sans fallbacks; `applyToTree` recursive tree styling and `#4DA6FF` checkbox tinter; `styleDialog` for standardizing AlertDialog action buttons).
+     - Integrated high-res crimson launcher icon assets across all densities (`dropin_res/mipmap-*`), solid `#1A0808` background (`folio_icon_bg.png` 512x512, `launcher_bg_adaptive.jpg` 432x432), and `ic_launcher_foreground.png`.
+     - Executed thorough zero-neon highlight sweep across all 4 UI files (`FolioMoreView.java`, `FolioMetadataCatalogDialog.java`, `FolioFolderBrowserDialog.java`, `FolioWebBrowserDialog.java`), replacing all lingering neon hexes with Kindle blue `#4DA6FF` and Kindle charcoal surfaces (`#1C1F22`, `#141618`, `#262A2E`).
+     - Bumped badge and About Folio dialog to **Milestone `Folio v12.5 KFX (Enhanced Typesetting)`**.
+     - Recompiled `classes9.dex` (450,180 bytes), rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, signed with `apksigner`.
+     - Streamed APK install to Galaxy M32 (`lastUpdateTime=2026-11-24 05:13:45`) with zero fatal crashes logged.
+     - Staged release APK at `07_APK_EPUB_INGESTION_MOD/release/folio_v12.5_kfx/base.apk` (132 MB).
+  2. **Visual Verification & Invariant Proofs (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r125_launcher_icon.png` (229,758 bytes) — Android home screen showing new Folio crimson boy-under-tree launcher icon (`#230f11` crimson base, crisp boy silhouette) alongside stock Kindle (`#2c93bc` blue).
+       * `verify_r125_kindle_fonts_and_highlights.png` (208,619 bytes) — Import EPUBs from Storage modal showing checked Kindle blue `#4DA6FF` checkboxes (1,418 verified `#4DA6FF` pixels), Bookerly header typography, Amazon Ember body/controls, and 0 neon pixels detected across entire modal.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Cloned Invariant: `com.amazon.kindle.epub` updated (`lastUpdateTime=2026-11-24 05:13:45`), zero crashes.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+  4. Packaged `antig_to_gemini_neon_clunky_report125.zip` and submitted to Gemini Neon tab `837018552`.
+
+## Verification Evidence (Round 125)
+1. `verify_r125_launcher_icon.png`: Home screen with crimson boy-under-tree launcher icon.
+2. `verify_r125_kindle_fonts_and_highlights.png`: Import EPUBs modal with Bookerly/Ember typography, Kindle-blue checked checkboxes, and 0 neon pixels.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v12.5 KFX deployed (`lastUpdateTime=2026-11-24 05:13:45`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.4 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 124 complete:
   1. **Kindle-Native Final Chip Polish & GitHub Repository Push (Task A, B & C)**:
      - Integrated `FolioMoreView.java`, `FolioMetadataCatalogDialog.java`, and `FolioFolderBrowserDialog.java` into `mod_src/real/`.

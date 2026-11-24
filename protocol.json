@@ -1,11 +1,15 @@
 {
-  "round": 124,
-  "version": "Folio v12.4 KFX",
-  "codename": "Kindle-Native Final Chip Polish & GitHub Repository Push",
+  "round": 125,
+  "version": "Folio v12.5 KFX",
+  "milestone": true,
+  "codename": "New Crimson Launcher Icon, Kindle Bookerly/Ember Typography & Zero-Neon Highlight Sweep",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
-  "git_push_requested": true,
   "dropin_files": [
+    {
+      "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioTheme.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioTheme.java"
+    },
     {
       "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
@@ -17,11 +21,16 @@
     {
       "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java"
+    },
+    {
+      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.4_kfx/base.apk",
+  "launcher_icon_assets_dir": "dropin_res/",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.5_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r124_catalog_chips_polished.png",
-    "verify_r124_importer_polished.png"
+    "verify_r125_launcher_icon.png",
+    "verify_r125_kindle_fonts_and_highlights.png"
   ]
 }

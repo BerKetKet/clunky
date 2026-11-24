@@ -36,6 +36,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.amazon.kindle.epub.catalog.FolioIcons;
+import com.amazon.kindle.epub.catalog.FolioTheme;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -271,8 +272,9 @@ public final class FolioWebBrowserDialog {
             }
         });
         root.addView(cleanToggle);
+        FolioTheme.applyToTree(ctx, root);
 
-        new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        AlertDialog sDlg = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setView(root)
                 .setPositiveButton("Save", new DialogInterface.OnClickListener() {
                     @Override public void onClick(DialogInterface dialog, int which) {
@@ -284,6 +286,7 @@ public final class FolioWebBrowserDialog {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+        FolioTheme.styleDialog(ctx, sDlg);
     }
 
     public static void show(final Context ctx, final Runnable onImported) {
@@ -638,7 +641,9 @@ public final class FolioWebBrowserDialog {
             }
         });
 
+        FolioTheme.applyToTree(ctx, root);
         dlg.show();
+        FolioTheme.styleDialog(ctx, dlg);
         Window win = dlg.getWindow();
         if (win != null) {
             win.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE

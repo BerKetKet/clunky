@@ -2,6 +2,7 @@ package com.amazon.kindle.epub.ingest;
 
 import android.widget.FrameLayout;
 import com.amazon.kindle.epub.catalog.FolioIcons;
+import com.amazon.kindle.epub.catalog.FolioTheme;
 
 import android.app.AlertDialog;
 import android.content.ContentValues;
@@ -292,7 +293,7 @@ public final class FolioMetadataCatalogDialog {
 
         final TextView bulkCountTv = new TextView(ctx);
         bulkCountTv.setText("0 selected — tap books to select");
-        bulkCountTv.setTextColor(Color.parseColor("#C7D2FE"));
+        bulkCountTv.setTextColor(Color.parseColor("#ECEFF1"));
         bulkCountTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         bulkCountTv.setTypeface(Typeface.DEFAULT_BOLD);
         bulkCountTv.setLayoutParams(new LinearLayout.LayoutParams(
@@ -301,7 +302,7 @@ public final class FolioMetadataCatalogDialog {
 
         final TextView btnSelectAll = new TextView(ctx);
         btnSelectAll.setText("Select All");
-        btnSelectAll.setTextColor(Color.parseColor("#38BDF8"));
+        btnSelectAll.setTextColor(Color.parseColor("#4DA6FF"));
         btnSelectAll.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         btnSelectAll.setTypeface(Typeface.DEFAULT_BOLD);
         btnSelectAll.setPadding(dp(ctx, 8), dp(ctx, 3), dp(ctx, 4), dp(ctx, 3));
@@ -312,11 +313,11 @@ public final class FolioMetadataCatalogDialog {
         bulkBtnsRow.setOrientation(LinearLayout.HORIZONTAL);
         bulkBtnsRow.setGravity(Gravity.CENTER_VERTICAL);
 
-        final TextView btnBulkShelf = makeBulkActionPill(ctx, "Shelf", "#312E81", "#C7D2FE", "#4F46E5");
-        final TextView btnBulkGenre = makeBulkActionPill(ctx, "+Genre", "#152638", "#38BDF8", "#1E4E75");
-        final TextView btnBulkQueue = makeBulkActionPill(ctx, "📌Queue", "#2B1B3D", "#C084FC", "#6B21A8");
-        final TextView btnBulkFav = makeBulkActionPill(ctx, "★Fav", "#3B2A14", "#FBBF24", "#784F1D");
-        final TextView btnBulkDone = makeBulkActionPill(ctx, "✓Done", "#123328", "#34D399", "#1E664E");
+        final TextView btnBulkShelf = makeBulkActionPill(ctx, "Shelf", "#312E81", "#ECEFF1", "#4F46E5");
+        final TextView btnBulkGenre = makeBulkActionPill(ctx, "+Genre", "#162330", "#4DA6FF", "#2C5278");
+        final TextView btnBulkQueue = makeBulkActionPill(ctx, "📌Queue", "#162330", "#4DA6FF", "#2C5278");
+        final TextView btnBulkFav = makeBulkActionPill(ctx, "★Fav", "#3B2A14", "#4DA6FF", "#784F1D");
+        final TextView btnBulkDone = makeBulkActionPill(ctx, "✓Done", "#123328", "#4DA6FF", "#1E664E");
         bulkBtnsRow.addView(btnBulkShelf);
         bulkBtnsRow.addView(btnBulkGenre);
         bulkBtnsRow.addView(btnBulkQueue);
@@ -671,7 +672,7 @@ public final class FolioMetadataCatalogDialog {
                 btnSelect.setText("✕ Done");
                 btnSelect.setTextColor(Color.WHITE);
                 selBtnBg.setColor(Color.parseColor("#4F46E5"));
-                selBtnBg.setStroke(dp(ctx, 1), Color.parseColor("#818CF8"));
+                selBtnBg.setStroke(dp(ctx, 1), Color.parseColor("#4DA6FF"));
                 bulkBar.setVisibility(View.VISIBLE);
                 listScroll.getLayoutParams().height = dp(ctx, 316);
                 listScroll.requestLayout();
@@ -810,7 +811,9 @@ public final class FolioMetadataCatalogDialog {
         });
 
         renderRef[0].run();
+        FolioTheme.applyToTree(ctx, root);
         dialog.show();
+        FolioTheme.styleDialog(ctx, dialog);
     }
 
     private interface SortPickCallback {
@@ -840,14 +843,14 @@ public final class FolioMetadataCatalogDialog {
         final boolean[] revState = new boolean[] { curRev };
         final TextView dirPill = new TextView(ctx);
         dirPill.setText(revState[0] ? "↑ Reversed" : "↓ Standard");
-        dirPill.setTextColor(Color.parseColor(revState[0] ? "#FBBF24" : "#38BDF8"));
+        dirPill.setTextColor(Color.parseColor(revState[0] ? "#4DA6FF" : "#4DA6FF"));
         dirPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         dirPill.setTypeface(Typeface.DEFAULT_BOLD);
         dirPill.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
         final GradientDrawable dBg = new GradientDrawable();
-        dBg.setColor(Color.parseColor(revState[0] ? "#2D2312" : "#152638"));
+        dBg.setColor(Color.parseColor(revState[0] ? "#2D2312" : "#162330"));
         dBg.setCornerRadius(dp(ctx, 12));
-        dBg.setStroke(dp(ctx, 1), Color.parseColor(revState[0] ? "#B45309" : "#1E4E75"));
+        dBg.setStroke(dp(ctx, 1), Color.parseColor(revState[0] ? "#B45309" : "#2C5278"));
         dirPill.setBackground(dBg);
         hdrRow.addView(dirPill);
         root.addView(hdrRow);
@@ -856,9 +859,9 @@ public final class FolioMetadataCatalogDialog {
         dirPill.setOnClickListener(v -> {
             revState[0] = !revState[0];
             dirPill.setText(revState[0] ? "↑ Reversed" : "↓ Standard");
-            dirPill.setTextColor(Color.parseColor(revState[0] ? "#FBBF24" : "#38BDF8"));
-            dBg.setColor(Color.parseColor(revState[0] ? "#2D2312" : "#152638"));
-            dBg.setStroke(dp(ctx, 1), Color.parseColor(revState[0] ? "#B45309" : "#1E4E75"));
+            dirPill.setTextColor(Color.parseColor(revState[0] ? "#4DA6FF" : "#4DA6FF"));
+            dBg.setColor(Color.parseColor(revState[0] ? "#2D2312" : "#162330"));
+            dBg.setStroke(dp(ctx, 1), Color.parseColor(revState[0] ? "#B45309" : "#2C5278"));
             cb.onPicked(curIdx, revState[0]);
         });
 
@@ -882,7 +885,7 @@ public final class FolioMetadataCatalogDialog {
             GradientDrawable rBg = new GradientDrawable();
             rBg.setColor(Color.parseColor(active ? "#1E2642" : "#141618"));
             rBg.setCornerRadius(dp(ctx, 9));
-            rBg.setStroke(dp(ctx, 1), Color.parseColor(active ? "#F59E0B" : "#262D3F"));
+            rBg.setStroke(dp(ctx, 1), Color.parseColor(active ? "#4DA6FF" : "#262D3F"));
             row.setBackground(rBg);
             LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -891,7 +894,7 @@ public final class FolioMetadataCatalogDialog {
 
             TextView lbl = new TextView(ctx);
             lbl.setText(descLabels[i]);
-            lbl.setTextColor(Color.parseColor(active ? "#FBBF24" : "#E2E8F0"));
+            lbl.setTextColor(Color.parseColor(active ? "#4DA6FF" : "#E2E8F0"));
             lbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
             lbl.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
             lbl.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -900,7 +903,7 @@ public final class FolioMetadataCatalogDialog {
             if (active) {
                 TextView chk = new TextView(ctx);
                 chk.setText("✓");
-                chk.setTextColor(Color.parseColor("#FBBF24"));
+                chk.setTextColor(Color.parseColor("#4DA6FF"));
                 chk.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
                 chk.setTypeface(Typeface.DEFAULT_BOLD);
                 row.addView(chk);
@@ -1117,7 +1120,7 @@ public final class FolioMetadataCatalogDialog {
         if (pct > 0) {
             float ratio = Math.max(0.08f, Math.min(1f, pct / 100f));
             View mFill = new View(ctx);
-            mFill.setBackgroundColor(Color.parseColor(pct >= 100 ? "#34D399" : "#38BDF8"));
+            mFill.setBackgroundColor(Color.parseColor(pct >= 100 ? "#4DA6FF" : "#4DA6FF"));
             mFill.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, ratio));
             miniTrack.addView(mFill);
             View mRest = new View(ctx);
@@ -1134,16 +1137,16 @@ public final class FolioMetadataCatalogDialog {
         TextView badgeTv = new TextView(ctx);
         if (pct >= 100) {
             badgeTv.setText("✓ Done");
-            badgeTv.setTextColor(Color.parseColor("#34D399"));
+            badgeTv.setTextColor(Color.parseColor("#4DA6FF"));
         } else if (pct > 0) {
             badgeTv.setText(pct + "%");
-            badgeTv.setTextColor(Color.parseColor("#38BDF8"));
+            badgeTv.setTextColor(Color.parseColor("#4DA6FF"));
         } else if (stars > 0) {
             badgeTv.setText("★ " + stars + "/5");
-            badgeTv.setTextColor(Color.parseColor("#FBBF24"));
+            badgeTv.setTextColor(Color.parseColor("#4DA6FF"));
         } else if (isInQueue(ctx, rec.kfxPath)) {
             badgeTv.setText("📌 Up Next");
-            badgeTv.setTextColor(Color.parseColor("#C084FC"));
+            badgeTv.setTextColor(Color.parseColor("#4DA6FF"));
         } else {
             badgeTv.setText("Unread");
             badgeTv.setTextColor(Color.parseColor("#7A828A"));
@@ -1252,7 +1255,7 @@ public final class FolioMetadataCatalogDialog {
         if (pct > 0) {
             TextView progTv = new TextView(ctx);
             progTv.setText(pct >= 100 ? "✓ Finished" : (pct + "% read"));
-            progTv.setTextColor(Color.parseColor(pct >= 100 ? "#34D399" : "#38BDF8"));
+            progTv.setTextColor(Color.parseColor(pct >= 100 ? "#4DA6FF" : "#4DA6FF"));
             progTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             progTv.setTypeface(Typeface.DEFAULT_BOLD);
             progTv.setPadding(0, dp(ctx, 3), 0, 0);
@@ -1272,7 +1275,7 @@ public final class FolioMetadataCatalogDialog {
         if (!cardShelf.isEmpty()) {
             TextView shelfTv = new TextView(ctx);
             shelfTv.setText("🏷 " + cardShelf);
-            shelfTv.setTextColor(Color.parseColor("#A5B4FC"));
+            shelfTv.setTextColor(Color.parseColor("#4DA6FF"));
             shelfTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             shelfTv.setTypeface(Typeface.DEFAULT_BOLD);
             shelfTv.setPadding(0, dp(ctx, 2), 0, 0);
@@ -1285,7 +1288,7 @@ public final class FolioMetadataCatalogDialog {
             for (int s = 0; s < 5; s++) stars.append(s < cardRating ? "★" : "☆");
             TextView rateTv = new TextView(ctx);
             rateTv.setText(stars.toString() + "  " + cardRating + "/5");
-            rateTv.setTextColor(Color.parseColor("#FBBF24"));
+            rateTv.setTextColor(Color.parseColor("#4DA6FF"));
             rateTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             rateTv.setTypeface(Typeface.DEFAULT_BOLD);
             rateTv.setPadding(0, dp(ctx, 2), 0, 0);
@@ -1296,7 +1299,7 @@ public final class FolioMetadataCatalogDialog {
         if (!cardNote.isEmpty()) {
             TextView notePreviewTv = new TextView(ctx);
             notePreviewTv.setText("“" + cardNote + "”");
-            notePreviewTv.setTextColor(Color.parseColor("#F59E0B"));
+            notePreviewTv.setTextColor(Color.parseColor("#4DA6FF"));
             notePreviewTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             notePreviewTv.setTypeface(null, Typeface.ITALIC);
             notePreviewTv.setMaxLines(1);
@@ -1388,7 +1391,7 @@ public final class FolioMetadataCatalogDialog {
         final String displayAuthor = formatAuthorForDisplay(rec.author);
         TextView sub = new TextView(ctx);
         sub.setText(displayAuthor.isEmpty() ? "" : displayAuthor + "  ›");
-        sub.setTextColor(Color.parseColor("#F59E0B"));
+        sub.setTextColor(Color.parseColor("#4DA6FF"));
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         sub.setTypeface(Typeface.DEFAULT_BOLD);
         sub.setPadding(0, dp(ctx, 4), 0, dp(ctx, 4));
@@ -1412,7 +1415,7 @@ public final class FolioMetadataCatalogDialog {
             } else {
                 progTv.setText(currentProgress + "% read");
             }
-            progTv.setTextColor(Color.parseColor(currentProgress >= 100 ? "#34D399" : "#38BDF8"));
+            progTv.setTextColor(Color.parseColor(currentProgress >= 100 ? "#4DA6FF" : "#4DA6FF"));
             progTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             progTv.setTypeface(Typeface.DEFAULT_BOLD);
             progTv.setPadding(0, dp(ctx, 2), 0, 0);
@@ -1506,7 +1509,7 @@ public final class FolioMetadataCatalogDialog {
             if (isLong) {
                 final TextView moreTv = new TextView(ctx);
                 moreTv.setText("Read full synopsis ›");
-                moreTv.setTextColor(Color.parseColor("#5EEAD4"));
+                moreTv.setTextColor(Color.parseColor("#4DA6FF"));
                 moreTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                 moreTv.setTypeface(Typeface.DEFAULT_BOLD);
                 moreTv.setPadding(0, dp(ctx, 4), 0, dp(ctx, 2));
@@ -1539,7 +1542,7 @@ public final class FolioMetadataCatalogDialog {
         final boolean isFinished = currentProgress >= 100;
         TextView readToggleBtn = new TextView(ctx);
         readToggleBtn.setText(isFinished ? "↺ Mark as Unread" : "✓ Mark as Finished");
-        readToggleBtn.setTextColor(Color.parseColor(isFinished ? "#F59E0B" : "#34D399"));
+        readToggleBtn.setTextColor(Color.parseColor(isFinished ? "#4DA6FF" : "#4DA6FF"));
         readToggleBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         readToggleBtn.setTypeface(Typeface.DEFAULT_BOLD);
         readToggleBtn.setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8));
@@ -1566,7 +1569,7 @@ public final class FolioMetadataCatalogDialog {
         final boolean isFav = isFavorite(ctx, rec.kfxPath);
         TextView favBtn = new TextView(ctx);
         favBtn.setText(isFav ? "★ Favorited" : "☆ Favorite");
-        favBtn.setTextColor(Color.parseColor(isFav ? "#FBBF24" : "#CBD5E1"));
+        favBtn.setTextColor(Color.parseColor(isFav ? "#4DA6FF" : "#CBD5E1"));
         favBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         favBtn.setTypeface(Typeface.DEFAULT_BOLD);
         favBtn.setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8));
@@ -1611,7 +1614,7 @@ public final class FolioMetadataCatalogDialog {
             for (int si = 0; si < 5; si++) {
                 boolean filled = si < curRating[0];
                 starViews[si].setText(filled ? "★" : "☆");
-                starViews[si].setTextColor(Color.parseColor(filled ? "#FBBF24" : "#475569"));
+                starViews[si].setTextColor(Color.parseColor(filled ? "#4DA6FF" : "#475569"));
             }
         };
         for (int si = 0; si < 5; si++) {
@@ -1651,7 +1654,7 @@ public final class FolioMetadataCatalogDialog {
 
         TextView shelfPill = new TextView(ctx);
         shelfPill.setText(curShelf.isEmpty() ? "+ Assign Shelf ›" : "🏷 " + curShelf + "  ›");
-        shelfPill.setTextColor(Color.parseColor(curShelf.isEmpty() ? "#8E959C" : "#A5B4FC"));
+        shelfPill.setTextColor(Color.parseColor(curShelf.isEmpty() ? "#8E959C" : "#4DA6FF"));
         shelfPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         shelfPill.setTypeface(Typeface.DEFAULT_BOLD);
         shelfPill.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
@@ -1674,7 +1677,7 @@ public final class FolioMetadataCatalogDialog {
         queuePill.setTypeface(Typeface.DEFAULT_BOLD);
         queuePill.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
         GradientDrawable qBg = new GradientDrawable();
-        qBg.setColor(Color.parseColor(inQ ? "#2B1B3D" : "#1C1F22"));
+        qBg.setColor(Color.parseColor(inQ ? "#162330" : "#1C1F22"));
         qBg.setCornerRadius(dp(ctx, 12));
         if (inQ) qBg.setStroke(dp(ctx, 1), Color.parseColor("#88A855F7"));
         queuePill.setBackground(qBg);
@@ -1712,7 +1715,7 @@ public final class FolioMetadataCatalogDialog {
 
         TextView noteHdr = new TextView(ctx);
         noteHdr.setText(existingNote.isEmpty() ? "📝 Add a Personal Reading Note ›" : "📝 Personal Note (tap to edit)");
-        noteHdr.setTextColor(Color.parseColor(existingNote.isEmpty() ? "#8E959C" : "#F59E0B"));
+        noteHdr.setTextColor(Color.parseColor(existingNote.isEmpty() ? "#8E959C" : "#4DA6FF"));
         noteHdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         noteHdr.setTypeface(Typeface.DEFAULT_BOLD);
         noteBox.addView(noteHdr);
@@ -1752,7 +1755,7 @@ public final class FolioMetadataCatalogDialog {
                 Map<String, Integer> sibProgMap = loadProgressMap(ctx);
                 TextView sibHdr = new TextView(ctx);
                 sibHdr.setText("MORE BY " + curAuthorClean.toUpperCase(Locale.ROOT) + " (" + siblings.size() + ")");
-                sibHdr.setTextColor(Color.parseColor("#F59E0B"));
+                sibHdr.setTextColor(Color.parseColor("#4DA6FF"));
                 sibHdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
                 sibHdr.setTypeface(Typeface.DEFAULT_BOLD);
                 sibHdr.setPadding(0, dp(ctx, 14), 0, dp(ctx, 6));
@@ -1815,13 +1818,13 @@ public final class FolioMetadataCatalogDialog {
                     TextView sbTv = new TextView(ctx);
                     if (sPct >= 100) {
                         sbTv.setText("✓ Done ›");
-                        sbTv.setTextColor(Color.parseColor("#34D399"));
+                        sbTv.setTextColor(Color.parseColor("#4DA6FF"));
                     } else if (sPct > 0) {
                         sbTv.setText(sPct + "% read ›");
-                        sbTv.setTextColor(Color.parseColor("#38BDF8"));
+                        sbTv.setTextColor(Color.parseColor("#4DA6FF"));
                     } else if (isInQueue(ctx, sib.kfxPath)) {
                         sbTv.setText("📌 Up Next ›");
-                        sbTv.setTextColor(Color.parseColor("#C084FC"));
+                        sbTv.setTextColor(Color.parseColor("#4DA6FF"));
                     } else {
                         int sYr = parseBookYear(sib.pubDate);
                         sbTv.setText(sYr > 0 ? (sYr + " · View ›") : "View Details ›");
@@ -1917,14 +1920,14 @@ public final class FolioMetadataCatalogDialog {
 
         TextView shareBtn = new TextView(ctx);
         shareBtn.setText("↗ Share");
-        shareBtn.setTextColor(Color.parseColor("#38BDF8"));
+        shareBtn.setTextColor(Color.parseColor("#4DA6FF"));
         shareBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         shareBtn.setTypeface(Typeface.DEFAULT_BOLD);
         shareBtn.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
         GradientDrawable shareBg = new GradientDrawable();
-        shareBg.setColor(Color.parseColor("#152638"));
+        shareBg.setColor(Color.parseColor("#162330"));
         shareBg.setCornerRadius(dp(ctx, 10));
-        shareBg.setStroke(dp(ctx, 1), Color.parseColor("#1E4E75"));
+        shareBg.setStroke(dp(ctx, 1), Color.parseColor("#2C5278"));
         shareBtn.setBackground(shareBg);
         LinearLayout.LayoutParams shBtnLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -2048,13 +2051,13 @@ public final class FolioMetadataCatalogDialog {
 
         TextView swapPill = new TextView(ctx);
         swapPill.setText("⇄ Swap T/A");
-        swapPill.setTextColor(Color.parseColor("#C084FC"));
+        swapPill.setTextColor(Color.parseColor("#4DA6FF"));
         swapPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         swapPill.setTypeface(Typeface.DEFAULT_BOLD);
         swapPill.setGravity(Gravity.CENTER);
         swapPill.setSingleLine(true);
         swapPill.setPadding(dp(ctx, 8), dp(ctx, 6), dp(ctx, 8), dp(ctx, 6));
-        swapPill.setBackground(pillBg(ctx, "#2B1B3D", "#6B21A8", 8));
+        swapPill.setBackground(pillBg(ctx, "#162330", "#2C5278", 8));
         LinearLayout.LayoutParams spLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         spLp.rightMargin = dp(ctx, 6);
         swapPill.setLayoutParams(spLp);
@@ -2069,13 +2072,13 @@ public final class FolioMetadataCatalogDialog {
 
         TextView normAuthPill = new TextView(ctx);
         normAuthPill.setText("Aa Fix Author");
-        normAuthPill.setTextColor(Color.parseColor("#38BDF8"));
+        normAuthPill.setTextColor(Color.parseColor("#4DA6FF"));
         normAuthPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         normAuthPill.setTypeface(Typeface.DEFAULT_BOLD);
         normAuthPill.setGravity(Gravity.CENTER);
         normAuthPill.setSingleLine(true);
         normAuthPill.setPadding(dp(ctx, 8), dp(ctx, 6), dp(ctx, 8), dp(ctx, 6));
-        normAuthPill.setBackground(pillBg(ctx, "#152638", "#1E4E75", 8));
+        normAuthPill.setBackground(pillBg(ctx, "#162330", "#2C5278", 8));
         LinearLayout.LayoutParams naLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         naLp.rightMargin = dp(ctx, 6);
         normAuthPill.setLayoutParams(naLp);
@@ -2088,13 +2091,13 @@ public final class FolioMetadataCatalogDialog {
 
         TextView titleCasePill = new TextView(ctx);
         titleCasePill.setText("Aa Title Case");
-        titleCasePill.setTextColor(Color.parseColor("#FBBF24"));
+        titleCasePill.setTextColor(Color.parseColor("#4DA6FF"));
         titleCasePill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         titleCasePill.setTypeface(Typeface.DEFAULT_BOLD);
         titleCasePill.setGravity(Gravity.CENTER);
         titleCasePill.setSingleLine(true);
         titleCasePill.setPadding(dp(ctx, 8), dp(ctx, 6), dp(ctx, 8), dp(ctx, 6));
-        titleCasePill.setBackground(pillBg(ctx, "#2A2011", "#854D0E", 8));
+        titleCasePill.setBackground(pillBg(ctx, "#162330", "#2C5278", 8));
         titleCasePill.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         titleCasePill.setOnClickListener(v -> {
             String fixed = toSmartTitleCase(etTitle.getText().toString());
@@ -2467,11 +2470,11 @@ public final class FolioMetadataCatalogDialog {
                 pill.setText(sLabels[i]);
                 pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
                 pill.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-                pill.setTextColor(Color.parseColor(active ? "#FBBF24" : "#8E959C"));
+                pill.setTextColor(Color.parseColor(active ? "#4DA6FF" : "#8E959C"));
                 pill.setGravity(Gravity.CENTER);
                 pill.setSingleLine(true);
                 pill.setPadding(dp(ctx, 10), dp(ctx, 6), dp(ctx, 10), dp(ctx, 6));
-                pill.setBackground(pillBg(ctx, active ? "#2A2011" : "#161923", active ? "#D97706" : "#262A2E", 9));
+                pill.setBackground(pillBg(ctx, active ? "#162330" : "#161923", active ? "#2C5278" : "#262A2E", 9));
                 LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                 if (i < sLabels.length - 1) plp.rightMargin = dp(ctx, 6);
                 pill.setLayoutParams(plp);
@@ -2523,7 +2526,7 @@ public final class FolioMetadataCatalogDialog {
                 GradientDrawable rBg = new GradientDrawable();
                 rBg.setColor(Color.parseColor("#141618"));
                 rBg.setCornerRadius(dp(ctx, 10));
-                rBg.setStroke(dp(ctx, 1), Color.parseColor((fin > 0 || rdg > 0) ? "#2F455C" : "#262A2E"));
+                rBg.setStroke(dp(ctx, 1), Color.parseColor((fin > 0 || rdg > 0) ? "#2C5278" : "#262A2E"));
                 row.setBackground(rBg);
                 LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -2532,14 +2535,14 @@ public final class FolioMetadataCatalogDialog {
 
                 TextView avTv = new TextView(ctx);
                 avTv.setText(authorMonogram(name));
-                avTv.setTextColor(Color.parseColor((fin > 0 || rdg > 0) ? "#5EEAD4" : "#FBBF24"));
+                avTv.setTextColor(Color.parseColor((fin > 0 || rdg > 0) ? "#4DA6FF" : "#4DA6FF"));
                 avTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
                 avTv.setTypeface(Typeface.DEFAULT_BOLD);
                 avTv.setGravity(Gravity.CENTER);
                 GradientDrawable avBg = new GradientDrawable();
                 avBg.setShape(GradientDrawable.OVAL);
-                avBg.setColor(Color.parseColor((fin > 0 || rdg > 0) ? "#132A2E" : "#282115"));
-                avBg.setStroke(dp(ctx, 1), Color.parseColor((fin > 0 || rdg > 0) ? "#1F5B63" : "#4A3A1E"));
+                avBg.setColor(Color.parseColor((fin > 0 || rdg > 0) ? "#162330" : "#1C1F22"));
+                avBg.setStroke(dp(ctx, 1), Color.parseColor((fin > 0 || rdg > 0) ? "#2C5278" : "#262A2E"));
                 avTv.setBackground(avBg);
                 LinearLayout.LayoutParams avLp = new LinearLayout.LayoutParams(dp(ctx, 32), dp(ctx, 32));
                 avLp.rightMargin = dp(ctx, 10);
@@ -2574,7 +2577,7 @@ public final class FolioMetadataCatalogDialog {
                 }
                 TextView subTv = new TextView(ctx);
                 subTv.setText(sub.toString());
-                subTv.setTextColor(Color.parseColor((fin > 0 || rdg > 0) ? "#5EEAD4" : "#7A828A"));
+                subTv.setTextColor(Color.parseColor((fin > 0 || rdg > 0) ? "#4DA6FF" : "#7A828A"));
                 subTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
                 subTv.setSingleLine(true);
                 subTv.setEllipsize(TextUtils.TruncateAt.END);
@@ -2583,7 +2586,7 @@ public final class FolioMetadataCatalogDialog {
 
                 TextView cntTv = new TextView(ctx);
                 cntTv.setText(n + (n == 1 ? " book ›" : " books ›"));
-                cntTv.setTextColor(Color.parseColor("#F59E0B"));
+                cntTv.setTextColor(Color.parseColor("#4DA6FF"));
                 cntTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                 cntTv.setTypeface(Typeface.DEFAULT_BOLD);
                 cntTv.setPadding(dp(ctx, 8), 0, 0, 0);
@@ -2643,12 +2646,12 @@ public final class FolioMetadataCatalogDialog {
             boolean isCur = preset.equalsIgnoreCase(currentShelf);
             TextView pill = new TextView(ctx);
             pill.setText("🏷 " + preset);
-            pill.setTextColor(Color.parseColor(isCur ? "#111827" : "#A5B4FC"));
+            pill.setTextColor(Color.parseColor(isCur ? "#111827" : "#4DA6FF"));
             pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             pill.setTypeface(Typeface.DEFAULT_BOLD);
             pill.setPadding(dp(ctx, 10), dp(ctx, 6), dp(ctx, 10), dp(ctx, 6));
             GradientDrawable bg = new GradientDrawable();
-            bg.setColor(Color.parseColor(isCur ? "#818CF8" : "#1C1F22"));
+            bg.setColor(Color.parseColor(isCur ? "#4DA6FF" : "#1C1F22"));
             bg.setCornerRadius(dp(ctx, 14));
             pill.setBackground(bg);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -2907,7 +2910,7 @@ public final class FolioMetadataCatalogDialog {
         GradientDrawable selBg = new GradientDrawable();
         selBg.setColor(Color.parseColor(isSel ? "#1E2642" : "#141618"));
         selBg.setCornerRadius(dp(ctx, 10));
-        selBg.setStroke(dp(ctx, isSel ? 2 : 1), Color.parseColor(isSel ? "#818CF8" : "#262A2E"));
+        selBg.setStroke(dp(ctx, isSel ? 2 : 1), Color.parseColor(isSel ? "#4DA6FF" : "#262A2E"));
         cardView.setBackground(selBg);
         cardView.setOnClickListener(v -> {
             if (rec.kfxPath == null || rec.kfxPath.isEmpty()) return;
@@ -2963,7 +2966,7 @@ public final class FolioMetadataCatalogDialog {
         for (final String sh : choices) {
             TextView pill = new TextView(ctx);
             pill.setText("🏷 " + sh);
-            pill.setTextColor(Color.parseColor("#C7D2FE"));
+            pill.setTextColor(Color.parseColor("#ECEFF1"));
             pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             pill.setTypeface(Typeface.DEFAULT_BOLD);
             pill.setPadding(dp(ctx, 11), dp(ctx, 6), dp(ctx, 11), dp(ctx, 6));
@@ -3064,14 +3067,14 @@ public final class FolioMetadataCatalogDialog {
             if (shown++ >= 14) break;
             TextView pill = new TextView(ctx);
             pill.setText("+ " + gName);
-            pill.setTextColor(Color.parseColor("#38BDF8"));
+            pill.setTextColor(Color.parseColor("#4DA6FF"));
             pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             pill.setTypeface(Typeface.DEFAULT_BOLD);
             pill.setPadding(dp(ctx, 11), dp(ctx, 6), dp(ctx, 11), dp(ctx, 6));
             GradientDrawable pBg = new GradientDrawable();
-            pBg.setColor(Color.parseColor("#152638"));
+            pBg.setColor(Color.parseColor("#162330"));
             pBg.setCornerRadius(dp(ctx, 14));
-            pBg.setStroke(dp(ctx, 1), Color.parseColor("#1E4E75"));
+            pBg.setStroke(dp(ctx, 1), Color.parseColor("#2C5278"));
             pill.setBackground(pBg);
             LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
