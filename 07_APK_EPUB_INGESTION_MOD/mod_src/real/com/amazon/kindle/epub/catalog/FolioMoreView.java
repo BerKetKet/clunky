@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v13.1 KFX");
+        badgeTv.setText("v13.2 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(TEXT_MUTED);
         badgeTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
@@ -4723,7 +4723,7 @@ public final class FolioMoreView {
         String remHrStr = remMins >= 60.0 ? (Math.round(remMins / 60.0) + "h") : (Math.round(remMins) + "m");
 
         TextView rtHdr = new TextView(ctx);
-        rtHdr.setText("READING TIME PORTFOLIO (" + userWpm + " WPM)");
+        rtHdr.setText("READING TIME PORTFOLIO (" + userWpm + " WPM · TAP TO CALIBRATE)");
         rtHdr.setTextColor(0xFF4DA6FF);
         rtHdr.setTextSize(11);
         rtHdr.setTypeface(Typeface.DEFAULT_BOLD);
@@ -4769,6 +4769,16 @@ public final class FolioMoreView {
             rTile.addView(rl);
             rtRow.addView(rTile);
         }
+        View.OnClickListener calibrateClick = new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
+                showReadingGoalDialog(ctx, new Runnable() {
+                    @Override public void run() { showLibraryInsightsDialog(ctx); }
+                });
+            }
+        };
+        rtHdr.setOnClickListener(calibrateClick);
+        rtRow.setOnClickListener(calibrateClick);
         content.addView(rtRow);
 
         // Section 0: Interactive Reading Status Stacked Bar (Finished / Reading / Unread)
@@ -5103,6 +5113,10 @@ public final class FolioMoreView {
             .append(unrdCnt).append(" unread\n");
         snap.append(yrNow).append(" Goal: ").append(finCnt).append("/").append(goalTgt)
             .append(" (").append(goalPct).append("%)\n");
+        snap.append("Reading Time (").append(userWpm).append(" WPM): ")
+            .append(totHrStr).append(" total · ")
+            .append(readHrStr).append(" read · ")
+            .append(remHrStr).append(" remaining\n");
         snap.append("Curation: ").append(favs).append(" fav · ").append(noted).append(" noted · ")
             .append(shelved).append(" shelved · ")
             .append(com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.countQueue(ctx)).append(" queued · ")
@@ -5480,7 +5494,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v13.1 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v13.2 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

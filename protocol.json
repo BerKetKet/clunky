@@ -1,7 +1,7 @@
 {
-  "round": 131,
-  "version": "Folio v13.1 KFX",
-  "codename": "Library Insights Reading Time Portfolio & Kindle Theme",
+  "round": 132,
+  "version": "Folio v13.2 KFX",
+  "codename": "Insights WPM Tap-to-Calibrate, Snapshot Telemetry & Clean Dialog Theming Sync",
   "target_device": "Samsung Galaxy M30 (32001776e8e82623)",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
@@ -11,9 +11,9 @@
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v13.1_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v13.2_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r131_insights_reading_time.png",
-    "verify_r131_about_v131.png"
+    "verify_r132_insights_calibrate.png",
+    "verify_r132_about_v132.png"
   ]
 }
