@@ -317,10 +317,11 @@ public final class FolioFolderBrowserDialog {
 
         final Runnable styleHideToggle = () -> {
             btnHideImported.setText(hideImported[0] ? "Hide Imported: ON" : "Hide Imported: OFF");
-            btnHideImported.setTextColor(Color.parseColor(hideImported[0] ? "#121010" : "#C4BDB5"));
+            btnHideImported.setTextColor(Color.parseColor(hideImported[0] ? "#F5B8AE" : "#C4BDB5"));
             GradientDrawable bg = new GradientDrawable();
-            bg.setColor(Color.parseColor(hideImported[0] ? "#E05A47" : "#211C1B"));
-            bg.setCornerRadius(dp(ctx, 14));
+            bg.setColor(Color.parseColor(hideImported[0] ? "#2A1816" : "#211C1B"));
+            bg.setCornerRadius(dp(ctx, 999));
+            bg.setStroke(dp(ctx, 1), Color.parseColor(hideImported[0] ? "#5C2D26" : "#2A2423"));
             btnHideImported.setBackground(bg);
         };
         styleHideToggle.run();

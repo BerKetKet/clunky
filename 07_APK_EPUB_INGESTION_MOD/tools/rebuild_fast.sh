@@ -34,6 +34,7 @@ sed -i 's/#ff2491ff/#ffe05a47/gI' \
     "${WORK_DIR}/base_dec/res/values/styles.xml"
 sed -i 's/android:color="@color\/accent_3_dark"/android:color="#ffe05a47"/g' \
     "${WORK_DIR}/base_dec/res/drawable/bottom_bar_label_color_dark.xml" || true
+python3 "${MOD_ROOT}/tools/patch_res_azath_covers.py" "${WORK_DIR}/base_dec/res"
 
 echo "[1c/5] Updating launcher icons from dropin_res..."
 python3 -c '
@@ -91,11 +92,11 @@ else
     echo "Device not currently attached via adb; skipping install for now."
 fi
 
-echo "[5/5] Staging Azath v14.8 KFX release..."
-mkdir -p "${MOD_ROOT}/release/azath_v14.8_kfx"
-cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v14.8_kfx/base.apk"
+echo "[5/5] Staging Azath v14.9 KFX release..."
+mkdir -p "${MOD_ROOT}/release/azath_v14.9_kfx"
+cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v14.9_kfx/base.apk"
 if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
-    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v14.8_kfx/base.apk.idsig"
+    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v14.9_kfx/base.apk.idsig"
 fi
 
-echo "Fast rebuild, deploy, and Azath v14.8 KFX staging successful!"
+echo "Fast rebuild, deploy, and Azath v14.9 KFX staging successful!"
