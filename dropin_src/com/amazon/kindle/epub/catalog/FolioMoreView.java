@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v12.7 KFX");
+        badgeTv.setText("v12.8 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(TEXT_MUTED);
         badgeTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
@@ -2456,7 +2456,7 @@ public final class FolioMoreView {
                     rRow.setGravity(Gravity.CENTER_VERTICAL);
                     for (final String rq : recents) {
                         TextView chip = new TextView(ctx);
-                        chip.setText(rq);
+                        chip.setText("" + rq);
                         chip.setTextColor(0xFF94A3B8);
                         chip.setTextSize(11);
                         chip.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
@@ -5343,7 +5343,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v12.7 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v12.8 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

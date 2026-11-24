@@ -60,6 +60,7 @@ public final class FolioWebBrowserDialog {
     private static final String KEY_HOME_URL = "web_browser_home_url";
     private static final String KEY_CLEAN_MODE = "web_browser_clean_mode";
     private static final String KEY_BOOKMARKS = "web_browser_bookmarks";
+    private static final String KEY_RECENT_IMPORTS = "web_recent_imports";
     public static final String DEFAULT_URL = "https://standardebooks.org/ebooks";
 
     private static final int BG_CANVAS = 0xFF0D0F12;
@@ -156,6 +157,177 @@ public final class FolioWebBrowserDialog {
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                     .edit().putString(KEY_BOOKMARKS, sb.toString()).apply();
         } catch (Throwable ignored) {}
+    }
+
+    private static List<String[]> loadRecentImports(Context ctx) {
+        List<String[]> out = new ArrayList<>();
+        try {
+            String raw = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                    .getString(KEY_RECENT_IMPORTS, "");
+            if (raw == null || raw.isEmpty()) return out;
+            for (String line : raw.split("\n")) {
+                String[] parts = line.split("\\|", 4);
+                if (parts.length >= 3 && !parts[2].trim().isEmpty()) {
+                    String ts = (parts.length >= 4) ? parts[3].trim() : "";
+                    out.add(new String[] { parts[0].trim(), parts[1].trim(), parts[2].trim(), ts });
+                }
+            }
+        } catch (Throwable ignored) {}
+        return out;
+    }
+
+    private static void recordRecentImport(Context ctx, String title, String author, String kfxPath) {
+        try {
+            List<String[]> list = loadRecentImports(ctx);
+            List<String[]> next = new ArrayList<>();
+            String cleanT = (title != null ? title : "Untitled").replace("|", " ").replace("\n", " ").trim();
+            String cleanA = (author != null ? author : "").replace("|", " ").replace("\n", " ").trim();
+            String cleanP = (kfxPath != null ? kfxPath : "").replace("|", "").replace("\n", "").trim();
+            String ts = new java.text.SimpleDateFormat("MMM d, HH:mm", Locale.US).format(new java.util.Date());
+            next.add(new String[] { cleanT, cleanA, cleanP, ts });
+            for (String[] item : list) {
+                if (!cleanP.equals(item[2])) next.add(item);
+                if (next.size() >= 15) break;
+            }
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < next.size(); i++) {
+                if (i > 0) sb.append('\n');
+                String[] r = next.get(i);
+                sb.append(r[0]).append('|').append(r[1]).append('|').append(r[2]).append('|').append(r[3]);
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                    .edit().putString(KEY_RECENT_IMPORTS, sb.toString()).apply();
+        } catch (Throwable ignored) {}
+    }
+
+    private static void showRecentDownloadsDialog(final Context ctx, final AlertDialog parentBrowserDlg, final Runnable onChanged) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        final List<String[]> items = loadRecentImports(ctx);
+
+        LinearLayout root = new LinearLayout(ctx);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(BG_SURFACE);
+        root.setPadding(dp(d, 20), dp(d, 18), dp(d, 20), dp(d, 12));
+
+        TextView hdr = new TextView(ctx);
+        hdr.setText("Web Downloads (" + items.size() + ")");
+        hdr.setTextColor(TEXT_PRIMARY);
+        hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        hdr.setTypeface(Typeface.SERIF, Typeface.BOLD);
+        hdr.setPadding(0, 0, 0, dp(d, 4));
+        root.addView(hdr);
+
+        TextView sub = new TextView(ctx);
+        sub.setText(items.isEmpty()
+                ? "Downloaded EPUBs are automatically converted to KFX and listed here."
+                : "Tap any imported book to open it in Folio.");
+        sub.setTextColor(TEXT_MUTED);
+        sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        sub.setPadding(0, 0, 0, dp(d, 12));
+        root.addView(sub);
+
+        final AlertDialog[] dlDlgRef = new AlertDialog[1];
+
+        if (items.isEmpty()) {
+            TextView emp = new TextView(ctx);
+            emp.setText("No web downloads yet. Browse a catalog and tap an EPUB link or use the EPUBs scanner.");
+            emp.setTextColor(TEXT_MUTED);
+            emp.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+            emp.setPadding(dp(d, 14), dp(d, 16), dp(d, 14), dp(d, 16));
+            GradientDrawable eBg = new GradientDrawable();
+            eBg.setColor(BG_CONTROL);
+            eBg.setCornerRadius(dp(d, 8));
+            eBg.setStroke(dp(d, 1), BORDER);
+            emp.setBackground(eBg);
+            root.addView(emp);
+        } else {
+            ScrollView sv = new ScrollView(ctx);
+            sv.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(d, Math.min(320, Math.max(96, items.size() * 68)))));
+            LinearLayout list = new LinearLayout(ctx);
+            list.setOrientation(LinearLayout.VERTICAL);
+            for (final String[] it : items) {
+                LinearLayout row = new LinearLayout(ctx);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding(dp(d, 12), dp(d, 10), dp(d, 12), dp(d, 10));
+                GradientDrawable rBg = new GradientDrawable();
+                rBg.setColor(BG_CONTROL);
+                rBg.setCornerRadius(dp(d, 8));
+                rBg.setStroke(dp(d, 1), BORDER);
+                row.setBackground(rBg);
+                LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                rLp.bottomMargin = dp(d, 8);
+                row.setLayoutParams(rLp);
+
+                LinearLayout tc = new LinearLayout(ctx);
+                tc.setOrientation(LinearLayout.VERTICAL);
+                tc.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+                TextView tTv = new TextView(ctx);
+                tTv.setText(it[0]);
+                tTv.setTextColor(TEXT_PRIMARY);
+                tTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+                tTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+                tTv.setSingleLine(true);
+                tTv.setEllipsize(TextUtils.TruncateAt.END);
+                tc.addView(tTv);
+
+                String meta = it[1];
+                if (!it[3].isEmpty()) meta = meta.isEmpty() ? it[3] : (meta + " · " + it[3]);
+                if (!meta.isEmpty()) {
+                    TextView mTv = new TextView(ctx);
+                    mTv.setText(meta);
+                    mTv.setTextColor(TEXT_MUTED);
+                    mTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+                    mTv.setSingleLine(true);
+                    mTv.setEllipsize(TextUtils.TruncateAt.END);
+                    tc.addView(mTv);
+                }
+                row.addView(tc);
+
+                TextView openLbl = new TextView(ctx);
+                openLbl.setText("Open ›");
+                openLbl.setTextColor(ACCENT_BLUE);
+                openLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                openLbl.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+                openLbl.setPadding(dp(d, 10), 0, 0, 0);
+                row.addView(openLbl);
+
+                row.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        File f = new File(it[2]);
+                        if (f.exists()) {
+                            if (dlDlgRef[0] != null) dlDlgRef[0].dismiss();
+                            if (parentBrowserDlg != null) parentBrowserDlg.dismiss();
+                            ExternalEpubActivity.launchKfxReader(ctx, f);
+                        } else {
+                            Toast.makeText(ctx, "Book file no longer exists in library", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+                list.addView(row);
+            }
+            sv.addView(list);
+            root.addView(sv);
+        }
+
+        AlertDialog.Builder b = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setView(root)
+                .setPositiveButton("Close", null);
+        if (!items.isEmpty()) {
+            b.setNeutralButton("Clear History", new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface dialog, int which) {
+                    ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                            .edit().remove(KEY_RECENT_IMPORTS).apply();
+                    Toast.makeText(ctx, "Cleared web download history", Toast.LENGTH_SHORT).show();
+                    if (onChanged != null) onChanged.run();
+                }
+            });
+        }
+        dlDlgRef[0] = b.show();
+        FolioTheme.applyToDialog(ctx, dlDlgRef[0]);
     }
 
     public static void showUrlSettingsDialog(final Context ctx, final Runnable onSaved) {
@@ -539,6 +711,17 @@ public final class FolioWebBrowserDialog {
                     }
                 });
                 bmRow.addView(scanBtn);
+
+                int dlCount = loadRecentImports(ctx).size();
+                String dlLabel = dlCount > 0 ? ("Downloads (" + dlCount + ")") : "Downloads";
+                LinearLayout dlBtn = makeChipWithIcon(ctx, d, FolioIcons.IMPORT, dlLabel,
+                        TEXT_PRIMARY, BG_CONTROL, BORDER);
+                dlBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        showRecentDownloadsDialog(ctx, dlgRef[0], renderBookmarksRef[0]);
+                    }
+                });
+                bmRow.addView(dlBtn);
 
                 for (int i = 0; i < bms.size(); i++) {
                     final int idx = i;
@@ -949,6 +1132,7 @@ public final class FolioWebBrowserDialog {
                         db.close();
                     }
                     FolioMetadataDb.registerInKindleLibraryDb(ctx, bookKey, outKfx, outCover, meta);
+                    recordRecentImport(ctx, meta.title, meta.author, outKfx.getAbsolutePath());
                     dlFile.delete();
 
                     final String addedTitle = (meta.title != null && !meta.title.isEmpty()) ? meta.title : safeName;

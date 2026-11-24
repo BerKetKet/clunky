@@ -1,6 +1,32 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.8 KFX") deployed and fully verified on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 128 complete:
+  1. **Web Browser Recent Downloads History Drawer (Task A)**:
+     - Target Hardware: Physical Samsung Galaxy M30 (`32001776e8e82623`).
+     - Added a persistent `Downloads` chip to the bookmarks bar in `FolioWebBrowserDialog.java` beside `Pin` and `EPUBs` (`makeChipWithIcon(ctx, d, FolioIcons.IMPORT, dlLabel, ...)`).
+     - Implemented `recordRecentImport(ctx, title, author, kfxPath)` to persist converted EPUB entries in `SharedPreferences("folio_ui_prefs", "web_recent_imports")` (up to 15 entries) with timestamp.
+     - Implemented `showRecentDownloadsDialog(ctx, parentDlg, onRefresh)` featuring Bookerly serif title (`Web Downloads (N)`), Amazon Ember subtitle/details, 1-tap `Open ›` reader launcher, clean `Clear History` action, and `Close` button styled with `FolioTheme.applyToDialog`.
+     - Preserved clean zero-emoji editorial elements across `FolioMoreView.java` and `FolioMetadataCatalogDialog.java`, and guaranteed post-`.show()` placement for `FolioTheme.applyToDialog`.
+     - Bumped Control Center badge and `About Folio` dialog to **`Folio v12.8 KFX`**.
+     - Recompiled `classes9.dex` (454,068 bytes), rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, signed with `apksigner`.
+     - Streamed APK install to Galaxy M30 (`lastUpdateTime=2026-11-24 06:08:36`) with zero fatal crashes logged.
+     - Staged release APK at `07_APK_EPUB_INGESTION_MOD/release/folio_v12.8_kfx/base.apk` (132 MB, SHA256: `3c1d427fc53b639a0a1bab2b5b96d53e9c46fec75e67d24c4e710f8da4cb7e83`).
+  2. **Visual Verification & Invariant Proofs (Task B)**:
+     - Captured hardware proof screenshots on Samsung Galaxy M30:
+       * `verify_r128_web_browser_downloads_bar.png` (251,966 bytes) — Web Book Browser showing bookmarks bar with `Pin`, `EPUBs`, and the new monochrome `Downloads` chip.
+       * `verify_r128_web_downloads_drawer.png` (205,678 bytes) — Web Downloads drawer showing Bookerly heading (`Web Downloads (0)`), Ember subtitle, empty state text, and `Close` button. Zero emojis.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Cloned Invariant: `com.amazon.kindle.epub` updated (`lastUpdateTime=2026-11-24 06:08:36`), zero crashes.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+  4. Packaged `antig_to_gemini_neon_clunky_report128.zip` and submitted to Gemini Neon tab `837018552`.
+
+## Verification Evidence (Round 128)
+1. `verify_r128_web_browser_downloads_bar.png`: Web Book Browser bookmarks bar showing `Pin`, `EPUBs`, and `Downloads`.
+2. `verify_r128_web_downloads_drawer.png`: Web Downloads drawer with Bookerly/Ember typography and zero emojis.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v12.8 KFX deployed (`lastUpdateTime=2026-11-24 06:08:36`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.7 KFX") deployed and fully verified on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 127 complete:
   1. **Zero-Emoji Editorial Modal Polish & Release Staging (Task A)**:
      - Verified target test hardware is **Samsung Galaxy M30** (`32001776e8e82623`, TrebleDroid Android 13 GSI), NOT M32.

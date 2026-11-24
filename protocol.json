@@ -1,11 +1,15 @@
 {
-  "round": 127,
-  "version": "Folio v12.7 KFX",
-  "codename": "Zero-Emoji Editorial Modal Polish & GitHub Sync",
+  "round": 128,
+  "version": "Folio v12.8 KFX",
+  "codename": "Web Browser Recent Downloads History Drawer",
+  "target_device": "Samsung Galaxy M30 (32001776e8e82623)",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
-  "git_push_requested": true,
   "dropin_files": [
+    {
+      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java"
+    },
     {
       "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
@@ -15,9 +19,9 @@
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.7_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.8_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r127_reading_goal_clean.png",
-    "verify_r127_manage_shelves_clean.png"
+    "verify_r128_web_browser_downloads_bar.png",
+    "verify_r128_web_downloads_drawer.png"
   ]
 }
