@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.res.AssetManager;
 import android.content.res.ColorStateList;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -13,21 +14,24 @@ import android.widget.CompoundButton;
 import android.widget.TextView;
 
 /**
- * Centralized Kindle-native typography, checkbox/button highlight, and dialog theme helper.
- * Dynamically loads Kindle's bundled Bookerly (serif headings) and Amazon Ember (UI sans)
- * fonts from APK assets with graceful fallback to Typeface.SERIF / Typeface.SANS_SERIF.
+ * Centralized Azath Editorial typography, checkbox/button highlight, and dialog theme helper.
+ * Pairs Regular-weight Bookerly display headings (>= 17sp, inspired by editorial serif hierarchy)
+ * with crisp Amazon Ember sans-serif UI controls (< 17sp) across a unified Obsidian-Ivory-Crimson palette.
  */
 public final class FolioTheme {
-    public static final int BG_CANVAS = 0xFF000000;
-    public static final int BG_MODAL = 0xFF0D0F12;
-    public static final int BG_SURFACE = 0xFF141618;
-    public static final int BG_CONTROL = 0xFF1C1F22;
-    public static final int BORDER_HAIRLINE = 0xFF262A2E;
-    public static final int TEXT_PRIMARY = 0xFFECEFF1;
-    public static final int TEXT_MUTED = 0xFF8E959C;
-    public static final int ACCENT_BLUE = 0xFF4DA6FF;
-    public static final int ACCENT_FILL = 0xFF162330;
-    public static final int ACCENT_BORDER = 0xFF2C5278;
+    public static final int BG_CANVAS = 0xFF0A0909;
+    public static final int BG_MODAL = 0xFF121010;
+    public static final int BG_SURFACE = 0xFF181515;
+    public static final int BG_CONTROL = 0xFF211C1B;
+    public static final int BORDER_HAIRLINE = 0xFF2A2423;
+    public static final int TEXT_PRIMARY = 0xFFF2EFE9;
+    public static final int TEXT_SECONDARY = 0xFFC4BDB5;
+    public static final int TEXT_MUTED = 0xFF8E867E;
+    public static final int ACCENT_CRIMSON = 0xFFE05A47;
+    public static final int ACCENT_BLUE = ACCENT_CRIMSON; // unified alias
+    public static final int ACCENT_FILL = 0xFF2A1816;
+    public static final int ACCENT_BORDER = 0xFF5C2D26;
+    public static final int ACCENT_SOFT_TEXT = 0xFFF5B8AE;
 
     private static boolean fontsLoaded = false;
     private static Typeface bookerlyReg = null;
@@ -106,7 +110,7 @@ public final class FolioTheme {
                 new int[] { android.R.attr.state_checked },
                 new int[] { -android.R.attr.state_checked }
         };
-        int[] colors = new int[] { ACCENT_BLUE, 0xFF6E7680 };
+        int[] colors = new int[] { ACCENT_CRIMSON, 0xFF706862 };
         return new ColorStateList(states, colors);
     }
 
@@ -131,7 +135,15 @@ public final class FolioTheme {
                 boolean isBold = (cur != null && cur.isBold());
                 float sp = tv.getTextSize() / scaledDensity;
                 if (sp >= 17.0f) {
-                    tv.setTypeface(isBold ? bookerlyBold : bookerlyReg);
+                    // Editorial serif display hierarchy: always Regular-weight Bookerly (never chunky bold)
+                    tv.setTypeface(bookerlyReg);
+                    if (sp >= 19.5f) {
+                        try {
+                            if (Math.abs(tv.getLetterSpacing()) < 0.005f) {
+                                tv.setLetterSpacing(-0.018f);
+                            }
+                        } catch (Throwable ignored) {}
+                    }
                 } else {
                     tv.setTypeface(isBold ? emberBold : emberReg);
                 }
@@ -148,8 +160,16 @@ public final class FolioTheme {
     public static void applyToDialog(Context ctx, AlertDialog dlg) {
         if (ctx == null || dlg == null) return;
         try {
-            if (dlg.getWindow() != null && dlg.getWindow().getDecorView() != null) {
-                applyToTree(ctx, dlg.getWindow().getDecorView());
+            if (dlg.getWindow() != null) {
+                float d = ctx.getResources().getDisplayMetrics().density;
+                GradientDrawable frame = new GradientDrawable();
+                frame.setColor(BG_MODAL);
+                frame.setCornerRadius(Math.round(18f * d));
+                frame.setStroke(Math.max(1, Math.round(1f * d)), BORDER_HAIRLINE);
+                dlg.getWindow().setBackgroundDrawable(frame);
+                if (dlg.getWindow().getDecorView() != null) {
+                    applyToTree(ctx, dlg.getWindow().getDecorView());
+                }
             }
         } catch (Throwable ignored) {}
         styleDialog(ctx, dlg);
@@ -161,7 +181,7 @@ public final class FolioTheme {
         try {
             Button pos = dlg.getButton(DialogInterface.BUTTON_POSITIVE);
             if (pos != null) {
-                pos.setTextColor(ACCENT_BLUE);
+                pos.setTextColor(ACCENT_CRIMSON);
                 pos.setTypeface(emberBold);
             }
             Button neg = dlg.getButton(DialogInterface.BUTTON_NEGATIVE);
@@ -171,7 +191,7 @@ public final class FolioTheme {
             }
             Button neu = dlg.getButton(DialogInterface.BUTTON_NEUTRAL);
             if (neu != null) {
-                neu.setTextColor(0xFFC4CBD2);
+                neu.setTextColor(TEXT_SECONDARY);
                 neu.setTypeface(emberReg);
             }
         } catch (Throwable ignored) {}

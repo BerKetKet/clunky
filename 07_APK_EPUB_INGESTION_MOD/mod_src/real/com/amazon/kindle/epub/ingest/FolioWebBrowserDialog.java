@@ -63,13 +63,13 @@ public final class FolioWebBrowserDialog {
     private static final String KEY_RECENT_IMPORTS = "web_recent_imports";
     public static final String DEFAULT_URL = "https://standardebooks.org/ebooks";
 
-    private static final int BG_CANVAS = 0xFF0D0F12;
-    private static final int BG_SURFACE = 0xFF141618;
-    private static final int BG_CONTROL = 0xFF1C1F22;
-    private static final int BORDER = 0xFF262A2E;
-    private static final int TEXT_PRIMARY = 0xFFECEFF1;
-    private static final int TEXT_MUTED = 0xFF8E959C;
-    private static final int ACCENT_BLUE = 0xFF4DA6FF;
+    private static final int BG_CANVAS = 0xFF121010;
+    private static final int BG_SURFACE = 0xFF181515;
+    private static final int BG_CONTROL = 0xFF211C1B;
+    private static final int BORDER = 0xFF2A2423;
+    private static final int TEXT_PRIMARY = 0xFFF2EFE9;
+    private static final int TEXT_MUTED = 0xFF8E867E;
+    private static final int ACCENT_BLUE = 0xFFE05A47;
 
     private FolioWebBrowserDialog() {}
 
@@ -364,7 +364,7 @@ public final class FolioWebBrowserDialog {
         final EditText urlEt = new EditText(ctx);
         urlEt.setText(getHomeUrl(ctx));
         urlEt.setHint("https://standardebooks.org/ebooks");
-        urlEt.setHintTextColor(0xFF606870);
+        urlEt.setHintTextColor(0xFF8E867E);
         urlEt.setTextColor(TEXT_PRIMARY);
         urlEt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         urlEt.setSingleLine(true);
@@ -432,7 +432,7 @@ public final class FolioWebBrowserDialog {
                 GradientDrawable ctBg = new GradientDrawable();
                 ctBg.setColor(BG_CONTROL);
                 ctBg.setCornerRadius(dp(d, 8));
-                ctBg.setStroke(dp(d, 1), on ? 0xFF2C5278 : BORDER);
+                ctBg.setStroke(dp(d, 1), on ? 0xFF5C2D26 : BORDER);
                 cleanToggle.setBackground(ctBg);
             }
         };
@@ -558,7 +558,7 @@ public final class FolioWebBrowserDialog {
 
         final TextView openNowBtn = new TextView(ctx);
         openNowBtn.setText("Open");
-        openNowBtn.setTextColor(0xFF000000);
+        openNowBtn.setTextColor(0xFF0A0909);
         openNowBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         openNowBtn.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
         openNowBtn.setPadding(dp(d, 10), dp(d, 4), dp(d, 10), dp(d, 4));
@@ -597,7 +597,7 @@ public final class FolioWebBrowserDialog {
                 GradientDrawable bg = new GradientDrawable();
                 bg.setColor(BG_CONTROL);
                 bg.setCornerRadius(dp(d, 7));
-                bg.setStroke(dp(d, 1), on ? 0xFF2C5278 : BORDER);
+                bg.setStroke(dp(d, 1), on ? 0xFF5C2D26 : BORDER);
                 btnClean.setBackground(bg);
                 FolioIcons.setButtonIconColor(btnClean, on ? ACCENT_BLUE : FolioIcons.COLOR_MUTED);
             }
@@ -704,7 +704,7 @@ public final class FolioWebBrowserDialog {
 
                 // EPUB Scanner button (single Kindle blue accent)
                 LinearLayout scanBtn = makeChipWithIcon(ctx, d, FolioIcons.DOWNLOAD, "EPUBs",
-                        ACCENT_BLUE, BG_CONTROL, 0xFF2C5278);
+                        ACCENT_BLUE, BG_CONTROL, 0xFF5C2D26);
                 scanBtn.setOnClickListener(new View.OnClickListener() {
                     @Override public void onClick(View v) {
                         scanPageForEpubLinks(ctx, webView, mainHandler, statusBanner, statusTv, openNowBtn, dlgRef, onImported);
@@ -857,7 +857,7 @@ public final class FolioWebBrowserDialog {
         et.setText(cur != null && !cur.isEmpty() ? cur : getHomeUrl(ctx));
         et.setSelectAllOnFocus(true);
         et.setHint("https://...");
-        et.setHintTextColor(0xFF606870);
+        et.setHintTextColor(0xFF8E867E);
         et.setTextColor(TEXT_PRIMARY);
         et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         et.setSingleLine(true);
@@ -1157,7 +1157,7 @@ public final class FolioWebBrowserDialog {
                     mainHandler.post(new Runnable() {
                         @Override public void run() {
                             statusBanner.setBackgroundColor(BG_CONTROL);
-                            statusTv.setTextColor(0xFFEF9A9A);
+                            statusTv.setTextColor(0xFFE87A6D);
                             statusTv.setText(t.getMessage() != null ? t.getMessage() : "Download failed");
                             openNowBtn.setVisibility(View.GONE);
                         }

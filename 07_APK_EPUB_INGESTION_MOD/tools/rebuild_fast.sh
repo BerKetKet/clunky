@@ -81,11 +81,11 @@ else
     echo "Device not currently attached via adb; skipping install for now."
 fi
 
-echo "[5/5] Staging Azath v14.0 KFX release..."
-mkdir -p "${MOD_ROOT}/release/azath_v14.0_kfx"
-cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v14.0_kfx/base.apk"
+echo "[5/5] Staging Azath v14.1 KFX release..."
+mkdir -p "${MOD_ROOT}/release/azath_v14.1_kfx"
+cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v14.1_kfx/base.apk"
 if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
-    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v14.0_kfx/base.apk.idsig"
+    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v14.1_kfx/base.apk.idsig"
 fi
 
-echo "Fast rebuild, deploy, and Azath v14.0 KFX staging successful!"
+echo "Fast rebuild, deploy, and Azath v14.1 KFX staging successful!"

@@ -449,18 +449,18 @@ public final class FolioMetadataBackup {
             h.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">");
             h.append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
             h.append("<title>Azath Offline Library Catalog</title>");
-            h.append("<style>body{margin:0;padding:24px;background:#000000;color:#ECEFF1;font-family:-apple-system,BlinkMacSystemFont,sans-serif;}");
+            h.append("<style>body{margin:0;padding:24px;background:#0A0909;color:#F2EFE9;font-family:-apple-system,BlinkMacSystemFont,sans-serif;}");
             h.append(".wrap{max-width:860px;margin:0 auto;}h1{margin:0 0 6px;font-size:26px;font-family:Georgia,'Times New Roman',serif;font-weight:700;}");
-            h.append(".sub{color:#8E959C;font-size:13px;margin-bottom:16px;}");
-            h.append(".bar{height:5px;background:#262A2E;border-radius:4px;overflow:hidden;margin:8px 0 18px;}");
-            h.append(".fill{height:100%;background:#4DA6FF;width:").append(goalPct).append("%;}");
-            h.append("#q{width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid #262A2E;background:#141618;color:#ECEFF1;font-size:14px;margin-bottom:14px;}");
-            h.append(".card{background:#141618;border:1px solid #262A2E;border-radius:10px;padding:14px 16px;margin-bottom:10px;}");
-            h.append(".t{font-weight:700;font-size:15.5px;font-family:Georgia,'Times New Roman',serif;margin-bottom:3px;}.a{color:#8E959C;font-size:12.5px;}");
+            h.append(".sub{color:#8E867E;font-size:13px;margin-bottom:16px;}");
+            h.append(".bar{height:5px;background:#2A2423;border-radius:4px;overflow:hidden;margin:8px 0 18px;}");
+            h.append(".fill{height:100%;background:#E05A47;width:").append(goalPct).append("%;}");
+            h.append("#q{width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid #2A2423;background:#181515;color:#F2EFE9;font-size:14px;margin-bottom:14px;}");
+            h.append(".card{background:#181515;border:1px solid #2A2423;border-radius:10px;padding:14px 16px;margin-bottom:10px;}");
+            h.append(".t{font-weight:700;font-size:15.5px;font-family:Georgia,'Times New Roman',serif;margin-bottom:3px;}.a{color:#8E867E;font-size:12.5px;}");
             h.append(".tags{margin-top:7px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px;font-weight:600;}");
-            h.append(".tag{padding:2px 9px;border-radius:7px;background:#1C1F22;border:1px solid #262A2E;color:#C4CBD2;}");
-            h.append(".done,.rd,.q,.sh{background:#162330;border-color:#2C5278;color:#4DA6FF;}");
-            h.append(".note{margin-top:9px;padding:9px 12px;background:#141618;border:1px solid #2C5278;border-left:3px solid #4DA6FF;color:#ECEFF1;font-size:12.5px;border-radius:6px;}");
+            h.append(".tag{padding:2px 9px;border-radius:7px;background:#211C1B;border:1px solid #2A2423;color:#C4BDB5;}");
+            h.append(".done,.rd,.q,.sh{background:#2A1816;border-color:#5C2D26;color:#E05A47;}");
+            h.append(".note{margin-top:9px;padding:9px 12px;background:#181515;border:1px solid #5C2D26;border-left:3px solid #E05A47;color:#F2EFE9;font-size:12.5px;border-radius:6px;}");
             h.append("</style></head><body><div class=\"wrap\">");
             h.append("<h1>Azath Offline Library Catalog</h1>");
             h.append("<div class=\"sub\">Exported ").append(dateStr).append(" · ")
@@ -497,7 +497,7 @@ public final class FolioMetadataBackup {
                     h.append("<span class=\"tag rd\">").append(pct).append("% read</span>");
                 }
                 if (inQ) h.append("<span class=\"tag q\">📌 Up Next</span>");
-                if (stars > 0) h.append("<span class=\"tag\" style=\"color:#fbbf24\">★ ").append(stars).append("/5</span>");
+                if (stars > 0) h.append("<span class=\"tag\" style=\"color:#E05A47\">★ ").append(stars).append("/5</span>");
                 if (!sh.isEmpty()) h.append("<span class=\"tag sh\">🏷 ").append(htmlEsc(sh)).append("</span>");
                 h.append("</div>");
                 if (!note.isEmpty()) {

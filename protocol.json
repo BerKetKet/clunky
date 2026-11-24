@@ -1,44 +1,16 @@
 {
-  "round": 134,
-  "version": "Azath v14.0 KFX",
-  "milestone": true,
-  "codename": "Malazan Rebrand (Azath / com.azath.reader), Bespoke Generated Icon Set & Play Store Folio Reference Capture",
-  "target_device": "Samsung Galaxy M30 (32001776e8e82623)",
-  "new_package_name": "com.azath.reader",
-  "previous_package_name": "com.amazon.kindle.epub",
-  "stock_package_untouched": "com.amazon.kindle",
-  "dropin_assets_dir": "dropin_assets/azath_icons/",
-  "dropin_files": [
-    {
-      "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioIcons.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioIcons.java"
-    },
-    {
-      "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
-    },
-    {
-      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java"
-    },
-    {
-      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java"
-    },
-    {
-      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java"
-    },
-    {
-      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java"
-    }
-  ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/azath_v14.0_kfx/base.apk",
-  "verification_screenshots": [
-    "verify_r134_azath_control_center.png",
-    "verify_r134_azath_launcher.png",
-    "ref_playstore_folio_1.png",
-    "ref_playstore_folio_2.png"
+  "round": 135,
+  "app_name": "Azath",
+  "package_name": "com.azath.reader",
+  "version_label": "Azath v14.1 KFX",
+  "target_hardware": "Samsung Galaxy M30 (32001776e8e82623)",
+  "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% UNTOUCHED and READ-ONLY",
+  "deliverables": [
+    "dropin_src/com/amazon/kindle/epub/catalog/FolioTheme.java",
+    "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
+    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
+    "dropin_src/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java",
+    "dropin_src/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java",
+    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java"
   ]
 }

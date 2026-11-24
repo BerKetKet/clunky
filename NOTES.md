@@ -1,6 +1,26 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.azath.reader` ("Azath v14.1 KFX") deployed and verified on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 135 complete:
+  1. **Editorial Typography & Unified Obsidian-Ivory-Crimson Design System (Task A)**:
+     - Target Hardware: Physical Samsung Galaxy M30 (`32001776e8e82623`).
+     - `FolioTheme.java`: Switched display headings (`>= 17sp`) to Regular-weight `Bookerly` (`bookerlyReg`, `-0.018f` tracking `>= 19.5sp`) paired with `Amazon Ember` sans UI controls (`< 17sp`), and unified rounded `#121010` / `#2A2423` modal window framing + `#E05A47` / `#8E867E` / `#C4BDB5` buttons.
+     - Swept all 6 modules (`FolioTheme`, `FolioMoreView`, `FolioMetadataCatalogDialog`, `FolioFolderBrowserDialog`, `FolioWebBrowserDialog`, `FolioMetadataBackup`) to Obsidian-Ivory-Crimson tokens (`#0A0909` / `#121010` / `#181515` / `#211C1B` / `#2A2423` / `#F2EFE9` / `#E05A47`), restored `Reading Time (WPM)` snapshot line in `FolioMoreView.java`, updated `rebuild_fast.sh` to `azath_v14.1_kfx`.
+     - Compiled `classes9.dex` (`460,456` bytes), deployed `com.azath.reader` (`lastUpdateTime=2026-11-25 00:08:51`) with zero crashes, and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v14.1_kfx/base.apk` (`137,856,708` bytes, SHA256: `e20d524c13e2c97b975317ab462765f843123838ef73f74b149782172d2fbaa0`).
+  2. **Visual Verification & Invariant Proofs (Task B)**:
+     - Captured on Samsung Galaxy M30:
+       * `verify_r135_azath_control_center.png` (`229,415` bytes) — Regular Bookerly `Control Center`, ember-crimson `v14.1 KFX` pill badge, `#181515` warm obsidian cards, `26 BOOKS` / `5 READING` restored state, ember-crimson accents, bespoke icons.
+       * `verify_r135_azath_modal_uniformity.png` (`305,157` bytes) — `Library Metadata & Genres (24)` showing `#121010` rounded modal frame, Regular Bookerly heading, `AZATH` eyebrow, `#E05A47` active pills and `CLOSE` button.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+  4. Packaged `antig_to_gemini_neon_clunky_report135.zip` and submitted to Gemini Neon (`clunky` tab).
+
+## Verification Evidence (Round 135)
+1. `verify_r135_azath_control_center.png`: Unified Obsidian-Ivory-Crimson Control Center (`v14.1 KFX`) on Galaxy M30.
+2. `verify_r135_azath_modal_uniformity.png`: Library Metadata & Genres modal with Regular Bookerly display font & Obsidian-Crimson accents.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.azath.reader`: Azath v14.1 KFX deployed cleanly (`lastUpdateTime=2026-11-25 00:08:51`).
 - **Current State**: Package cleanly rebranded and deployed as `com.azath.reader` ("Azath v14.0 KFX") on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 134 (Major Milestone) complete:
   1. **Malazan Rebrand (`com.azath.reader`) & Bespoke Generated Icon Set (Task A)**:
      - Target Hardware: Physical Samsung Galaxy M30 (`32001776e8e82623`).

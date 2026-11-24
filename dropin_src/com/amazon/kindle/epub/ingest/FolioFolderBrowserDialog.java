@@ -63,7 +63,7 @@ public final class FolioFolderBrowserDialog {
 
         final LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.parseColor("#0D0F12"));
+        root.setBackgroundColor(Color.parseColor("#121010"));
         root.setPadding(dp(ctx, 18), dp(ctx, 16), dp(ctx, 18), dp(ctx, 12));
 
         // Top row: Eyebrow + Hide Imported toggle
@@ -73,7 +73,7 @@ public final class FolioFolderBrowserDialog {
 
         TextView eyebrow = new TextView(ctx);
         eyebrow.setText("BATCH EPUB IMPORTER");
-        eyebrow.setTextColor(Color.parseColor("#8E959C"));
+        eyebrow.setTextColor(Color.parseColor("#8E867E"));
         eyebrow.setLetterSpacing(0.10f);
         eyebrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         eyebrow.setTypeface(Typeface.DEFAULT_BOLD);
@@ -84,14 +84,14 @@ public final class FolioFolderBrowserDialog {
         final int[] folderSortIdx = new int[] { 0 };
         final TextView btnSortFolder = new TextView(ctx);
         btnSortFolder.setText("Sort: A–Z");
-        btnSortFolder.setTextColor(Color.parseColor("#E2E8F0"));
+        btnSortFolder.setTextColor(Color.parseColor("#F2EFE9"));
         btnSortFolder.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnSortFolder.setTypeface(Typeface.DEFAULT_BOLD);
         btnSortFolder.setPadding(dp(ctx, 9), dp(ctx, 5), dp(ctx, 9), dp(ctx, 5));
         GradientDrawable sBg = new GradientDrawable();
-        sBg.setColor(Color.parseColor("#1C1F22"));
+        sBg.setColor(Color.parseColor("#211C1B"));
         sBg.setCornerRadius(dp(ctx, 14));
-        sBg.setStroke(dp(ctx, 1), Color.parseColor("#2C3035"));
+        sBg.setStroke(dp(ctx, 1), Color.parseColor("#2A2423"));
         btnSortFolder.setBackground(sBg);
         LinearLayout.LayoutParams sLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -101,7 +101,7 @@ public final class FolioFolderBrowserDialog {
 
         final TextView btnHideImported = new TextView(ctx);
         btnHideImported.setText("Hide Imported: OFF");
-        btnHideImported.setTextColor(Color.parseColor("#CBD5E1"));
+        btnHideImported.setTextColor(Color.parseColor("#C4BDB5"));
         btnHideImported.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnHideImported.setTypeface(Typeface.DEFAULT_BOLD);
         btnHideImported.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
@@ -137,7 +137,7 @@ public final class FolioFolderBrowserDialog {
         etPath.setBackground(makeInputBg(ctx));
         etPath.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         final FrameLayout btnUpDir = FolioIcons.makeIconButton(
-                ctx, FolioIcons.UP_ARROW, 16, 8, FolioIcons.COLOR_ICON, 0xFF1C1F22, 0xFF2C3035, 8);
+                ctx, FolioIcons.UP_ARROW, 16, 8, FolioIcons.COLOR_ICON, 0xFF211C1B, 0xFF2A2423, 8);
         LinearLayout.LayoutParams upLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         upLp.setMargins(0, 0, dp(ctx, 6), 0);
@@ -148,12 +148,12 @@ public final class FolioFolderBrowserDialog {
 
         TextView btnGo = new TextView(ctx);
         btnGo.setText("Open");
-        btnGo.setTextColor(Color.parseColor("#000000"));
+        btnGo.setTextColor(Color.parseColor("#0A0909"));
         btnGo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         btnGo.setTypeface(Typeface.DEFAULT_BOLD);
         btnGo.setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8));
         GradientDrawable goBg = new GradientDrawable();
-        goBg.setColor(Color.parseColor("#4DA6FF"));
+        goBg.setColor(Color.parseColor("#E05A47"));
         goBg.setCornerRadius(dp(ctx, 8));
         btnGo.setBackground(goBg);
         LinearLayout.LayoutParams goLp = new LinearLayout.LayoutParams(
@@ -164,14 +164,14 @@ public final class FolioFolderBrowserDialog {
 
         final TextView btnPinDir = new TextView(ctx);
         btnPinDir.setText("☆");
-        btnPinDir.setTextColor(Color.parseColor("#8E959C"));
+        btnPinDir.setTextColor(Color.parseColor("#8E867E"));
         btnPinDir.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         btnPinDir.setTypeface(Typeface.DEFAULT_BOLD);
         btnPinDir.setPadding(dp(ctx, 10), dp(ctx, 6), dp(ctx, 10), dp(ctx, 6));
         final GradientDrawable pinBg = new GradientDrawable();
-        pinBg.setColor(Color.parseColor("#1C1F22"));
+        pinBg.setColor(Color.parseColor("#211C1B"));
         pinBg.setCornerRadius(dp(ctx, 8));
-        pinBg.setStroke(dp(ctx, 1), Color.parseColor("#2C3035"));
+        pinBg.setStroke(dp(ctx, 1), Color.parseColor("#2A2423"));
         btnPinDir.setBackground(pinBg);
         LinearLayout.LayoutParams pinLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -205,7 +205,7 @@ public final class FolioFolderBrowserDialog {
 
         final EditText etFilter = new EditText(ctx);
         etFilter.setHint("Search EPUB filenames in this folder...");
-        etFilter.setHintTextColor(Color.parseColor("#7A828A"));
+        etFilter.setHintTextColor(Color.parseColor("#8E867E"));
         etFilter.setTextColor(Color.WHITE);
         etFilter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         etFilter.setSingleLine(true);
@@ -217,7 +217,7 @@ public final class FolioFolderBrowserDialog {
 
         final TextView btnClearFilter = new TextView(ctx);
         btnClearFilter.setText("✕");
-        btnClearFilter.setTextColor(Color.parseColor("#8E959C"));
+        btnClearFilter.setTextColor(Color.parseColor("#8E867E"));
         btnClearFilter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         btnClearFilter.setTypeface(Typeface.DEFAULT_BOLD);
         btnClearFilter.setPadding(dp(ctx, 10), dp(ctx, 7), dp(ctx, 12), dp(ctx, 7));
@@ -233,7 +233,7 @@ public final class FolioFolderBrowserDialog {
         statusRow.setPadding(0, 0, 0, dp(ctx, 6));
 
         final TextView statusTv = new TextView(ctx);
-        statusTv.setTextColor(Color.parseColor("#8E959C"));
+        statusTv.setTextColor(Color.parseColor("#8E867E"));
         statusTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         statusTv.setLayoutParams(new LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -241,12 +241,12 @@ public final class FolioFolderBrowserDialog {
 
         final TextView btnSelectBatch = new TextView(ctx);
         btnSelectBatch.setText("Select New");
-        btnSelectBatch.setTextColor(Color.parseColor("#4DA6FF"));
+        btnSelectBatch.setTextColor(Color.parseColor("#E05A47"));
         btnSelectBatch.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnSelectBatch.setTypeface(Typeface.DEFAULT_BOLD);
         btnSelectBatch.setPadding(dp(ctx, 10), dp(ctx, 4), dp(ctx, 10), dp(ctx, 4));
         GradientDrawable batchBg = new GradientDrawable();
-        batchBg.setColor(Color.parseColor("#1C1F22"));
+        batchBg.setColor(Color.parseColor("#211C1B"));
         batchBg.setCornerRadius(dp(ctx, 12));
         btnSelectBatch.setBackground(batchBg);
         LinearLayout.LayoutParams batchLp = new LinearLayout.LayoutParams(
@@ -270,12 +270,12 @@ public final class FolioFolderBrowserDialog {
         final TextView btnImport = new TextView(ctx);
         btnImport.setText("Import Selected (0)");
         btnImport.setGravity(Gravity.CENTER);
-        btnImport.setTextColor(Color.parseColor("#000000"));
+        btnImport.setTextColor(Color.parseColor("#0A0909"));
         btnImport.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         btnImport.setTypeface(Typeface.DEFAULT_BOLD);
         btnImport.setPadding(dp(ctx, 16), dp(ctx, 12), dp(ctx, 16), dp(ctx, 12));
         GradientDrawable impBg = new GradientDrawable();
-        impBg.setColor(Color.parseColor("#4DA6FF"));
+        impBg.setColor(Color.parseColor("#E05A47"));
         impBg.setCornerRadius(dp(ctx, 10));
         btnImport.setBackground(impBg);
         LinearLayout.LayoutParams impLp = new LinearLayout.LayoutParams(
@@ -307,18 +307,18 @@ public final class FolioFolderBrowserDialog {
             }
             if (nSel > 0) {
                 btnSelectBatch.setText("Clear (" + nSel + ")");
-                btnSelectBatch.setTextColor(Color.parseColor("#4DA6FF"));
+                btnSelectBatch.setTextColor(Color.parseColor("#E05A47"));
             } else {
                 btnSelectBatch.setText("Select New");
-                btnSelectBatch.setTextColor(Color.parseColor("#4DA6FF"));
+                btnSelectBatch.setTextColor(Color.parseColor("#E05A47"));
             }
         };
 
         final Runnable styleHideToggle = () -> {
             btnHideImported.setText(hideImported[0] ? "Hide Imported: ON" : "Hide Imported: OFF");
-            btnHideImported.setTextColor(Color.parseColor(hideImported[0] ? "#111827" : "#CBD5E1"));
+            btnHideImported.setTextColor(Color.parseColor(hideImported[0] ? "#121010" : "#C4BDB5"));
             GradientDrawable bg = new GradientDrawable();
-            bg.setColor(Color.parseColor(hideImported[0] ? "#4DA6FF" : "#1C1F22"));
+            bg.setColor(Color.parseColor(hideImported[0] ? "#E05A47" : "#211C1B"));
             bg.setCornerRadius(dp(ctx, 14));
             btnHideImported.setBackground(bg);
         };
@@ -341,9 +341,9 @@ public final class FolioFolderBrowserDialog {
                 dRow.setGravity(Gravity.CENTER_VERTICAL);
                 dRow.setPadding(dp(ctx, 12), dp(ctx, 9), dp(ctx, 12), dp(ctx, 9));
                 GradientDrawable dBg = new GradientDrawable();
-                dBg.setColor(Color.parseColor("#181D2B"));
+                dBg.setColor(Color.parseColor("#181515"));
                 dBg.setCornerRadius(dp(ctx, 8));
-                dBg.setStroke(dp(ctx, 1), Color.parseColor("#2B3347"));
+                dBg.setStroke(dp(ctx, 1), Color.parseColor("#2A2423"));
                 dRow.setBackground(dBg);
                 LinearLayout.LayoutParams drLp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -352,7 +352,7 @@ public final class FolioFolderBrowserDialog {
 
                 TextView dnTv = new TextView(ctx);
                 dnTv.setText("📁 " + dName);
-                dnTv.setTextColor(Color.parseColor("#ECEFF1"));
+                dnTv.setTextColor(Color.parseColor("#F2EFE9"));
                 dnTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
                 dnTv.setTypeface(Typeface.DEFAULT_BOLD);
                 dnTv.setSingleLine(true);
@@ -362,7 +362,7 @@ public final class FolioFolderBrowserDialog {
 
                 TextView goTv = new TextView(ctx);
                 goTv.setText("Open ›");
-                goTv.setTextColor(Color.parseColor("#8E959C"));
+                goTv.setTextColor(Color.parseColor("#8E867E"));
                 goTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
                 dRow.addView(goTv);
 
@@ -404,7 +404,7 @@ public final class FolioFolderBrowserDialog {
                 row.setGravity(Gravity.CENTER_VERTICAL);
                 row.setPadding(dp(ctx, 10), dp(ctx, 8), dp(ctx, 10), dp(ctx, 8));
                 GradientDrawable rbg = new GradientDrawable();
-                rbg.setColor(Color.parseColor("#141618"));
+                rbg.setColor(Color.parseColor("#181515"));
                 rbg.setCornerRadius(dp(ctx, 8));
                 row.setBackground(rbg);
                 LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
@@ -440,7 +440,7 @@ public final class FolioFolderBrowserDialog {
                 String sizeStr = formatSize(epub.length()) + (already ? " · Already Imported" : "");
                 TextView subTv = new TextView(ctx);
                 subTv.setText(sizeStr);
-                subTv.setTextColor(Color.parseColor(already ? "#4DA6FF" : "#8E959C"));
+                subTv.setTextColor(Color.parseColor(already ? "#E05A47" : "#8E867E"));
                 subTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
                 infoCol.addView(subTv);
 
@@ -455,14 +455,14 @@ public final class FolioFolderBrowserDialog {
                 TextView btnMore = new TextView(ctx);
                 btnMore.setText("Load More (+" + step + " of " + remaining + " remaining)");
                 btnMore.setGravity(Gravity.CENTER);
-                btnMore.setTextColor(Color.parseColor("#4DA6FF"));
+                btnMore.setTextColor(Color.parseColor("#E05A47"));
                 btnMore.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                 btnMore.setTypeface(Typeface.DEFAULT_BOLD);
                 btnMore.setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10));
                 GradientDrawable mBg = new GradientDrawable();
-                mBg.setColor(Color.parseColor("#1C1F22"));
+                mBg.setColor(Color.parseColor("#211C1B"));
                 mBg.setCornerRadius(dp(ctx, 8));
-                mBg.setStroke(dp(ctx, 1), Color.parseColor("#2C3035"));
+                mBg.setStroke(dp(ctx, 1), Color.parseColor("#2A2423"));
                 btnMore.setBackground(mBg);
                 LinearLayout.LayoutParams mLp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -521,9 +521,9 @@ public final class FolioFolderBrowserDialog {
             java.util.LinkedHashSet<String> pinned = loadPinnedDirs(ctx);
             boolean curIsPinned = !curDir.isEmpty() && pinned.contains(curDir);
             btnPinDir.setText(curIsPinned ? "★" : "☆");
-            btnPinDir.setTextColor(Color.parseColor(curIsPinned ? "#4DA6FF" : "#8E959C"));
-            pinBg.setColor(Color.parseColor(curIsPinned ? "#162330" : "#1C1F22"));
-            pinBg.setStroke(dp(ctx, 1), Color.parseColor(curIsPinned ? "#2C5278" : "#2C3035"));
+            btnPinDir.setTextColor(Color.parseColor(curIsPinned ? "#E05A47" : "#8E867E"));
+            pinBg.setColor(Color.parseColor(curIsPinned ? "#2A1816" : "#211C1B"));
+            pinBg.setStroke(dp(ctx, 1), Color.parseColor(curIsPinned ? "#5C2D26" : "#2A2423"));
 
             java.util.LinkedHashMap<String, Boolean> allDirs = new java.util.LinkedHashMap<>();
             for (String pd : pinned) allDirs.put(pd, Boolean.TRUE);
@@ -538,14 +538,14 @@ public final class FolioFolderBrowserDialog {
                 String shortLbl = qd.replace("/sdcard/", "");
                 if (shortLbl.isEmpty()) shortLbl = qd;
                 chip.setText((isPin ? "★ " : "") + shortLbl);
-                chip.setTextColor(Color.parseColor(isCur ? "#111827" : (isPin ? "#4DA6FF" : "#CBD5E1")));
+                chip.setTextColor(Color.parseColor(isCur ? "#121010" : (isPin ? "#E05A47" : "#C4BDB5")));
                 chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
                 chip.setTypeface(isCur || isPin ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                 chip.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
                 GradientDrawable cbg = new GradientDrawable();
-                cbg.setColor(Color.parseColor(isCur ? "#4DA6FF" : "#1C1F22"));
+                cbg.setColor(Color.parseColor(isCur ? "#E05A47" : "#211C1B"));
                 cbg.setCornerRadius(dp(ctx, 14));
-                if (!isCur) cbg.setStroke(dp(ctx, 1), Color.parseColor(isPin ? "#2C5278" : "#262A2E"));
+                if (!isCur) cbg.setStroke(dp(ctx, 1), Color.parseColor(isPin ? "#5C2D26" : "#2A2423"));
                 chip.setBackground(cbg);
                 LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -713,9 +713,9 @@ public final class FolioFolderBrowserDialog {
 
     private static GradientDrawable makeInputBg(Context ctx) {
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.parseColor("#141618"));
+        bg.setColor(Color.parseColor("#181515"));
         bg.setCornerRadius(dp(ctx, 8));
-        bg.setStroke(dp(ctx, 1), Color.parseColor("#262A2E"));
+        bg.setStroke(dp(ctx, 1), Color.parseColor("#2A2423"));
         return bg;
     }
 
