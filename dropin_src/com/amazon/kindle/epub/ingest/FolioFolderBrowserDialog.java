@@ -90,7 +90,7 @@ public final class FolioFolderBrowserDialog {
         btnSortFolder.setPadding(dp(ctx, 9), dp(ctx, 5), dp(ctx, 9), dp(ctx, 5));
         GradientDrawable sBg = new GradientDrawable();
         sBg.setColor(Color.parseColor("#211C1B"));
-        sBg.setCornerRadius(dp(ctx, 14));
+        sBg.setCornerRadius(dp(ctx, 999));
         sBg.setStroke(dp(ctx, 1), Color.parseColor("#2A2423"));
         btnSortFolder.setBackground(sBg);
         LinearLayout.LayoutParams sLp = new LinearLayout.LayoutParams(
@@ -110,9 +110,10 @@ public final class FolioFolderBrowserDialog {
 
         TextView heading = new TextView(ctx);
         heading.setText("Import EPUBs from Storage");
-        heading.setTextColor(Color.WHITE);
-        heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
-        heading.setTypeface(Typeface.SERIF, Typeface.BOLD);
+        heading.setTextColor(Color.parseColor("#F2EFE9"));
+        heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+        heading.setTypeface(FolioTheme.serif(ctx));
+        heading.setLetterSpacing(-0.015f);
         heading.setPadding(0, dp(ctx, 4), 0, dp(ctx, 10));
         root.addView(heading);
 
@@ -130,7 +131,7 @@ public final class FolioFolderBrowserDialog {
         String initDir = (savedDir != null && !savedDir.trim().isEmpty() && new File(savedDir).isDirectory())
                 ? savedDir.trim() : pickDefaultDir();
         etPath.setText(initDir);
-        etPath.setTextColor(Color.WHITE);
+        etPath.setTextColor(Color.parseColor("#F2EFE9"));
         etPath.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         etPath.setSingleLine(true);
         etPath.setPadding(dp(ctx, 10), dp(ctx, 8), dp(ctx, 10), dp(ctx, 8));
@@ -206,7 +207,7 @@ public final class FolioFolderBrowserDialog {
         final EditText etFilter = new EditText(ctx);
         etFilter.setHint("Search EPUB filenames in this folder...");
         etFilter.setHintTextColor(Color.parseColor("#8E867E"));
-        etFilter.setTextColor(Color.WHITE);
+        etFilter.setTextColor(Color.parseColor("#F2EFE9"));
         etFilter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         etFilter.setSingleLine(true);
         etFilter.setBackgroundColor(Color.TRANSPARENT);
@@ -431,7 +432,7 @@ public final class FolioFolderBrowserDialog {
 
                 TextView nameTv = new TextView(ctx);
                 nameTv.setText(epub.getName());
-                nameTv.setTextColor(Color.WHITE);
+                nameTv.setTextColor(Color.parseColor("#F2EFE9"));
                 nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
                 nameTv.setMaxLines(1);
                 nameTv.setEllipsize(TextUtils.TruncateAt.END);

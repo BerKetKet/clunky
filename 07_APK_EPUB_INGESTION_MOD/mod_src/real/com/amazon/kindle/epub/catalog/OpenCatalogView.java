@@ -277,7 +277,7 @@ public final class OpenCatalogView {
         mainScroll.setBackgroundColor(BG_DARK);
         mainScroll.setFillViewport(true);
         mainScroll.setClipToPadding(false);
-        mainScroll.setPadding(0, 0, 0, dp(d, 80));
+        mainScroll.setPadding(0, 0, 0, dp(d, 96));
         mainScroll.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
