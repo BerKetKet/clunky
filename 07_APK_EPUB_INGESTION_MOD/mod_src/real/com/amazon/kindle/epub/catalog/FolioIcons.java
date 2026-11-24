@@ -52,10 +52,10 @@ public final class FolioIcons {
     public static final int UP_ARROW = 27;
     public static final int AUTHORS = 28;
 
-    public static final int COLOR_PRIMARY = 0xFFECEFF1;
-    public static final int COLOR_ICON = 0xFFC4CBD2;
-    public static final int COLOR_MUTED = 0xFF7A828A;
-    public static final int COLOR_ACCENT = 0xFF4DA6FF;
+    public static final int COLOR_PRIMARY = 0xFFECE8E0;
+    public static final int COLOR_ICON = 0xFFBDB8AE;
+    public static final int COLOR_MUTED = 0xFF8A857D;
+    public static final int COLOR_ACCENT = 0xFFD4C9B8;
 
     private FolioIcons() {}
 
@@ -110,6 +110,9 @@ public final class FolioIcons {
         if (bmp != null) {
             ImageView img = new ImageView(ctx);
             img.setImageBitmap(bmp);
+            if (FolioTheme.isLimestoneLight(ctx)) {
+                img.setColorFilter(FolioTheme.textPrimary(ctx), android.graphics.PorterDuff.Mode.SRC_IN);
+            }
             img.setScaleType(ImageView.ScaleType.FIT_CENTER);
             img.setLayoutParams(new LinearLayout.LayoutParams(px, px));
             return img;
@@ -139,6 +142,9 @@ public final class FolioIcons {
         if (bmp != null) {
             ImageView img = new ImageView(ctx);
             img.setImageBitmap(bmp);
+            if (FolioTheme.isLimestoneLight(ctx)) {
+                img.setColorFilter(FolioTheme.textPrimary(ctx), android.graphics.PorterDuff.Mode.SRC_IN);
+            }
             img.setScaleType(ImageView.ScaleType.FIT_CENTER);
             fl.addView(img, lp);
             fl.setTag(img);

@@ -478,7 +478,7 @@ public final class OpenCatalogView {
         // Populate Genre Chips
         String[] genres = new String[]{"Sci-Fi", "Fantasy", "Mystery", "Horror", "Classic", "History", "Philosophy", "Adventure"};
         for (final String g : genres) {
-            TextView chip = makePill(ctx, d, g, BG_SURFACE, TEXT_PRIMARY);
+            TextView chip = makePill(ctx, d, g, cBgSurface, cTextPrimary);
             LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             clp.rightMargin = dp(d, 8);
@@ -704,7 +704,7 @@ public final class OpenCatalogView {
         card.setLayoutParams(lp);
 
         FrameLayout coverFrame = new FrameLayout(ctx);
-        coverFrame.setBackground(roundRect(BG_CARD, dp(d, 8), 0xFF32353B, dp(d, 1)));
+        coverFrame.setBackground(roundRect(FolioTheme.bgControl(ctx), dp(d, 8), FolioTheme.border(ctx), dp(d, 1)));
         coverFrame.setClipToOutline(true);
         LinearLayout.LayoutParams cfLp = new LinearLayout.LayoutParams(dp(d, 114), dp(d, 168));
         cfLp.bottomMargin = dp(d, 6);
@@ -731,14 +731,14 @@ public final class OpenCatalogView {
         }
         TextView dropCap = new TextView(ctx);
         dropCap.setText(initial);
-        dropCap.setTextColor(0xFF8A857D);
+        dropCap.setTextColor(FolioTheme.textMuted(ctx));
         dropCap.setTextSize(34f);
         dropCap.setTypeface(FolioTheme.serif(ctx));
         dropCap.setGravity(Gravity.CENTER);
         fallback.addView(dropCap);
 
         View spineRule = new View(ctx);
-        spineRule.setBackground(roundRect(0xFF524B41, dp(d, 2), 0, 0));
+        spineRule.setBackground(roundRect(FolioTheme.accentBorder(ctx), dp(d, 2), 0, 0));
         LinearLayout.LayoutParams srLp = new LinearLayout.LayoutParams(dp(d, 26), dp(d, 2));
         srLp.topMargin = dp(d, 4);
         srLp.bottomMargin = dp(d, 10);
@@ -746,7 +746,7 @@ public final class OpenCatalogView {
 
         TextView fbTitle = new TextView(ctx);
         fbTitle.setText(lb.title);
-        fbTitle.setTextColor(0xFFBDB8AE);
+        fbTitle.setTextColor(FolioTheme.textSecondary(ctx));
         fbTitle.setTextSize(11.5f);
         fbTitle.setTypeface(FolioTheme.serif(ctx));
         fbTitle.setGravity(Gravity.CENTER);
@@ -760,7 +760,7 @@ public final class OpenCatalogView {
 
         TextView titleTv = new TextView(ctx);
         titleTv.setText(lb.title);
-        titleTv.setTextColor(TEXT_PRIMARY);
+        titleTv.setTextColor(FolioTheme.textPrimary(ctx));
         titleTv.setTextSize(12.5f);
         titleTv.setTypeface(null, Typeface.BOLD);
         titleTv.setMaxLines(2);
@@ -771,7 +771,7 @@ public final class OpenCatalogView {
         if (!cleanAuth.isEmpty()) {
             TextView authTv = new TextView(ctx);
             authTv.setText(cleanAuth);
-            authTv.setTextColor(TEXT_MUTED);
+            authTv.setTextColor(FolioTheme.textMuted(ctx));
             authTv.setTextSize(11f);
             authTv.setMaxLines(1);
             authTv.setEllipsize(TextUtils.TruncateAt.END);
@@ -848,7 +848,7 @@ public final class OpenCatalogView {
         card.setLayoutParams(lp);
 
         FrameLayout coverFrame = new FrameLayout(ctx);
-        coverFrame.setBackground(roundRect(BG_CARD, dp(d, 8), 0xFF32353B, dp(d, 1)));
+        coverFrame.setBackground(roundRect(FolioTheme.bgControl(ctx), dp(d, 8), FolioTheme.border(ctx), dp(d, 1)));
         coverFrame.setClipToOutline(true);
         LinearLayout.LayoutParams cfLp = new LinearLayout.LayoutParams(dp(d, 114), dp(d, 168));
         cfLp.bottomMargin = dp(d, 6);
@@ -859,7 +859,7 @@ public final class OpenCatalogView {
 
         final TextView fallback = new TextView(ctx);
         fallback.setText(book.title);
-        fallback.setTextColor(TEXT_PRIMARY);
+        fallback.setTextColor(FolioTheme.textPrimary(ctx));
         fallback.setTextSize(12f);
         fallback.setGravity(Gravity.CENTER);
         fallback.setPadding(dp(d, 8), dp(d, 8), dp(d, 8), dp(d, 8));
@@ -868,7 +868,7 @@ public final class OpenCatalogView {
 
         TextView titleTv = new TextView(ctx);
         titleTv.setText(book.title);
-        titleTv.setTextColor(TEXT_PRIMARY);
+        titleTv.setTextColor(FolioTheme.textPrimary(ctx));
         titleTv.setTextSize(12.5f);
         titleTv.setTypeface(null, Typeface.BOLD);
         titleTv.setMaxLines(2);
@@ -877,7 +877,7 @@ public final class OpenCatalogView {
 
         TextView authTv = new TextView(ctx);
         authTv.setText(book.author);
-        authTv.setTextColor(TEXT_MUTED);
+        authTv.setTextColor(FolioTheme.textMuted(ctx));
         authTv.setTextSize(11f);
         authTv.setMaxLines(1);
         authTv.setEllipsize(TextUtils.TruncateAt.END);
