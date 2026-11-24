@@ -92,15 +92,53 @@ public final class OpenCatalogView {
         }
     }
 
+    private static java.lang.ref.WeakReference<View> sStockBellRef = null;
+
+    private static boolean isAncestorOf(View ancestor, View child) {
+        if (ancestor == null || child == null) return false;
+        View cur = child;
+        while (cur != null) {
+            if (cur == ancestor) return true;
+            if (cur.getParent() instanceof View) {
+                cur = (View) cur.getParent();
+            } else {
+                break;
+            }
+        }
+        return false;
+    }
+
+    private static View findClickableBellInSubtree(View v) {
+        if (v == null) return null;
+        CharSequence cd = v.getContentDescription();
+        String cds = cd != null ? cd.toString().toLowerCase(Locale.US) : "";
+        if (cds.contains("notif") || cds.contains("bell") || cds.contains("alert") || cds.contains("inbox")) {
+            return v;
+        }
+        if (v instanceof ImageView && v.isClickable()) {
+            return v;
+        }
+        if (v instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) v;
+            for (int i = vg.getChildCount() - 1; i >= 0; i--) {
+                View found = findClickableBellInSubtree(vg.getChildAt(i));
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
     private static void hideRedundantKindleSearchBar(View anchor) {
         try {
             View root = anchor.getRootView();
             if (!(root instanceof ViewGroup)) return;
-            hideSearchKindleRecursive((ViewGroup) root, anchor);
+            float d = anchor.getResources().getDisplayMetrics().density;
+            int screenH = anchor.getResources().getDisplayMetrics().heightPixels;
+            hideSearchKindleRecursive((ViewGroup) root, anchor, d, screenH);
         } catch (Throwable ignored) {}
     }
 
-    private static void hideSearchKindleRecursive(ViewGroup vg, View skipSubtree) {
+    private static void hideSearchKindleRecursive(ViewGroup vg, View skipSubtree, float d, int screenH) {
         if (vg == skipSubtree) return;
         for (int i = 0; i < vg.getChildCount(); i++) {
             View c = vg.getChildAt(i);
@@ -108,22 +146,115 @@ public final class OpenCatalogView {
             if (c instanceof TextView) {
                 CharSequence txt = ((TextView) c).getText();
                 CharSequence hint = ((TextView) c).getHint();
-                String s1 = txt != null ? txt.toString() : "";
-                String s2 = hint != null ? hint.toString() : "";
+                String s1 = txt != null ? txt.toString().trim() : "";
+                String s2 = hint != null ? hint.toString().trim() : "";
                 if (s1.contains("Search Kindle") || s2.contains("Search Kindle")
-                        || s1.contains("Search Folio") || s2.contains("Search Folio") || s1.contains("Search Azath") || s2.contains("Search Azath")) {
+                        || s1.contains("Search Folio") || s2.contains("Search Folio")
+                        || s1.contains("Search Azath") || s2.contains("Search Azath")) {
                     View target = c;
-                    if (c.getParent() instanceof View && c.getParent() != vg.getRootView()) {
+                    if (c.getParent() instanceof View && c.getParent() != vg.getRootView()
+                            && !isAncestorOf((View) c.getParent(), skipSubtree)) {
                         target = (View) c.getParent();
                     }
                     target.setVisibility(View.GONE);
-                    return;
+                    continue;
+                }
+                // Collapse the redundant stock top "Home" bar (strictly in top third of screen so bottom nav "Home" is untouched)
+                if ("Home".equals(s1) && c.getVisibility() == View.VISIBLE) {
+                    int[] loc = new int[2];
+                    c.getLocationOnScreen(loc);
+                    if (loc[1] >= 0 && loc[1] < screenH / 3) {
+                        View bar = c;
+                        while (bar.getParent() instanceof View) {
+                            View p = (View) bar.getParent();
+                            if (p == vg.getRootView() || isAncestorOf(p, skipSubtree)) break;
+                            int ph = p.getHeight();
+                            if (ph > 0 && ph <= dp(d, 136)) {
+                                bar = p;
+                            } else {
+                                break;
+                            }
+                        }
+                        if (!isAncestorOf(bar, skipSubtree)) {
+                            View bell = findClickableBellInSubtree(bar);
+                            if (bell != null) {
+                                sStockBellRef = new java.lang.ref.WeakReference<View>(bell);
+                            }
+                            bar.setVisibility(View.GONE);
+                            continue;
+                        }
+                    }
                 }
             }
             if (c instanceof ViewGroup) {
-                hideSearchKindleRecursive((ViewGroup) c, skipSubtree);
+                hideSearchKindleRecursive((ViewGroup) c, skipSubtree, d, screenH);
             }
         }
+    }
+
+    private static View makeBellIconButton(final Context ctx, final float d) {
+        FrameLayout btn = new FrameLayout(ctx);
+        btn.setBackground(roundRect(BG_SURFACE, dp(d, 999), 0xFF2A2423, dp(d, 1)));
+        int size = dp(d, 34);
+        btn.setLayoutParams(new LinearLayout.LayoutParams(size, size));
+
+        View icon = new View(ctx) {
+            @Override
+            protected void onDraw(android.graphics.Canvas canvas) {
+                super.onDraw(canvas);
+                android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                p.setColor(TEXT_PRIMARY);
+                p.setStyle(android.graphics.Paint.Style.STROKE);
+                p.setStrokeWidth(Math.max(1.8f, 1.55f * d));
+                p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+                p.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+
+                float w = getWidth();
+                float h = getHeight();
+                float cx = w * 0.5f;
+                // Bell dome + flared skirt
+                android.graphics.Path path = new android.graphics.Path();
+                path.moveTo(w * 0.27f, h * 0.68f);
+                path.lineTo(w * 0.31f, h * 0.44f);
+                path.cubicTo(w * 0.31f, h * 0.25f, w * 0.69f, h * 0.25f, w * 0.69f, h * 0.44f);
+                path.lineTo(w * 0.73f, h * 0.68f);
+                path.close();
+                canvas.drawPath(path, p);
+                // Top crown dot
+                canvas.drawLine(cx, h * 0.20f, cx, h * 0.26f, p);
+                // Clapper arc at bottom
+                android.graphics.RectF clap = new android.graphics.RectF(cx - w * 0.08f, h * 0.67f, cx + w * 0.08f, h * 0.79f);
+                canvas.drawArc(clap, 15f, 150f, false, p);
+            }
+        };
+        int icSz = dp(d, 20);
+        FrameLayout.LayoutParams ilp = new FrameLayout.LayoutParams(icSz, icSz);
+        ilp.gravity = Gravity.CENTER;
+        btn.addView(icon, ilp);
+
+        btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                View stockBell = sStockBellRef != null ? sStockBellRef.get() : null;
+                if (stockBell != null) {
+                    try {
+                        stockBell.performClick();
+                        return;
+                    } catch (Throwable ignored) {}
+                }
+                try {
+                    Class<?> cls = Class.forName("com.amazon.kindle.inapp.notifications.InAppNotificationsActivity");
+                    android.content.Intent intent = new android.content.Intent(ctx, cls);
+                    if (!(ctx instanceof android.app.Activity)) {
+                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    }
+                    ctx.startActivity(intent);
+                    return;
+                } catch (Throwable ignored) {}
+                Toast.makeText(ctx, "No new notifications", Toast.LENGTH_SHORT).show();
+            }
+        });
+        return btn;
     }
 
     public static View buildCatalogView(final Context ctx) {
@@ -155,7 +286,7 @@ public final class OpenCatalogView {
         final LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(BG_DARK);
-        root.setPadding(dp(d, 16), dp(d, 18), dp(d, 16), dp(d, 24));
+        root.setPadding(dp(d, 16), dp(d, 10), dp(d, 16), dp(d, 24));
         mainScroll.addView(root);
 
         // --- Top Brand Header ---
@@ -181,6 +312,12 @@ public final class OpenCatalogView {
         TextView backupPill = makePill(ctx, d, "Backup", FolioTheme.ACCENT_FILL, FolioTheme.ACCENT_SOFT_TEXT);
         backupPill.setBackground(roundRect(FolioTheme.ACCENT_FILL, dp(d, 999), FolioTheme.ACCENT_BORDER, dp(d, 1)));
         headerRow.addView(backupPill);
+
+        View gapBell = new View(ctx);
+        headerRow.addView(gapBell, new LinearLayout.LayoutParams(dp(d, 8), 1));
+
+        View bellBtn = makeBellIconButton(ctx, d);
+        headerRow.addView(bellBtn);
         root.addView(headerRow);
 
         // --- Rounded Search Bar ---

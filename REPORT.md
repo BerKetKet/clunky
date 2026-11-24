@@ -1,27 +1,27 @@
-# Antigravity Report — Round 139 Deliverables (`Azath v14.5 KFX`)
+# Antigravity Report — Round 140 Deliverables (`Azath v14.6 KFX`)
 
 ## Summary
-Implemented, built, deployed, and hardware-verified Round 139 (`Azath v14.5 KFX`) on the physical **Samsung Galaxy M30** (`32001776e8e82623`, TrebleDroid Android 13 GSI), adding `.cover.jpg` fallback lookup and literary archival **EB Garamond** drop-cap covers with `#5C2D26` spine rules on Home, the graceful **Offline Mode** card (`Retry` + `Local Catalog` pills), version bump to `Azath v14.5 KFX`, and runtime verification of the Round 138 dark offline WebView error screen.
+Implemented, built, deployed, and hardware-verified Round 140 (`Azath v14.6 KFX`) on the physical **Samsung Galaxy M30** (`32001776e8e82623`, TrebleDroid Android 13 GSI), collapsing the redundant Jetpack Compose `Home` top bar cleanly at its Scaffold source, integrating the circular Notification Bell button into the **Azath** header row, carrying over permanent `rec.title` / `"Azath Library Insights\n"` fixes, and bumping to `Azath v14.6 KFX`.
 
 ---
 
 ## Verification Matrix
 | Check / Deliverable | Status | Verified Evidence |
 | :--- | :--- | :--- |
-| Regression Fixes Preserved (`FolioMoreView.java`) | **VERIFIED** | Restored `makeMiniCoverView(ctx, d, rec.kfxPath, rec.title, 38, 54, 9)` (line 1326) and `"Azath Library Insights\n"` (line 5159) in `dropin_src/` before copying into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`. |
-| APK Build & Staging (`v14.5 KFX`) | **VERIFIED** | `bash 07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` exited `0` (`classes9.dex` `464996` bytes, `Lib/b.<clinit>` Ember Crimson `0xffe05a47L` + XML patches). Staged APK: `07_APK_EPUB_INGESTION_MOD/release/azath_v14.5_kfx/base.apk` (`138532967` bytes, SHA256 `7320ae96062ae5a080b01c79a763c6cfb8617216fb3c9f92370780d6e71361c7`). |
-| Device Deployment (`com.azath.reader`) | **VERIFIED** | `dumpsys package com.azath.reader` -> `versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-25 00:52:52`. Logcat (`FATAL EXCEPTION`) -> `NO_FATAL_EXCEPTIONS`. Control Center badge `v14.5 KFX` confirmed in `logs/azath_more_r139.xml`. |
+| Compose `Home` TopBar Collapse (`patch_classes3_azath.sh`) | **VERIFIED** | Verified via `logs/azath_home_r139.xml` that the top `"Home"` + Bell header was rendered inside Compose `com.azath.reader:id/compose_content` (`HomeScreenlet` -> `com/amazon/kcp/home/a.smali`), not an Android `TextView`. Added idempotent `07_APK_EPUB_INGESTION_MOD/tools/patch_classes3_azath.sh` patching `com/amazon/kcp/home/a;->j()` from `HeaderMode;->d` to `HeaderMode;->c` (`h$a`, zero-height empty header in `NavigationControllerTopAppBar`), leaving `Library` and `More` headers intact. |
+| Notification Bell Integration (`OpenCatalogView.java`) | **VERIFIED** | Circular Notification Bell icon button (`makeBellIconButton`) sits directly beside `Backup` on the `Azath` row; wired click handler directly to `com.amazon.kindle.inapp.notifications.InAppNotificationsActivity` (`topResumedActivity` confirmed on `(993, 160)` tap). |
+| APK Build & Staging (`v14.6 KFX`) | **VERIFIED** | `bash 07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` exited `0` (`classes9.dex` `467736` bytes, `Lib/b.<clinit>` Ember Crimson `0xffe05a47L`, `patch_classes3_azath.sh`, XML patches). Staged APK: `07_APK_EPUB_INGESTION_MOD/release/azath_v14.6_kfx/base.apk` (`138532967` bytes, SHA256 `d7995bd674ad6db38cd034f74dbe38907e95a3ee44dcf4a7b2a46a6d17a8530f`). |
+| Device Deployment (`com.azath.reader`) | **VERIFIED** | `dumpsys package com.azath.reader` -> `versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-25 01:11:28`. Logcat (`FATAL EXCEPTION`) -> `NO_FATAL_EXCEPTIONS`. Control Center badge `v14.6 KFX` confirmed in `logs/azath_more_r140.xml`. |
 | Stock Kindle Preservation (`com.amazon.kindle`) | **VERIFIED** | `dumpsys package com.amazon.kindle` -> `versionName=8.160.1.0(2.0.124621.0)`, `lastUpdateTime=2026-11-19 21:59:23` (100% untouched & read-only). |
-| Home Archival Covers & Offline Card (`verify_r139_azath_home.png`) | **VERIFIED** | Captured on Galaxy M30 (`185017` bytes) & visually inspected: EB Garamond drop-cap initials (`M`, `C`, `T`) with `#5C2D26` crimson spine rules and EB Garamond titles on `Continue Reading` cards; clean **Offline Mode** card under `Popular Free EPUBs` with EB Garamond heading, Inter guidance copy, tonal ember-crimson `Retry` pill, and `Local Catalog` pill. |
-| Offline Web Book Browser (`verify_r139_azath_web_browser_offline.png`) | **VERIFIED** | Captured on Galaxy M30 (`116073` bytes) & visually inspected: Web Book Browser opened offline to `https://standardebooks.org/ebooks`, rendering dark Obsidian-Ivory-Crimson **`Page unavailable offline`** card, `net::ERR_INTERNET_DISCONNECTED` pill, and `#E05A47` **`Try Again`** button. |
+| Single-Header Home UI (`verify_r140_azath_home.png`) | **VERIFIED** | Captured on Galaxy M30 (`641259` bytes) & visually inspected: redundant `Home` top bar eliminated (`Azath` at `bounds="[42,109][527,212]"` directly under status bar) with `+ OPDS`, `Backup`, and circular Bell button on one row; real `.cover.jpg` covers rendered for *The 210th Day* & *Rashomon and Other Stories*, EB Garamond archival monogram `M` on *Moksha*, and calm `Offline Mode` card below. |
 
 ---
 
 ## Modified / Added Files
 - `dropin_src/com/amazon/kindle/epub/catalog/{OpenCatalogView.java,FolioMoreView.java}` & `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/{OpenCatalogView.java,FolioMoreView.java}`
-- `07_APK_EPUB_INGESTION_MOD/dex/classes9.dex` (`464996` bytes)
-- `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` (`azath_v14.5_kfx` staging)
-- `verify_r139_azath_home.png`, `verify_r139_azath_web_browser_offline.png`
+- `07_APK_EPUB_INGESTION_MOD/tools/patch_classes3_azath.sh` & `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh`
+- `07_APK_EPUB_INGESTION_MOD/dex/classes9.dex` (`467736` bytes)
+- `verify_r140_azath_home.png`
 
 ---
 

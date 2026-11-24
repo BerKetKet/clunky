@@ -108,7 +108,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v14.5 KFX");
+        badgeTv.setText("v14.6 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(FolioTheme.ACCENT_SOFT_TEXT);
         badgeTv.setTypeface(FolioTheme.sansBold(ctx));
@@ -726,7 +726,7 @@ public final class FolioMoreView {
                 if (i < limit - 1) cLp.rightMargin = dp(d, 8);
                 card.setLayoutParams(cLp);
 
-                card.addView(makeMiniCoverView(ctx, d, rec.kfxPath, 34, 50, 9));
+                card.addView(makeMiniCoverView(ctx, d, rec.kfxPath, rec.title, 34, 50, 9));
 
                 LinearLayout mc = new LinearLayout(ctx);
                 mc.setOrientation(LinearLayout.VERTICAL);
@@ -1566,7 +1566,7 @@ public final class FolioMoreView {
             if (i < limit - 1) cLp.rightMargin = dp(d, 10);
             card.setLayoutParams(cLp);
 
-            card.addView(makeMiniCoverView(ctx, d, rec.kfxPath, 36, 52, 9));
+            card.addView(makeMiniCoverView(ctx, d, rec.kfxPath, rec.title, 36, 52, 9));
 
             LinearLayout metaCol = new LinearLayout(ctx);
             metaCol.setOrientation(LinearLayout.VERTICAL);
@@ -1844,7 +1844,7 @@ public final class FolioMoreView {
                     rankTv.setLayoutParams(rkLp);
                     row.addView(rankTv);
 
-                    row.addView(makeMiniCoverView(ctx, d, rec.kfxPath, 34, 48, 10));
+                    row.addView(makeMiniCoverView(ctx, d, rec.kfxPath, rec.title, 34, 48, 10));
 
                     LinearLayout infoCol = new LinearLayout(ctx);
                     infoCol.setOrientation(LinearLayout.VERTICAL);
@@ -2149,7 +2149,7 @@ public final class FolioMoreView {
                 topRow.setOrientation(LinearLayout.HORIZONTAL);
                 topRow.setGravity(Gravity.CENTER_VERTICAL);
 
-                topRow.addView(makeMiniCoverView(ctx, d, rec.kfxPath, 68, 98, 12));
+                topRow.addView(makeMiniCoverView(ctx, d, rec.kfxPath, rec.title, 68, 98, 12));
 
                 LinearLayout mc = new LinearLayout(ctx);
                 mc.setOrientation(LinearLayout.VERTICAL);
@@ -5541,7 +5541,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Azath — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Azath v14.5 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Azath v14.6 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

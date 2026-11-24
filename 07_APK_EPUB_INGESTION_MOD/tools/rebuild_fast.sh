@@ -12,6 +12,7 @@ bash "${MOD_ROOT}/tools/compile_mod_dex.sh" "${MOD_ROOT}/dex/classes9.dex"
 echo "[1/5] Copying compiled mod DEX to base_dec/classes4.dex, libkfxconv.so, and azath_icons..."
 cp "${MOD_ROOT}/dex/classes9.dex" "${WORK_DIR}/base_dec/classes4.dex"
 python3 "${MOD_ROOT}/tools/patch_classes2_azath.py" "${WORK_DIR}/base_dec/classes2.dex"
+bash "${MOD_ROOT}/tools/patch_classes3_azath.sh" "${WORK_DIR}/base_dec/classes3.dex"
 mkdir -p "${WORK_DIR}/base_dec/lib/arm64-v8a"
 cp "${MOD_ROOT}/lib/arm64-v8a/libkfxconv.so" "${WORK_DIR}/base_dec/lib/arm64-v8a/libkfxconv.so"
 mkdir -p "${WORK_DIR}/base_dec/assets/azath_icons"
@@ -90,11 +91,11 @@ else
     echo "Device not currently attached via adb; skipping install for now."
 fi
 
-echo "[5/5] Staging Azath v14.5 KFX release..."
-mkdir -p "${MOD_ROOT}/release/azath_v14.5_kfx"
-cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v14.5_kfx/base.apk"
+echo "[5/5] Staging Azath v14.6 KFX release..."
+mkdir -p "${MOD_ROOT}/release/azath_v14.6_kfx"
+cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v14.6_kfx/base.apk"
 if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
-    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v14.5_kfx/base.apk.idsig"
+    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v14.6_kfx/base.apk.idsig"
 fi
 
-echo "Fast rebuild, deploy, and Azath v14.5 KFX staging successful!"
+echo "Fast rebuild, deploy, and Azath v14.6 KFX staging successful!"
