@@ -2056,6 +2056,74 @@ public final class FolioMetadataCatalogDialog {
 
         final EditText etTitle = addField(ctx, form, "Title", rec.title);
         final EditText etAuthor = addField(ctx, form, "Author", rec.author);
+
+        // Smart Quick-Fix Toolbar: ⇄ Swap · Aa Fix Author · Aa Title Case
+        LinearLayout fixRow = new LinearLayout(ctx);
+        fixRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams fixRowLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        fixRowLp.topMargin = dp(ctx, 8);
+        fixRowLp.bottomMargin = dp(ctx, 4);
+        fixRow.setLayoutParams(fixRowLp);
+
+        TextView swapPill = new TextView(ctx);
+        swapPill.setText("⇄ Swap T/A");
+        swapPill.setTextColor(Color.parseColor("#C084FC"));
+        swapPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        swapPill.setTypeface(Typeface.DEFAULT_BOLD);
+        swapPill.setGravity(Gravity.CENTER);
+        swapPill.setSingleLine(true);
+        swapPill.setPadding(dp(ctx, 8), dp(ctx, 6), dp(ctx, 8), dp(ctx, 6));
+        swapPill.setBackground(pillBg(ctx, "#2B1B3D", "#6B21A8", 8));
+        LinearLayout.LayoutParams spLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        spLp.rightMargin = dp(ctx, 6);
+        swapPill.setLayoutParams(spLp);
+        swapPill.setOnClickListener(v -> {
+            String t = etTitle.getText().toString();
+            String a = etAuthor.getText().toString();
+            etTitle.setText(a);
+            etAuthor.setText(t);
+            Toast.makeText(ctx, "Swapped Title & Author", Toast.LENGTH_SHORT).show();
+        });
+        fixRow.addView(swapPill);
+
+        TextView normAuthPill = new TextView(ctx);
+        normAuthPill.setText("Aa Fix Author");
+        normAuthPill.setTextColor(Color.parseColor("#38BDF8"));
+        normAuthPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        normAuthPill.setTypeface(Typeface.DEFAULT_BOLD);
+        normAuthPill.setGravity(Gravity.CENTER);
+        normAuthPill.setSingleLine(true);
+        normAuthPill.setPadding(dp(ctx, 8), dp(ctx, 6), dp(ctx, 8), dp(ctx, 6));
+        normAuthPill.setBackground(pillBg(ctx, "#152638", "#1E4E75", 8));
+        LinearLayout.LayoutParams naLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        naLp.rightMargin = dp(ctx, 6);
+        normAuthPill.setLayoutParams(naLp);
+        normAuthPill.setOnClickListener(v -> {
+            String fixed = formatAuthorForDisplay(etAuthor.getText().toString());
+            etAuthor.setText(fixed);
+            Toast.makeText(ctx, "Normalized Author", Toast.LENGTH_SHORT).show();
+        });
+        fixRow.addView(normAuthPill);
+
+        TextView titleCasePill = new TextView(ctx);
+        titleCasePill.setText("Aa Title Case");
+        titleCasePill.setTextColor(Color.parseColor("#FBBF24"));
+        titleCasePill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        titleCasePill.setTypeface(Typeface.DEFAULT_BOLD);
+        titleCasePill.setGravity(Gravity.CENTER);
+        titleCasePill.setSingleLine(true);
+        titleCasePill.setPadding(dp(ctx, 8), dp(ctx, 6), dp(ctx, 8), dp(ctx, 6));
+        titleCasePill.setBackground(pillBg(ctx, "#2A2011", "#854D0E", 8));
+        titleCasePill.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        titleCasePill.setOnClickListener(v -> {
+            String fixed = toSmartTitleCase(etTitle.getText().toString());
+            etTitle.setText(fixed);
+            Toast.makeText(ctx, "Formatted Title Case", Toast.LENGTH_SHORT).show();
+        });
+        fixRow.addView(titleCasePill);
+        form.addView(fixRow);
+
         final EditText etPubDate = addField(ctx, form, "Published Date / Year", rec.pubDate);
         final EditText etPublisher = addField(ctx, form, "Publisher", rec.publisher);
         final EditText etGenres = addField(ctx, form, "Genres (comma-separated)", rec.genres);
@@ -2083,6 +2151,13 @@ public final class FolioMetadataCatalogDialog {
                         cv.put("description", etDesc.getText().toString().trim());
                         db.getWritableDatabase().update(
                                 "books_metadata", cv, "id = ?", new String[] { String.valueOf(rec.id) });
+                        rec.title = newTitle;
+                        rec.author = newAuthor;
+                        rec.pubDate = etPubDate.getText().toString().trim();
+                        rec.publisher = etPublisher.getText().toString().trim();
+                        rec.genres = etGenres.getText().toString().trim();
+                        rec.isbn = etIsbn.getText().toString().trim();
+                        rec.description = etDesc.getText().toString().trim();
                         syncTitleAuthorToKindleDb(ctx, rec.kfxPath, newTitle, newAuthor);
                         Toast.makeText(ctx, "Saved & synced metadata", Toast.LENGTH_SHORT).show();
                         if (onSaved != null) onSaved.run();
@@ -2092,6 +2167,39 @@ public final class FolioMetadataCatalogDialog {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private static GradientDrawable pillBg(Context ctx, String fillHex, String strokeHex, int radiusDp) {
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Color.parseColor(fillHex));
+        bg.setCornerRadius(dp(ctx, radiusDp));
+        bg.setStroke(dp(ctx, 1), Color.parseColor(strokeHex));
+        return bg;
+    }
+
+    private static String toSmartTitleCase(String input) {
+        if (input == null) return "";
+        String trimmed = input.trim();
+        if (trimmed.isEmpty()) return "";
+        String[] minor = { "a", "an", "the", "and", "or", "but", "nor", "of", "in", "on", "to", "for", "by", "at", "with", "from" };
+        java.util.HashSet<String> minorSet = new java.util.HashSet<>(java.util.Arrays.asList(minor));
+        String[] words = trimmed.split("\\s+");
+        StringBuilder out = new StringBuilder();
+        boolean forceCap = true;
+        for (int i = 0; i < words.length; i++) {
+            String w = words[i];
+            if (i > 0) out.append(' ');
+            String lower = w.toLowerCase(java.util.Locale.US);
+            if (!forceCap && i < words.length - 1 && minorSet.contains(lower)) {
+                out.append(lower);
+            } else if (w.length() > 1) {
+                out.append(Character.toUpperCase(w.charAt(0))).append(lower.substring(1));
+            } else {
+                out.append(w.toUpperCase(java.util.Locale.US));
+            }
+            forceCap = w.endsWith(":") || w.endsWith("-") || w.endsWith("—") || w.endsWith("?");
+        }
+        return out.toString();
     }
 
     private static void syncTitleAuthorToKindleDb(Context ctx, String kfxPath, String title, String author) {

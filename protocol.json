@@ -1,18 +1,22 @@
 {
-  "round": 112,
-  "version": "Folio v11.2 KFX",
-  "codename": "Up Next Queue Reorder Manager & Live Sync",
+  "round": 113,
+  "version": "Folio v11.3 KFX",
+  "codename": "Smart Metadata Quick-Fix Toolbar",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
+    {
+      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java"
+    },
     {
       "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.2_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.3_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r112_queue_reorder.png",
-    "verify_r112_about_v112.png"
+    "verify_r113_edit_metadata_quickfix.png",
+    "verify_r113_about_v113.png"
   ]
 }
