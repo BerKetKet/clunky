@@ -55,4 +55,4 @@ Verified on physical Samsung Galaxy M30 hardware (`32001776e8e82623`):
 ## 3. GitHub Repository Synchronization
 - **Repository Remote**: `https://github.com/BerKetKet/clunky.git`
 - **Branch**: `master` (tracking `origin/master`)
-- **Commit**: Recorded upon push in Task C.
+- **Commit**: `07a3720` ("Round 129: Kindle-Native Book Details, Reading-Time Estimate & About Folio Theme (Folio v12.9 KFX)") pushed to `origin/master`.
