@@ -123,7 +123,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v11.4 KFX");
+        badgeTv.setText("Folio v11.5 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2671,24 +2671,149 @@ public final class FolioMoreView {
         root.setBackgroundColor(0xFF11131A);
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
+        final AlertDialog[] nbDlgRef = new AlertDialog[1];
+
+        LinearLayout hdrRow = new LinearLayout(ctx);
+        hdrRow.setOrientation(LinearLayout.HORIZONTAL);
+        hdrRow.setGravity(Gravity.CENTER_VERTICAL);
+        hdrRow.setPadding(0, 0, 0, dp(d, 4));
+
         final TextView titleTv = new TextView(ctx);
         titleTv.setText("📝 Reading Notes (" + annotated.size() + ")");
         titleTv.setTextColor(TEXT_PRIMARY);
-        titleTv.setTextSize(18);
+        titleTv.setTextSize(17.5f);
         titleTv.setTypeface(Typeface.DEFAULT_BOLD);
-        titleTv.setPadding(0, 0, 0, dp(d, 4));
-        root.addView(titleTv);
+        titleTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        hdrRow.addView(titleTv);
+
+        TextView addNoteBtn = new TextView(ctx);
+        addNoteBtn.setText("+ Add Note");
+        addNoteBtn.setTextColor(0xFFC084FC);
+        addNoteBtn.setTextSize(11.5f);
+        addNoteBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        addNoteBtn.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
+        GradientDrawable anBg = new GradientDrawable();
+        anBg.setColor(0xFF2B1B3D);
+        anBg.setCornerRadius(dp(d, 9));
+        anBg.setStroke(dp(d, 1), 0xFF6B21A8);
+        addNoteBtn.setBackground(anBg);
+        addNoteBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                showAddNoteBookPicker(ctx, all, nbDlgRef[0]);
+            }
+        });
+        hdrRow.addView(addNoteBtn);
+        root.addView(hdrRow);
 
         TextView subTv = new TextView(ctx);
         subTv.setText(annotated.isEmpty()
-                ? "No personal reading notes saved yet"
-                : "Tap any book header to read, or copy & edit notes directly");
+                ? "Tap + Add Note to save a quote or thought for any book"
+                : "Tap any book header to read, or export your notebook below");
         subTv.setTextColor(TEXT_MUTED);
         subTv.setTextSize(12);
         subTv.setPadding(0, 0, 0, dp(d, 10));
         root.addView(subTv);
 
-        final AlertDialog[] nbDlgRef = new AlertDialog[1];
+        if (!annotated.isEmpty()) {
+            LinearLayout actBar = new LinearLayout(ctx);
+            actBar.setOrientation(LinearLayout.HORIZONTAL);
+            actBar.setPadding(0, 0, 0, dp(d, 10));
+
+            TextView copyAllPill = new TextView(ctx);
+            copyAllPill.setText("📋 Copy All");
+            copyAllPill.setTextColor(ACCENT_AMBER);
+            copyAllPill.setTextSize(11.5f);
+            copyAllPill.setTypeface(Typeface.DEFAULT_BOLD);
+            copyAllPill.setGravity(Gravity.CENTER);
+            copyAllPill.setSingleLine(true);
+            copyAllPill.setPadding(dp(d, 8), dp(d, 6), dp(d, 8), dp(d, 6));
+            GradientDrawable caBg = new GradientDrawable();
+            caBg.setColor(0xFF2A2011);
+            caBg.setCornerRadius(dp(d, 8));
+            caBg.setStroke(dp(d, 1), 0xFF854D0E);
+            copyAllPill.setBackground(caBg);
+            LinearLayout.LayoutParams caLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            caLp.rightMargin = dp(d, 6);
+            copyAllPill.setLayoutParams(caLp);
+            copyAllPill.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    String md = buildNotesMarkdown(ctx, annotated, noteMap, rateMap);
+                    android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                            ctx.getSystemService(Context.CLIPBOARD_SERVICE);
+                    if (cm != null) {
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("Folio Reading Notes", md));
+                        Toast.makeText(ctx, "Copied " + annotated.size() + " note(s) as Markdown", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            actBar.addView(copyAllPill);
+
+            TextView shareAllPill = new TextView(ctx);
+            shareAllPill.setText("↗ Share");
+            shareAllPill.setTextColor(ACCENT_TEAL);
+            shareAllPill.setTextSize(11.5f);
+            shareAllPill.setTypeface(Typeface.DEFAULT_BOLD);
+            shareAllPill.setGravity(Gravity.CENTER);
+            shareAllPill.setSingleLine(true);
+            shareAllPill.setPadding(dp(d, 8), dp(d, 6), dp(d, 8), dp(d, 6));
+            GradientDrawable saBg = new GradientDrawable();
+            saBg.setColor(0xFF152638);
+            saBg.setCornerRadius(dp(d, 8));
+            saBg.setStroke(dp(d, 1), 0xFF1E4E75);
+            shareAllPill.setBackground(saBg);
+            LinearLayout.LayoutParams saLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            saLp.rightMargin = dp(d, 6);
+            shareAllPill.setLayoutParams(saLp);
+            shareAllPill.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    String md = buildNotesMarkdown(ctx, annotated, noteMap, rateMap);
+                    try {
+                        android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                        shareIntent.setType("text/plain");
+                        shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "Folio Reading Notes");
+                        shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, md);
+                        ctx.startActivity(android.content.Intent.createChooser(shareIntent, "Share Reading Notes"));
+                    } catch (Throwable t) {
+                        Toast.makeText(ctx, "Unable to open share sheet", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            actBar.addView(shareAllPill);
+
+            TextView exportMdPill = new TextView(ctx);
+            exportMdPill.setText("💾 Export .md");
+            exportMdPill.setTextColor(0xFF34D399);
+            exportMdPill.setTextSize(11.5f);
+            exportMdPill.setTypeface(Typeface.DEFAULT_BOLD);
+            exportMdPill.setGravity(Gravity.CENTER);
+            exportMdPill.setSingleLine(true);
+            exportMdPill.setPadding(dp(d, 8), dp(d, 6), dp(d, 8), dp(d, 6));
+            GradientDrawable emBg = new GradientDrawable();
+            emBg.setColor(0xFF0F2A22);
+            emBg.setCornerRadius(dp(d, 8));
+            emBg.setStroke(dp(d, 1), 0xFF1E6B52);
+            exportMdPill.setBackground(emBg);
+            exportMdPill.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            exportMdPill.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    String md = buildNotesMarkdown(ctx, annotated, noteMap, rateMap);
+                    try {
+                        File dir = new File("/sdcard/kindle/backups");
+                        if (!dir.exists()) dir.mkdirs();
+                        File outFile = new File(dir, "folio_reading_notes.md");
+                        java.io.FileOutputStream fos = new java.io.FileOutputStream(outFile);
+                        byte[] bytes = md.getBytes("UTF-8");
+                        fos.write(bytes);
+                        fos.close();
+                        Toast.makeText(ctx, "Saved folio_reading_notes.md (" + bytes.length + " B)", Toast.LENGTH_LONG).show();
+                    } catch (Throwable t) {
+                        Toast.makeText(ctx, "Export failed: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            actBar.addView(exportMdPill);
+            root.addView(actBar);
+        }
 
         final EditText searchEt = new EditText(ctx);
         searchEt.setHint("Search notes, titles, or authors...");
@@ -2946,6 +3071,169 @@ public final class FolioMoreView {
             });
         }
         nbDlgRef[0] = b.show();
+    }
+
+    private static String buildNotesMarkdown(
+            Context ctx,
+            java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> annotated,
+            java.util.Map<String, String> noteMap,
+            java.util.Map<String, Integer> rateMap) {
+        StringBuilder sb = new StringBuilder("# Folio Reading Notes\n\n");
+        for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : annotated) {
+            String t = (r.title != null && !r.title.isEmpty()) ? r.title : "Untitled";
+            String a = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
+            int stars = rateMap.containsKey(r.kfxPath) ? rateMap.get(r.kfxPath) : 0;
+            sb.append("## ").append(t);
+            if (!a.isEmpty()) sb.append(" — ").append(a);
+            if (stars > 0) {
+                sb.append(" (");
+                for (int s = 0; s < stars; s++) sb.append("★");
+                sb.append(")");
+            }
+            sb.append("\n> ").append(noteMap.get(r.kfxPath)).append("\n\n");
+        }
+        return sb.toString();
+    }
+
+    private static void showAddNoteBookPicker(
+            final Context ctx,
+            final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> allBooks,
+            final AlertDialog parentDlg) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> sorted =
+                new java.util.ArrayList<>(allBooks);
+        java.util.Collections.sort(sorted, new java.util.Comparator<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord>() {
+            @Override
+            public int compare(com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord a,
+                               com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord b) {
+                String ta = a.title != null ? a.title : "";
+                String tb = b.title != null ? b.title : "";
+                return ta.compareToIgnoreCase(tb);
+            }
+        });
+
+        LinearLayout wrap = new LinearLayout(ctx);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setBackgroundColor(0xFF11131A);
+        wrap.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
+
+        TextView hdr = new TextView(ctx);
+        hdr.setText("📝 Add / Edit Book Note");
+        hdr.setTextColor(TEXT_PRIMARY);
+        hdr.setTextSize(17);
+        hdr.setTypeface(Typeface.DEFAULT_BOLD);
+        hdr.setPadding(0, 0, 0, dp(d, 8));
+        wrap.addView(hdr);
+
+        final EditText filterEt = new EditText(ctx);
+        filterEt.setHint("Filter books by title or author...");
+        filterEt.setHintTextColor(0xFF64748B);
+        filterEt.setTextColor(TEXT_PRIMARY);
+        filterEt.setTextSize(13);
+        filterEt.setSingleLine(true);
+        filterEt.setPadding(dp(d, 12), dp(d, 8), dp(d, 12), dp(d, 8));
+        GradientDrawable fBg = new GradientDrawable();
+        fBg.setColor(0xFF1A1F2E);
+        fBg.setCornerRadius(dp(d, 8));
+        fBg.setStroke(dp(d, 1), 0xFF2A3142);
+        filterEt.setBackground(fBg);
+        LinearLayout.LayoutParams fLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        fLp.bottomMargin = dp(d, 10);
+        filterEt.setLayoutParams(fLp);
+        wrap.addView(filterEt);
+
+        ScrollView sv = new ScrollView(ctx);
+        sv.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 320)));
+        final LinearLayout list = new LinearLayout(ctx);
+        list.setOrientation(LinearLayout.VERTICAL);
+        sv.addView(list);
+        wrap.addView(sv);
+
+        final AlertDialog[] pickerDlg = new AlertDialog[1];
+        final Runnable renderPicker = new Runnable() {
+            @Override
+            public void run() {
+                list.removeAllViews();
+                String q = filterEt.getText() != null
+                        ? filterEt.getText().toString().trim().toLowerCase(java.util.Locale.ROOT)
+                        : "";
+                for (final com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec : sorted) {
+                    if (rec.kfxPath == null || rec.kfxPath.isEmpty()) continue;
+                    final String titleStr = (rec.title != null && !rec.title.isEmpty()) ? rec.title : "Untitled";
+                    final String authStr = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(rec.author);
+                    if (!q.isEmpty() && !(titleStr + " " + authStr).toLowerCase(java.util.Locale.ROOT).contains(q)) {
+                        continue;
+                    }
+                    final String existing = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getNote(ctx, rec.kfxPath);
+                    final boolean hasNote = (existing != null && !existing.trim().isEmpty());
+
+                    LinearLayout row = new LinearLayout(ctx);
+                    row.setOrientation(LinearLayout.HORIZONTAL);
+                    row.setGravity(Gravity.CENTER_VERTICAL);
+                    row.setPadding(dp(d, 10), dp(d, 9), dp(d, 10), dp(d, 9));
+                    GradientDrawable rBg = new GradientDrawable();
+                    rBg.setColor(BG_CARD);
+                    rBg.setCornerRadius(dp(d, 9));
+                    rBg.setStroke(dp(d, 1), hasNote ? 0xFF854D0E : 0xFF2A3142);
+                    row.setBackground(rBg);
+                    LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    rLp.bottomMargin = dp(d, 7);
+                    row.setLayoutParams(rLp);
+
+                    LinearLayout tc = new LinearLayout(ctx);
+                    tc.setOrientation(LinearLayout.VERTICAL);
+                    tc.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+                    TextView tTv = new TextView(ctx);
+                    tTv.setText(titleStr);
+                    tTv.setTextColor(TEXT_PRIMARY);
+                    tTv.setTextSize(13);
+                    tTv.setTypeface(Typeface.DEFAULT_BOLD);
+                    tTv.setMaxLines(1);
+                    tTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                    tc.addView(tTv);
+
+                    TextView aTv = new TextView(ctx);
+                    aTv.setText(!authStr.isEmpty() ? authStr : "Unknown Author");
+                    aTv.setTextColor(0xFF94A3B8);
+                    aTv.setTextSize(11);
+                    aTv.setMaxLines(1);
+                    aTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                    tc.addView(aTv);
+                    row.addView(tc);
+
+                    TextView tagTv = new TextView(ctx);
+                    tagTv.setText(hasNote ? "✏️ Edit" : "+ Note");
+                    tagTv.setTextColor(hasNote ? ACCENT_AMBER : 0xFFC084FC);
+                    tagTv.setTextSize(11.5f);
+                    tagTv.setTypeface(Typeface.DEFAULT_BOLD);
+                    tagTv.setPadding(dp(d, 8), 0, 0, 0);
+                    row.addView(tagTv);
+
+                    row.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            if (pickerDlg[0] != null) pickerDlg[0].dismiss();
+                            showInlineNoteEditor(ctx, rec.kfxPath, titleStr, hasNote ? existing.trim() : "", parentDlg);
+                        }
+                    });
+                    list.addView(row);
+                }
+            }
+        };
+        renderPicker.run();
+        filterEt.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) { renderPicker.run(); }
+            @Override public void afterTextChanged(android.text.Editable s) {}
+        });
+
+        pickerDlg[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setView(wrap)
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private static void showInlineNoteEditor(
@@ -4388,7 +4676,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v11.4 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v11.5 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

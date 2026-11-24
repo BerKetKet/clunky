@@ -1,6 +1,28 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Milestone Folio v11.5 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 115 complete:
+  1. **Reading Notes Studio: + Add Note, Share & Export .md (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java`.
+     - Built `+ Add Note` header action and searchable book picker (`showAddNoteBookPicker`) with `✏️ Edit` / `+ Note` status tags.
+     - Built 3-pill export & share toolbar: `📋 Copy All` (clipboard), `↗ Share` (native Android `ACTION_SEND`), and `💾 Export .md` (`/sdcard/kindle/backups/folio_reading_notes.md`).
+     - Verified exported Markdown on hardware: **114 bytes**, containing structured notes with star ratings and formatted quote blocks.
+     - Bumped badge and About Folio string to `Folio v11.5 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Milestone Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r115_notes_studio.png` (153 KB) — Reading Notes Studio showing `+ Add Note` pill, 3-pill export toolbar, and *1984* note card.
+       * `verify_r115_about_v115.png` (347 KB) — About Folio modal showing `Version: Folio v11.5 KFX (Enhanced Typesetting)`, `Up Next & Goal: 2 queued · 1/5 annual goal`, and live telemetry.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v11.5 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v11.5_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 115)
+1. `verify_r115_notes_studio.png`: Reading Notes Studio with `+ Add Note` and 3-pill export toolbar.
+2. `/sdcard/kindle/backups/folio_reading_notes.md`: Verified generated on device storage (114 bytes).
+3. `verify_r115_about_v115.png`: About Folio modal confirming `Version: Folio v11.5 KFX (Enhanced Typesetting)`.
+4. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+5. `dumpsys package com.amazon.kindle.epub`: Folio v11.5 KFX deployed (`lastUpdateTime=2026-11-24 03:36:42`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v11.4 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 114 complete:
   1. **Authors Directory Sort Pills & Progress Telemetry (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`.
