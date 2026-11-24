@@ -1,18 +1,22 @@
 {
-  "round": 118,
-  "version": "Folio v11.8 KFX",
-  "codename": "Saved Backups & Exports File Browser",
+  "round": 119,
+  "version": "Folio v11.9 KFX",
+  "codename": "Simplified Web Book Browser & Auto-Ingest EPUB Pipeline",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
+    {
+      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java"
+    },
     {
       "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.8_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.9_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r118_saved_backups_browser.png",
-    "verify_r118_about_v118.png"
+    "verify_r119_web_browser.png",
+    "verify_r119_web_browser_settings.png"
   ]
 }

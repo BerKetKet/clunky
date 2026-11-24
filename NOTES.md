@@ -1,6 +1,27 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v11.9 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 119 complete:
+  1. **Simplified Web Book Browser & Auto-Ingest EPUB Pipeline (Task A & B)**:
+     - Built and integrated `FolioWebBrowserDialog.java` and updated `FolioMoreView.java`.
+     - Added full-height modal `WebView` with compact navigation bar (`←`, `↻`, `🏠`, clickable host/path pill, `✨` Simplified View CSS toggle, `⚙` URL Settings, `✕` Close) and linear load progress bar.
+     - Built configurable Homepage URL & Simplified View Settings (`showUrlSettingsDialog`): stored in `SharedPreferences("folio_ui_prefs", "web_browser_home_url")` (defaults to `https://standardebooks.org/ebooks`) with 1-tap presets (`Standard Ebooks`, `Project Gutenberg`, `Open Library`, `Calibre LAN`) and `✨ Simplified View` toggle (strips clutter, sticky banners, and cookie overlays).
+     - Built automatic EPUB Download -> KFX Conversion -> Library Ingestion: intercepts `.epub` navigations and downloads with session cookies/User-Agent preserved, converts to native KFX via `ExternalEpubActivity.convertEpubToKfx`, enriches via `MetadataEnricher.enrichInPlace`, indexes into `FolioMetadataDb` + `kindle_library.db`, and presents an inline green success banner `✓ Added "<Title>" to Library` with a 1-tap `Open ›` button.
+     - Bumped badge and About Folio string to `Folio v11.9 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r119_web_browser.png` (191 KB) — `🌐 Web Book Browser` full-height modal showing top navigation bar (`←`, `↻`, `🏠`, address pill `standardebooks.org/ebooks`, `✨`, `⚙`, `✕`) and active `WebView` loading Standard Ebooks.
+       * `verify_r119_web_browser_settings.png` (170 KB) — `🌐 Web Browser Settings` modal showing Homepage URL field (`https://standardebooks.org/ebooks`), quick preset chips, and `✨ Simplified View: ON` toggle.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v11.9 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v11.9_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 119)
+1. `verify_r119_web_browser.png`: Web Book Browser modal with navigation bar and Standard Ebooks catalog.
+2. `verify_r119_web_browser_settings.png`: Web Browser Settings modal with homepage URL, preset chips, and Simplified View toggle.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v11.9 KFX deployed (`lastUpdateTime=2026-11-24 04:10:44`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v11.8 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 118 complete:
   1. **Saved Backups & Exports File Browser (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java`.

@@ -123,7 +123,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v11.8 KFX");
+        badgeTv.setText("Folio v11.9 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -327,6 +327,20 @@ public final class FolioMoreView {
                 }
         ));
 
+        // Card: Simplified Web Book Browser (configurable URL + auto-ingest EPUBs)
+        container.addView(makeActionCard(
+                ctx, d,
+                "🌐", "Web Book Browser",
+                "Browse " + com.amazon.kindle.epub.ingest.FolioWebBrowserDialog.getHomeHostLabel(ctx)
+                        + " & auto-import downloaded EPUBs",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        com.amazon.kindle.epub.ingest.FolioWebBrowserDialog.show(ctx, refreshStats);
+                    }
+                }
+        ));
+
         // Card A: OPDS Catalogs
         container.addView(makeActionCard(
                 ctx, d,
@@ -440,6 +454,20 @@ public final class FolioMoreView {
                     @Override
                     public void onClick(View v) {
                         openSettings(ctx);
+                    }
+                }
+        ));
+
+        // Card D2: Web Browser URL Settings
+        container.addView(makeActionCard(
+                ctx, d,
+                "🔗", "Web Browser URL",
+                "Configure homepage URL & Simplified View ("
+                        + com.amazon.kindle.epub.ingest.FolioWebBrowserDialog.getHomeHostLabel(ctx) + ")",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        com.amazon.kindle.epub.ingest.FolioWebBrowserDialog.showUrlSettingsDialog(ctx, refreshStats);
                     }
                 }
         ));
@@ -5338,7 +5366,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v11.8 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v11.9 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
