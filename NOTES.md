@@ -1,6 +1,28 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.3 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 123 complete:
+  1. **Full-App Kindle-Native Editorial Unification (Task A & B)**:
+     - Integrated `FolioIcons.java`, `FolioMoreView.java`, `FolioMetadataCatalogDialog.java`, and `FolioFolderBrowserDialog.java` into `mod_src/real/`.
+     - Built monochrome hairline vector icons `USER` (Authors Directory) and `UP_ARROW` (Parent Folder) in `FolioIcons.java`.
+     - Unified Up Next Queue card border to `BORDER_HAIRLINE` (`#262A2E`) and unified remaining modal backgrounds to Kindle dark (`#0D0F12` / `#141618` / `#262A2E`). Bumped badge to `Folio v12.3 KFX`.
+     - Unified `FolioMetadataCatalogDialog.java` to Kindle charcoal (`#0D0F12` / `#141618` / `#1C1F22` / `1px #262A2E`), updated title to `Typeface.SERIF` bold, shifted `Sync & Enrich` to calm Kindle blue (`#4DA6FF`) with black text, and replaced emoji buttons with crisp monochrome `FolioIcons` (`USER`, `SHUFFLE`).
+     - Unified `FolioFolderBrowserDialog.java` to Kindle charcoal, updated title to `Typeface.SERIF` bold, shifted `Open` to calm Kindle blue (`#4DA6FF`), and replaced `⬆` with monochrome vector `FolioIcons.UP_ARROW`. Fixed misplaced `btnUpDir` click listener nesting.
+     - Bumped badge and About Folio string to `Folio v12.3 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r123_kindle_catalog.png` (834 KB) — Unified Kindle-native Library Metadata & Genres modal showing Serif bold header, monochrome `USER` & `SHUFFLE` vector buttons, calm Kindle blue `Sync & Enrich` pill, and `#141618` charcoal cards.
+       * `verify_r123_kindle_importer.png` (198 KB) — Unified Kindle-native Import EPUBs from Storage modal showing Serif bold header, monochrome vector `UP_ARROW` button, calm Kindle blue `Open` pill, pinned folder chips, and charcoal surfaces.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v12.3 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v12.3_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 123)
+1. `verify_r123_kindle_catalog.png`: Unified Library Metadata & Genres modal with Serif header, vector icons, and Kindle blue action pill.
+2. `verify_r123_kindle_importer.png`: Unified Import EPUBs modal with Serif header, UP_ARROW vector icon, and charcoal surfaces.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v12.3 KFX deployed (`lastUpdateTime=2026-11-24 04:47:39`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.2 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 122 complete:
   1. **Kindle-Native Editorial Dark Redesign & Monochrome Vector Icon System (Task A & B)**:
      - Integrated `FolioIcons.java`, `FolioMoreView.java`, and `FolioWebBrowserDialog.java` into `mod_src/real/`.

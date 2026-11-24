@@ -42,6 +42,8 @@ public final class FolioIcons {
     public static final int BOOKMARK = 23;
     public static final int TARGET = 24;
     public static final int CHEVRON_RIGHT = 25;
+    public static final int USER = 26;
+    public static final int UP_ARROW = 27;
 
     public static final int COLOR_PRIMARY = 0xFFECEFF1;
     public static final int COLOR_ICON = 0xFFC4CBD2;
@@ -354,6 +356,21 @@ public final class FolioIcons {
                     path.moveTo(9.5f * s, 6.5f * s);
                     path.lineTo(15f * s, 12f * s);
                     path.lineTo(9.5f * s, 17.5f * s);
+                    c.drawPath(path, paint);
+                    break;
+
+                case USER:
+                    c.drawCircle(12f * s, 8.2f * s, 3.6f * s, paint);
+                    rf.set(5f * s, 14.2f * s, 19f * s, 25f * s);
+                    c.drawArc(rf, 180f, 180f, false, paint);
+                    break;
+
+                case UP_ARROW:
+                    path.moveTo(12f * s, 18.5f * s);
+                    path.lineTo(12f * s, 5.5f * s);
+                    path.moveTo(6.8f * s, 10.7f * s);
+                    path.lineTo(12f * s, 5.5f * s);
+                    path.lineTo(17.2f * s, 10.7f * s);
                     c.drawPath(path, paint);
                     break;
 
