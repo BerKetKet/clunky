@@ -11,12 +11,13 @@ bash "${MOD_ROOT}/tools/compile_mod_dex.sh" "${MOD_ROOT}/dex/classes9.dex"
 
 echo "[1/5] Copying compiled mod DEX to base_dec/classes4.dex, libkfxconv.so, and azath_icons..."
 cp "${MOD_ROOT}/dex/classes9.dex" "${WORK_DIR}/base_dec/classes4.dex"
+python3 "${MOD_ROOT}/tools/patch_classes2_azath.py" "${WORK_DIR}/base_dec/classes2.dex"
 mkdir -p "${WORK_DIR}/base_dec/lib/arm64-v8a"
 cp "${MOD_ROOT}/lib/arm64-v8a/libkfxconv.so" "${WORK_DIR}/base_dec/lib/arm64-v8a/libkfxconv.so"
 mkdir -p "${WORK_DIR}/base_dec/assets/azath_icons"
 cp -a "${MOD_ROOT}/assets/azath_icons/"*.png "${WORK_DIR}/base_dec/assets/azath_icons/"
 
-echo "[1b/5] Patching strings.xml Azath library branding..."
+echo "[1b/5] Patching strings.xml & bottom nav Ember Crimson resources..."
 find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i \
     -e 's/in your Kindle library\./in your Azath library\./g' \
     -e 's/in your Folio library\./in your Azath library\./g' \
@@ -24,6 +25,12 @@ find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i \
     -e 's/your Folio library/your Azath library/g' \
     -e 's/>Search Folio</\>Search Azath</g' \
     -e 's/>Search Kindle</\>Search Azath</g' {} +
+sed -i 's/#ff2491ff/#ffe05a47/gI' \
+    "${WORK_DIR}/base_dec/res/values-night/colors.xml" \
+    "${WORK_DIR}/base_dec/res/values/colors.xml" \
+    "${WORK_DIR}/base_dec/res/values/styles.xml"
+sed -i 's/android:color="@color\/accent_3_dark"/android:color="#ffe05a47"/g' \
+    "${WORK_DIR}/base_dec/res/drawable/bottom_bar_label_color_dark.xml" || true
 
 echo "[1c/5] Updating launcher icons from dropin_res..."
 python3 -c '
@@ -81,11 +88,11 @@ else
     echo "Device not currently attached via adb; skipping install for now."
 fi
 
-echo "[5/5] Staging Azath v14.1 KFX release..."
-mkdir -p "${MOD_ROOT}/release/azath_v14.1_kfx"
-cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v14.1_kfx/base.apk"
+echo "[5/5] Staging Azath v14.2 KFX release..."
+mkdir -p "${MOD_ROOT}/release/azath_v14.2_kfx"
+cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v14.2_kfx/base.apk"
 if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
-    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v14.1_kfx/base.apk.idsig"
+    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v14.2_kfx/base.apk.idsig"
 fi
 
-echo "Fast rebuild, deploy, and Azath v14.1 KFX staging successful!"
+echo "Fast rebuild, deploy, and Azath v14.2 KFX staging successful!"

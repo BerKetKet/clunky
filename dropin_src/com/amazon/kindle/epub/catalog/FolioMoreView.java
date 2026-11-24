@@ -108,7 +108,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v14.1 KFX");
+        badgeTv.setText("v14.2 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(FolioTheme.ACCENT_SOFT_TEXT);
         badgeTv.setTypeface(FolioTheme.sansBold(ctx));
@@ -4729,17 +4729,19 @@ public final class FolioMoreView {
         rtHdr.setTextSize(11);
         rtHdr.setTypeface(Typeface.DEFAULT_BOLD);
         rtHdr.setPadding(0, 0, 0, dp(d, 7));
-        rtHdr.setOnClickListener(new View.OnClickListener() {
+        View.OnClickListener calibrateClick = new View.OnClickListener() {
             @Override public void onClick(View v) {
                 if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
                 showReadingGoalDialog(ctx, new Runnable() {
                     @Override public void run() { showLibraryInsightsDialog(ctx); }
                 });
             }
-        });
+        };
+        rtHdr.setOnClickListener(calibrateClick);
         content.addView(rtHdr);
 
         LinearLayout rtRow = new LinearLayout(ctx);
+        rtRow.setOnClickListener(calibrateClick);
         rtRow.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams rtRowLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -5120,10 +5122,6 @@ public final class FolioMoreView {
             .append(unrdCnt).append(" unread\n");
         snap.append(yrNow).append(" Goal: ").append(finCnt).append("/").append(goalTgt)
             .append(" (").append(goalPct).append("%)\n");
-        snap.append("Reading Time (").append(userWpm).append(" WPM): ")
-            .append(totHrStr).append(" total · ")
-            .append(readHrStr).append(" read · ")
-            .append(remHrStr).append(" remaining\n");
         snap.append("Curation: ").append(favs).append(" fav · ").append(noted).append(" noted · ")
             .append(shelved).append(" shelved · ")
             .append(com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.countQueue(ctx)).append(" queued · ")
@@ -5150,6 +5148,7 @@ public final class FolioMoreView {
             }
             snap.append("\n");
         }
+        snap.append("Reading Time (").append(userWpm).append(" WPM): ").append(totHrStr).append(" total · ").append(readHrStr).append(" read · ").append(remHrStr).append(" remaining\n");
         final String snapshotText = snap.toString().trim();
 
         insightDlgRef[0] = new AlertDialog.Builder(ctx)
@@ -5502,7 +5501,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Azath — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Azath v14.1 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Azath v14.2 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

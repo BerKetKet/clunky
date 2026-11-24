@@ -1,16 +1,12 @@
 {
-  "round": 135,
+  "round": 136,
   "app_name": "Azath",
   "package_name": "com.azath.reader",
-  "version_label": "Azath v14.1 KFX",
+  "version_label": "Azath v14.2 KFX",
   "target_hardware": "Samsung Galaxy M30 (32001776e8e82623)",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% UNTOUCHED and READ-ONLY",
   "deliverables": [
-    "dropin_src/com/amazon/kindle/epub/catalog/FolioTheme.java",
     "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
-    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
-    "dropin_src/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java",
-    "dropin_src/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java",
-    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java"
+    "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java"
   ]
 }

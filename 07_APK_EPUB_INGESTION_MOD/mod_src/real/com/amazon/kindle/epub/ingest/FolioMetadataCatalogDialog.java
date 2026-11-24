@@ -434,12 +434,12 @@ public final class FolioMetadataCatalogDialog {
                     chip.setText(chipPrefix + labelText + " (" + gCount + ")");
                     chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                     chip.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-                    chip.setTextColor(Color.parseColor(active ? "#0A0909" : "#C4BDB5"));
+                    chip.setTextColor(Color.parseColor(active ? "#F5B8AE" : "#C4BDB5"));
                     chip.setPadding(dp(ctx, 12), dp(ctx, 6), dp(ctx, 12), dp(ctx, 6));
                     GradientDrawable bg = new GradientDrawable();
-                    bg.setColor(Color.parseColor(active ? "#E05A47" : "#211C1B"));
-                    bg.setCornerRadius(dp(ctx, 16));
-                    if (!active) bg.setStroke(dp(ctx, 1), Color.parseColor("#2A2423"));
+                    bg.setColor(Color.parseColor(active ? "#2A1816" : "#211C1B"));
+                    bg.setCornerRadius(dp(ctx, 999));
+                    bg.setStroke(dp(ctx, 1), Color.parseColor(active ? "#5C2D26" : "#2A2423"));
                     chip.setBackground(bg);
                     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -1198,22 +1198,65 @@ public final class FolioMetadataCatalogDialog {
         cardLp.setMargins(0, 0, 0, dp(ctx, 10));
         card.setLayoutParams(cardLp);
 
-        ImageView thumb = new ImageView(ctx);
-        LinearLayout.LayoutParams imgLp = new LinearLayout.LayoutParams(dp(ctx, 56), dp(ctx, 84));
-        imgLp.setMargins(0, 0, dp(ctx, 12), 0);
-        thumb.setLayoutParams(imgLp);
-        thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        thumb.setBackgroundColor(Color.parseColor("#2A2423"));
+        Bitmap coverBm = null;
         if (rec.coverPath != null && !rec.coverPath.isEmpty()) {
             File cf = new File(rec.coverPath);
             if (cf.exists()) {
                 BitmapFactory.Options opts = new BitmapFactory.Options();
                 opts.inSampleSize = 2;
-                Bitmap bm = BitmapFactory.decodeFile(cf.getAbsolutePath(), opts);
-                if (bm != null) thumb.setImageBitmap(bm);
+                coverBm = BitmapFactory.decodeFile(cf.getAbsolutePath(), opts);
             }
         }
-        card.addView(thumb);
+        LinearLayout.LayoutParams imgLp = new LinearLayout.LayoutParams(dp(ctx, 56), dp(ctx, 84));
+        imgLp.setMargins(0, 0, dp(ctx, 12), 0);
+        if (coverBm != null) {
+            ImageView thumb = new ImageView(ctx);
+            thumb.setLayoutParams(imgLp);
+            thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            thumb.setBackgroundColor(Color.parseColor("#211C1B"));
+            thumb.setImageBitmap(coverBm);
+            card.addView(thumb);
+        } else {
+            FrameLayout monoBox = new FrameLayout(ctx);
+            monoBox.setLayoutParams(imgLp);
+            GradientDrawable monoBg = new GradientDrawable();
+            monoBg.setColor(Color.parseColor("#211C1B"));
+            monoBg.setCornerRadius(dp(ctx, 6));
+            monoBg.setStroke(dp(ctx, 1), Color.parseColor("#2A2423"));
+            monoBox.setBackground(monoBg);
+
+            String initial = "A";
+            if (rec.title != null) {
+                String trimmed = rec.title.trim();
+                for (int ci = 0; ci < trimmed.length(); ci++) {
+                    char ch = trimmed.charAt(ci);
+                    if (Character.isLetterOrDigit(ch)) {
+                        initial = String.valueOf(Character.toUpperCase(ch));
+                        break;
+                    }
+                }
+            }
+            TextView monoTv = new TextView(ctx);
+            monoTv.setText(initial);
+            monoTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+            monoTv.setTextColor(Color.parseColor("#8E867E"));
+            monoTv.setGravity(Gravity.CENTER);
+            monoTv.setTypeface(com.amazon.kindle.epub.catalog.FolioTheme.serif(ctx));
+            monoBox.addView(monoTv, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+
+            View spineRule = new View(ctx);
+            GradientDrawable ruleBg = new GradientDrawable();
+            ruleBg.setColor(Color.parseColor("#5C2D26"));
+            ruleBg.setCornerRadius(dp(ctx, 2));
+            spineRule.setBackground(ruleBg);
+            FrameLayout.LayoutParams ruleLp = new FrameLayout.LayoutParams(dp(ctx, 22), dp(ctx, 2));
+            ruleLp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+            ruleLp.bottomMargin = dp(ctx, 8);
+            monoBox.addView(spineRule, ruleLp);
+
+            card.addView(monoBox);
+        }
 
         LinearLayout col = new LinearLayout(ctx);
         col.setOrientation(LinearLayout.VERTICAL);
@@ -1222,7 +1265,7 @@ public final class FolioMetadataCatalogDialog {
         TextView title = new TextView(ctx);
         String prefix = (isInQueue(ctx, rec.kfxPath) ? "" : "") + (isFavorite(ctx, rec.kfxPath) ? "★ " : "") + (!getNote(ctx, rec.kfxPath).isEmpty() ? "" : "");
         title.setText(prefix + rec.title);
-        title.setTextColor(Color.WHITE);
+        title.setTextColor(Color.parseColor("#F2EFE9"));
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setMaxLines(2);
@@ -1244,7 +1287,7 @@ public final class FolioMetadataCatalogDialog {
         if (!displayGenres.isEmpty()) {
             TextView genresTv = new TextView(ctx);
             genresTv.setText(displayGenres);
-            genresTv.setTextColor(Color.parseColor("#E05A47"));
+            genresTv.setTextColor(Color.parseColor("#8E867E"));
             genresTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             genresTv.setMaxLines(2);
             genresTv.setEllipsize(TextUtils.TruncateAt.END);
@@ -1383,7 +1426,7 @@ public final class FolioMetadataCatalogDialog {
 
         TextView title = new TextView(ctx);
         title.setText(rec.title);
-        title.setTextColor(Color.WHITE);
+        title.setTextColor(Color.parseColor("#F2EFE9"));
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         headerCol.addView(title);
