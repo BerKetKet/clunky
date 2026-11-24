@@ -1,6 +1,27 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.2 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 122 complete:
+  1. **Kindle-Native Editorial Dark Redesign & Monochrome Vector Icon System (Task A & B)**:
+     - Integrated `FolioIcons.java`, `FolioMoreView.java`, and `FolioWebBrowserDialog.java` into `mod_src/real/`.
+     - Built NEW `FolioIcons.java`: Custom Canvas vector line icon kit (25 monochrome hairline icons: `SEARCH`, `SHUFFLE`, `LIBRARY`, `IMPORT`, `GLOBE`, `FEED`, `REFRESH`, `BACKUP`, `LOG`, `NOTES`, `INSIGHTS`, `SHELVES`, `STORAGE`, `SETTINGS`, `LINK`, `INFO`, `BACK`, `HOME`, `SPARKLE`, `DOWNLOAD`, `STAR`, `CLOSE`, `BOOKMARK`, `TARGET`, `CHEVRON_RIGHT`) drawn with `1.65dp` round-cap strokes matching native Kindle Android app chrome.
+     - Redesigned Control Center (`FolioMoreView.java`): Switched from neon rainbow pills to pure `#000000` canvas, `#141618` elevated surface cards, `1px #262A2E` hairline dividers, `#ECEFF1` primary text, `#8E959C` muted text, and calm Kindle blue (`#4DA6FF`) accent. Added `Typeface.SERIF` header & stat counters (`34 BOOKS`, `5 READING`, `1 FINISHED`, `1 FAVORITES`), subtle reading goal bar, and 3 grouped hairline-divided tool sections (`LIBRARY & IMPORT`, `READING & CURATION`, `SYSTEM & SETTINGS`) with `20dp` monochrome `FolioIcons` and thin chevrons.
+     - Redesigned Web Book Browser (`FolioWebBrowserDialog.java`): Monochrome vector controls (`BACK`, `REFRESH`, `HOME`, `SPARKLE`, `SETTINGS`, `CLOSE`), neutral hairline bookmark chips (`Pin`, `EPUBs` in Kindle blue, `Standard Ebooks`, `Gutenberg`), and Serif dialog titles.
+     - Bumped badge and About Folio string to `Folio v12.2 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r122_kindle_control_center.png` (290 KB) — Redesigned Control Center showing Serif header, monochrome vector `SHUFFLE`/`SEARCH` icons, `v12.2 KFX` badge, literary stat counters, Reading Goal card, and grouped hairline tool sections with `FolioIcons`.
+       * `verify_r122_kindle_web_browser.png` (203 KB) — Redesigned Kindle-native monochrome browser chrome (`BACK`, `REFRESH`, `HOME`, `SPARKLE`, `SETTINGS`, `CLOSE` vector icons + `Pin` / `EPUBs` / bookmarks bar) over active WebView.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v12.2 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v12.2_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 122)
+1. `verify_r122_kindle_control_center.png`: Redesigned Control Center with Serif header, vector icons, and grouped tool sections.
+2. `verify_r122_kindle_web_browser.png`: Redesigned monochrome browser chrome with vector controls.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v12.2 KFX deployed (`lastUpdateTime=2026-11-24 04:37:15`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.1 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 121 complete:
   1. **Web Browser Go-to-URL Bar & 1-Tap EPUB Page Scanner (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioWebBrowserDialog.java` and `FolioMoreView.java`.

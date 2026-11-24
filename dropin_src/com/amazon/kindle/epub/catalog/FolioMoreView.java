@@ -37,13 +37,14 @@ public final class FolioMoreView {
     private static final String PREFS_NAME = "folio_catalog_prefs";
     private static final String KEY_CUSTOM_OPDS = "custom_opds_url";
 
-    private static final int BG_DARK = 0xFF101216;
-    private static final int BG_CARD = 0xFF1B1F27;
-    private static final int BG_CARD_HOVER = 0xFF242A35;
-    private static final int ACCENT_AMBER = 0xFFE6A23C;
-    private static final int ACCENT_TEAL = 0xFF38BDF8;
-    private static final int TEXT_PRIMARY = 0xFFF3F4F6;
-    private static final int TEXT_MUTED = 0xFF9CA3AF;
+    private static final int BG_DARK = 0xFF000000;
+    private static final int BG_CARD = 0xFF141618;
+    private static final int BG_CARD_HOVER = 0xFF1E2124;
+    private static final int BORDER_HAIRLINE = 0xFF262A2E;
+    private static final int ACCENT_AMBER = 0xFF4DA6FF;
+    private static final int ACCENT_TEAL = 0xFF4DA6FF;
+    private static final int TEXT_PRIMARY = 0xFFECEFF1;
+    private static final int TEXT_MUTED = 0xFF8E959C;
 
     public static View wrap(View originalView) {
         try {
@@ -72,50 +73,33 @@ public final class FolioMoreView {
                 ViewGroup.LayoutParams.WRAP_CONTENT
         ));
 
-        // 1. Header Row: Title + Version Badge
+        // 1. Header Row: Serif Title + Monochrome Vector Actions + Subtle Version Tag
         LinearLayout headerRow = new LinearLayout(ctx);
         headerRow.setOrientation(LinearLayout.HORIZONTAL);
         headerRow.setGravity(Gravity.CENTER_VERTICAL);
-        headerRow.setPadding(0, 0, 0, dp(d, 6));
+        headerRow.setPadding(0, 0, 0, dp(d, 4));
 
         TextView titleTv = new TextView(ctx);
         titleTv.setText("Control Center");
         titleTv.setTextSize(22);
         titleTv.setTextColor(TEXT_PRIMARY);
-        titleTv.setTypeface(Typeface.DEFAULT_BOLD);
+        titleTv.setTypeface(Typeface.SERIF, Typeface.BOLD);
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
         headerRow.addView(titleTv, tlp);
 
-        TextView diceBtn = new TextView(ctx);
-        diceBtn.setText("🎲");
-        diceBtn.setTextSize(12);
-        diceBtn.setTextColor(0xFFC084FC);
-        diceBtn.setPadding(dp(d, 8), dp(d, 4), dp(d, 8), dp(d, 4));
-        GradientDrawable diceBg = new GradientDrawable();
-        diceBg.setColor(0xFF2B1B3D);
-        diceBg.setCornerRadius(dp(d, 12));
-        diceBg.setStroke(dp(d, 1), 0x66A855F7);
-        diceBtn.setBackground(diceBg);
+        FrameLayout diceBtn = FolioIcons.makeIconButton(
+                ctx, FolioIcons.SHUFFLE, 17, 7, FolioIcons.COLOR_ICON, BG_CARD, BORDER_HAIRLINE, 8);
         LinearLayout.LayoutParams diceLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        diceLp.rightMargin = dp(d, 6);
+        diceLp.rightMargin = dp(d, 7);
         diceBtn.setLayoutParams(diceLp);
-        // diceBtn click listener wired below after refreshStats is initialized
         headerRow.addView(diceBtn);
 
-        TextView quickSearchBtn = new TextView(ctx);
-        quickSearchBtn.setText("🔍");
-        quickSearchBtn.setTextSize(12);
-        quickSearchBtn.setTextColor(ACCENT_TEAL);
-        quickSearchBtn.setPadding(dp(d, 8), dp(d, 4), dp(d, 8), dp(d, 4));
-        GradientDrawable qsBg = new GradientDrawable();
-        qsBg.setColor(0xFF152638);
-        qsBg.setCornerRadius(dp(d, 12));
-        qsBg.setStroke(dp(d, 1), 0x6638BDF8);
-        quickSearchBtn.setBackground(qsBg);
+        FrameLayout quickSearchBtn = FolioIcons.makeIconButton(
+                ctx, FolioIcons.SEARCH, 17, 7, FolioIcons.COLOR_ICON, BG_CARD, BORDER_HAIRLINE, 8);
         LinearLayout.LayoutParams qsLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        qsLp.rightMargin = dp(d, 6);
+        qsLp.rightMargin = dp(d, 7);
         quickSearchBtn.setLayoutParams(qsLp);
         quickSearchBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { showGlobalSearchDialog(ctx); }
@@ -123,15 +107,15 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v12.1 KFX");
+        badgeTv.setText("v12.2 KFX");
         badgeTv.setTextSize(11);
-        badgeTv.setTextColor(ACCENT_AMBER);
-        badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
-        badgeTv.setPadding(dp(d, 10), dp(d, 4), dp(d, 10), dp(d, 4));
+        badgeTv.setTextColor(TEXT_MUTED);
+        badgeTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+        badgeTv.setPadding(dp(d, 9), dp(d, 5), dp(d, 9), dp(d, 5));
         GradientDrawable badgeBg = new GradientDrawable();
-        badgeBg.setColor(0xFF282216);
-        badgeBg.setCornerRadius(dp(d, 12));
-        badgeBg.setStroke(dp(d, 1), 0x66E6A23C);
+        badgeBg.setColor(BG_CARD);
+        badgeBg.setCornerRadius(dp(d, 8));
+        badgeBg.setStroke(dp(d, 1), BORDER_HAIRLINE);
         badgeTv.setBackground(badgeBg);
         badgeTv.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { showAboutDialog(ctx); }
@@ -140,13 +124,13 @@ public final class FolioMoreView {
         container.addView(headerRow);
 
         TextView subTv = new TextView(ctx);
-        subTv.setText("Offline Reader & Library Tools");
-        subTv.setTextSize(13);
+        subTv.setText("Offline EPUB & KFX Library");
+        subTv.setTextSize(12.5f);
         subTv.setTextColor(TEXT_MUTED);
-        subTv.setPadding(0, 0, 0, dp(d, 14));
+        subTv.setPadding(0, 0, 0, dp(d, 16));
         container.addView(subTv);
 
-        // 1b. Live 4-Tile Reading Stats Strip + Annual Reading Goal Card
+        // 1b. Monochrome 4-Tile Reading Stats Strip + Annual Reading Goal Card
         final TextView[] statNums = new TextView[4];
         final TextView[] goalStatusRef = new TextView[1];
         final View[] goalFillRef = new View[1];
@@ -170,39 +154,40 @@ public final class FolioMoreView {
             }
         };
 
+        diceBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showTonightsPickDialog(ctx, refreshStats); }
+        });
+
         int[] stats = readQuickStats(ctx);
         LinearLayout statsRow = new LinearLayout(ctx);
         statsRow.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams srLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        srLp.bottomMargin = dp(d, 16);
+        srLp.bottomMargin = dp(d, 14);
         statsRow.setLayoutParams(srLp);
 
-        diceBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { showTonightsPickDialog(ctx, refreshStats); }
-        });
-                statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[0]), "BOOKS", 0xFFF59E0B, true,
+        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[0]), "BOOKS", TEXT_PRIMARY, true,
                 statNums, 0,
                 new View.OnClickListener() {
                     @Override public void onClick(View v) {
                         com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "All", refreshStats);
                     }
                 }));
-        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[1]), "READING", 0xFF5EEAD4, true,
+        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[1]), "READING", TEXT_PRIMARY, true,
                 statNums, 1,
                 new View.OnClickListener() {
                     @Override public void onClick(View v) {
                         com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Reading", refreshStats);
                     }
                 }));
-        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[2]), "FINISHED", 0xFF34D399, true,
+        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[2]), "FINISHED", TEXT_PRIMARY, true,
                 statNums, 2,
                 new View.OnClickListener() {
                     @Override public void onClick(View v) {
                         com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "Finished", refreshStats);
                     }
                 }));
-        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[3]), "★ FAVS", 0xFFFBBF24, false,
+        statsRow.addView(makeStatTile(ctx, d, String.valueOf(stats[3]), "FAVORITES", TEXT_PRIMARY, false,
                 statNums, 3,
                 new View.OnClickListener() {
                     @Override public void onClick(View v) {
@@ -211,61 +196,66 @@ public final class FolioMoreView {
                 }));
         container.addView(statsRow);
 
-        // 1c. Annual Reading Goal Progress Card (tap to customize target)
+        // 1c. Annual Reading Goal Card (Kindle-native hairline surface + single blue progress bar)
         LinearLayout goalCard = new LinearLayout(ctx);
         goalCard.setOrientation(LinearLayout.VERTICAL);
         goalCard.setPadding(dp(d, 14), dp(d, 12), dp(d, 14), dp(d, 12));
         GradientDrawable gcBg = new GradientDrawable();
-        gcBg.setColor(0xFF1A1F2E);
-        gcBg.setCornerRadius(dp(d, 12));
-        gcBg.setStroke(dp(d, 1), 0xFF2A3142);
+        gcBg.setColor(BG_CARD);
+        gcBg.setCornerRadius(dp(d, 10));
+        gcBg.setStroke(dp(d, 1), BORDER_HAIRLINE);
         goalCard.setBackground(gcBg);
         LinearLayout.LayoutParams gcLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        gcLp.bottomMargin = dp(d, 16);
+        gcLp.bottomMargin = dp(d, 14);
         goalCard.setLayoutParams(gcLp);
 
         LinearLayout goalTop = new LinearLayout(ctx);
         goalTop.setOrientation(LinearLayout.HORIZONTAL);
         goalTop.setGravity(Gravity.CENTER_VERTICAL);
 
+        View goalIco = FolioIcons.makeIcon(ctx, FolioIcons.TARGET, 16, FolioIcons.COLOR_ICON);
+        LinearLayout.LayoutParams giLp = new LinearLayout.LayoutParams(dp(d, 16), dp(d, 16));
+        giLp.rightMargin = dp(d, 8);
+        goalTop.addView(goalIco, giLp);
+
         int yrNow = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
         TextView goalTitleTv = new TextView(ctx);
-        goalTitleTv.setText("🎯 " + yrNow + " Reading Goal");
+        goalTitleTv.setText(yrNow + " Reading Goal");
         goalTitleTv.setTextColor(TEXT_PRIMARY);
-        goalTitleTv.setTextSize(13);
-        goalTitleTv.setTypeface(Typeface.DEFAULT_BOLD);
+        goalTitleTv.setTextSize(13.5f);
+        goalTitleTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
         goalTitleTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         goalTop.addView(goalTitleTv);
 
         TextView goalEditTv = new TextView(ctx);
-        goalEditTv.setText("Edit ›");
-        goalEditTv.setTextColor(0xFF34D399);
+        goalEditTv.setText("Edit");
+        goalEditTv.setTextColor(ACCENT_TEAL);
         goalEditTv.setTextSize(12);
-        goalEditTv.setTypeface(Typeface.DEFAULT_BOLD);
+        goalEditTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
         goalTop.addView(goalEditTv);
         goalCard.addView(goalTop);
 
         TextView goalSubTv = new TextView(ctx);
         goalSubTv.setTextColor(TEXT_MUTED);
         goalSubTv.setTextSize(12);
-        goalSubTv.setPadding(0, dp(d, 3), 0, dp(d, 8));
+        goalSubTv.setPadding(0, dp(d, 4), 0, dp(d, 8));
         goalStatusRef[0] = goalSubTv;
         goalCard.addView(goalSubTv);
 
         LinearLayout barTrack = new LinearLayout(ctx);
         barTrack.setOrientation(LinearLayout.HORIZONTAL);
         GradientDrawable trBg = new GradientDrawable();
-        trBg.setColor(0xFF242938);
-        trBg.setCornerRadius(dp(d, 4));
+        trBg.setColor(0xFF262A2E);
+        trBg.setCornerRadius(dp(d, 3));
         barTrack.setBackground(trBg);
         barTrack.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 6)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 4)));
 
         View barFill = new View(ctx);
         GradientDrawable flBg = new GradientDrawable();
-        flBg.setColor(0xFF34D399);
-        flBg.setCornerRadius(dp(d, 4));
+        flBg.setColor(ACCENT_TEAL);
+        flBg.setCornerRadius(dp(d, 3));
         barFill.setBackground(flBg);
         barFill.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0f));
         barTrack.addView(barFill);
@@ -286,204 +276,99 @@ public final class FolioMoreView {
         });
         container.addView(goalCard);
 
-        // 1d. Continue Reading Quick-Resume Carousel (in-progress books with standalone cover thumbnails)
+        // 1d. Continue Reading Quick-Resume Carousel
         LinearLayout continueHost = new LinearLayout(ctx);
         continueHost.setOrientation(LinearLayout.VERTICAL);
         continueHostRef[0] = continueHost;
         populateContinueReadingStrip(ctx, d, continueHost, refreshStats);
         container.addView(continueHost);
 
-        // 1e. Up Next Reading Queue Carousel / Quick-Pick Bar
+        // 1e. Up Next Reading Queue Carousel
         LinearLayout upNextHost = new LinearLayout(ctx);
         upNextHost.setOrientation(LinearLayout.VERTICAL);
         upNextHostRef[0] = upNextHost;
         populateUpNextStrip(ctx, d, upNextHost, refreshStats);
         container.addView(upNextHost);
 
-        // 2. Action Cards
-        // Card: Library Metadata & Genres
-        container.addView(makeActionCard(
-                ctx, d,
-                "📚", "Library Metadata & Genres",
-                "Browse saved authors, pub dates, ISBNs & genres",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
+        // 2. Grouped Kindle-Style Hairline Tool Lists (Zero Emojis)
+        container.addView(makeSectionLabel(ctx, d, "LIBRARY & IMPORT"));
+        LinearLayout libGroup = makeGroupCard(ctx, d);
+        libGroup.addView(makeKindleRow(ctx, d, FolioIcons.LIBRARY, "Library Metadata & Genres",
+                "Browse authors, dates, ISBNs & genres", false, new View.OnClickListener() {
+                    @Override public void onClick(View v) {
                         com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "All", refreshStats);
                     }
-                }
-        ));
-
-        // Card: Import EPUBs from Storage
-        container.addView(makeActionCard(
-                ctx, d,
-                "📥", "Import EPUBs from Storage",
-                "Batch-select EPUB folders into app library",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
+                }));
+        libGroup.addView(makeKindleRow(ctx, d, FolioIcons.IMPORT, "Import EPUBs from Storage",
+                "Batch-select EPUB folders into app library", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) {
                         com.amazon.kindle.epub.ingest.FolioFolderBrowserDialog.show(ctx);
                     }
-                }
-        ));
-
-        // Card: Simplified Web Book Browser (configurable URL + auto-ingest EPUBs)
-        container.addView(makeActionCard(
-                ctx, d,
-                "🌐", "Web Book Browser",
+                }));
+        libGroup.addView(makeKindleRow(ctx, d, FolioIcons.GLOBE, "Web Book Browser",
                 "Browse " + com.amazon.kindle.epub.ingest.FolioWebBrowserDialog.getHomeHostLabel(ctx)
-                        + " & auto-import downloaded EPUBs",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
+                        + " & auto-import EPUBs", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) {
                         com.amazon.kindle.epub.ingest.FolioWebBrowserDialog.show(ctx, refreshStats);
                     }
-                }
-        ));
+                }));
+        libGroup.addView(makeKindleRow(ctx, d, FolioIcons.FEED, "OPDS Catalogs",
+                "Gutenberg, Standard Ebooks & custom feeds", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) { showOpdsDialog(ctx); }
+                }));
+        libGroup.addView(makeKindleRow(ctx, d, FolioIcons.REFRESH, "Scan Local Library",
+                "Rescan /sdcard/epub/ & update KFX catalog", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) { scanLocalLibrary(ctx); }
+                }));
+        container.addView(libGroup);
 
-        // Card A: OPDS Catalogs
-        container.addView(makeActionCard(
-                ctx, d,
-                "🌐", "OPDS Catalogs",
-                "Browse Gutenberg, Standard Ebooks & custom feeds",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        showOpdsDialog(ctx);
-                    }
-                }
-        ));
+        container.addView(makeSectionLabel(ctx, d, "READING & CURATION"));
+        LinearLayout curGroup = makeGroupCard(ctx, d);
+        curGroup.addView(makeKindleRow(ctx, d, FolioIcons.NOTES, "Reading Notes Notebook",
+                "Search, edit, share & export personal notes", false, new View.OnClickListener() {
+                    @Override public void onClick(View v) { showNotesNotebookDialog(ctx); }
+                }));
+        curGroup.addView(makeKindleRow(ctx, d, FolioIcons.SHELVES, "Manage Shelves",
+                "Create, rename, or browse custom shelves", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) { showManageShelvesDialog(ctx); }
+                }));
+        curGroup.addView(makeKindleRow(ctx, d, FolioIcons.INSIGHTS, "Library Insights",
+                "Authors, genres, ratings & publication eras", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) { showLibraryInsightsDialog(ctx); }
+                }));
+        curGroup.addView(makeKindleRow(ctx, d, FolioIcons.LOG, "Reading Log & Export",
+                "Export reading log to Markdown, CSV or HTML", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) { showReadingLogDialog(ctx); }
+                }));
+        container.addView(curGroup);
 
-        // Card B: Scan Local Library
-        container.addView(makeActionCard(
-                ctx, d,
-                "🔄", "Scan Local Library",
-                "Rescan /sdcard/epub/ & update native KFX catalog",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        scanLocalLibrary(ctx);
-                    }
-                }
-        ));
-
-        // Card C: Backup & Restore
-        container.addView(makeActionCard(
-                ctx, d,
-                "💾", "Backup & Restore",
-                "Back up library metadata, notes & reading progress",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        OpenCatalogView.showBackupRestoreDialog(ctx);
-                    }
-                }
-        ));
-
-        // Card C2: Reading Log & Markdown Export
-        container.addView(makeActionCard(
-                ctx, d,
-                "📄", "Reading Log & Export",
-                "Export rated, favorited & annotated books to Markdown",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        showReadingLogDialog(ctx);
-                    }
-                }
-        ));
-
-        // Card C2b: Reading Notes & Quotes Notebook
-        container.addView(makeActionCard(
-                ctx, d,
-                "📝", "Reading Notes Notebook",
-                "Browse, search, copy & edit personal book notes in one place",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        showNotesNotebookDialog(ctx);
-                    }
-                }
-        ));
-
-        // Card C3: Library Insights & Visual Analytics
-        container.addView(makeActionCard(
-                ctx, d,
-                "📊", "Library Insights",
-                "Top authors, top genres, average rating & shelf stats",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        showLibraryInsightsDialog(ctx);
-                    }
-                }
-        ));
-
-        // Card C4: Custom Shelves Manager
-        container.addView(makeActionCard(
-                ctx, d,
-                "🏷", "Manage Shelves",
-                "Rename, remove, or open your custom reading shelves",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        showManageShelvesDialog(ctx);
-                    }
-                }
-        ));
-
-        // Card C5: Storage & Duplicates Manager
-        container.addView(makeActionCard(
-                ctx, d,
-                "💾", "Storage & Duplicates",
-                "Inspect largest KFX books, cache size & duplicate titles",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        showStorageDuplicatesDialog(ctx);
-                    }
-                }
-        ));
-
-        // Card D: Reader Settings
-        container.addView(makeActionCard(
-                ctx, d,
-                "⚙️", "Reader & App Settings",
-                "Reading preferences, dark mode, dictionary & storage",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        openSettings(ctx);
-                    }
-                }
-        ));
-
-        // Card D2: Web Browser URL Settings
-        container.addView(makeActionCard(
-                ctx, d,
-                "🔗", "Web Browser URL",
-                "Configure homepage URL & Simplified View ("
+        container.addView(makeSectionLabel(ctx, d, "SYSTEM & SETTINGS"));
+        LinearLayout sysGroup = makeGroupCard(ctx, d);
+        sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.BACKUP, "Backup & Restore",
+                "Back up metadata, notes & reading progress", false, new View.OnClickListener() {
+                    @Override public void onClick(View v) { OpenCatalogView.showBackupRestoreDialog(ctx); }
+                }));
+        sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.STORAGE, "Storage & Duplicates",
+                "Largest KFX files, saved backups & cache", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) { showStorageDuplicatesDialog(ctx); }
+                }));
+        sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.LINK, "Web Browser URL",
+                "Homepage & Simplified View ("
                         + com.amazon.kindle.epub.ingest.FolioWebBrowserDialog.getHomeHostLabel(ctx) + ")",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
+                true, new View.OnClickListener() {
+                    @Override public void onClick(View v) {
                         com.amazon.kindle.epub.ingest.FolioWebBrowserDialog.showUrlSettingsDialog(ctx, refreshStats);
                     }
-                }
-        ));
-
-        // Card E: About Folio
-        container.addView(makeActionCard(
-                ctx, d,
-                "ℹ️", "About Folio",
-                "Engine capabilities, active features & cache stats",
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        showAboutDialog(ctx);
-                    }
-                }
-        ));
+                }));
+        sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.SETTINGS, "Reader & App Settings",
+                "Reading preferences, dark mode & dictionary", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) { openSettings(ctx); }
+                }));
+        sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.INFO, "About Folio",
+                "Engine capabilities, version & library stats", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) { showAboutDialog(ctx); }
+                }));
+        container.addView(sysGroup);
 
         return scroll;
     }
@@ -527,9 +412,9 @@ public final class FolioMoreView {
         tile.setGravity(Gravity.CENTER);
         tile.setPadding(dp(d, 6), dp(d, 11), dp(d, 6), dp(d, 11));
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xFF1A1F2E);
-        bg.setCornerRadius(dp(d, 12));
-        bg.setStroke(dp(d, 1), 0xFF2A3142);
+        bg.setColor(BG_CARD);
+        bg.setCornerRadius(dp(d, 10));
+        bg.setStroke(dp(d, 1), BORDER_HAIRLINE);
         tile.setBackground(bg);
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
@@ -538,9 +423,9 @@ public final class FolioMoreView {
 
         TextView numTv = new TextView(ctx);
         numTv.setText(count);
-        numTv.setTextSize(20);
+        numTv.setTextSize(19);
         numTv.setTextColor(accentColor);
-        numTv.setTypeface(Typeface.DEFAULT_BOLD);
+        numTv.setTypeface(Typeface.SERIF, Typeface.BOLD);
         numTv.setGravity(Gravity.CENTER);
         if (numSlot != null && slotIdx >= 0 && slotIdx < numSlot.length) numSlot[slotIdx] = numTv;
         tile.addView(numTv);
@@ -945,6 +830,88 @@ public final class FolioMoreView {
                 .show();
     }
 
+    private static TextView makeSectionLabel(Context ctx, float d, String text) {
+        TextView tv = new TextView(ctx);
+        tv.setText(text);
+        tv.setTextColor(TEXT_MUTED);
+        tv.setTextSize(11);
+        tv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+        tv.setLetterSpacing(0.08f);
+        tv.setPadding(dp(d, 2), dp(d, 6), dp(d, 2), dp(d, 8));
+        return tv;
+    }
+
+    private static LinearLayout makeGroupCard(Context ctx, float d) {
+        LinearLayout card = new LinearLayout(ctx);
+        card.setOrientation(LinearLayout.VERTICAL);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(BG_CARD);
+        bg.setCornerRadius(dp(d, 10));
+        bg.setStroke(dp(d, 1), BORDER_HAIRLINE);
+        card.setBackground(bg);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(d, 14);
+        card.setLayoutParams(lp);
+        return card;
+    }
+
+    private static View makeKindleRow(
+            Context ctx, float d, int iconId, String title, String subtitle,
+            boolean topDivider, View.OnClickListener listener) {
+        LinearLayout wrap = new LinearLayout(ctx);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+
+        if (topDivider) {
+            View div = new View(ctx);
+            div.setBackgroundColor(0xFF23272B);
+            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, Math.round(d * 0.8f)));
+            dlp.leftMargin = dp(d, 48);
+            wrap.addView(div, dlp);
+        }
+
+        LinearLayout row = new LinearLayout(ctx);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(d, 14), dp(d, 13), dp(d, 14), dp(d, 13));
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setOnClickListener(listener);
+
+        View ico = FolioIcons.makeIcon(ctx, iconId, 20, FolioIcons.COLOR_ICON);
+        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(dp(d, 20), dp(d, 20));
+        ilp.rightMargin = dp(d, 14);
+        row.addView(ico, ilp);
+
+        LinearLayout col = new LinearLayout(ctx);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView tTv = new TextView(ctx);
+        tTv.setText(title);
+        tTv.setTextColor(TEXT_PRIMARY);
+        tTv.setTextSize(14.5f);
+        tTv.setTypeface(Typeface.SANS_SERIF, Typeface.NORMAL);
+        col.addView(tTv);
+
+        TextView sTv = new TextView(ctx);
+        sTv.setText(subtitle);
+        sTv.setTextColor(TEXT_MUTED);
+        sTv.setTextSize(12);
+        sTv.setPadding(0, dp(d, 2), 0, 0);
+        col.addView(sTv);
+        row.addView(col);
+
+        View chev = FolioIcons.makeIcon(ctx, FolioIcons.CHEVRON_RIGHT, 16, 0xFF5F666E);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(dp(d, 16), dp(d, 16));
+        clp.leftMargin = dp(d, 8);
+        row.addView(chev, clp);
+
+        wrap.addView(row);
+        return wrap;
+    }
+
     private static View makeActionCard(
             Context ctx, float d,
             String icon, String title, String subtitle,
@@ -1223,9 +1190,9 @@ public final class FolioMoreView {
         wrapper.setOrientation(LinearLayout.VERTICAL);
         wrapper.setPadding(dp(d, 14), dp(d, 12), dp(d, 14), dp(d, 12));
         GradientDrawable wBg = new GradientDrawable();
-        wBg.setColor(0xFF1A1F2E);
+        wBg.setColor(BG_CARD);
         wBg.setCornerRadius(dp(d, 12));
-        wBg.setStroke(dp(d, 1), 0xFF2A3142);
+        wBg.setStroke(dp(d, 1), BORDER_HAIRLINE);
         wrapper.setBackground(wBg);
         LinearLayout.LayoutParams wLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1238,7 +1205,7 @@ public final class FolioMoreView {
         hdr.setPadding(0, 0, 0, dp(d, 10));
 
         TextView hdrTitle = new TextView(ctx);
-        hdrTitle.setText("📖 Continue Reading");
+        hdrTitle.setText("Continue Reading");
         hdrTitle.setTextColor(TEXT_PRIMARY);
         hdrTitle.setTextSize(13);
         hdrTitle.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1247,7 +1214,7 @@ public final class FolioMoreView {
 
         TextView seeAll = new TextView(ctx);
         seeAll.setText("See All (" + inProgress.size() + ") ›");
-        seeAll.setTextColor(0xFF5EEAD4);
+        seeAll.setTextColor(ACCENT_TEAL);
         seeAll.setTextSize(12);
         seeAll.setTypeface(Typeface.DEFAULT_BOLD);
         seeAll.setOnClickListener(new View.OnClickListener() {
@@ -1393,7 +1360,7 @@ public final class FolioMoreView {
         wrapper.setOrientation(LinearLayout.VERTICAL);
         wrapper.setPadding(dp(d, 14), dp(d, 11), dp(d, 14), dp(d, 11));
         GradientDrawable wBg = new GradientDrawable();
-        wBg.setColor(0xFF1A1F2E);
+        wBg.setColor(BG_CARD);
         wBg.setCornerRadius(dp(d, 12));
         wBg.setStroke(dp(d, 1), queued.isEmpty() ? 0xFF2A3142 : 0xFF4C3575);
         wrapper.setBackground(wBg);
@@ -1412,7 +1379,7 @@ public final class FolioMoreView {
             txtCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
             TextView t1 = new TextView(ctx);
-            t1.setText("📌 Up Next Queue");
+            t1.setText("Up Next Queue");
             t1.setTextColor(TEXT_PRIMARY);
             t1.setTextSize(13);
             t1.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1465,7 +1432,7 @@ public final class FolioMoreView {
         hdr.setPadding(0, 0, 0, dp(d, 10));
 
         TextView hdrTitle = new TextView(ctx);
-        hdrTitle.setText("📌 Up Next Queue");
+        hdrTitle.setText("Up Next Queue");
         hdrTitle.setTextColor(TEXT_PRIMARY);
         hdrTitle.setTextSize(13);
         hdrTitle.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1473,15 +1440,15 @@ public final class FolioMoreView {
         hdr.addView(hdrTitle);
 
         TextView reorderBtn = new TextView(ctx);
-        reorderBtn.setText("⇅ Reorder");
-        reorderBtn.setTextColor(0xFFC084FC);
+        reorderBtn.setText("Reorder");
+        reorderBtn.setTextColor(TEXT_PRIMARY);
         reorderBtn.setTextSize(11);
         reorderBtn.setTypeface(Typeface.DEFAULT_BOLD);
         reorderBtn.setPadding(dp(d, 8), dp(d, 3), dp(d, 8), dp(d, 3));
         GradientDrawable roBg = new GradientDrawable();
-        roBg.setColor(0xFF2B1B3D);
+        roBg.setColor(0xFF1C1F22);
         roBg.setCornerRadius(dp(d, 8));
-        roBg.setStroke(dp(d, 1), 0x66A855F7);
+        roBg.setStroke(dp(d, 1), BORDER_HAIRLINE);
         reorderBtn.setBackground(roBg);
         LinearLayout.LayoutParams roLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1496,7 +1463,7 @@ public final class FolioMoreView {
 
         TextView seeAll = new TextView(ctx);
         seeAll.setText("See All (" + queued.size() + ") ›");
-        seeAll.setTextColor(0xFFC084FC);
+        seeAll.setTextColor(ACCENT_TEAL);
         seeAll.setTextSize(12);
         seeAll.setTypeface(Typeface.DEFAULT_BOLD);
         seeAll.setOnClickListener(new View.OnClickListener() {
@@ -1521,9 +1488,9 @@ public final class FolioMoreView {
             card.setGravity(Gravity.CENTER_VERTICAL);
             card.setPadding(dp(d, 10), dp(d, 9), dp(d, 8), dp(d, 9));
             GradientDrawable cBg = new GradientDrawable();
-            cBg.setColor(0xFF141622);
+            cBg.setColor(0xFF1C1F22);
             cBg.setCornerRadius(dp(d, 10));
-            cBg.setStroke(dp(d, 1), 0xFF3A2B54);
+            cBg.setStroke(dp(d, 1), BORDER_HAIRLINE);
             card.setBackground(cBg);
             LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
                     dp(d, 196), ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1556,7 +1523,7 @@ public final class FolioMoreView {
 
             TextView goTv = new TextView(ctx);
             goTv.setText("Start Reading ›");
-            goTv.setTextColor(0xFFC084FC);
+            goTv.setTextColor(ACCENT_TEAL);
             goTv.setTextSize(10.5f);
             goTv.setTypeface(Typeface.DEFAULT_BOLD);
             goTv.setPadding(0, dp(d, 2), 0, 0);
@@ -2074,7 +2041,7 @@ public final class FolioMoreView {
                 GradientDrawable cBg = new GradientDrawable();
                 cBg.setColor(BG_CARD);
                 cBg.setCornerRadius(dp(d, 12));
-                cBg.setStroke(dp(d, 1), 0xFF3A2B54);
+                cBg.setStroke(dp(d, 1), BORDER_HAIRLINE);
                 card.setBackground(cBg);
 
                 LinearLayout topRow = new LinearLayout(ctx);
@@ -5366,7 +5333,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v12.1 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v12.2 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

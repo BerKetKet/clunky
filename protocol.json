@@ -1,22 +1,26 @@
 {
-  "round": 121,
-  "version": "Folio v12.1 KFX",
-  "codename": "Web Browser Go-to-URL Bar & 1-Tap EPUB Page Scanner",
+  "round": 122,
+  "version": "Folio v12.2 KFX",
+  "codename": "Kindle-Native Editorial Dark Redesign & Monochrome Vector Icon System",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
     {
-      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java"
+      "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioIcons.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioIcons.java"
     },
     {
       "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
+    },
+    {
+      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.1_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.2_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r121_web_browser_epub_scanner.png",
-    "verify_r121_about_v121.png"
+    "verify_r122_kindle_control_center.png",
+    "verify_r122_kindle_web_browser.png"
   ]
 }
