@@ -432,32 +432,97 @@ public final class OpenCatalogView {
         }).start();
 
         // --- Async Load 2: Popular Free EPUBs Carousel (Gutendex) ---
-        new Thread(new Runnable() {
+        final LinearLayout offlineCard = new LinearLayout(ctx);
+        offlineCard.setOrientation(LinearLayout.VERTICAL);
+        offlineCard.setBackground(roundRect(BG_SURFACE, dp(d, 16), 0xFF2A2423, dp(d, 1)));
+        offlineCard.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 16));
+        LinearLayout.LayoutParams ocLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        ocLp.topMargin = dp(d, 8);
+        ocLp.bottomMargin = dp(d, 16);
+        offlineCard.setLayoutParams(ocLp);
+        offlineCard.setVisibility(View.GONE);
+
+        TextView offTitle = new TextView(ctx);
+        offTitle.setText("Offline Mode");
+        offTitle.setTextColor(TEXT_PRIMARY);
+        offTitle.setTextSize(18f);
+        offTitle.setTypeface(FolioTheme.serif(ctx));
+        offlineCard.addView(offTitle);
+
+        TextView offMsg = new TextView(ctx);
+        offMsg.setText("Connect to Wi-Fi to browse Project Gutenberg & OPDS catalogs, or continue reading from your local library.");
+        offMsg.setTextColor(TEXT_MUTED);
+        offMsg.setTextSize(12.5f);
+        offMsg.setPadding(0, dp(d, 4), 0, dp(d, 14));
+        offlineCard.addView(offMsg);
+
+        LinearLayout offBtns = new LinearLayout(ctx);
+        offBtns.setOrientation(LinearLayout.HORIZONTAL);
+        TextView retryPill = makePill(ctx, d, "Retry", FolioTheme.ACCENT_FILL, FolioTheme.ACCENT_SOFT_TEXT);
+        retryPill.setBackground(roundRect(FolioTheme.ACCENT_FILL, dp(d, 999), FolioTheme.ACCENT_BORDER, dp(d, 1)));
+        offBtns.addView(retryPill);
+
+        View offGap = new View(ctx);
+        offBtns.addView(offGap, new LinearLayout.LayoutParams(dp(d, 8), 1));
+
+        TextView localCatPill = makePill(ctx, d, "Local Catalog", BG_CARD, TEXT_PRIMARY);
+        localCatPill.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx, "All", null);
+            }
+        });
+        offBtns.addView(localCatPill);
+        offlineCard.addView(offBtns);
+        popSection.addView(offlineCard);
+
+        final Runnable[] loadPopularRef = new Runnable[1];
+        loadPopularRef[0] = new Runnable() {
             @Override
             public void run() {
-                try {
-                    final List<BookResult> popular = sources.get(0).search("");
-                    mainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            popStatus.setVisibility(View.GONE);
-                            popCarousel.removeAllViews();
-                            popCarousel.setPadding(0, dp(d, 8), 0, dp(d, 18));
-                            for (int i = 0; i < Math.min(14, popular.size()); i++) {
-                                popCarousel.addView(buildRemoteCoverCard(ctx, d, mainHandler, popular.get(i), searchInput, doSearch));
-                            }
+                offlineCard.setVisibility(View.GONE);
+                popStatus.setVisibility(View.VISIBLE);
+                popStatus.setText("Loading Project Gutenberg catalog...");
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            final List<BookResult> popular = sources.get(0).search("");
+                            mainHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    popStatus.setVisibility(View.GONE);
+                                    offlineCard.setVisibility(View.GONE);
+                                    popCarousel.removeAllViews();
+                                    popCarousel.setPadding(0, dp(d, 8), 0, dp(d, 18));
+                                    for (int i = 0; i < Math.min(14, popular.size()); i++) {
+                                        popCarousel.addView(buildRemoteCoverCard(ctx, d, mainHandler, popular.get(i), searchInput, doSearch));
+                                    }
+                                    FolioTheme.applyToTree(ctx, popCarousel);
+                                }
+                            });
+                        } catch (final Throwable t) {
+                            mainHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    popStatus.setVisibility(View.GONE);
+                                    offlineCard.setVisibility(View.VISIBLE);
+                                    FolioTheme.applyToTree(ctx, offlineCard);
+                                }
+                            });
                         }
-                    });
-                } catch (final Throwable t) {
-                    mainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            popStatus.setText("Catalog error: " + t.getMessage());
-                        }
-                    });
-                }
+                    }
+                }).start();
             }
-        }).start();
+        };
+        retryPill.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                loadPopularRef[0].run();
+            }
+        });
+        loadPopularRef[0].run();
 
         FolioTheme.applyToTree(ctx, mainScroll);
         return mainScroll;
@@ -480,13 +545,49 @@ public final class OpenCatalogView {
         iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
         coverFrame.addView(iv, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        final TextView fallback = new TextView(ctx);
-        fallback.setText(lb.title);
-        fallback.setTextColor(TEXT_PRIMARY);
-        fallback.setTextSize(12f);
+        final LinearLayout fallback = new LinearLayout(ctx);
+        fallback.setOrientation(LinearLayout.VERTICAL);
         fallback.setGravity(Gravity.CENTER);
-        fallback.setPadding(dp(d, 8), dp(d, 8), dp(d, 8), dp(d, 8));
-        coverFrame.addView(fallback);
+        fallback.setPadding(dp(d, 10), dp(d, 12), dp(d, 10), dp(d, 12));
+
+        String initial = "A";
+        if (lb.title != null) {
+            String tr = lb.title.trim();
+            for (int ci = 0; ci < tr.length(); ci++) {
+                char ch = tr.charAt(ci);
+                if (Character.isLetterOrDigit(ch)) {
+                    initial = String.valueOf(Character.toUpperCase(ch));
+                    break;
+                }
+            }
+        }
+        TextView dropCap = new TextView(ctx);
+        dropCap.setText(initial);
+        dropCap.setTextColor(0xFF8E867E);
+        dropCap.setTextSize(34f);
+        dropCap.setTypeface(FolioTheme.serif(ctx));
+        dropCap.setGravity(Gravity.CENTER);
+        fallback.addView(dropCap);
+
+        View spineRule = new View(ctx);
+        spineRule.setBackground(roundRect(0xFF5C2D26, dp(d, 2), 0, 0));
+        LinearLayout.LayoutParams srLp = new LinearLayout.LayoutParams(dp(d, 26), dp(d, 2));
+        srLp.topMargin = dp(d, 4);
+        srLp.bottomMargin = dp(d, 10);
+        fallback.addView(spineRule, srLp);
+
+        TextView fbTitle = new TextView(ctx);
+        fbTitle.setText(lb.title);
+        fbTitle.setTextColor(0xFFC4BDB5);
+        fbTitle.setTextSize(11.5f);
+        fbTitle.setTypeface(FolioTheme.serif(ctx));
+        fbTitle.setGravity(Gravity.CENTER);
+        fbTitle.setMaxLines(3);
+        fbTitle.setEllipsize(TextUtils.TruncateAt.END);
+        fallback.addView(fbTitle);
+
+        coverFrame.addView(fallback, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         card.addView(coverFrame, cfLp);
 
         TextView titleTv = new TextView(ctx);
@@ -511,7 +612,14 @@ public final class OpenCatalogView {
         IMG_POOL.execute(new Runnable() {
             @Override
             public void run() {
-                final Bitmap bmp = LocalLibraryReader.decodeCover(lb.coverPath);
+                Bitmap dec = LocalLibraryReader.decodeCover(lb.coverPath);
+                if (dec == null && lb.filePath != null && !lb.filePath.isEmpty()) {
+                    File alt = new File(lb.filePath + ".cover.jpg");
+                    if (alt.exists() && alt.length() > 64) {
+                        dec = LocalLibraryReader.decodeCover(alt.getAbsolutePath());
+                    }
+                }
+                final Bitmap bmp = dec;
                 if (bmp != null) {
                     mainHandler.post(new Runnable() {
                         @Override

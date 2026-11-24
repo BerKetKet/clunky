@@ -1,6 +1,12 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 139 (`Azath v14.5 KFX`) Verified & Staged (2026-11-25)**:
+  - Integrated Round 139 `OpenCatalogView.java` (`.cover.jpg` fallback lookup, Regular EB Garamond `34sp` drop-cap archival covers + `#5C2D26` spine rules, graceful `#181515` `Offline Mode` card with `Retry` & `Local Catalog` pills) and `FolioMoreView.java` (`v14.5 KFX`), while restoring `makeMiniCoverView(ctx, d, rec.kfxPath, rec.title, 38, 54, 9)` and `"Azath Library Insights\n"` in both `dropin_src/` and `07_APK_EPUB_INGESTION_MOD/mod_src/real/`.
+  - Updated `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` for `azath_v14.5_kfx` staging, recompiled `classes9.dex` (`464996` bytes), and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v14.5_kfx/base.apk` (`138532967` bytes, SHA256 `7320ae96062ae5a080b01c79a763c6cfb8617216fb3c9f92370780d6e71361c7`).
+  - Hardware verified on **Samsung Galaxy M30** (`32001776e8e82623`): `com.azath.reader` updated `2026-11-25 00:52:52`, `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`), `NO_FATAL_EXCEPTIONS` in logcat, `v14.5 KFX` confirmed in `logs/azath_more_r139.xml`, and both screenshots visually verified: `verify_r139_azath_home.png` (`185017` B) and `verify_r139_azath_web_browser_offline.png` (`116073` B).
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 138 (`Azath v14.4 KFX`) Verified & Staged (2026-11-25)**:
   - Bundled `EBGaramond-Regular.ttf` (`381K`), `EBGaramond-SemiBold.ttf` (`384K`), `Inter-Regular.otf` (`253K`), and `Inter-SemiBold.otf` (`265K`) in `07_APK_EPUB_INGESTION_MOD/assets/azath_fonts/` and `dropin_assets/azath_fonts/`.
   - Integrated Round 138 `FolioTheme.java`, `OpenCatalogView.java`, `FolioMoreView.java`, and `FolioWebBrowserDialog.java` into `07_APK_EPUB_INGESTION_MOD/mod_src/real/` (preserving `makeMiniCoverView(ctx, d, rec.kfxPath, rec.title, 38, 54, 9)` and `"Azath Library Insights\n"` in `dropin_src/.../FolioMoreView.java`, plus Round 137's `FolioIcons.java`, `ic_authors.png`, `FolioMetadataCatalogDialog.java`).

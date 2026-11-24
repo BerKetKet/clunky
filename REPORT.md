@@ -1,29 +1,27 @@
-# Antigravity Report — Round 138 Deliverables (`Azath v14.4 KFX`)
+# Antigravity Report — Round 139 Deliverables (`Azath v14.5 KFX`)
 
 ## Summary
-Implemented, built, deployed, and hardware-verified Round 138 (`Azath v14.4 KFX`) on the physical **Samsung Galaxy M30** (`32001776e8e82623`, Android 13 GSI `arm64-v8a`), delivering bundled **EB Garamond** + **Inter** UI typography, Home Screen UI polish, dark offline WebView error handling in source, and updated release branding.
+Implemented, built, deployed, and hardware-verified Round 139 (`Azath v14.5 KFX`) on the physical **Samsung Galaxy M30** (`32001776e8e82623`, TrebleDroid Android 13 GSI), adding `.cover.jpg` fallback lookup and literary archival **EB Garamond** drop-cap covers with `#5C2D26` spine rules on Home, the graceful **Offline Mode** card (`Retry` + `Local Catalog` pills), version bump to `Azath v14.5 KFX`, and runtime verification of the Round 138 dark offline WebView error screen.
 
 ---
 
 ## Verification Matrix
 | Check / Deliverable | Status | Verified Evidence |
 | :--- | :--- | :--- |
-| Bundled Fonts (`EB Garamond` + `Inter`) | **VERIFIED** | `07_APK_EPUB_INGESTION_MOD/assets/azath_fonts/` and `dropin_assets/azath_fonts/`: `EBGaramond-Regular.ttf` (`381K`, TrueType), `EBGaramond-SemiBold.ttf` (`384K`, TrueType), `Inter-Regular.otf` (`253K`, OpenType), `Inter-SemiBold.otf` (`265K`, OpenType). |
-| APK Build & Staging (`v14.4 KFX`) | **VERIFIED** | `bash 07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` exited `0` (`classes9.dex` `462736` bytes, `Lib/b.<clinit>` Ember Crimson `0xffe05a47L` DEX patch + XML patches applied). Staged release: `07_APK_EPUB_INGESTION_MOD/release/azath_v14.4_kfx/base.apk` (`138528871` bytes, SHA256 `234deb91bf6ce4245203f451e58f551688e268eb89efa02c31e4bda0fe759663`). |
-| Device Deployment (`com.azath.reader`) | **VERIFIED** | `dumpsys package com.azath.reader` -> `lastUpdateTime=2026-11-25 00:43:31`. Logcat check -> `NO_FATAL_EXCEPTIONS`. |
-| Stock Kindle Preservation (`com.amazon.kindle`) | **VERIFIED** | `dumpsys package com.amazon.kindle` -> `lastUpdateTime=2026-11-19 21:59:23` (100% untouched & read-only). |
-| Home Screen UI (`verify_r138_azath_home.png`) | **VERIFIED** | Captured on Galaxy M30 (`154151` bytes) & visually inspected: **`Azath`** in Regular EB Garamond (`30sp`), `+ OPDS`, tonal `Backup`, `#181515` search bar with `#E05A47` `Search` CTA, genre pills, `Continue Reading` (`Moksha`, `Crome Yellow`, `The Dream of the Red Chamber`) & `Popular Free EPUBs` in Regular EB Garamond, `#E05A47` active `Home` tab. |
-| Control Center (`verify_r138_azath_control_center.png`) | **VERIFIED** | Captured on Galaxy M30 (`239020` bytes) & visually inspected: `Control Center` & stat numbers (`26 BOOKS`, `5 READING`) in Regular EB Garamond, `v14.4 KFX` ember-crimson pill (`logs/azath_more_r138.xml` verified), Inter labels, preserved `B` monogram on *Brave New World* + `"Azath Library Insights"`, `#E05A47` `More` tab. |
-| Dark Offline WebView Error Page (`FolioWebBrowserDialog.java`) | **COMPILED / NOT SCREENSHOTTED** | `FolioWebBrowserDialog.java` updated with dark offline `onReceivedError` handling and compiled into `classes9.dex`; not runtime-screenshotted in Round 138 (only Home & Control Center were captured per Task B). |
+| Regression Fixes Preserved (`FolioMoreView.java`) | **VERIFIED** | Restored `makeMiniCoverView(ctx, d, rec.kfxPath, rec.title, 38, 54, 9)` (line 1326) and `"Azath Library Insights\n"` (line 5159) in `dropin_src/` before copying into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`. |
+| APK Build & Staging (`v14.5 KFX`) | **VERIFIED** | `bash 07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` exited `0` (`classes9.dex` `464996` bytes, `Lib/b.<clinit>` Ember Crimson `0xffe05a47L` + XML patches). Staged APK: `07_APK_EPUB_INGESTION_MOD/release/azath_v14.5_kfx/base.apk` (`138532967` bytes, SHA256 `7320ae96062ae5a080b01c79a763c6cfb8617216fb3c9f92370780d6e71361c7`). |
+| Device Deployment (`com.azath.reader`) | **VERIFIED** | `dumpsys package com.azath.reader` -> `versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-25 00:52:52`. Logcat (`FATAL EXCEPTION`) -> `NO_FATAL_EXCEPTIONS`. Control Center badge `v14.5 KFX` confirmed in `logs/azath_more_r139.xml`. |
+| Stock Kindle Preservation (`com.amazon.kindle`) | **VERIFIED** | `dumpsys package com.amazon.kindle` -> `versionName=8.160.1.0(2.0.124621.0)`, `lastUpdateTime=2026-11-19 21:59:23` (100% untouched & read-only). |
+| Home Archival Covers & Offline Card (`verify_r139_azath_home.png`) | **VERIFIED** | Captured on Galaxy M30 (`185017` bytes) & visually inspected: EB Garamond drop-cap initials (`M`, `C`, `T`) with `#5C2D26` crimson spine rules and EB Garamond titles on `Continue Reading` cards; clean **Offline Mode** card under `Popular Free EPUBs` with EB Garamond heading, Inter guidance copy, tonal ember-crimson `Retry` pill, and `Local Catalog` pill. |
+| Offline Web Book Browser (`verify_r139_azath_web_browser_offline.png`) | **VERIFIED** | Captured on Galaxy M30 (`116073` bytes) & visually inspected: Web Book Browser opened offline to `https://standardebooks.org/ebooks`, rendering dark Obsidian-Ivory-Crimson **`Page unavailable offline`** card, `net::ERR_INTERNET_DISCONNECTED` pill, and `#E05A47` **`Try Again`** button. |
 
 ---
 
 ## Modified / Added Files
-- `07_APK_EPUB_INGESTION_MOD/assets/azath_fonts/` & `dropin_assets/azath_fonts/` (`EBGaramond-Regular.ttf`, `EBGaramond-SemiBold.ttf`, `Inter-Regular.otf`, `Inter-SemiBold.otf`)
-- `07_APK_EPUB_INGESTION_MOD/mod_src/real/{FolioTheme.java,OpenCatalogView.java,FolioMoreView.java,FolioWebBrowserDialog.java}` (and preserved `rec.title` + `"Azath Library Insights"` in `dropin_src/.../FolioMoreView.java`)
-- `07_APK_EPUB_INGESTION_MOD/dex/classes9.dex` (`462736` bytes)
-- `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh`
-- `verify_r138_azath_home.png`, `verify_r138_azath_control_center.png`
+- `dropin_src/com/amazon/kindle/epub/catalog/{OpenCatalogView.java,FolioMoreView.java}` & `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/{OpenCatalogView.java,FolioMoreView.java}`
+- `07_APK_EPUB_INGESTION_MOD/dex/classes9.dex` (`464996` bytes)
+- `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` (`azath_v14.5_kfx` staging)
+- `verify_r139_azath_home.png`, `verify_r139_azath_web_browser_offline.png`
 
 ---
 
