@@ -1,23 +1,44 @@
 {
-  "round": 133,
-  "version": "Folio v13.3 KFX",
-  "codename": "Kindle-Native Reading Log Modal & Editorial Offline HTML Export",
+  "round": 134,
+  "version": "Azath v14.0 KFX",
+  "milestone": true,
+  "codename": "Malazan Rebrand (Azath / com.azath.reader), Bespoke Generated Icon Set & Play Store Folio Reference Capture",
   "target_device": "Samsung Galaxy M30 (32001776e8e82623)",
-  "target_package": "com.amazon.kindle.epub",
+  "new_package_name": "com.azath.reader",
+  "previous_package_name": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
+  "dropin_assets_dir": "dropin_assets/azath_icons/",
   "dropin_files": [
     {
-      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java"
+      "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioIcons.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioIcons.java"
     },
     {
       "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
+    },
+    {
+      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java"
+    },
+    {
+      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java"
+    },
+    {
+      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java"
+    },
+    {
+      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v13.3_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/azath_v14.0_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r133_reading_log_kindle.png",
-    "verify_r133_about_v133.png"
+    "verify_r134_azath_control_center.png",
+    "verify_r134_azath_launcher.png",
+    "ref_playstore_folio_1.png",
+    "ref_playstore_folio_2.png"
   ]
 }

@@ -93,7 +93,7 @@ public final class FolioMetadataCatalogDialog {
         topRow.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView eyebrow = new TextView(ctx);
-        eyebrow.setText("FOLIO");
+        eyebrow.setText("AZATH");
         eyebrow.setTextColor(Color.parseColor("#8E959C"));
         eyebrow.setLetterSpacing(0.10f);
         eyebrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
@@ -1862,7 +1862,7 @@ public final class FolioMetadataCatalogDialog {
         footerActionRow.setPadding(0, dp(ctx, 14), 0, dp(ctx, 4));
 
         TextView removeBtn = new TextView(ctx);
-        removeBtn.setText("Remove from Folio Library");
+        removeBtn.setText("Remove from Azath Library");
         removeBtn.setTextColor(Color.parseColor("#F87171"));
         removeBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         removeBtn.setTypeface(Typeface.DEFAULT_BOLD);

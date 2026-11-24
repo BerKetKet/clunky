@@ -232,7 +232,7 @@ public final class FolioMetadataBackup {
             String dateStr = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
                     .format(new java.util.Date());
             StringBuilder md = new StringBuilder();
-            md.append(curatedOnly ? "# Folio Curated Reading Log (" : "# Folio Reading Log (").append(dateStr).append(")\n\n");
+            md.append(curatedOnly ? "# Azath Curated Reading Log (" : "# Azath Reading Log (").append(dateStr).append(")\n\n");
             int goalTarget = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
                     .getInt("reading_goal_target", 12);
             if (goalTarget <= 0) goalTarget = 12;
@@ -448,7 +448,7 @@ public final class FolioMetadataBackup {
             StringBuilder h = new StringBuilder();
             h.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">");
             h.append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
-            h.append("<title>Folio Offline Library Catalog</title>");
+            h.append("<title>Azath Offline Library Catalog</title>");
             h.append("<style>body{margin:0;padding:24px;background:#000000;color:#ECEFF1;font-family:-apple-system,BlinkMacSystemFont,sans-serif;}");
             h.append(".wrap{max-width:860px;margin:0 auto;}h1{margin:0 0 6px;font-size:26px;font-family:Georgia,'Times New Roman',serif;font-weight:700;}");
             h.append(".sub{color:#8E959C;font-size:13px;margin-bottom:16px;}");
@@ -462,7 +462,7 @@ public final class FolioMetadataBackup {
             h.append(".done,.rd,.q,.sh{background:#162330;border-color:#2C5278;color:#4DA6FF;}");
             h.append(".note{margin-top:9px;padding:9px 12px;background:#141618;border:1px solid #2C5278;border-left:3px solid #4DA6FF;color:#ECEFF1;font-size:12.5px;border-radius:6px;}");
             h.append("</style></head><body><div class=\"wrap\">");
-            h.append("<h1>Folio Offline Library Catalog</h1>");
+            h.append("<h1>Azath Offline Library Catalog</h1>");
             h.append("<div class=\"sub\">Exported ").append(dateStr).append(" · ")
              .append(all.size()).append(" books · ").append(reading).append(" reading · ")
              .append(finished).append(" finished · ").append(favs).append(" fav · ")

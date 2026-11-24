@@ -220,7 +220,7 @@ public final class FolioWebBrowserDialog {
         TextView sub = new TextView(ctx);
         sub.setText(items.isEmpty()
                 ? "Downloaded EPUBs are automatically converted to KFX and listed here."
-                : "Tap any imported book to open it in Folio.");
+                : "Tap any imported book to open it in Azath.");
         sub.setTextColor(TEXT_MUTED);
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         sub.setPadding(0, 0, 0, dp(d, 12));
@@ -1149,7 +1149,7 @@ public final class FolioWebBrowserDialog {
                                 }
                             });
                             if (onImported != null) onImported.run();
-                            Toast.makeText(ctx, "Added \"" + addedTitle + "\" to Folio Library", Toast.LENGTH_LONG).show();
+                            Toast.makeText(ctx, "Added \"" + addedTitle + "\" to Azath Library", Toast.LENGTH_LONG).show();
                         }
                     });
                 } catch (final Throwable t) {

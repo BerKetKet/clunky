@@ -88,7 +88,7 @@ public final class FolioMoreView {
         headerRow.addView(titleTv, tlp);
 
         FrameLayout diceBtn = FolioIcons.makeIconButton(
-                ctx, FolioIcons.SHUFFLE, 17, 7, FolioIcons.COLOR_ICON, BG_CARD, BORDER_HAIRLINE, 8);
+                ctx, FolioIcons.SHUFFLE, 19, 6, FolioIcons.COLOR_ICON, BG_CARD, BORDER_HAIRLINE, 8);
         LinearLayout.LayoutParams diceLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         diceLp.rightMargin = dp(d, 7);
@@ -96,7 +96,7 @@ public final class FolioMoreView {
         headerRow.addView(diceBtn);
 
         FrameLayout quickSearchBtn = FolioIcons.makeIconButton(
-                ctx, FolioIcons.SEARCH, 17, 7, FolioIcons.COLOR_ICON, BG_CARD, BORDER_HAIRLINE, 8);
+                ctx, FolioIcons.SEARCH, 19, 6, FolioIcons.COLOR_ICON, BG_CARD, BORDER_HAIRLINE, 8);
         LinearLayout.LayoutParams qsLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         qsLp.rightMargin = dp(d, 7);
@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v13.3 KFX");
+        badgeTv.setText("v14.0 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(TEXT_MUTED);
         badgeTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
@@ -364,7 +364,7 @@ public final class FolioMoreView {
                 "Reading preferences, dark mode & dictionary", true, new View.OnClickListener() {
                     @Override public void onClick(View v) { openSettings(ctx); }
                 }));
-        sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.INFO, "About Folio",
+        sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.INFO, "About Azath",
                 "Engine capabilities, version & library stats", true, new View.OnClickListener() {
                     @Override public void onClick(View v) { showAboutDialog(ctx); }
                 }));
@@ -947,8 +947,8 @@ public final class FolioMoreView {
         row.setFocusable(true);
         row.setOnClickListener(listener);
 
-        View ico = FolioIcons.makeIcon(ctx, iconId, 20, FolioIcons.COLOR_ICON);
-        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(dp(d, 20), dp(d, 20));
+        View ico = FolioIcons.makeIcon(ctx, iconId, 24, FolioIcons.COLOR_ICON);
+        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(dp(d, 24), dp(d, 24));
         ilp.rightMargin = dp(d, 14);
         row.addView(ico, ilp);
 
@@ -1647,7 +1647,7 @@ public final class FolioMoreView {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         } else {
             TextView phTv = new TextView(ctx);
-            phTv.setText("F");
+            phTv.setText("A");
             phTv.setTextColor(0xFF5F666E);
             phTv.setTextSize(14);
             phTv.setGravity(Gravity.CENTER);
@@ -2685,7 +2685,7 @@ public final class FolioMoreView {
                                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                     } else {
                         TextView phTv = new TextView(ctx);
-                        phTv.setText("F");
+                        phTv.setText("A");
             phTv.setTextColor(0xFF5F666E);
                         phTv.setTextSize(14);
                         phTv.setGravity(Gravity.CENTER);
@@ -2925,7 +2925,7 @@ public final class FolioMoreView {
                     android.content.ClipboardManager cm = (android.content.ClipboardManager)
                             ctx.getSystemService(Context.CLIPBOARD_SERVICE);
                     if (cm != null) {
-                        cm.setPrimaryClip(android.content.ClipData.newPlainText("Folio Reading Notes", md));
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("Azath Reading Notes", md));
                         Toast.makeText(ctx, "Copied " + annotated.size() + " note(s) as Markdown", Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -2954,7 +2954,7 @@ public final class FolioMoreView {
                     try {
                         android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
                         shareIntent.setType("text/plain");
-                        shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "Folio Reading Notes");
+                        shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "Azath Reading Notes");
                         shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, md);
                         ctx.startActivity(android.content.Intent.createChooser(shareIntent, "Share Reading Notes"));
                     } catch (Throwable t) {
@@ -3243,7 +3243,7 @@ public final class FolioMoreView {
             java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> annotated,
             java.util.Map<String, String> noteMap,
             java.util.Map<String, Integer> rateMap) {
-        StringBuilder sb = new StringBuilder("# Folio Reading Notes\n\n");
+        StringBuilder sb = new StringBuilder("# Azath Reading Notes\n\n");
         for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : annotated) {
             String t = (r.title != null && !r.title.isEmpty()) ? r.title : "Untitled";
             String a = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
@@ -5154,7 +5154,7 @@ public final class FolioMoreView {
                             android.content.ClipboardManager cm = (android.content.ClipboardManager)
                                     ctx.getSystemService(Context.CLIPBOARD_SERVICE);
                             if (cm != null) {
-                                cm.setPrimaryClip(android.content.ClipData.newPlainText("Folio Library Insights", snapshotText));
+                                cm.setPrimaryClip(android.content.ClipData.newPlainText("Azath Library Insights", snapshotText));
                                 Toast.makeText(ctx, "Copied Library Insights summary", Toast.LENGTH_SHORT).show();
                             }
                         } catch (Throwable ignored) {}
@@ -5165,7 +5165,7 @@ public final class FolioMoreView {
                         try {
                             Intent share = new Intent(Intent.ACTION_SEND);
                             share.setType("text/plain");
-                            share.putExtra(Intent.EXTRA_SUBJECT, "Folio Library Insights");
+                            share.putExtra(Intent.EXTRA_SUBJECT, "Azath Library Insights");
                             share.putExtra(Intent.EXTRA_TEXT, snapshotText);
                             ctx.startActivity(Intent.createChooser(share, "Share Library Insights"));
                         } catch (Throwable ignored) {}
@@ -5494,8 +5494,8 @@ public final class FolioMoreView {
         double sdKindleMb = sdKindleBytes / (1024.0 * 1024.0);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v13.3 KFX (Enhanced Typesetting)\n");
+        sb.append("Azath — Offline EPUB & KFX Reader\n");
+        sb.append("Version: Azath v14.0 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
@@ -5541,7 +5541,7 @@ public final class FolioMoreView {
         sb.append("• Privacy Mode: Local-First (Zero Amazon Telemetry)\n");
 
         AlertDialog aboutDlg = new AlertDialog.Builder(ctx)
-                .setTitle("About Folio")
+                .setTitle("About Azath")
                 .setMessage(sb.toString())
                 .setPositiveButton("Close", null)
                 .setNeutralButton("Clear Temp Cache", new DialogInterface.OnClickListener() {

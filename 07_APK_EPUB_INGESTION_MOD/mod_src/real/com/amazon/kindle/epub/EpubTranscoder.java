@@ -128,7 +128,10 @@ public final class EpubTranscoder {
         } catch (Throwable t) {
             android.util.Log.w("EpubTranscoder", "getKfxConvBinary error: " + t.getMessage());
         }
-        File pkgLib = new File("/data/data/com.amazon.kindle.epub/lib/libkfxconv.so");
+        File pkgLib = new File("/data/data/com.azath.reader/lib/libkfxconv.so");
+        if (!pkgLib.exists()) {
+            pkgLib = new File("/data/data/com.amazon.kindle.epub/lib/libkfxconv.so");
+        }
         if (pkgLib.exists()) {
             if (!pkgLib.canExecute()) {
                 pkgLib.setExecutable(true, false);

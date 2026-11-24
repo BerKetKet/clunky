@@ -1,8 +1,8 @@
-# Round 133 Deliverables Report — Folio v13.3 KFX (Kindle-Native Reading Log Modal & Editorial Offline HTML Export)
+# Round 134 Deliverables Report — Major Milestone Azath v14.0 KFX (Malazan Rebrand, Bespoke Generated Icon Set & Play Store Folio Reference Study)
 **Environment**: Samsung Galaxy M30 (`32001776e8e82623`), TrebleDroid Android 13 (arm64-v8a).  
 **Target Device**: Physical **Samsung Galaxy M30** (`32001776e8e82623`).  
 **Stock Kindle Invariant**: Package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Folio Version**: `Folio v13.3 KFX` installed on device at `2026-11-24 23:41:43`.
+**Azath Version**: `Azath v14.0 KFX` (`com.azath.reader`, `userId=10503`) installed on device at `2026-11-24 23:55:15`.
 
 ---
 
@@ -11,32 +11,31 @@
 
 ---
 
-## 1. Task A: Source Integration & Release Staging
-1. **Drop-In Source Integration**:
-   - **`FolioMetadataBackup.java` (`exportLibraryHtml`)**:
-     * Redesigned exported `/sdcard/kindle/backups/folio_library.html` CSS to **Kindle-Native Editorial Dark Theme** (`#000000` canvas, `#141618` cards, `1px #262A2E` hairlines, Georgia serif display headings & book titles, `#4DA6FF` Kindle blue progress bar & badges, and `#162330`/`#2C5278` note callout — zero neon colors).
-   - **`FolioMoreView.java`**:
-     * Wired `FolioTheme.applyToDialog(ctx, logDlg)` post-`.show()` onto **Reading Log & Export** (`showReadingLogDialog`).
-     * Synced `rtHdr` click-to-calibrate listener using a single shared `calibrateClick` listener across `rtHdr` and `rtRow`, while preserving the `Reading Time (WPM)` snapshot line inside `snapshotText`.
-     * Bumped Control Center badge and `About Folio` dialog to **`Folio v13.3 KFX`** (`Folio v13.3 KFX (Enhanced Typesetting)`).
-
-2. **Compilation, Packaging & Deployment**:
-   - Recompiled `classes9.dex` (`458,484` bytes) via `javac` and Android `d8`.
-   - Rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, signed with debug keystore.
-   - Streamed APK install to physical Samsung Galaxy M30 (`lastUpdateTime=2026-11-24 23:41:43`).
-   - Verified zero fatal crashes in `logcat` (`FATAL EXCEPTION` check clean).
-   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v13.3_kfx/base.apk` (`137,740,774` bytes ~132 MB, SHA256: `b46ca94d9cd3e58bf3d846da0fa5091bc0f89f5a77888fcd99c638d19fedb144`).
+## 1. Task A: Malazan Rebrand (`com.azath.reader`), Bespoke Icons, Build & Release Staging
+1. **Drop-In Integration & Companion Adjustments**:
+   - Integrated all 6 drop-in Java modules (`FolioIcons.java`, `FolioMoreView.java`, `FolioMetadataCatalogDialog.java`, `FolioFolderBrowserDialog.java`, `FolioWebBrowserDialog.java`, `FolioMetadataBackup.java`) into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`.
+   - Preserved Round 132/133 fixes in `FolioMoreView.java` (`Reading Time (WPM)` line in `snapshotText` and shared `calibrateClick` on `rtHdr`/`rtRow`) and updated the non-curated fallback heading in `FolioMetadataBackup.java` to `# Azath Reading Log (`.
+   - Updated `OpenCatalogView.java` (`hideSearchKindleRecursive` adds `"Search Azath"` alongside `"Search Folio"`/`"Search Kindle"`, and home brand header updated to `"Azath"`) and added `/data/data/com.azath.reader/lib/libkfxconv.so` primary fallback in `EpubTranscoder.java`.
+   - Copied all 16 bespoke 96x96 transparent ivory+crimson PNGs from `dropin_assets/azath_icons/` into `07_APK_EPUB_INGESTION_MOD/assets/azath_icons/` and wired them into `rebuild_fast.sh` -> `/tmp/kindle_clone_build/base_dec/assets/azath_icons/`.
+2. **Clean Package Rename (`com.amazon.kindle.epub` -> `com.azath.reader`)**:
+   - Updated `AndroidManifest.xml` package name, permissions, `uses-permission`, and providers (`com.amazon.kindle.epub.*` -> `com.azath.reader.*`, `kindlereader.epub` -> `kindlereader.azath`, `MAPInformationProvider.epub` -> `MAPInformationProvider.azath`) while keeping Java `android:name` classes (`OpenCatalogActivity`, `ExternalEpubActivity`) intact.
+   - Updated `android:label="Azath"` in manifest and patched `strings.xml` (`Search Azath`, `Azath library`).
+   - Updated `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` to target `com.azath.reader` (including `MANAGE_EXTERNAL_STORAGE` grant) and stage `07_APK_EPUB_INGESTION_MOD/release/azath_v14.0_kfx/base.apk`.
+3. **Compilation, Deployment & Smoke Test**:
+   - Recompiled `classes9.dex` (`459,960` bytes), rebuilt APK with `apktool b`, aligned via `zipalign`, signed with debug keystore.
+   - Streamed install succeeded cleanly as `com.azath.reader` (`lastUpdateTime=2026-11-24 23:55:15`) side-by-side with untouched stock `com.amazon.kindle` (`2026-11-19 21:59:23`) and `com.amazon.kindle.epub`.
+   - Launched `com.azath.reader/com.amazon.kindle.UpgradePage` directly into **Azath** Home and More Control Center with **zero fatal crashes or authority/provider errors** in `logcat`.
+   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/azath_v14.0_kfx/base.apk` (`137,856,708` bytes ~132 MB, SHA256: `c5ff452232ba5fc38a5c7d0de91f8f03796ca9ea4ba5790dd4d30fdc8ecb0e67`).
 
 ---
 
-## 2. Task B: Hardware Verification on Physical Samsung Galaxy M30
-Verified on physical Samsung Galaxy M30 hardware (`32001776e8e82623`):
-
-1. **`verify_r133_reading_log_kindle.png` (234,189 bytes)**:
-   - Opened **Reading Log & Export** (`Reading Log (.md)`), tapped **HTML**, confirmed toast `"Exported offline HTML catalog (folio_library.html)"`, updated path text `Saved HTML: /sdcard/kindle/backups/folio_library.html`, and styled Kindle footer buttons (`CLOSE`, `COPY MARKDOWN`, `SHARE`).
-   - Verified regenerated `/sdcard/kindle/backups/folio_library.html` on device (`8,778` bytes vs previous `7,486` bytes, timestamp `2026-11-24 23:43`) and pulled HTML confirming `#000000` canvas, Georgia serif titles, and `#4DA6FF` Kindle blue accents.
-2. **`verify_r133_about_v133.png` (338,933 bytes)**:
-   - Captured **About Folio** modal showing `Version: Folio v13.3 KFX (Enhanced Typesetting)`, `Hardware: TrebleDroid with GApps · Android 13 (arm64-v8a)`, and styled Kindle action buttons (`CLOSE`, `CLEAR TEMP CACHE`).
-3. **Safety Invariants**:
-   - Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED and READ-ONLY (`lastUpdateTime=2026-11-19 21:59:23`).
-   - Zero crashes logged for `com.amazon.kindle.epub`.
+## 2. Task B: Hardware Verification & Play Store Folio Reference Capture (Samsung Galaxy M30)
+1. **`verify_r134_azath_control_center.png` (208,312 bytes)**:
+   - Captured **Azath** More tab (`Search Azath`, `Control Center`, `v14.0 KFX` badge, bespoke ivory+crimson icons on compass/search/rows: `ic_library`, `ic_import`, `ic_globe`, `ic_feed`, `ic_compass`, `ic_search`).
+   - Verified `RESTORE LATEST` in Backup & Restore ran against `/sdcard/kindle/backups/folio_metadata_backup.json` (19 local `/sdcard/kindle` KFX books indexed immediately on fresh `com.azath.reader` install; full backup prefs/DB sync applies cleanly on next restart).
+2. **`verify_r134_azath_launcher.png` (339,650 bytes)**:
+   - Captured Samsung Galaxy M30 app drawer displaying the crimson boy-under-tree launcher icon with label **`Azath`** clearly separated from legacy `Folio` and Play Store `Folio`.
+3. **`ref_playstore_folio_1.png` (418,540 bytes) & `ref_playstore_folio_2.png` (155,997 bytes)**:
+   - Launched Play Store **Folio** (`ct.reader/com.folio.reader.MainActivity`) and captured its Library screen (`Your library`, serif headings + geometric sans UI, `All books`/`Reading`/`Finished` chips, shelf grid) and Settings screen (`Make yourself at home`, serif card headlines + sans body, icon list) for Round 135 typography unification study.
+4. **Safety Invariant**:
+   - Stock `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).

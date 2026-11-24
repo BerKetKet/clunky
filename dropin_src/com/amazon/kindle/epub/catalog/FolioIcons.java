@@ -1,7 +1,13 @@
 package com.amazon.kindle.epub.catalog;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.widget.ImageView;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
@@ -52,9 +58,60 @@ public final class FolioIcons {
 
     private FolioIcons() {}
 
+    private static final Map<Integer, Bitmap> ASSET_CACHE = new HashMap<>();
+
+    private static String assetFileForIcon(int iconId) {
+        switch (iconId) {
+            case LIBRARY: return "azath_icons/ic_library.png";
+            case IMPORT: return "azath_icons/ic_import.png";
+            case GLOBE: return "azath_icons/ic_globe.png";
+            case FEED: return "azath_icons/ic_feed.png";
+            case REFRESH: return "azath_icons/ic_refresh.png";
+            case NOTES: return "azath_icons/ic_notes.png";
+            case SHELVES: return "azath_icons/ic_shelves.png";
+            case INSIGHTS: return "azath_icons/ic_insights.png";
+            case LOG: return "azath_icons/ic_log.png";
+            case BACKUP: return "azath_icons/ic_backup.png";
+            case STORAGE: return "azath_icons/ic_storage.png";
+            case LINK: return "azath_icons/ic_link.png";
+            case SETTINGS: return "azath_icons/ic_settings.png";
+            case INFO: return "azath_icons/ic_info.png";
+            case SHUFFLE: return "azath_icons/ic_compass.png";
+            case SEARCH: return "azath_icons/ic_search.png";
+            default: return null;
+        }
+    }
+
+    private static Bitmap loadAssetIcon(Context ctx, int iconId) {
+        if (ctx == null) return null;
+        synchronized (ASSET_CACHE) {
+            if (ASSET_CACHE.containsKey(iconId)) return ASSET_CACHE.get(iconId);
+        }
+        String path = assetFileForIcon(iconId);
+        if (path == null) return null;
+        Bitmap bmp = null;
+        try {
+            InputStream is = ctx.getAssets().open(path);
+            bmp = BitmapFactory.decodeStream(is);
+            is.close();
+        } catch (Throwable ignored) {}
+        synchronized (ASSET_CACHE) {
+            ASSET_CACHE.put(iconId, bmp);
+        }
+        return bmp;
+    }
+
     public static View makeIcon(Context ctx, final int iconId, int sizeDp, final int color) {
         final float d = ctx.getResources().getDisplayMetrics().density;
         final int px = Math.round(sizeDp * d);
+        Bitmap bmp = loadAssetIcon(ctx, iconId);
+        if (bmp != null) {
+            ImageView img = new ImageView(ctx);
+            img.setImageBitmap(bmp);
+            img.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            img.setLayoutParams(new LinearLayout.LayoutParams(px, px));
+            return img;
+        }
         IconView iv = new IconView(ctx, iconId, color, d);
         iv.setLayoutParams(new LinearLayout.LayoutParams(px, px));
         return iv;
@@ -73,12 +130,21 @@ public final class FolioIcons {
         if (strokeColor != 0) bg.setStroke(Math.max(1, Math.round(d)), strokeColor);
         fl.setBackground(bg);
 
-        IconView iv = new IconView(ctx, iconId, iconColor, d);
         int sz = Math.round(iconSizeDp * d);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(sz, sz);
         lp.gravity = Gravity.CENTER;
-        fl.addView(iv, lp);
-        fl.setTag(iv);
+        Bitmap bmp = loadAssetIcon(ctx, iconId);
+        if (bmp != null) {
+            ImageView img = new ImageView(ctx);
+            img.setImageBitmap(bmp);
+            img.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            fl.addView(img, lp);
+            fl.setTag(img);
+        } else {
+            IconView iv = new IconView(ctx, iconId, iconColor, d);
+            fl.addView(iv, lp);
+            fl.setTag(iv);
+        }
         return fl;
     }
 

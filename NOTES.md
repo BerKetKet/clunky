@@ -1,6 +1,30 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Package cleanly rebranded and deployed as `com.azath.reader` ("Azath v14.0 KFX") on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 134 (Major Milestone) complete:
+  1. **Malazan Rebrand (`com.azath.reader`) & Bespoke Generated Icon Set (Task A)**:
+     - Target Hardware: Physical Samsung Galaxy M30 (`32001776e8e82623`).
+     - Bundled 16 handcrafted 96x96 transparent ivory+crimson PNGs (`dropin_assets/azath_icons/*.png` -> `07_APK_EPUB_INGESTION_MOD/assets/azath_icons/*.png` -> `assets/azath_icons/` in APK).
+     - Integrated all 6 drop-in Java files (`FolioIcons`, `FolioMoreView`, `FolioMetadataCatalogDialog`, `FolioFolderBrowserDialog`, `FolioWebBrowserDialog`, `FolioMetadataBackup`), preserving Round 132/133 fixes (`Reading Time` snapshot line, shared `calibrateClick`, `# Azath Reading Log`).
+     - Updated `OpenCatalogView.java` (`Search Azath` + `"Azath"` header) and `EpubTranscoder.java` (`com.azath.reader/lib/libkfxconv.so`).
+     - Rebranded `AndroidManifest.xml` cleanly (`package="com.azath.reader"`, `android:label="Azath"`, unique permissions & authorities including `kindlereader.azath` / `MAPInformationProvider.azath`), updated `strings.xml`, updated `rebuild_fast.sh`.
+     - Compiled `classes9.dex` (`459,960` bytes), deployed `com.azath.reader` (`lastUpdateTime=2026-11-24 23:55:15`) with **zero authority/launch crashes**, and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v14.0_kfx/base.apk` (`137,856,708` bytes, SHA256: `c5ff452232ba5fc38a5c7d0de91f8f03796ca9ea4ba5790dd4d30fdc8ecb0e67`).
+  2. **Visual Verification & Play Store Folio Reference Study (Task B)**:
+     - Captured on Samsung Galaxy M30:
+       * `verify_r134_azath_control_center.png` (`208,312` bytes) — Azath More tab (`Search Azath`, `Control Center`, `v14.0 KFX`, bespoke ivory+crimson icons).
+       * `verify_r134_azath_launcher.png` (`339,650` bytes) — App drawer showing crimson **`Azath`** icon and label.
+       * `ref_playstore_folio_1.png` (`418,540` bytes) & `ref_playstore_folio_2.png` (`155,997` bytes) — Play Store Folio (`ct.reader/com.folio.reader.MainActivity`) Library & Settings screens for Round 135 typography unification reference.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+  4. Packaged `antig_to_gemini_neon_clunky_report134.zip` and submitted to Gemini Neon (`clunky` tab).
+
+## Verification Evidence (Round 134)
+1. `verify_r134_azath_control_center.png`: Azath Control Center (`v14.0 KFX`, `Search Azath`, bespoke 16-icon set).
+2. `verify_r134_azath_launcher.png`: Azath launcher icon & label in M30 app drawer.
+3. `ref_playstore_folio_1.png` & `ref_playstore_folio_2.png`: Play Store Folio (`ct.reader`) typography & spacing reference screens.
+4. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+5. `dumpsys package com.azath.reader`: Azath v14.0 KFX deployed cleanly (`lastUpdateTime=2026-11-24 23:55:15`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v13.3 KFX") deployed and fully verified on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 133 complete:
   1. **Kindle-Native Reading Log Modal & Editorial Offline HTML Export (Task A)**:
      - Target Hardware: Physical Samsung Galaxy M30 (`32001776e8e82623`).

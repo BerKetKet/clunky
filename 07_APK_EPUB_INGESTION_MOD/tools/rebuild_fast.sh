@@ -4,19 +4,26 @@ export PATH="/opt/android-sdk/build-tools/36.0.0:${PATH}"
 
 MOD_ROOT="/home/bgg/projects/clunky/07_APK_EPUB_INGESTION_MOD"
 WORK_DIR="/tmp/kindle_clone_build"
-NEW_PKG="com.amazon.kindle.epub"
+NEW_PKG="com.azath.reader"
 
 echo "[0/5] Compiling mod DEX (classes9.dex)..."
 bash "${MOD_ROOT}/tools/compile_mod_dex.sh" "${MOD_ROOT}/dex/classes9.dex"
 
-echo "[1/5] Copying compiled mod DEX to base_dec/classes4.dex and libkfxconv.so..."
+echo "[1/5] Copying compiled mod DEX to base_dec/classes4.dex, libkfxconv.so, and azath_icons..."
 cp "${MOD_ROOT}/dex/classes9.dex" "${WORK_DIR}/base_dec/classes4.dex"
 mkdir -p "${WORK_DIR}/base_dec/lib/arm64-v8a"
 cp "${MOD_ROOT}/lib/arm64-v8a/libkfxconv.so" "${WORK_DIR}/base_dec/lib/arm64-v8a/libkfxconv.so"
+mkdir -p "${WORK_DIR}/base_dec/assets/azath_icons"
+cp -a "${MOD_ROOT}/assets/azath_icons/"*.png "${WORK_DIR}/base_dec/assets/azath_icons/"
 
-echo "[1b/5] Patching strings.xml Folio library branding..."
-find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i 's/in your Kindle library\./in your Folio library\./g' {} +
-find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i 's/your Kindle library/your Folio library/g' {} +
+echo "[1b/5] Patching strings.xml Azath library branding..."
+find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i \
+    -e 's/in your Kindle library\./in your Azath library\./g' \
+    -e 's/in your Folio library\./in your Azath library\./g' \
+    -e 's/your Kindle library/your Azath library/g' \
+    -e 's/your Folio library/your Azath library/g' \
+    -e 's/>Search Folio</\>Search Azath</g' \
+    -e 's/>Search Kindle</\>Search Azath</g' {} +
 
 echo "[1c/5] Updating launcher icons from dropin_res..."
 python3 -c '
@@ -68,15 +75,17 @@ if adb get-state >/dev/null 2>&1; then
     else
         adb install -r -d "${WORK_DIR}/signed_splits/base.apk"
     fi
+    adb shell appops set "${NEW_PKG}" MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
+    adb shell pm grant "${NEW_PKG}" android.permission.READ_EXTERNAL_STORAGE >/dev/null 2>&1 || true
 else
     echo "Device not currently attached via adb; skipping install for now."
 fi
 
-echo "[5/5] Staging Folio v13.3 KFX release..."
-mkdir -p "${MOD_ROOT}/release/folio_v13.3_kfx"
-cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/folio_v13.3_kfx/base.apk"
+echo "[5/5] Staging Azath v14.0 KFX release..."
+mkdir -p "${MOD_ROOT}/release/azath_v14.0_kfx"
+cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v14.0_kfx/base.apk"
 if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
-    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/folio_v13.3_kfx/base.apk.idsig"
+    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v14.0_kfx/base.apk.idsig"
 fi
 
-echo "Fast rebuild, deploy, and Folio v13.3 KFX staging successful!"
+echo "Fast rebuild, deploy, and Azath v14.0 KFX staging successful!"

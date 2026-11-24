@@ -111,7 +111,8 @@ public final class OpenCatalogView {
                 String s1 = txt != null ? txt.toString() : "";
                 String s2 = hint != null ? hint.toString() : "";
                 if (s1.contains("Search Kindle") || s2.contains("Search Kindle")
-                        || s1.contains("Search Folio") || s2.contains("Search Folio")) {
+                        || s1.contains("Search Folio") || s2.contains("Search Folio")
+                        || s1.contains("Search Azath") || s2.contains("Search Azath")) {
                     View target = c;
                     if (c.getParent() instanceof View && c.getParent() != vg.getRootView()) {
                         target = (View) c.getParent();
@@ -165,7 +166,7 @@ public final class OpenCatalogView {
         headerRow.setPadding(0, 0, 0, dp(d, 12));
 
         TextView brand = new TextView(ctx);
-        brand.setText("Folio");
+        brand.setText("Azath");
         brand.setTextColor(TEXT_PRIMARY);
         brand.setTextSize(26f);
         brand.setTypeface(Typeface.SERIF, Typeface.BOLD);

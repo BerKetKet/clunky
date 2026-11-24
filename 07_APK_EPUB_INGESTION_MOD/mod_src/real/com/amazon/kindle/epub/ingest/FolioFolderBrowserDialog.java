@@ -698,7 +698,7 @@ public final class FolioFolderBrowserDialog {
                     selectedFiles.clear();
                     updateImportLabel.run();
                     Toast.makeText(ctx,
-                            "Imported " + finalOk + " of " + batch.size() + " EPUBs to Folio Library",
+                            "Imported " + finalOk + " of " + batch.size() + " EPUBs to Azath Library",
                             Toast.LENGTH_LONG).show();
                     renderList.run();
                 });
