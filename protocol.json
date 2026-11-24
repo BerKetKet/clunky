@@ -1,14 +1,11 @@
 {
-  "round": 126,
-  "version": "Folio v12.6 KFX",
-  "codename": "Bookerly/Ember Strict Typography Hierarchy & Modal-Wide Theme Unification",
+  "round": 127,
+  "version": "Folio v12.7 KFX",
+  "codename": "Zero-Emoji Editorial Modal Polish & GitHub Sync",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
+  "git_push_requested": true,
   "dropin_files": [
-    {
-      "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioTheme.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioTheme.java"
-    },
     {
       "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
@@ -16,15 +13,11 @@
     {
       "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java"
-    },
-    {
-      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.6_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.7_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r126_importer_ember_and_pin.png",
-    "verify_r126_modal_bookerly_ember.png"
+    "verify_r127_reading_goal_clean.png",
+    "verify_r127_manage_shelves_clean.png"
   ]
 }

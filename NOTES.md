@@ -1,6 +1,34 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.7 KFX") deployed and fully verified on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 127 complete:
+  1. **Zero-Emoji Editorial Modal Polish & Release Staging (Task A)**:
+     - Verified target test hardware is **Samsung Galaxy M30** (`32001776e8e82623`, TrebleDroid Android 13 GSI), NOT M32.
+     - Completed comprehensive zero-emoji editorial audit in `FolioMoreView.java` and `FolioMetadataCatalogDialog.java`.
+     - Replaced shelf rename button `✏️` with a clean Kindle-native `Edit` pill (`#162330` fill, `#2C5278` stroke, `ACCENT_TEAL`).
+     - Cleaned search history chips, removing leftover `🕒` prefix.
+     - Cleaned bulk action pill in catalog from `📌Queue` to `+Queue` (`#162330` fill, `#4DA6FF` text, `#2C5278` border).
+     - Enforced Bookerly headings (`>= 17sp`) and Amazon Ember body/controls (`< 17sp`) across all Control Center dialogs (`Reading Goal`, `Completed Books`, `Tonight's Pick`, `Up Next Queue`, `Reading Notes`, `Manage Shelves`, `Storage & Duplicates`, `Saved Backups & Exports`, `Authors Directory`, `Book Details`).
+     - Maintained post-`.show()` placement for `FolioTheme.applyToDialog` so AlertDialog action buttons are properly styled.
+     - Bumped Control Center badge and `About Folio` dialog to **`Folio v12.7 KFX`**.
+     - Recompiled `classes9.dex` (449,732 bytes), rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, signed with `apksigner`.
+     - Streamed APK install to Galaxy M30 (`lastUpdateTime=2026-11-24 05:51:25`) with zero fatal crashes logged.
+     - Staged release APK at `07_APK_EPUB_INGESTION_MOD/release/folio_v12.7_kfx/base.apk` (132 MB, SHA256: `cb9a79cd7abf19009c710881f2bc7366a8e7001541a442b72569b7444f64ebb7`).
+  2. **Visual Verification & Invariant Proofs (Task B)**:
+     - Captured hardware proof screenshots on Samsung Galaxy M30:
+       * `verify_r127_reading_goal_clean.png` (196,000 bytes) — 2026 Reading Goal modal showing Bookerly heading, clean Amazon Ember sans on all metrics (`1 of 5 books finished (20%)`, `37 DAYS LEFT`, `4 TO GO`, `1 / 9d NEEDED PACE`, `COMPLETED BOOKS (1)`, `✓ 2026-11-23`), target selector buttons (`5`, `12`, `24`, `36`, `52`), and styled action buttons (`Save Goal` in `#4DA6FF` bold, `Cancel` in `#8E959C` muted). Zero emojis.
+       * `verify_r127_manage_shelves_clean.png` (207,504 bytes) — Manage Shelves modal showing Bookerly heading, clean Kindle controls (`+ New Shelf`, `+ Books`, `Edit` [replacing `✏️`], `✕`), custom shelves (`Classics`, `Philosophy`), and clean action buttons (`Browse Catalog`, `Close`). Zero emojis.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Cloned Invariant: `com.amazon.kindle.epub` updated (`lastUpdateTime=2026-11-24 05:51:25`), zero crashes.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+  4. Packaged `antig_to_gemini_neon_clunky_report127.zip` and submitted to Gemini Neon tab `837018552`.
+
+## Verification Evidence (Round 127)
+1. `verify_r127_reading_goal_clean.png`: Reading Goal modal with Bookerly/Ember typography and Kindle blue action buttons.
+2. `verify_r127_manage_shelves_clean.png`: Manage Shelves modal with Bookerly/Ember typography, `Edit` button replacing `✏️`, and zero emojis.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v12.7 KFX deployed (`lastUpdateTime=2026-11-24 05:51:25`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.6 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 126 complete:
   1. **Strict Bookerly/Ember Hierarchy & Modal-Wide Theme Unification (Task A)**:
      - Integrated `FolioTheme.java` routing Bookerly strictly to display titles (`>= 17sp`) and Amazon Ember sans to all eyebrows, pills, chips, buttons, and body text (`< 17sp`). Implemented `FolioTheme.applyToDialog` for recursive view-tree font styling and AlertDialog action button styling (`#4DA6FF` Positive, `#8E959C` Negative, `#C4CBD2` Neutral).

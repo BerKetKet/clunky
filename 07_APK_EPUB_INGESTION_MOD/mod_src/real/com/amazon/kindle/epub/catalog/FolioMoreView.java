@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v12.6 KFX");
+        badgeTv.setText("v12.7 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(TEXT_MUTED);
         badgeTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
@@ -517,7 +517,7 @@ public final class FolioMoreView {
         final int booksLeft = Math.max(0, cur - finCount);
         final String paceVal;
         if (booksLeft == 0) {
-            paceVal = "🏆 Met!";
+            paceVal = "Met!";
         } else if (daysLeft == 0) {
             paceVal = booksLeft + " today";
         } else if (daysLeft >= booksLeft) {
@@ -533,7 +533,7 @@ public final class FolioMoreView {
         hdrRow.setPadding(0, 0, 0, dp(d, 3));
 
         TextView hdr = new TextView(ctx);
-        hdr.setText("🎯 " + yrNow + " Reading Goal");
+        hdr.setText("" + yrNow + " Reading Goal");
         hdr.setTextColor(TEXT_PRIMARY);
         hdr.setTextSize(17);
         hdr.setTypeface(Typeface.DEFAULT_BOLD);
@@ -558,14 +558,14 @@ public final class FolioMoreView {
         shareGoalBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 StringBuilder sb = new StringBuilder();
-                sb.append("🎯 ").append(shareYr).append(" Reading Goal (Folio)\n");
+                sb.append("").append(shareYr).append(" Reading Goal (Folio)\n");
                 sb.append("Progress: ").append(shareFin).append(" / ").append(shareCur)
                         .append(" books finished (").append(sharePct).append("%)\n");
                 sb.append("Pace: ").append(daysLeft).append(" days left · ")
                         .append(booksLeft == 0 ? "Goal reached!" : (booksLeft + " to go (" + paceVal + ")"))
                         .append("\n");
                 if (!finishedBooks.isEmpty()) {
-                    sb.append("\n🏆 Completed:\n");
+                    sb.append("\nCompleted:\n");
                     for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : finishedBooks) {
                         String t = (r.title != null && !r.title.isEmpty()) ? r.title : "Untitled";
                         String a = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
@@ -679,7 +679,7 @@ public final class FolioMoreView {
         // Completed Books Trophy Shelf
         if (!finishedBooks.isEmpty()) {
             TextView trHdr = new TextView(ctx);
-            trHdr.setText("🏆 COMPLETED BOOKS (" + finishedBooks.size() + ")");
+            trHdr.setText("COMPLETED BOOKS (" + finishedBooks.size() + ")");
             trHdr.setTextColor(0xFF4DA6FF);
             trHdr.setTextSize(10.5f);
             trHdr.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1255,7 +1255,7 @@ public final class FolioMoreView {
             topRow.setOrientation(LinearLayout.HORIZONTAL);
             topRow.setGravity(Gravity.CENTER_VERTICAL);
 
-            // Dedicated standalone cover thumbnail (FIT_CENTER on dark matte or 📖 placeholder)
+            // Dedicated standalone cover thumbnail (FIT_CENTER on dark matte or placeholder)
             topRow.addView(makeMiniCoverView(ctx, d, rec.kfxPath, 38, 54, 9));
 
             LinearLayout metaCol = new LinearLayout(ctx);
@@ -1581,7 +1581,8 @@ public final class FolioMoreView {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         } else {
             TextView phTv = new TextView(ctx);
-            phTv.setText("📖");
+            phTv.setText("F");
+            phTv.setTextColor(0xFF5F666E);
             phTv.setTextSize(14);
             phTv.setGravity(Gravity.CENTER);
             covFrame.addView(phTv, new FrameLayout.LayoutParams(
@@ -1663,7 +1664,7 @@ public final class FolioMoreView {
         hdrRow.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView titleHdr = new TextView(ctx);
-        titleHdr.setText("📌 Up Next Queue");
+        titleHdr.setText("Up Next Queue");
         titleHdr.setTextColor(TEXT_PRIMARY);
         titleHdr.setTextSize(17);
         titleHdr.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1923,7 +1924,7 @@ public final class FolioMoreView {
         hdrRow.setPadding(0, 0, 0, dp(d, 10));
 
         TextView titleHdr = new TextView(ctx);
-        titleHdr.setText("🎲 Tonight's Pick");
+        titleHdr.setText("Tonight's Pick");
         titleHdr.setTextColor(TEXT_PRIMARY);
         titleHdr.setTextSize(18);
         titleHdr.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1943,7 +1944,7 @@ public final class FolioMoreView {
         hdrRow.addView(poolTag);
         root.addView(hdrRow);
 
-        // Pool Scope Selector Row (Unread / 📌 Queue / All)
+        // Pool Scope Selector Row (Unread / Queue / All)
         final LinearLayout scopeRow = new LinearLayout(ctx);
         scopeRow.setOrientation(LinearLayout.HORIZONTAL);
         scopeRow.setPadding(0, 0, 0, dp(d, 10));
@@ -1969,7 +1970,7 @@ public final class FolioMoreView {
                 }
                 String[] labels = new String[] {
                         "Unread (" + unreadPool.size() + ")",
-                        "📌 Queue (" + queuePool.size() + ")",
+                        "Queue (" + queuePool.size() + ")",
                         "All (" + all.size() + ")"
                 };
                 if (scopeIdx[0] == 0) poolTag.setText(unreadPool.size() + " unread");
@@ -2137,13 +2138,13 @@ public final class FolioMoreView {
                     card.addView(descTv);
                 }
 
-                // Inline 3-Button Action Row: 🎲 Another · 📌 Queue/Queued · ⓘ Details
+                // Inline 3-Button Action Row: Another · Queue/Queued · ⓘ Details
                 LinearLayout actRow = new LinearLayout(ctx);
                 actRow.setOrientation(LinearLayout.HORIZONTAL);
                 actRow.setPadding(0, dp(d, 12), 0, 0);
 
                 TextView rerollBtn = new TextView(ctx);
-                rerollBtn.setText("🎲 Another");
+                rerollBtn.setText("Another");
                 rerollBtn.setTextColor(0xFF4DA6FF);
                 rerollBtn.setTextSize(11.5f);
                 rerollBtn.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2174,7 +2175,7 @@ public final class FolioMoreView {
 
                 final boolean inQueue = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.isInQueue(ctx, rec.kfxPath);
                 TextView queueBtn = new TextView(ctx);
-                queueBtn.setText(inQueue ? "📌 Queued" : "📌 Queue");
+                queueBtn.setText(inQueue ? "Queued" : "Queue");
                 queueBtn.setTextColor(inQueue ? 0xFFECEFF1 : 0xFFCBD5E1);
                 queueBtn.setTextSize(11.5f);
                 queueBtn.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2317,7 +2318,7 @@ public final class FolioMoreView {
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
         final TextView titleTv = new TextView(ctx);
-        titleTv.setText("🔍 Quick Library Search");
+        titleTv.setText("Quick Library Search");
         titleTv.setTextColor(TEXT_PRIMARY);
         titleTv.setTextSize(18);
         titleTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2372,7 +2373,7 @@ public final class FolioMoreView {
 
         // Quick-Filter Scope Pills (All, Reading, Notes, Queue, Shelves)
         final String[] scopeKeys = new String[] { "ALL", "READING", "RATED", "NOTES", "QUEUE", "SHELVES" };
-        final String[] scopeLabels = new String[] { "All", "📖 Reading", "★ Rated", "📝 Notes", "📌 Queue", "🏷 Shelves" };
+        final String[] scopeLabels = new String[] { "All", "Reading", "★ Rated", "Notes", "Queue", "Shelves" };
         final String[] activeScope = new String[] { "ALL" };
 
         android.widget.HorizontalScrollView scopeScroll = new android.widget.HorizontalScrollView(ctx);
@@ -2455,7 +2456,7 @@ public final class FolioMoreView {
                     rRow.setGravity(Gravity.CENTER_VERTICAL);
                     for (final String rq : recents) {
                         TextView chip = new TextView(ctx);
-                        chip.setText("🕒 " + rq);
+                        chip.setText(rq);
                         chip.setTextColor(0xFF94A3B8);
                         chip.setTextSize(11);
                         chip.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
@@ -2520,7 +2521,7 @@ public final class FolioMoreView {
                     shRow.setLayoutParams(shLp);
 
                     TextView shTv = new TextView(ctx);
-                    shTv.setText("🏷 Shelf: " + shName);
+                    shTv.setText("Shelf: " + shName);
                     shTv.setTextColor(0xFFECEFF1);
                     shTv.setTextSize(12.5f);
                     shTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2618,7 +2619,8 @@ public final class FolioMoreView {
                                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                     } else {
                         TextView phTv = new TextView(ctx);
-                        phTv.setText("📖");
+                        phTv.setText("F");
+            phTv.setTextColor(0xFF5F666E);
                         phTv.setTextSize(14);
                         phTv.setGravity(Gravity.CENTER);
                         covFrame.addView(phTv, new FrameLayout.LayoutParams(
@@ -2641,7 +2643,7 @@ public final class FolioMoreView {
 
                     String statusTag = pct >= 100 ? "✓ Finished"
                             : (pct > 0 ? (pct + "% read")
-                            : (com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.isInQueue(ctx, rec.kfxPath) ? "📌 Up Next" : "Unread"));
+                            : (com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.isInQueue(ctx, rec.kfxPath) ? "Up Next" : "Unread"));
                     TextView ba = new TextView(ctx);
                     ba.setText((!aStr.isEmpty() ? aStr : "Unknown Author") + " · " + statusTag);
                     ba.setTextColor(0xFF94A3B8);
@@ -2652,7 +2654,7 @@ public final class FolioMoreView {
 
                     if (!nStr.isEmpty() && (matchedNote || q.isEmpty())) {
                         TextView bn = new TextView(ctx);
-                        bn.setText("📝 " + nStr);
+                        bn.setText("" + nStr);
                         bn.setTextColor(0xFF4DA6FF);
                         bn.setTextSize(10.5f);
                         bn.setSingleLine(true);
@@ -2795,7 +2797,7 @@ public final class FolioMoreView {
         hdrRow.setPadding(0, 0, 0, dp(d, 4));
 
         final TextView titleTv = new TextView(ctx);
-        titleTv.setText("📝 Reading Notes (" + annotated.size() + ")");
+        titleTv.setText("Reading Notes (" + annotated.size() + ")");
         titleTv.setTextColor(TEXT_PRIMARY);
         titleTv.setTextSize(17.5f);
         titleTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2836,7 +2838,7 @@ public final class FolioMoreView {
             actBar.setPadding(0, 0, 0, dp(d, 10));
 
             TextView copyAllPill = new TextView(ctx);
-            copyAllPill.setText("📋 Copy All");
+            copyAllPill.setText("Copy All");
             copyAllPill.setTextColor(ACCENT_AMBER);
             copyAllPill.setTextSize(11.5f);
             copyAllPill.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2897,7 +2899,7 @@ public final class FolioMoreView {
             actBar.addView(shareAllPill);
 
             TextView exportMdPill = new TextView(ctx);
-            exportMdPill.setText("💾 Export .md");
+            exportMdPill.setText("Export .md");
             exportMdPill.setTextColor(0xFF4DA6FF);
             exportMdPill.setTextSize(11.5f);
             exportMdPill.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3038,7 +3040,7 @@ public final class FolioMoreView {
                     StringBuilder subMeta = new StringBuilder();
                     subMeta.append(!authorStr.isEmpty() ? authorStr : "Unknown Author");
                     if (st > 0) subMeta.append(" · ★ ").append(st).append("/5");
-                    if (sh != null && !sh.isEmpty()) subMeta.append(" · 🏷 ").append(sh);
+                    if (sh != null && !sh.isEmpty()) subMeta.append(" · ").append(sh);
                     TextView bSub = new TextView(ctx);
                     bSub.setText(subMeta.toString());
                     bSub.setTextColor(0xFF94A3B8);
@@ -3093,7 +3095,7 @@ public final class FolioMoreView {
                     actRow.setGravity(Gravity.END);
 
                     TextView copyBtn = new TextView(ctx);
-                    copyBtn.setText("📋 Copy");
+                    copyBtn.setText("Copy");
                     copyBtn.setTextColor(0xFF94A3B8);
                     copyBtn.setTextSize(11);
                     copyBtn.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3121,7 +3123,7 @@ public final class FolioMoreView {
                     actRow.addView(copyBtn);
 
                     TextView editBtn = new TextView(ctx);
-                    editBtn.setText("✏️ Edit");
+                    editBtn.setText("Edit");
                     editBtn.setTextColor(ACCENT_TEAL);
                     editBtn.setTextSize(11);
                     editBtn.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3142,8 +3144,8 @@ public final class FolioMoreView {
                     listBox.addView(card);
                 }
                 titleTv.setText(q.isEmpty()
-                        ? "📝 Reading Notes (" + annotated.size() + ")"
-                        : "📝 Reading Notes (" + shown + " of " + annotated.size() + ")");
+                        ? "Reading Notes (" + annotated.size() + ")"
+                        : "Reading Notes (" + shown + " of " + annotated.size() + ")");
                 if (shown == 0) {
                     TextView noMatch = new TextView(ctx);
                     noMatch.setText("No notes match \"" + q + "\".");
@@ -3215,7 +3217,7 @@ public final class FolioMoreView {
         wrap.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
 
         TextView hdr = new TextView(ctx);
-        hdr.setText("📝 Add / Edit Book Note");
+        hdr.setText("Add / Edit Book Note");
         hdr.setTextColor(TEXT_PRIMARY);
         hdr.setTextSize(17);
         hdr.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3303,7 +3305,7 @@ public final class FolioMoreView {
                     row.addView(tc);
 
                     TextView tagTv = new TextView(ctx);
-                    tagTv.setText(hasNote ? "✏️ Edit" : "+ Note");
+                    tagTv.setText(hasNote ? "Edit" : "+ Note");
                     tagTv.setTextColor(hasNote ? ACCENT_AMBER : 0xFF4DA6FF);
                     tagTv.setTextSize(11.5f);
                     tagTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3389,7 +3391,7 @@ public final class FolioMoreView {
         hdrRow.setPadding(0, 0, 0, dp(d, 4));
 
         final TextView titleTv = new TextView(ctx);
-        titleTv.setText("📦 Saved Backups & Exports");
+        titleTv.setText("Saved Backups & Exports");
         titleTv.setTextColor(TEXT_PRIMARY);
         titleTv.setTextSize(17);
         titleTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3529,7 +3531,7 @@ public final class FolioMoreView {
                     card.addView(mc);
 
                     TextView viewBtn = new TextView(ctx);
-                    viewBtn.setText("👁");
+                    viewBtn.setText("View");
                     viewBtn.setTextColor(ACCENT_TEAL);
                     viewBtn.setTextSize(13);
                     viewBtn.setPadding(dp(d, 8), dp(d, 5), dp(d, 8), dp(d, 5));
@@ -3709,7 +3711,7 @@ public final class FolioMoreView {
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
         TextView titleTv = new TextView(ctx);
-        titleTv.setText("💾 Storage & Duplicates");
+        titleTv.setText("Storage & Duplicates");
         titleTv.setTextColor(TEXT_PRIMARY);
         titleTv.setTextSize(18);
         titleTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3977,7 +3979,7 @@ public final class FolioMoreView {
         hdrRow.setPadding(0, 0, 0, dp(d, 4));
 
         TextView titleTv = new TextView(ctx);
-        titleTv.setText("🏷 Manage Shelves");
+        titleTv.setText("Manage Shelves");
         titleTv.setTextColor(TEXT_PRIMARY);
         titleTv.setTextSize(17.5f);
         titleTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -4108,7 +4110,7 @@ public final class FolioMoreView {
 
                 // Rename pill
                 TextView renBtn = new TextView(ctx);
-                renBtn.setText("✏️");
+                renBtn.setText("Edit");
                 renBtn.setTextColor(ACCENT_TEAL);
                 renBtn.setTextSize(12);
                 renBtn.setPadding(dp(d, 8), dp(d, 5), dp(d, 8), dp(d, 5));
@@ -4212,7 +4214,7 @@ public final class FolioMoreView {
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
 
         final TextView hdr = new TextView(ctx);
-        hdr.setText(isEditExisting ? ("🏷 Books in " + initialShelfName) : "🏷 Create New Shelf");
+        hdr.setText(isEditExisting ? ("Books in " + initialShelfName) : "Create New Shelf");
         hdr.setTextColor(TEXT_PRIMARY);
         hdr.setTextSize(17);
         hdr.setTypeface(Typeface.DEFAULT_BOLD);
@@ -4605,7 +4607,7 @@ public final class FolioMoreView {
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
         TextView titleTv = new TextView(ctx);
-        titleTv.setText("📊 Library Insights");
+        titleTv.setText("Library Insights");
         titleTv.setTextColor(TEXT_PRIMARY);
         titleTv.setTextSize(18);
         titleTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -4856,7 +4858,7 @@ public final class FolioMoreView {
 
             int maxS = Math.max(1, shelfFreq.get(topShelves.get(0)));
             for (final String sh : topShelves) {
-                content.addView(makeInsightBarRow(ctx, d, "🏷 " + sh, shelfFreq.get(sh), maxS, 0xFF4DA6FF,
+                content.addView(makeInsightBarRow(ctx, d, "" + sh, shelfFreq.get(sh), maxS, 0xFF4DA6FF,
                         new View.OnClickListener() {
                             @Override public void onClick(View v) {
                                 if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
@@ -4884,7 +4886,7 @@ public final class FolioMoreView {
                 final String eraName = ee.getKey();
                 int eCnt = ee.getValue();
                 if (eCnt <= 0) continue;
-                content.addView(makeInsightBarRow(ctx, d, "📅 " + eraName, eCnt, maxE, 0xFF4DA6FF,
+                content.addView(makeInsightBarRow(ctx, d, "" + eraName, eCnt, maxE, 0xFF4DA6FF,
                         new View.OnClickListener() {
                             @Override public void onClick(View v) {
                                 if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
@@ -4959,7 +4961,7 @@ public final class FolioMoreView {
         int goalPct = Math.min(100, Math.round((finCnt * 100f) / Math.max(1, goalTgt)));
         int yrNow = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
         StringBuilder snap = new StringBuilder();
-        snap.append("📊 Folio Library Insights\n");
+        snap.append("Folio Library Insights\n");
         snap.append("Books: ").append(all.size()).append(" cataloged · ")
             .append(readCnt).append(" reading · ").append(finCnt).append(" finished · ")
             .append(unrdCnt).append(" unread\n");
@@ -5142,7 +5144,7 @@ public final class FolioMoreView {
         topExportRow.setPadding(0, 0, 0, dp(d, 10));
 
         final TextView scopeBtn = new TextView(ctx);
-        scopeBtn.setText("✨ Scope: Curated Only");
+        scopeBtn.setText("Scope: Curated Only");
         scopeBtn.setTextColor(0xFF4DA6FF);
         scopeBtn.setTextSize(11);
         scopeBtn.setTypeface(Typeface.DEFAULT_BOLD);
@@ -5159,7 +5161,7 @@ public final class FolioMoreView {
         topExportRow.addView(spacer);
 
         TextView csvBtn = new TextView(ctx);
-        csvBtn.setText("📊 CSV");
+        csvBtn.setText("CSV");
         csvBtn.setTextColor(0xFF4DA6FF);
         csvBtn.setTextSize(11);
         csvBtn.setTypeface(Typeface.DEFAULT_BOLD);
@@ -5183,7 +5185,7 @@ public final class FolioMoreView {
         topExportRow.addView(csvBtn);
 
         TextView htmlBtn = new TextView(ctx);
-        htmlBtn.setText("🌐 HTML");
+        htmlBtn.setText("HTML");
         htmlBtn.setTextColor(0xFF4DA6FF);
         htmlBtn.setTextSize(11);
         htmlBtn.setTypeface(Typeface.DEFAULT_BOLD);
@@ -5236,12 +5238,12 @@ public final class FolioMoreView {
                 mdTv.setText(currentMd[0]);
                 if (saved != null) pathTv.setText("Saved: " + saved.getAbsolutePath());
                 if (curatedOnly[0]) {
-                    scopeBtn.setText("✨ Scope: Curated Only");
+                    scopeBtn.setText("Scope: Curated Only");
                     scopeBtn.setTextColor(0xFF4DA6FF);
                     scopeBg.setColor(0xFF162330);
                     scopeBg.setStroke(dp(d, 1), 0x884DA6FF);
                 } else {
-                    scopeBtn.setText("📚 Scope: All Books");
+                    scopeBtn.setText("Scope: All Books");
                     scopeBtn.setTextColor(0xFF4DA6FF);
                     scopeBg.setColor(0xFF162330);
                     scopeBg.setStroke(dp(d, 1), 0x884DA6FF);
@@ -5341,7 +5343,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v12.6 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v12.7 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
