@@ -1,15 +1,11 @@
 {
-  "round": 128,
-  "version": "Folio v12.8 KFX",
-  "codename": "Web Browser Recent Downloads History Drawer",
+  "round": 129,
+  "version": "Folio v12.9 KFX",
+  "codename": "Kindle-Native Book Details, Reading-Time Estimate & About Folio Theme",
   "target_device": "Samsung Galaxy M30 (32001776e8e82623)",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
-    {
-      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java"
-    },
     {
       "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
@@ -19,9 +15,9 @@
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.8_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.9_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r128_web_browser_downloads_bar.png",
-    "verify_r128_web_downloads_drawer.png"
+    "verify_r129_book_details_kindle.png",
+    "verify_r129_about_v129.png"
   ]
 }

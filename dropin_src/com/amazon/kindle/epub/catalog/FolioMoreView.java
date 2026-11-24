@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v12.8 KFX");
+        badgeTv.setText("v12.9 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(TEXT_MUTED);
         badgeTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
@@ -5343,7 +5343,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v12.8 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v12.9 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
@@ -5388,7 +5388,7 @@ public final class FolioMoreView {
         sb.append("• Temp Open-Once Cache: ").append(String.format("%.1f", tempCacheMb)).append(" MB\n");
         sb.append("• Privacy Mode: Local-First (Zero Amazon Telemetry)\n");
 
-        new AlertDialog.Builder(ctx)
+        AlertDialog aboutDlg = new AlertDialog.Builder(ctx)
                 .setTitle("About Folio")
                 .setMessage(sb.toString())
                 .setPositiveButton("Close", null)
@@ -5404,6 +5404,7 @@ public final class FolioMoreView {
                     }
                 })
                 .show();
+        FolioTheme.applyToDialog(ctx, aboutDlg);
     }
 
     private static long dirSizeBytes(File dir) {

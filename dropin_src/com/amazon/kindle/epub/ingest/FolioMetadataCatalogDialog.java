@@ -1443,7 +1443,11 @@ public final class FolioMetadataCatalogDialog {
                 String sizeStr = bytes >= 1024L * 1024L
                         ? String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
                         : Math.max(1L, bytes / 1024L) + " KB";
-                details.append("Format: Enhanced KFX · ").append(sizeStr).append("\n");
+                int estMins = Math.max(15, Math.min(2400, (int) Math.round((bytes / 1024.0) * 0.34)));
+                String readEst = estMins >= 60
+                        ? ("~" + (estMins / 60) + "h " + (estMins % 60) + "m read")
+                        : ("~" + estMins + "m read");
+                details.append("Format: Enhanced KFX · ").append(sizeStr).append(" · ").append(readEst).append("\n");
             }
         }
 
@@ -1961,6 +1965,7 @@ public final class FolioMetadataCatalogDialog {
                         showEditMetadataDialog(ctx, rec, onMetadataEdited))
                 .setNegativeButton("Close", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, detailDlgRef[0]);
     }
 
     private static void showCoverLightbox(final Context ctx, final FolioMetadataDb.BookRecord rec) {
