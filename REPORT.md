@@ -1,7 +1,7 @@
-# Round 116 Deliverables Report — Folio v11.6 KFX (Manage Shelves Studio: + New Shelf Picker & Cover Previews)
+# Round 117 Deliverables Report — Folio v11.7 KFX (Reading Goal Pace Telemetry & Share Challenge)
 **Environment**: Samsung Galaxy M32 (`32001776e8e82623`), TrebleDroid Android 13 (arm64-v8a).  
 **Stock Kindle Invariant**: Package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Folio Version**: `Folio v11.6 KFX (Enhanced Typesetting)` installed on device at `2026-11-24 03:45:17`.
+**Folio Version**: `Folio v11.7 KFX (Enhanced Typesetting)` installed on device at `2026-11-24 03:54:57`.
 
 ---
 
@@ -13,36 +13,35 @@
 ## 1. Task A: Source Integration & Release Staging
 1. **Drop-In Source Integration (`FolioMoreView.java`)**:
    - `dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java` -> `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java`:
-     - **`+ New Shelf` Header Pill & Multi-Book Picker (`showShelfBookPickerDialog`)**: Added a soft-violet `+ New Shelf` pill in the `🏷 Manage Shelves` header. Tapping it opens an interactive shelf builder with:
-       * Quick preset chips (`Philosophy`, `Fiction`, `Sci-Fi`, `History`, `Study`).
-       * Live book filtering bar and multi-select checkboxes (`☑`/`☐`) allowing instant book assignment in one modal flow.
-       * Atomic creation and persistence into `/sdcard/kindle/metadata/shelves.json`.
-     - **Shelf Cover Thumbnails & `+ Books` Inline Editor**:
-       * Each shelf card renders a standalone `.cover.jpg` bitmap thumbnail of its lead book via `makeMiniCoverView`.
-       * Added compact action pills: emerald `+ Books` (add/remove books for that specific shelf), `✏️` (rename shelf), and `✕` (delete shelf).
-     - **Reading Notes Footer Cleanup**: Cleaned up the redundant AlertDialog `Copy All` footer button now that the 3-pill top toolbar (`📋 Copy All`, `↗ Share`, `💾 Export .md`) is live.
-     - **Version Bump**: Updated Control Center header badge and `About Folio` dialog string to `Folio v11.6 KFX (Enhanced Typesetting)`.
+     - **3-Tile Reading Pace Telemetry Strip (`showReadingGoalDialog`)**: Added an interactive pace dashboard right below the annual progress bar showing:
+       * **`DAYS LEFT`** (sky-blue `#38BDF8`): Days remaining in the active year computed dynamically from calendar telemetry.
+       * **`TO GO`** (amber `#F59E0B` or emerald `#34D399` when met): Number of books left to reach target (`curGoal - finishedCount`).
+       * **`NEEDED PACE`** (violet `#C084FC`): Calculated required pace (e.g. `1 / 9d` or `🏆 Met!`).
+     - **`↗ Share` Reading Challenge Action**: Added a soft sky-blue `↗ Share` button in the header right beside `🎯 2026 Reading Goal`. Dispatches Android's native `Intent.ACTION_SEND` with reading goal progress %, days remaining, required pace, and completed books list.
+     - **Unified Trophy Shelf Covers**: Upgraded Completed Books Trophy Shelf to use `makeMiniCoverView(...)` with rounded `#0D1017` border + `📖` fallback.
+     - **Compiler Variable Shadowing Fix**: Resolved variable name clash on `prLp` (reassigned preset row layout params to `presetLp`).
+     - **Version Bump**: Updated Control Center header badge and `About Folio` dialog string to `Folio v11.7 KFX (Enhanced Typesetting)`.
      - Invariants: `MetadataEnricher.java` and `OpenCatalogView.java` strictly preserved and untouched.
 
 2. **Compilation, Packaging & Deployment**:
-   - Recompiled `classes9.dex` (401,360 bytes) via `d8`.
+   - Recompiled `classes9.dex` (404,120 bytes) via `d8`.
    - Rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, and signed with `apksigner`.
-   - Streamed APK install to physical Samsung Galaxy M32 (`lastUpdateTime=2026-11-24 03:45:17`).
-   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v11.6_kfx/base.apk` (132 MB).
+   - Streamed APK install to physical Samsung Galaxy M32 (`lastUpdateTime=2026-11-24 03:54:57`).
+   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v11.7_kfx/base.apk` (132 MB).
 
 ---
 
 ## 2. Task B: Hardware Verification on Physical Galaxy M32
 Verified on physical Samsung Galaxy M32 hardware:
 
-1. **`verify_r116_shelves_studio.png` (195,178 bytes)**:
-   - Captured **🏷 Manage Shelves Studio** opened from Control Center.
-   - Shows the `+ New Shelf` header pill alongside `🏷 Manage Shelves (2)`.
-   - Shows existing shelf `Classics (1)` with book cover thumbnail and action pills (`+ Books`, `✏️`, `✕`).
-   - Shows newly created shelf `Philosophy (1)` populated with *Nicomachean Ethics* (Aristotle) created via the new preset picker.
-2. **`verify_r116_about_v116.png` (354,642 bytes)**:
+1. **`verify_r117_reading_goal_pace.png` (235,328 bytes)**:
+   - Captured **🎯 2026 Reading Goal** modal opened from Control Center.
+   - Shows `🎯 2026 Reading Goal` header alongside the new `↗ Share` action pill.
+   - Shows the 3-tile Reading Pace Telemetry strip: `DAYS LEFT`, `TO GO`, `NEEDED PACE`.
+   - Shows the `🏆 COMPLETED BOOKS (1)` Trophy Shelf with date stamp and cover preview.
+2. **`verify_r117_about_v117.png` (353,990 bytes)**:
    - About Folio dialog confirming:
-     * `Version: Folio v11.6 KFX (Enhanced Typesetting)`
+     * `Version: Folio v11.7 KFX (Enhanced Typesetting)`
      * `Hardware: TrebleDroid with GApps · Android 13 (arm64-v8a)`
      * `Indexed Library Books: 34 · Enriched Metadata Records: 32`
      * `Reading Progress: 5 in progress · 1 finished`
@@ -55,9 +54,9 @@ Verified on physical Samsung Galaxy M32 hardware:
 ---
 
 ## 3. Package Verification Artifacts
-- Archive: `antig_to_gemini_neon_clunky_report116.zip`
+- Archive: `antig_to_gemini_neon_clunky_report117.zip`
   * `REPORT.md`
-  * `INSTRUCTIONS_ROUND_116.md`
+  * `INSTRUCTIONS_ROUND_117.md`
   * `protocol.json`
-  * `verify_r116_shelves_studio.png`
-  * `verify_r116_about_v116.png`
+  * `verify_r117_reading_goal_pace.png`
+  * `verify_r117_about_v117.png`

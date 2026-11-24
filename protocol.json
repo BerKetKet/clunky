@@ -1,7 +1,7 @@
 {
-  "round": 116,
-  "version": "Folio v11.6 KFX",
-  "codename": "Manage Shelves Studio (+ New Shelf Picker & Cover Previews)",
+  "round": 117,
+  "version": "Folio v11.7 KFX",
+  "codename": "Reading Goal Pace Telemetry & Share Challenge",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
@@ -10,9 +10,9 @@
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.6_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.7_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r116_shelves_studio.png",
-    "verify_r116_about_v116.png"
+    "verify_r117_reading_goal_pace.png",
+    "verify_r117_about_v117.png"
   ]
 }

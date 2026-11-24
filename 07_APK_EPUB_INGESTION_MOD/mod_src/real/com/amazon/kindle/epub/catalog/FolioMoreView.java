@@ -123,7 +123,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v11.6 KFX");
+        badgeTv.setText("Folio v11.7 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -596,13 +596,85 @@ public final class FolioMoreView {
         wrap.setBackgroundColor(0xFF11131A);
         wrap.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
+        java.util.Calendar calNow = java.util.Calendar.getInstance();
+        int dayOfYr = calNow.get(java.util.Calendar.DAY_OF_YEAR);
+        int daysInYr = calNow.getActualMaximum(java.util.Calendar.DAY_OF_YEAR);
+        final int daysLeft = Math.max(0, daysInYr - dayOfYr);
+        final int booksLeft = Math.max(0, cur - finCount);
+        final String paceVal;
+        if (booksLeft == 0) {
+            paceVal = "🏆 Met!";
+        } else if (daysLeft == 0) {
+            paceVal = booksLeft + " today";
+        } else if (daysLeft >= booksLeft) {
+            int dPerBook = Math.max(1, Math.round((float) daysLeft / (float) booksLeft));
+            paceVal = "1 / " + dPerBook + "d";
+        } else {
+            paceVal = String.format(java.util.Locale.US, "%.1f/wk", (booksLeft * 7.0) / Math.max(1, daysLeft));
+        }
+
+        LinearLayout hdrRow = new LinearLayout(ctx);
+        hdrRow.setOrientation(LinearLayout.HORIZONTAL);
+        hdrRow.setGravity(Gravity.CENTER_VERTICAL);
+        hdrRow.setPadding(0, 0, 0, dp(d, 3));
+
         TextView hdr = new TextView(ctx);
         hdr.setText("🎯 " + yrNow + " Reading Goal");
         hdr.setTextColor(TEXT_PRIMARY);
         hdr.setTextSize(17);
         hdr.setTypeface(Typeface.DEFAULT_BOLD);
-        hdr.setPadding(0, 0, 0, dp(d, 3));
-        wrap.addView(hdr);
+        hdr.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        hdrRow.addView(hdr);
+
+        final int shareFin = finCount;
+        final int shareCur = cur;
+        final int sharePct = pct;
+        final int shareYr = yrNow;
+        TextView shareGoalBtn = new TextView(ctx);
+        shareGoalBtn.setText("↗ Share");
+        shareGoalBtn.setTextColor(ACCENT_TEAL);
+        shareGoalBtn.setTextSize(11.5f);
+        shareGoalBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        shareGoalBtn.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
+        GradientDrawable sgBg = new GradientDrawable();
+        sgBg.setColor(0xFF152638);
+        sgBg.setCornerRadius(dp(d, 9));
+        sgBg.setStroke(dp(d, 1), 0xFF1E4E75);
+        shareGoalBtn.setBackground(sgBg);
+        shareGoalBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                StringBuilder sb = new StringBuilder();
+                sb.append("🎯 ").append(shareYr).append(" Reading Goal (Folio)\n");
+                sb.append("Progress: ").append(shareFin).append(" / ").append(shareCur)
+                        .append(" books finished (").append(sharePct).append("%)\n");
+                sb.append("Pace: ").append(daysLeft).append(" days left · ")
+                        .append(booksLeft == 0 ? "Goal reached!" : (booksLeft + " to go (" + paceVal + ")"))
+                        .append("\n");
+                if (!finishedBooks.isEmpty()) {
+                    sb.append("\n🏆 Completed:\n");
+                    for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : finishedBooks) {
+                        String t = (r.title != null && !r.title.isEmpty()) ? r.title : "Untitled";
+                        String a = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(r.author);
+                        String dt = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getFinishedDate(ctx, r.kfxPath);
+                        sb.append("• ").append(t);
+                        if (!a.isEmpty()) sb.append(" — ").append(a);
+                        if (!dt.isEmpty()) sb.append(" (").append(dt).append(")");
+                        sb.append("\n");
+                    }
+                }
+                try {
+                    android.content.Intent si = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                    si.setType("text/plain");
+                    si.putExtra(android.content.Intent.EXTRA_SUBJECT, shareYr + " Reading Goal");
+                    si.putExtra(android.content.Intent.EXTRA_TEXT, sb.toString().trim());
+                    ctx.startActivity(android.content.Intent.createChooser(si, "Share Reading Goal"));
+                } catch (Throwable t) {
+                    Toast.makeText(ctx, "Unable to open share sheet", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        hdrRow.addView(shareGoalBtn);
+        wrap.addView(hdrRow);
 
         TextView progSub = new TextView(ctx);
         progSub.setText(finCount + " of " + cur + " books finished (" + pct + "%)");
@@ -635,6 +707,58 @@ public final class FolioMoreView {
         pRest.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f - frac));
         pTrack.addView(pRest);
         wrap.addView(pTrack);
+
+        // 3-Tile Reading Pace Telemetry Strip
+        LinearLayout paceRow = new LinearLayout(ctx);
+        paceRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams prLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        prLp.bottomMargin = dp(d, 14);
+        paceRow.setLayoutParams(prLp);
+
+        String[] pVals = new String[] {
+                String.valueOf(daysLeft),
+                booksLeft == 0 ? "✓ 0" : String.valueOf(booksLeft),
+                paceVal
+        };
+        String[] pLbls = new String[] { "DAYS LEFT", "TO GO", "NEEDED PACE" };
+        int[] pCols = new int[] { ACCENT_TEAL, booksLeft == 0 ? 0xFF34D399 : ACCENT_AMBER, 0xFFC084FC };
+        int[] pBgs = new int[] { 0xFF132233, booksLeft == 0 ? 0xFF102A22 : 0xFF281F10, 0xFF251836 };
+        int[] pBrd = new int[] { 0xFF1E4466, booksLeft == 0 ? 0xFF1E6B52 : 0xFF6B4E16, 0xFF5B21B6 };
+
+        for (int ti = 0; ti < 3; ti++) {
+            LinearLayout tile = new LinearLayout(ctx);
+            tile.setOrientation(LinearLayout.VERTICAL);
+            tile.setGravity(Gravity.CENTER);
+            tile.setPadding(dp(d, 8), dp(d, 8), dp(d, 8), dp(d, 8));
+            GradientDrawable tBg = new GradientDrawable();
+            tBg.setColor(pBgs[ti]);
+            tBg.setCornerRadius(dp(d, 9));
+            tBg.setStroke(dp(d, 1), pBrd[ti]);
+            tile.setBackground(tBg);
+            LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            if (ti < 2) tLp.rightMargin = dp(d, 7);
+            tile.setLayoutParams(tLp);
+
+            TextView vTv = new TextView(ctx);
+            vTv.setText(pVals[ti]);
+            vTv.setTextColor(pCols[ti]);
+            vTv.setTextSize(15);
+            vTv.setTypeface(Typeface.DEFAULT_BOLD);
+            vTv.setSingleLine(true);
+            tile.addView(vTv);
+
+            TextView lTv = new TextView(ctx);
+            lTv.setText(pLbls[ti]);
+            lTv.setTextColor(0xFF94A3B8);
+            lTv.setTextSize(9.5f);
+            lTv.setTypeface(Typeface.DEFAULT_BOLD);
+            lTv.setPadding(0, dp(d, 2), 0, 0);
+            tile.addView(lTv);
+
+            paceRow.addView(tile);
+        }
+        wrap.addView(paceRow);
 
         final AlertDialog[] goalDlgRef = new AlertDialog[1];
 
@@ -672,15 +796,7 @@ public final class FolioMoreView {
                 if (i < limit - 1) cLp.rightMargin = dp(d, 8);
                 card.setLayoutParams(cLp);
 
-                android.widget.ImageView covIv = new android.widget.ImageView(ctx);
-                covIv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-                covIv.setBackgroundColor(0xFF0D1017);
-                LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(d, 34), dp(d, 50));
-                ivLp.rightMargin = dp(d, 9);
-                covIv.setLayoutParams(ivLp);
-                android.graphics.Bitmap bmp = decodeMiniCover(rec.kfxPath, dp(d, 42));
-                if (bmp != null) covIv.setImageBitmap(bmp);
-                card.addView(covIv);
+                card.addView(makeMiniCoverView(ctx, d, rec.kfxPath, 34, 50, 9));
 
                 LinearLayout mc = new LinearLayout(ctx);
                 mc.setOrientation(LinearLayout.VERTICAL);
@@ -751,10 +867,10 @@ public final class FolioMoreView {
 
         LinearLayout presetRow = new LinearLayout(ctx);
         presetRow.setOrientation(LinearLayout.HORIZONTAL);
-        LinearLayout.LayoutParams prLp = new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams presetLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        prLp.bottomMargin = dp(d, 10);
-        presetRow.setLayoutParams(prLp);
+        presetLp.bottomMargin = dp(d, 10);
+        presetRow.setLayoutParams(presetLp);
 
         int[] presets = new int[] { 5, 12, 24, 36, 52 };
         for (final int pv : presets) {
@@ -4955,7 +5071,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v11.6 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v11.7 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
