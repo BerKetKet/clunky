@@ -1,8 +1,7 @@
 {
-  "round": 120,
-  "version": "Folio v12.0 KFX",
-  "milestone": true,
-  "codename": "Web Book Browser Bookmarks Bar & Live EPUB Download Progress",
+  "round": 121,
+  "version": "Folio v12.1 KFX",
+  "codename": "Web Browser Go-to-URL Bar & 1-Tap EPUB Page Scanner",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
@@ -15,9 +14,9 @@
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.0_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.1_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r120_web_browser_bookmarks.png",
-    "verify_r120_about_v120.png"
+    "verify_r121_web_browser_epub_scanner.png",
+    "verify_r121_about_v121.png"
   ]
 }

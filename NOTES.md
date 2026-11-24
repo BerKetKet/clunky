@@ -1,6 +1,26 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.1 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 121 complete:
+  1. **Web Browser Go-to-URL Bar & 1-Tap EPUB Page Scanner (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioWebBrowserDialog.java` and `FolioMoreView.java`.
+     - Built 1-tap emerald `⬇ EPUBs` page scanner pill in Quick Bookmarks Bar directly beside `+ ★`. When tapped, it queries active WebView DOM for all `.epub`/`/epub` links and displays them in a clean dark picker sheet (`📥 EPUB Links Found (N)`), enabling 1-tap download, native KFX conversion, metadata enrichment, and library addition.
+     - Built quick `🔗 Go to URL` navigation modal (`showGoToUrlDialog`) when tapping the address pill in the top bar for fast one-off navigation (`Go`, `Set Home`, `Cancel`) without altering default homepage setting.
+     - Bumped badge and About Folio string to `Folio v12.1 KFX (Enhanced Typesetting)` and added engine feature bullet.
+  2. **Visual Verification & Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r121_web_browser_epub_scanner.png` (204 KB) — `🌐 Web Book Browser` modal showing navigation bar and upgraded Quick Bookmarks Bar (`+ ★`, emerald `⬇ EPUBs` scanner, `★ Standard Ebooks`, `★ Gutenberg`) above active WebView.
+       * `verify_r121_about_v121.png` (370 KB) — About Folio modal showing `Version: Folio v12.1 KFX (Enhanced Typesetting)` and live library stats.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v12.1 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v12.1_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 121)
+1. `verify_r121_web_browser_epub_scanner.png`: Web Book Browser with Quick Bookmarks Bar and emerald `⬇ EPUBs` scanner pill.
+2. `verify_r121_about_v121.png`: About Folio modal confirming `Version: Folio v12.1 KFX (Enhanced Typesetting)`.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v12.1 KFX deployed (`lastUpdateTime=2026-11-24 04:26:04`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Milestone Folio v12.0 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 120 complete:
   1. **Web Book Browser Bookmarks Bar & Live EPUB Download Progress (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioWebBrowserDialog.java` and `FolioMoreView.java`.

@@ -518,6 +518,28 @@ public final class FolioWebBrowserDialog {
                 });
                 bmRow.addView(pinBtn);
 
+                TextView scanBtn = new TextView(ctx);
+                scanBtn.setText("⬇ EPUBs");
+                scanBtn.setTextColor(0xFF34D399);
+                scanBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                scanBtn.setTypeface(Typeface.DEFAULT_BOLD);
+                scanBtn.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
+                GradientDrawable sbBg = new GradientDrawable();
+                sbBg.setColor(0xFF0F2A22);
+                sbBg.setCornerRadius(dp(d, 8));
+                sbBg.setStroke(dp(d, 1), 0xFF1E6B52);
+                scanBtn.setBackground(sbBg);
+                LinearLayout.LayoutParams sbLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                sbLp.rightMargin = dp(d, 6);
+                scanBtn.setLayoutParams(sbLp);
+                scanBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        scanPageForEpubLinks(ctx, webView, mainHandler, statusBanner, statusTv, openNowBtn, dlgRef, onImported);
+                    }
+                });
+                bmRow.addView(scanBtn);
+
                 for (int i = 0; i < bms.size(); i++) {
                     final int idx = i;
                     final String[] item = bms.get(i);
@@ -584,7 +606,11 @@ public final class FolioWebBrowserDialog {
             }
         };
         btnSettings.setOnClickListener(openSettingsClick);
-        urlChip.setOnClickListener(openSettingsClick);
+        urlChip.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                showGoToUrlDialog(ctx, webView);
+            }
+        });
 
         final AlertDialog dlg = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setView(root)
@@ -625,6 +651,166 @@ public final class FolioWebBrowserDialog {
         }
 
         webView.loadUrl(getHomeUrl(ctx));
+    }
+
+    private static void showGoToUrlDialog(final Context ctx, final WebView webView) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setBackgroundColor(0xFF11131A);
+        box.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
+
+        TextView hdr = new TextView(ctx);
+        hdr.setText("🔗 Go to URL");
+        hdr.setTextColor(0xFFFFFFFF);
+        hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
+        hdr.setTypeface(Typeface.DEFAULT_BOLD);
+        hdr.setPadding(0, 0, 0, dp(d, 8));
+        box.addView(hdr);
+
+        final EditText et = new EditText(ctx);
+        String cur = webView.getUrl();
+        et.setText(cur != null && !cur.isEmpty() ? cur : getHomeUrl(ctx));
+        et.setSelectAllOnFocus(true);
+        et.setHint("https://...");
+        et.setHintTextColor(0xFF64748B);
+        et.setTextColor(0xFFFFFFFF);
+        et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        et.setSingleLine(true);
+        et.setPadding(dp(d, 12), dp(d, 9), dp(d, 12), dp(d, 9));
+        GradientDrawable eBg = new GradientDrawable();
+        eBg.setColor(0xFF1A1F2E);
+        eBg.setCornerRadius(dp(d, 9));
+        eBg.setStroke(dp(d, 1), 0xFF334155);
+        et.setBackground(eBg);
+        box.addView(et);
+
+        new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setView(box)
+                .setPositiveButton("Go", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        String target = normalizeUrl(et.getText().toString());
+                        webView.loadUrl(target);
+                    }
+                })
+                .setNeutralButton("Set Home", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        String target = normalizeUrl(et.getText().toString());
+                        setHomeUrl(ctx, target);
+                        webView.loadUrl(target);
+                        Toast.makeText(ctx, "Homepage updated to " + getHomeHostLabel(ctx), Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private static void scanPageForEpubLinks(
+            final Context ctx, final WebView webView, final Handler mainHandler,
+            final LinearLayout statusBanner, final TextView statusTv,
+            final TextView openNowBtn, final AlertDialog[] dlgRef, final Runnable onImported) {
+        String js = "(function(){try{"
+                + "var out=[];var seen={};var as=document.querySelectorAll('a[href]');"
+                + "for(var i=0;i<as.length;i++){"
+                + "var h=as[i].href||'';var hl=h.toLowerCase();"
+                + "if((hl.indexOf('.epub')>=0||hl.indexOf('/epub')>=0)&&!seen[h]){"
+                + "seen[h]=1;var t=(as[i].innerText||as[i].textContent||'').replace(/\\s+/g,' ').trim();"
+                + "if(!t)t=h.substring(h.lastIndexOf('/')+1);"
+                + "out.push(t.replace(/\\|/g,' ')+'|'+h);"
+                + "if(out.length>=25)break;}}"
+                + "return out.join('\\n');}catch(e){return '';}})();";
+        webView.evaluateJavascript(js, new android.webkit.ValueCallback<String>() {
+            @Override public void onReceiveValue(String raw) {
+                if (raw == null || raw.equals("null") || raw.equals("\"\"")) {
+                    Toast.makeText(ctx, "No EPUB links found on this page — open a book page first", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                String unq = raw;
+                if (unq.startsWith("\"") && unq.endsWith("\"") && unq.length() >= 2) {
+                    unq = unq.substring(1, unq.length() - 1);
+                }
+                unq = unq.replace("\\n", "\n").replace("\\\"", "\"").replace("\\\\", "\\");
+                final java.util.List<String[]> found = new java.util.ArrayList<>();
+                for (String line : unq.split("\n")) {
+                    int sep = line.indexOf('|');
+                    if (sep > 0 && sep + 1 < line.length()) {
+                        found.add(new String[] { line.substring(0, sep).trim(), line.substring(sep + 1).trim() });
+                    }
+                }
+                if (found.isEmpty()) {
+                    Toast.makeText(ctx, "No EPUB links found on this page — open a book page first", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                final float d = ctx.getResources().getDisplayMetrics().density;
+                LinearLayout wrap = new LinearLayout(ctx);
+                wrap.setOrientation(LinearLayout.VERTICAL);
+                wrap.setBackgroundColor(0xFF11131A);
+                wrap.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
+
+                TextView hdr = new TextView(ctx);
+                hdr.setText("📥 EPUB Links Found (" + found.size() + ")");
+                hdr.setTextColor(0xFFFFFFFF);
+                hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.5f);
+                hdr.setTypeface(Typeface.DEFAULT_BOLD);
+                hdr.setPadding(0, 0, 0, dp(d, 10));
+                wrap.addView(hdr);
+
+                android.widget.ScrollView sv = new android.widget.ScrollView(ctx);
+                sv.setLayoutParams(new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, dp(d, Math.min(300, Math.max(90, found.size() * 62)))));
+                LinearLayout list = new LinearLayout(ctx);
+                list.setOrientation(LinearLayout.VERTICAL);
+                sv.addView(list);
+                wrap.addView(sv);
+
+                final AlertDialog[] pickDlg = new AlertDialog[1];
+                for (final String[] item : found) {
+                    LinearLayout row = new LinearLayout(ctx);
+                    row.setOrientation(LinearLayout.VERTICAL);
+                    row.setPadding(dp(d, 11), dp(d, 9), dp(d, 11), dp(d, 9));
+                    GradientDrawable rBg = new GradientDrawable();
+                    rBg.setColor(0xFF161923);
+                    rBg.setCornerRadius(dp(d, 9));
+                    rBg.setStroke(dp(d, 1), 0xFF1E6B52);
+                    row.setBackground(rBg);
+                    LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    rLp.bottomMargin = dp(d, 7);
+                    row.setLayoutParams(rLp);
+
+                    TextView tTv = new TextView(ctx);
+                    tTv.setText("⬇ " + item[0]);
+                    tTv.setTextColor(0xFF34D399);
+                    tTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+                    tTv.setTypeface(Typeface.DEFAULT_BOLD);
+                    tTv.setSingleLine(true);
+                    tTv.setEllipsize(TextUtils.TruncateAt.END);
+                    row.addView(tTv);
+
+                    TextView uTv = new TextView(ctx);
+                    uTv.setText(item[1]);
+                    uTv.setTextColor(0xFF94A3B8);
+                    uTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+                    uTv.setSingleLine(true);
+                    uTv.setEllipsize(TextUtils.TruncateAt.END);
+                    row.addView(uTv);
+
+                    row.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            if (pickDlg[0] != null) pickDlg[0].dismiss();
+                            downloadAndIngestEpub(ctx, item[1], webView.getSettings().getUserAgentString(),
+                                    null, "application/epub+zip", mainHandler, statusBanner, statusTv, openNowBtn, dlgRef, onImported);
+                        }
+                    });
+                    list.addView(row);
+                }
+
+                pickDlg[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                        .setView(wrap)
+                        .setNegativeButton("Close", null)
+                        .show();
+            }
+        });
     }
 
     private static boolean isLikelyEpubUrl(String url) {
