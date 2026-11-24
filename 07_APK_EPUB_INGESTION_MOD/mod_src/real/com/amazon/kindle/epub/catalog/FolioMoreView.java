@@ -59,8 +59,18 @@ public final class FolioMoreView {
     public static View build(final Context ctx) {
         final float d = ctx.getResources().getDisplayMetrics().density;
 
+        final int dynBg = FolioTheme.bgCanvas(ctx);
+        final int dynCard = FolioTheme.bgSurface(ctx);
+        final int dynBorder = FolioTheme.border(ctx);
+        final int dynText = FolioTheme.textPrimary(ctx);
+        final int dynMuted = FolioTheme.textMuted(ctx);
+        final int dynAccent = FolioTheme.accent(ctx);
+        final int dynAccentFill = FolioTheme.accentFill(ctx);
+        final int dynAccentBorder = FolioTheme.accentBorder(ctx);
+        final int dynAccentSoft = FolioTheme.accentSoftText(ctx);
+
         ScrollView scroll = new ScrollView(ctx);
-        scroll.setBackgroundColor(BG_DARK);
+        scroll.setBackgroundColor(dynBg);
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         scroll.setPadding(0, 0, 0, dp(d, 96));
@@ -82,7 +92,7 @@ public final class FolioMoreView {
         TextView titleTv = new TextView(ctx);
         titleTv.setText("Control Center");
         titleTv.setTextSize(26);
-        titleTv.setTextColor(TEXT_PRIMARY);
+        titleTv.setTextColor(dynText);
         titleTv.setTypeface(FolioTheme.serif(ctx));
         titleTv.setLetterSpacing(-0.02f);
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
@@ -108,7 +118,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v16.0 KFX");
+        badgeTv.setText("v16.1 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(FolioTheme.ACCENT_SOFT_TEXT);
         badgeTv.setTypeface(FolioTheme.sansBold(ctx));
@@ -124,12 +134,39 @@ public final class FolioMoreView {
         headerRow.addView(badgeTv);
         container.addView(headerRow);
 
+        LinearLayout subRow = new LinearLayout(ctx);
+        subRow.setOrientation(LinearLayout.HORIZONTAL);
+        subRow.setGravity(Gravity.CENTER_VERTICAL);
+        subRow.setPadding(0, dp(d, 2), 0, dp(d, 16));
+
         TextView subTv = new TextView(ctx);
         subTv.setText("Offline EPUB & KFX Library");
         subTv.setTextSize(12.5f);
-        subTv.setTextColor(TEXT_MUTED);
-        subTv.setPadding(0, 0, 0, dp(d, 16));
-        container.addView(subTv);
+        subTv.setTextColor(dynMuted);
+        subRow.addView(subTv, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
+
+        final TextView themeTogglePill = new TextView(ctx);
+        boolean isLightNow = FolioTheme.isLimestoneLight(ctx);
+        themeTogglePill.setText(isLightNow ? "Limestone" : "Granite");
+        themeTogglePill.setTextSize(11);
+        themeTogglePill.setTextColor(dynAccentSoft);
+        themeTogglePill.setTypeface(FolioTheme.sansBold(ctx));
+        themeTogglePill.setPadding(dp(d, 10), dp(d, 4), dp(d, 10), dp(d, 4));
+        GradientDrawable ttBg = new GradientDrawable();
+        ttBg.setColor(dynAccentFill);
+        ttBg.setCornerRadius(dp(d, 999));
+        ttBg.setStroke(dp(d, 1), dynAccentBorder);
+        themeTogglePill.setBackground(ttBg);
+        themeTogglePill.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                boolean nextLight = !FolioTheme.isLimestoneLight(ctx);
+                FolioTheme.setThemeMode(ctx, nextLight ? "limestone" : "granite");
+                Toast.makeText(ctx, "Theme set to " + (nextLight ? "Limestone (Light)" : "Granite (Dark)") + " — switch tabs or reopen to refresh", Toast.LENGTH_SHORT).show();
+                themeTogglePill.setText(nextLight ? "Limestone" : "Granite");
+            }
+        });
+        subRow.addView(themeTogglePill);
+        container.addView(subRow);
 
         // 1b. Monochrome 4-Tile Reading Stats Strip + Annual Reading Goal Card
         final TextView[] statNums = new TextView[4];
@@ -5541,7 +5578,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Azath — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Azath v16.0 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Azath v16.1 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

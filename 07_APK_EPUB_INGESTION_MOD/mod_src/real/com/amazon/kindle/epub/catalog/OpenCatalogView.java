@@ -194,7 +194,7 @@ public final class OpenCatalogView {
 
     private static View makeBellIconButton(final Context ctx, final float d) {
         FrameLayout btn = new FrameLayout(ctx);
-        btn.setBackground(roundRect(BG_SURFACE, dp(d, 999), 0xFF32353B, dp(d, 1)));
+        btn.setBackground(roundRect(FolioTheme.bgSurface(ctx), dp(d, 999), FolioTheme.border(ctx), dp(d, 1)));
         int size = dp(d, 34);
         btn.setLayoutParams(new LinearLayout.LayoutParams(size, size));
 
@@ -203,7 +203,7 @@ public final class OpenCatalogView {
             protected void onDraw(android.graphics.Canvas canvas) {
                 super.onDraw(canvas);
                 android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-                p.setColor(TEXT_PRIMARY);
+                p.setColor(FolioTheme.textPrimary(ctx));
                 p.setStyle(android.graphics.Paint.Style.STROKE);
                 p.setStrokeWidth(Math.max(1.8f, 1.55f * d));
                 p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
@@ -273,8 +273,20 @@ public final class OpenCatalogView {
         }
         final int[] activeSourceIdx = new int[]{0};
 
+        final int cBgDark = FolioTheme.bgCanvas(ctx);
+        final int cBgSurface = FolioTheme.bgSurface(ctx);
+        final int cBgCard = FolioTheme.bgControl(ctx);
+        final int cBorder = FolioTheme.border(ctx);
+        final int cTextPrimary = FolioTheme.textPrimary(ctx);
+        final int cTextMuted = FolioTheme.textMuted(ctx);
+        final int cAccent = FolioTheme.accent(ctx);
+        final int cAccentFill = FolioTheme.accentFill(ctx);
+        final int cAccentBorder = FolioTheme.accentBorder(ctx);
+        final int cAccentSoftText = FolioTheme.accentSoftText(ctx);
+        final int cBtnTextOnAccent = FolioTheme.isLimestoneLight(ctx) ? 0xFFF4F0E8 : 0xFF0E0F11;
+
         ScrollView mainScroll = new ScrollView(ctx);
-        mainScroll.setBackgroundColor(BG_DARK);
+        mainScroll.setBackgroundColor(cBgDark);
         mainScroll.setFillViewport(true);
         mainScroll.setClipToPadding(false);
         mainScroll.setPadding(0, 0, 0, dp(d, 96));
@@ -283,7 +295,7 @@ public final class OpenCatalogView {
 
         final LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(BG_DARK);
+        root.setBackgroundColor(cBgDark);
         root.setPadding(dp(d, 16), dp(d, 10), dp(d, 16), dp(d, 24));
         mainScroll.addView(root);
 
@@ -295,20 +307,20 @@ public final class OpenCatalogView {
 
         TextView brand = new TextView(ctx);
         brand.setText("Azath");
-        brand.setTextColor(TEXT_PRIMARY);
+        brand.setTextColor(cTextPrimary);
         brand.setTextSize(30f);
         brand.setTypeface(FolioTheme.serif(ctx));
         brand.setLetterSpacing(-0.02f);
         headerRow.addView(brand, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        TextView opdsPill = makePill(ctx, d, sources.size() > 1 ? "OPDS" : "+ OPDS", BG_SURFACE, TEXT_PRIMARY);
+        TextView opdsPill = makePill(ctx, d, sources.size() > 1 ? "OPDS" : "+ OPDS", cBgSurface, cTextPrimary);
         headerRow.addView(opdsPill);
 
         View gap = new View(ctx);
         headerRow.addView(gap, new LinearLayout.LayoutParams(dp(d, 8), 1));
 
-        TextView backupPill = makePill(ctx, d, "Backup", FolioTheme.ACCENT_FILL, FolioTheme.ACCENT_SOFT_TEXT);
-        backupPill.setBackground(roundRect(FolioTheme.ACCENT_FILL, dp(d, 999), FolioTheme.ACCENT_BORDER, dp(d, 1)));
+        TextView backupPill = makePill(ctx, d, "Backup", cAccentFill, cAccentSoftText);
+        backupPill.setBackground(roundRect(cAccentFill, dp(d, 999), cAccentBorder, dp(d, 1)));
         headerRow.addView(backupPill);
 
         View gapBell = new View(ctx);
@@ -322,7 +334,7 @@ public final class OpenCatalogView {
         LinearLayout searchBar = new LinearLayout(ctx);
         searchBar.setOrientation(LinearLayout.HORIZONTAL);
         searchBar.setGravity(Gravity.CENTER_VERTICAL);
-        searchBar.setBackground(roundRect(BG_SURFACE, dp(d, 24), 0xFF32353B, dp(d, 1)));
+        searchBar.setBackground(roundRect(cBgSurface, dp(d, 24), cBorder, dp(d, 1)));
         searchBar.setPadding(dp(d, 16), dp(d, 4), dp(d, 8), dp(d, 4));
         LinearLayout.LayoutParams sbLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -330,15 +342,15 @@ public final class OpenCatalogView {
 
         final EditText searchInput = new EditText(ctx);
         searchInput.setHint("Search books, authors, or topics...");
-        searchInput.setHintTextColor(TEXT_MUTED);
-        searchInput.setTextColor(TEXT_PRIMARY);
+        searchInput.setHintTextColor(cTextMuted);
+        searchInput.setTextColor(cTextPrimary);
         searchInput.setTextSize(15f);
         searchInput.setBackgroundColor(Color.TRANSPARENT);
         searchInput.setSingleLine(true);
         searchInput.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         searchBar.addView(searchInput, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        final TextView searchGo = makePill(ctx, d, "Search", ACCENT_AMBER, 0xFF0E0F11);
+        final TextView searchGo = makePill(ctx, d, "Search", cAccent, cBtnTextOnAccent);
         searchBar.addView(searchGo);
         root.addView(searchBar, sbLp);
 
@@ -569,7 +581,7 @@ public final class OpenCatalogView {
         // --- Async Load 2: Popular Free EPUBs Carousel (Gutendex) ---
         final LinearLayout offlineCard = new LinearLayout(ctx);
         offlineCard.setOrientation(LinearLayout.VERTICAL);
-        offlineCard.setBackground(roundRect(BG_SURFACE, dp(d, 16), 0xFF32353B, dp(d, 1)));
+        offlineCard.setBackground(roundRect(cBgSurface, dp(d, 16), cBorder, dp(d, 1)));
         offlineCard.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 16));
         LinearLayout.LayoutParams ocLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -580,28 +592,28 @@ public final class OpenCatalogView {
 
         TextView offTitle = new TextView(ctx);
         offTitle.setText("Offline Mode");
-        offTitle.setTextColor(TEXT_PRIMARY);
+        offTitle.setTextColor(cTextPrimary);
         offTitle.setTextSize(18f);
         offTitle.setTypeface(FolioTheme.serif(ctx));
         offlineCard.addView(offTitle);
 
         TextView offMsg = new TextView(ctx);
         offMsg.setText("Connect to Wi-Fi to browse Project Gutenberg & OPDS catalogs, or continue reading from your local library.");
-        offMsg.setTextColor(TEXT_MUTED);
+        offMsg.setTextColor(cTextMuted);
         offMsg.setTextSize(12.5f);
         offMsg.setPadding(0, dp(d, 4), 0, dp(d, 14));
         offlineCard.addView(offMsg);
 
         LinearLayout offBtns = new LinearLayout(ctx);
         offBtns.setOrientation(LinearLayout.HORIZONTAL);
-        TextView retryPill = makePill(ctx, d, "Retry", FolioTheme.ACCENT_FILL, FolioTheme.ACCENT_SOFT_TEXT);
-        retryPill.setBackground(roundRect(FolioTheme.ACCENT_FILL, dp(d, 999), FolioTheme.ACCENT_BORDER, dp(d, 1)));
+        TextView retryPill = makePill(ctx, d, "Retry", cAccentFill, cAccentSoftText);
+        retryPill.setBackground(roundRect(cAccentFill, dp(d, 999), cAccentBorder, dp(d, 1)));
         offBtns.addView(retryPill);
 
         View offGap = new View(ctx);
         offBtns.addView(offGap, new LinearLayout.LayoutParams(dp(d, 8), 1));
 
-        TextView localCatPill = makePill(ctx, d, "Local Catalog", BG_CARD, TEXT_PRIMARY);
+        TextView localCatPill = makePill(ctx, d, "Local Catalog", cBgCard, cTextPrimary);
         localCatPill.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -987,7 +999,7 @@ public final class OpenCatalogView {
     private static TextView makeSectionTitle(Context ctx, float d, String text) {
         TextView tv = new TextView(ctx);
         tv.setText(text);
-        tv.setTextColor(TEXT_PRIMARY);
+        tv.setTextColor(FolioTheme.textPrimary(ctx));
         tv.setTextSize(20f);
         tv.setTypeface(FolioTheme.serif(ctx));
         tv.setLetterSpacing(-0.015f);
@@ -1001,7 +1013,7 @@ public final class OpenCatalogView {
         tv.setTextColor(textColor);
         tv.setTextSize(12.5f);
         tv.setTypeface(FolioTheme.sansBold(ctx));
-        tv.setBackground(roundRect(bgColor, dp(d, 999), 0xFF32353B, dp(d, 1)));
+        tv.setBackground(roundRect(bgColor, dp(d, 999), FolioTheme.border(ctx), dp(d, 1)));
         tv.setPadding(dp(d, 14), dp(d, 7), dp(d, 14), dp(d, 7));
         return tv;
     }

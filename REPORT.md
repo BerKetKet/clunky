@@ -1,34 +1,30 @@
-# Antigravity Report — Round 146 Stone Edition (`Azath v16.0 KFX`)
+# Round 147 Report — Azath v16.1 KFX (Adaptive Launcher Icon Safe-Zone Framing & Live Granite/Limestone Theme Switcher)
 
-## Summary
-Implemented, built, deployed, and hardware-verified Round 146 (**Major Stone Edition `Azath v16.0 KFX`**) on the physical **Samsung Galaxy M30** (`32001776e8e82623`, TrebleDroid Android 13 GSI), migrating all 8 Java UI modules, bespoke icons, launcher icon, Compose bottom nav tint, generic Library cover tiles, and `Library` header typography into the unified **Granite & Limestone Stone** design system.
+## 1. Target Hardware & Policy Compliance
+- **Hardware**: Physical **Samsung Galaxy M30** (`32001776e8e82623`), running TrebleDroid Android 13 GSI (`arm64-v8a`).
+- **Active Package**: `com.azath.reader` (`Azath v16.1 KFX`, `versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-25 02:14:27`).
+- **Safety Invariant Verified**: Stock `com.amazon.kindle` (`versionName=8.160.1.0(2.0.124621.0)`) remains **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).
+- **Strict Policy Respected**: Zero Play Store Folio (`ct.reader`) launches, inspections, or references.
 
----
+## 2. Task A: Adaptive Launcher Icon & Dynamic Theme Build / Deploy / Stage
+- Copied Round 147 `FolioMoreView.java` and `OpenCatalogView.java` from `dropin_src/com/amazon/kindle/epub/catalog/` into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/`.
+- Synced safe-zone-framed `dropin_assets/azath_launcher/ic_launcher_foreground_432.png` -> `dropin_res/ic_launcher_foreground.png` and `dropin_assets/azath_launcher/azath_icon_limestone_512.png` -> `dropin_res/ic_launcher_full_512.png`, alongside `dropin_res/mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/`.
+- Updated `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` to stage `07_APK_EPUB_INGESTION_MOD/release/azath_v16.1_kfx/base.apk`.
+- Recompiled DEX cleanly (`classes9.dex`: `471,184` bytes), built and signed APK, deployed to Galaxy M30 (`32001776e8e82623`), and staged release:
+  - **Path**: `07_APK_EPUB_INGESTION_MOD/release/azath_v16.1_kfx/base.apk`
+  - **Size**: `138,827,879` bytes
+  - **SHA256**: `e92c910b32732eb6d4d8723f0acd929e2858accbbd594c2c5a93184d7f9ded31`
 
-## Verification Matrix
-| Check / Deliverable | Status | Verified Evidence |
-| :--- | :--- | :--- |
-| Stone Java Modules (All 8 Files) | **VERIFIED** | Integrated all 8 drop-in files (`FolioTheme`, `FolioMoreView`, `OpenCatalogView`, `FolioMetadataCatalogDialog`, `FolioFolderBrowserDialog`, `FolioMetadataBackup`, `FolioWebBrowserDialog`, `ExternalEpubActivity`) into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/`. Verified Granite dark mode across Home, Library, Control Center, and `"AZATH"`/`v16.0 KFX` branding. (Note: Limestone light theme toggle inside Settings was compiled in `FolioTheme.java` and not toggled in R146.) |
-| Limestone Launcher & 17 UI Icons (`azath_icons/`, `dropin_res/`) | **VERIFIED** | Installed `dropin_assets/azath_launcher/ic_launcher_foreground_432.png` & `azath_icon_limestone_512.png` + `mipmap-*` with `#141517` Stone adaptive background (`rebuild_fast.sh`); synced all 16 re-tinted `azath_icons/` and re-tinted `ic_authors.png` to `#ECE8E0` / `#D4C9B8`. |
-| DEX & Resource Patchers (`patch_classes2_azath.py`, `patch_res_azath_covers.py`, `rebuild_fast.sh`) | **VERIFIED** | Updated `patch_classes2_azath.py` to patch `Lib/b.<clinit>` (`0xff2491ffL`/`0xffe05a47L` -> `0xffd4c9b8L`, applied at `0x4d6f50`), updated `patch_res_azath_covers.py` to Granite `#1C1E22`/`#32353B`/`#8A857D`/`#524B41`/`#ECE8E0`, and replaced `res/font/amazon_ember_serif_{bold,he}.ttf` with `EBGaramond-Regular.ttf` in `rebuild_fast.sh` (keeping reader `Bookerly-*.ttf` in `assets/` completely untouched). |
-| APK Build & Staging (`v16.0 KFX`) | **VERIFIED** | `bash 07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` exited `0` (`classes9.dex` `470136` bytes, `classes2.dex` `8,413,156` bytes). Staged APK: `07_APK_EPUB_INGESTION_MOD/release/azath_v16.0_kfx/base.apk` (`139032679` bytes, SHA256 `f995e5a0372907cadce08240c7189dc2cd9e9967e39836a252f0ba239f8ca0b6`). |
-| Device Deployment & Invariants | **VERIFIED** | `com.azath.reader` updated `2026-11-25 02:06:48`; stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`); `NO_FATAL_EXCEPTIONS` in `logcat -d`; `text="v16.0 KFX"` confirmed in `logs/azath_more_r146.xml`; zero `ct.reader` launches/references. |
-| App Drawer Limestone Icon (`verify_r146_azath_launcher_limestone.png`) | **VERIFIED** | Captured (`320969` bytes) & visually inspected: circular Limestone moonlit sky + tree silhouette `Azath` icon in Android app drawer (zero crimson). |
-| Home Screen (`verify_r146_azath_home_granite.png`) | **VERIFIED** | Captured (`642942` bytes) & visually inspected: Granite `#1C1E22`/`#32353B` cards, luminous Limestone `#D4C9B8` `Search` CTA & active `Home` tab, EB Garamond headings, `#1C1E22` *Moksha* monogram, and `Offline Mode` card. |
-| Library Screen (`verify_r146_azath_library_garamond.png`) | **VERIFIED** | Captured (`1079394` bytes) & visually inspected: top-left **`Library`** title now renders in airy **Regular EB Garamond** (`amazon_ember_serif_{bold,he}.ttf` patched), dark Granite `#1C1E22` generic covers with `#8A857D` open-book emblems & `#ECE8E0` ivory text, and `#D4C9B8` active `Library` tab. |
-| Control Center (`verify_r146_azath_control_center_granite.png`) | **VERIFIED** | Captured (`314365` bytes) & visually inspected: **`Control Center`** (`v16.0 KFX`), Limestone-tinted `azath_icons/` (`Library Metadata & Genres`, `Import EPUBs from Storage`, `Web Book Browser`, `OPDS Catalogs`), Granite stat cards, tonal `+ Pick ›`, and `#D4C9B8` active `More` tab. |
+## 3. Task B: Hardware Verification & Visual Audit (Samsung Galaxy M30)
+- **`verify_r147_azath_launcher_safezone.png` (`325,542` bytes)**: Verified in the Android app drawer that the feathered 69% safe-zone crop cleanly frames the **crescent moon, hanging tree foliage, and reader silhouette with open book** inside the circular `Azath` adaptive launcher icon with zero edge clipping.
+- **`verify_r147_azath_home_limestone_light.png` (`874,452` bytes)**: Toggled `Granite` -> `Limestone` in Control Center (`v16.1 KFX` badge verified in UI XML) and verified Home in **Limestone Light Mode** (`#F4F0E8` warm limestone canvas, `#E7E1D5` Search bar & `Offline Mode` card, `#2D3138` dark Granite CTA/genre pills, EB Garamond `#1A1B1E` `Azath` wordmark & section headings).
+- **`verify_r147_azath_control_center_limestone.png` (`314,002` bytes)**: Captured Control Center while Limestone mode was active, then toggled `Limestone` -> `Granite` (confirmed in UI XML `bounds="[876,221][1027,285]" text="Granite"`) and reopened so device returned cleanly to dark Granite mode.
+- **Logcat Crash Check**: `NO_FATAL_EXCEPTIONS` in `AndroidRuntime:E` / `FATAL:E`.
 
----
+### Honest Observations / Visual & UX Polish Opportunities for Round 148
+1. **Home Carousel Book Titles in Limestone Light Mode (`OpenCatalogView.java`)**: Author names rendered cleanly in muted Granite ink, but **Continue Reading book titles** (e.g., *Delphi Complete Works of Aristotle*, *The 210th Day*, *Rashomon and Other Stories*) still render in light `#ECE8E0` on the `#F4F0E8` Limestone background (nearly invisible contrast) and need `FolioTheme.textPrimary(ctx)`.
+2. **Control Center Card Surfaces in Limestone Light Mode (`FolioMoreView.java`)**: While Control Center's canvas, `Control Center` heading, subtitle, and `Limestone` toggle pill switched to Light Mode, the inner cards (stats tiles, `2026 Reading Goal`, `Continue Reading`, `Up Next Queue`, `LIBRARY & IMPORT` card) still render with static `BG_CARD` / `BG_SURFACE` (`#1C1E22` / `#25282D`) and light text instead of `FolioTheme.bgSurface(ctx)` / `bgControl(ctx)` / `textPrimary(ctx)`.
+3. **In-App Tab Switch vs Reopen**: Tapping `Granite` -> `Limestone` updates `SharedPreferences`, but switching tabs from `More` -> `Home` in-process leaves the cached `RubyHomeFragment` in Granite until Azath is reopened (app restart triggered Limestone on Home). Automatically refreshing on tab re-resume/re-selection or calling `recreate()` on toggle would make switching instantaneous without a manual restart.
 
-## Modified / Added Files
-- `dropin_res/` & `dropin_assets/azath_launcher/` (Limestone launcher icons + `#141517` background)
-- `dropin_assets/azath_icons/*.png` & `07_APK_EPUB_INGESTION_MOD/assets/azath_icons/*.png` (all 17 Stone icons including re-tinted `ic_authors.png`)
-- `dropin_src/com/amazon/kindle/epub/{catalog,ingest}/*.java` & `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/{catalog,ingest}/*.java` (all 8 Java files)
-- `07_APK_EPUB_INGESTION_MOD/tools/{patch_classes2_azath.py,patch_res_azath_covers.py,rebuild_fast.sh}`
-- `07_APK_EPUB_INGESTION_MOD/dex/classes9.dex` (`470136` bytes)
-- `verify_r146_azath_launcher_limestone.png`, `verify_r146_azath_home_granite.png`, `verify_r146_azath_library_garamond.png`, `verify_r146_azath_control_center_granite.png`
-
----
-
-## Mandatory Project Lead Architectural Directive (Cover Architecture)
+## 4. Project Lead Architectural Directive (Mandatory Reiteration)
 > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."

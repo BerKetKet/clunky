@@ -1,10 +1,9 @@
 {
-  "round": 146,
+  "round": 147,
   "app_name": "Azath",
   "package_name": "com.azath.reader",
-  "version_label": "Azath v16.0 KFX",
-  "milestone": "Major Stone Edition \u2014 Granite (Dark) & Limestone (Light) Themes, Limestone Launcher & UI Icons, EB Garamond Library Header",
+  "version_label": "Azath v16.1 KFX",
   "target_hardware": "Samsung Galaxy M30 (32001776e8e82623)",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% UNTOUCHED and READ-ONLY",
-  "strict_policy": "DO NOT launch, inspect, or reference Play Store Folio (ct.reader) ever again."
+  "strict_policy": "DO NOT launch, inspect, or reference Play Store Folio (ct.reader)."
 }
