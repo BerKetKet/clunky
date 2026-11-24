@@ -53,7 +53,7 @@ if (!modelInfo.isNeon) {
 console.log('Checking if report150 was already submitted...');
 const historyCheck = runEval(`(() => {
   const userQueries = Array.from(document.querySelectorAll('.user-query-container, user-query')).map(m => m.innerText || '');
-  const alreadySent = userQueries.some(m => m.includes('antig_to_gemini_neon_clunky_report150.zip') || m.includes('Round 150'));
+  const alreadySent = userQueries.some(m => m.includes('antig_to_gemini_neon_clunky_report150.zip') || m.includes('Milestone Round 150 Deliverables'));
   return { alreadySent };
 })()`);
 console.log('Submission history check:', historyCheck);
