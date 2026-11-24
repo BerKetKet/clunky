@@ -1,6 +1,12 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 150 Milestone (`Azath v17.0 KFX`) Verified, Staged & Audited (2026-11-25)**:
+  - Integrated Round 150 `FolioTheme.java` (zero-arg `sLastLight` cached getters), `FolioMoreView.java` (`v17.0 KFX`), `FolioFolderBrowserDialog.java`, `FolioMetadataCatalogDialog.java` (with 2-line `javac` type fix on lines `2938` & `2967` synced to `dropin_src/`), and `FolioWebBrowserDialog.java`. Updated `rebuild_fast.sh` to stage `azath_v17.0_kfx`.
+  - Built `classes9.dex` (`473,568` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.0_kfx/base.apk` (`138,831,975` B, SHA256 `2152ecf1ad99c7e4c2ad63397839f7a0484b3680735fab97fd496814c73cad63`).
+  - Hardware verified on **Samsung Galaxy M30** (`32001776e8e82623`): `com.azath.reader` updated `2026-11-25 02:53:35`, stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`), `ZERO_CRASHES_AND_NO_SIGSYS`, restored cleanly to `Granite`, and `verify_r150_azath_catalog_limestone.png` (`363,543` B) visually verified in Limestone Light Mode (noting low-contrast white `Library Metadata & Genres (24)` header and dark `CLOSE` footer panel).
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 149 (`Azath v16.3 KFX`) Stress-Tested, Verified & Staged (2026-11-25)**:
   - Integrated Round 149 `FolioTheme.java` (`THEME_LISTENERS` weak-referenced listener registry + `notifyThemeChanged()`), `FolioMoreView.java` (`v16.3 KFX`, persistent `FrameLayout` in-place rebuilder replacing `Activity.recreate()`), and `OpenCatalogView.java` (persistent `FrameLayout` in-place rebuilder). Updated `rebuild_fast.sh` to stage `azath_v16.3_kfx`.
   - Built `classes9.dex` (`473,324` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v16.3_kfx/base.apk` (`138,831,975` B, SHA256 `a09e804f949b6462830b77af4309d44d4a817f0479f2d20faf3a970c12c88cec`).

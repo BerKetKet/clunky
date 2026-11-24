@@ -1,8 +1,9 @@
 {
-  "round": 149,
+  "round": 150,
   "app_name": "Azath",
   "package_name": "com.azath.reader",
-  "version_label": "Azath v16.3 KFX",
+  "version_label": "Azath v17.0 KFX",
+  "milestone": "Round 150 Stone Edition Complete \u2014 Full Granite & Limestone Modal Parity",
   "target_hardware": "Samsung Galaxy M30 (32001776e8e82623)",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% UNTOUCHED and READ-ONLY",
   "strict_policy": "DO NOT launch, inspect, or reference Play Store Folio (ct.reader)."

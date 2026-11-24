@@ -100,18 +100,45 @@ public final class FolioTheme {
         } catch (Throwable ignored) {}
     }
 
+    private static volatile boolean sLastLight = false;
+
+    public static boolean isLimestoneLight() {
+        return sLastLight;
+    }
+
     public static boolean isLimestoneLight(Context ctx) {
         String mode = getThemeMode(ctx);
-        if ("limestone".equalsIgnoreCase(mode)) return true;
-        if ("granite".equalsIgnoreCase(mode)) return false;
-        if (ctx == null) return false;
-        try {
-            int uiMode = ctx.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
-            return uiMode != Configuration.UI_MODE_NIGHT_YES;
-        } catch (Throwable ignored) {
-            return false;
+        boolean res;
+        if ("limestone".equalsIgnoreCase(mode)) {
+            res = true;
+        } else if ("granite".equalsIgnoreCase(mode)) {
+            res = false;
+        } else if (ctx == null) {
+            res = sLastLight;
+        } else {
+            try {
+                int uiMode = ctx.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+                res = (uiMode != Configuration.UI_MODE_NIGHT_YES);
+            } catch (Throwable ignored) {
+                res = false;
+            }
         }
+        sLastLight = res;
+        return res;
     }
+
+    public static int bgCanvas() { return sLastLight ? LIGHT_BG_CANVAS : BG_CANVAS; }
+    public static int bgModal() { return sLastLight ? LIGHT_BG_MODAL : BG_MODAL; }
+    public static int bgSurface() { return sLastLight ? LIGHT_BG_SURFACE : BG_SURFACE; }
+    public static int bgControl() { return sLastLight ? LIGHT_BG_CONTROL : BG_CONTROL; }
+    public static int border() { return sLastLight ? LIGHT_BORDER_HAIRLINE : BORDER_HAIRLINE; }
+    public static int textPrimary() { return sLastLight ? LIGHT_TEXT_PRIMARY : TEXT_PRIMARY; }
+    public static int textSecondary() { return sLastLight ? LIGHT_TEXT_SECONDARY : TEXT_SECONDARY; }
+    public static int textMuted() { return sLastLight ? LIGHT_TEXT_MUTED : TEXT_MUTED; }
+    public static int accent() { return sLastLight ? LIGHT_ACCENT_GRANITE : ACCENT_LIMESTONE; }
+    public static int accentFill() { return sLastLight ? LIGHT_ACCENT_FILL : ACCENT_FILL; }
+    public static int accentBorder() { return sLastLight ? LIGHT_ACCENT_BORDER : ACCENT_BORDER; }
+    public static int accentSoftText() { return sLastLight ? LIGHT_ACCENT_SOFT_TEXT : ACCENT_SOFT_TEXT; }
 
     public static int bgCanvas(Context ctx) { return isLimestoneLight(ctx) ? LIGHT_BG_CANVAS : BG_CANVAS; }
     public static int bgModal(Context ctx) { return isLimestoneLight(ctx) ? LIGHT_BG_MODAL : BG_MODAL; }
