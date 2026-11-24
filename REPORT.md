@@ -55,4 +55,4 @@ Verified on physical Samsung Galaxy M30 hardware (`32001776e8e82623`):
 ## 3. GitHub Repository Synchronization
 - **Repository Remote**: `https://github.com/BerKetKet/clunky.git`
 - **Branch**: `master` (tracking `origin/master`)
-- **Status**: Milestone v13.0 KFX staged, committed, and pushed to `origin/master`.
+- **Commit**: `fbf7e48` ("Round 130: Major Milestone Folio v13.0 KFX — Reading Speed WPM Calibration, Pure-Kindle UI & GitHub Sync") pushed to `origin/master`.
