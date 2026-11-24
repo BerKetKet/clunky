@@ -1,6 +1,29 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v13.0 KFX") deployed and fully verified on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 130 (Major Milestone) complete:
+  1. **Reading Speed (WPM) Calibration & Pure-Kindle Book Details (Task A)**:
+     - Target Hardware: Physical Samsung Galaxy M30 (`32001776e8e82623`).
+     - `FolioMoreView.java`: Added a 4-pill `READING SPEED (WPM)` selector (`180 wpm`, `250 wpm`, `330 wpm`, `420 wpm`, persisted in `SharedPreferences("folio_ui_prefs", "reading_speed_wpm")`) inside the **2026 Reading Goal** modal. Repaired drop-in dialog theming: moved `FolioTheme.applyToDialog` post-`.show()` across reading goal, Up Next queue clear, cache clear, and About Folio dialogs. Bumped badge to **`Folio v13.0 KFX`** and version string to `Folio v13.0 KFX (Enhanced Typesetting)`.
+     - `FolioMetadataCatalogDialog.java`: Scaled `Format: Enhanced KFX · 1.2 MB · ~7h 8m read` dynamically using the user's configured `reading_speed_wpm`. Swept remaining indigo/amber borders to pure Kindle blue-slate `#2C5278` / `#162330` across `Favorited`, `Shelf`, `Personal Note`, and bulk selection pills.
+     - Recompiled `classes9.dex` (456,172 bytes), rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, signed with `apksigner`.
+     - Streamed APK install to Galaxy M30 (`lastUpdateTime=2026-11-24 06:33:02`) with zero fatal crashes logged.
+     - Staged release APK at `07_APK_EPUB_INGESTION_MOD/release/folio_v13.0_kfx/base.apk` (137,740,774 bytes ~132 MB, SHA256: `332b90e59b0750fee936496d62d3d0ba677f4c8b7168bedb074882e4fffa3463`).
+  2. **Visual Verification & Invariant Proofs (Task B)**:
+     - Captured hardware proof screenshots on Samsung Galaxy M30:
+       * `verify_r130_reading_goal_wpm.png` (193,335 bytes) — 2026 Reading Goal modal showing header, preset pills, target input, and the new `READING SPEED (WPM)` 4-pill selector (`180 wpm`, `250 wpm`, `330 wpm`, `420 wpm`) with active teal accent (`#26A69A`).
+       * `verify_r130_book_details_pure_kindle.png` (267,884 bytes) — Book Details for *1984* showing pure-Kindle blue-slate borders on `Favorited`, `Classics`, and `Personal Note`, dynamic reading-time estimate `Format: Enhanced KFX · 1.2 MB · ~7h 8m read`, and Kindle footer buttons.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Cloned Invariant: `com.amazon.kindle.epub` updated (`lastUpdateTime=2026-11-24 06:33:02`), zero crashes.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+  4. Packaged `antig_to_gemini_neon_clunky_report130.zip` and submitted to Gemini Neon tab `837018552`.
+
+## Verification Evidence (Round 130)
+1. `verify_r130_reading_goal_wpm.png`: Reading Goal dialog with 4-pill Reading Speed (WPM) selector.
+2. `verify_r130_book_details_pure_kindle.png`: Book Details modal with calibrated reading-time and pure-Kindle blue-slate borders.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v13.0 KFX deployed (`lastUpdateTime=2026-11-24 06:33:02`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.9 KFX") deployed and fully verified on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 129 complete:
   1. **Kindle-Native Book Details, Reading-Time Estimate & About Folio Theme (Task A)**:
      - Target Hardware: Physical Samsung Galaxy M30 (`32001776e8e82623`).

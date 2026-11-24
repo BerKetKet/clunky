@@ -313,7 +313,7 @@ public final class FolioMetadataCatalogDialog {
         bulkBtnsRow.setOrientation(LinearLayout.HORIZONTAL);
         bulkBtnsRow.setGravity(Gravity.CENTER_VERTICAL);
 
-        final TextView btnBulkShelf = makeBulkActionPill(ctx, "Shelf", "#312E81", "#ECEFF1", "#4F46E5");
+        final TextView btnBulkShelf = makeBulkActionPill(ctx, "Shelf", "#162330", "#ECEFF1", "#2C5278");
         final TextView btnBulkGenre = makeBulkActionPill(ctx, "+Genre", "#162330", "#4DA6FF", "#2C5278");
         final TextView btnBulkQueue = makeBulkActionPill(ctx, "+Queue", "#162330", "#4DA6FF", "#2C5278");
         final TextView btnBulkFav = makeBulkActionPill(ctx, "★Fav", "#3B2A14", "#4DA6FF", "#784F1D");
@@ -671,7 +671,7 @@ public final class FolioMetadataCatalogDialog {
             if (selectMode[0]) {
                 btnSelect.setText("✕ Done");
                 btnSelect.setTextColor(Color.WHITE);
-                selBtnBg.setColor(Color.parseColor("#4F46E5"));
+                selBtnBg.setColor(Color.parseColor("#2C5278"));
                 selBtnBg.setStroke(dp(ctx, 1), Color.parseColor("#4DA6FF"));
                 bulkBar.setVisibility(View.VISIBLE);
                 listScroll.getLayoutParams().height = dp(ctx, 316);
@@ -848,9 +848,9 @@ public final class FolioMetadataCatalogDialog {
         dirPill.setTypeface(Typeface.DEFAULT_BOLD);
         dirPill.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
         final GradientDrawable dBg = new GradientDrawable();
-        dBg.setColor(Color.parseColor(revState[0] ? "#2D2312" : "#162330"));
+        dBg.setColor(Color.parseColor(revState[0] ? "#162330" : "#162330"));
         dBg.setCornerRadius(dp(ctx, 12));
-        dBg.setStroke(dp(ctx, 1), Color.parseColor(revState[0] ? "#B45309" : "#2C5278"));
+        dBg.setStroke(dp(ctx, 1), Color.parseColor(revState[0] ? "#2C5278" : "#2C5278"));
         dirPill.setBackground(dBg);
         hdrRow.addView(dirPill);
         root.addView(hdrRow);
@@ -860,8 +860,8 @@ public final class FolioMetadataCatalogDialog {
             revState[0] = !revState[0];
             dirPill.setText(revState[0] ? "↑ Reversed" : "↓ Standard");
             dirPill.setTextColor(Color.parseColor(revState[0] ? "#4DA6FF" : "#4DA6FF"));
-            dBg.setColor(Color.parseColor(revState[0] ? "#2D2312" : "#162330"));
-            dBg.setStroke(dp(ctx, 1), Color.parseColor(revState[0] ? "#B45309" : "#2C5278"));
+            dBg.setColor(Color.parseColor(revState[0] ? "#162330" : "#162330"));
+            dBg.setStroke(dp(ctx, 1), Color.parseColor(revState[0] ? "#2C5278" : "#2C5278"));
             cb.onPicked(curIdx, revState[0]);
         });
 
@@ -1443,7 +1443,12 @@ public final class FolioMetadataCatalogDialog {
                 String sizeStr = bytes >= 1024L * 1024L
                         ? String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
                         : Math.max(1L, bytes / 1024L) + " KB";
-                int estMins = Math.max(15, Math.min(2400, (int) Math.round((bytes / 1024.0) * 0.34)));
+                int wpm = 250;
+                try {
+                    wpm = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE).getInt("reading_speed_wpm", 250);
+                    if (wpm < 100 || wpm > 800) wpm = 250;
+                } catch (Throwable ignored) {}
+                int estMins = Math.max(15, Math.min(2400, (int) Math.round((bytes / 1024.0) * 0.34 * (250.0 / wpm))));
                 String readEst = estMins >= 60
                         ? ("~" + (estMins / 60) + "h " + (estMins % 60) + "m read")
                         : ("~" + estMins + "m read");
@@ -1578,9 +1583,9 @@ public final class FolioMetadataCatalogDialog {
         favBtn.setTypeface(Typeface.DEFAULT_BOLD);
         favBtn.setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8));
         GradientDrawable favBg = new GradientDrawable();
-        favBg.setColor(Color.parseColor(isFav ? "#282216" : "#1C1F22"));
+        favBg.setColor(Color.parseColor(isFav ? "#162330" : "#1C1F22"));
         favBg.setCornerRadius(dp(ctx, 10));
-        if (isFav) favBg.setStroke(dp(ctx, 1), Color.parseColor("#66FBBF24"));
+        if (isFav) favBg.setStroke(dp(ctx, 1), Color.parseColor("#2C5278"));
         favBtn.setBackground(favBg);
         favBtn.setOnClickListener(v -> {
             boolean nextFav = !isFav;
@@ -1663,9 +1668,9 @@ public final class FolioMetadataCatalogDialog {
         shelfPill.setTypeface(Typeface.DEFAULT_BOLD);
         shelfPill.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
         GradientDrawable shBg = new GradientDrawable();
-        shBg.setColor(Color.parseColor(curShelf.isEmpty() ? "#1C1F22" : "#1E223B"));
+        shBg.setColor(Color.parseColor(curShelf.isEmpty() ? "#1C1F22" : "#162330"));
         shBg.setCornerRadius(dp(ctx, 12));
-        if (!curShelf.isEmpty()) shBg.setStroke(dp(ctx, 1), Color.parseColor("#66818CF8"));
+        if (!curShelf.isEmpty()) shBg.setStroke(dp(ctx, 1), Color.parseColor("#2C5278"));
         shelfPill.setBackground(shBg);
         shelfPill.setOnClickListener(v -> showShelfPickerDialog(ctx, rec, curShelf, () -> {
             if (detailDlgRef[0] != null) detailDlgRef[0].dismiss();
@@ -1683,7 +1688,7 @@ public final class FolioMetadataCatalogDialog {
         GradientDrawable qBg = new GradientDrawable();
         qBg.setColor(Color.parseColor(inQ ? "#162330" : "#1C1F22"));
         qBg.setCornerRadius(dp(ctx, 12));
-        if (inQ) qBg.setStroke(dp(ctx, 1), Color.parseColor("#88A855F7"));
+        if (inQ) qBg.setStroke(dp(ctx, 1), Color.parseColor("#2C5278"));
         queuePill.setBackground(qBg);
         LinearLayout.LayoutParams qpLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -1710,7 +1715,7 @@ public final class FolioMetadataCatalogDialog {
         GradientDrawable noteBg = new GradientDrawable();
         noteBg.setColor(Color.parseColor("#141618"));
         noteBg.setCornerRadius(dp(ctx, 10));
-        noteBg.setStroke(dp(ctx, 1), Color.parseColor(existingNote.isEmpty() ? "#262A2E" : "#66F59E0B"));
+        noteBg.setStroke(dp(ctx, 1), Color.parseColor(existingNote.isEmpty() ? "#262A2E" : "#2C5278"));
         noteBox.setBackground(noteBg);
         LinearLayout.LayoutParams noteLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -2980,7 +2985,7 @@ public final class FolioMetadataCatalogDialog {
             GradientDrawable pBg = new GradientDrawable();
             pBg.setColor(Color.parseColor("#1E2438"));
             pBg.setCornerRadius(dp(ctx, 14));
-            pBg.setStroke(dp(ctx, 1), Color.parseColor("#4F46E5"));
+            pBg.setStroke(dp(ctx, 1), Color.parseColor("#2C5278"));
             pill.setBackground(pBg);
             LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);

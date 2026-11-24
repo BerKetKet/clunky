@@ -1,10 +1,12 @@
 {
-  "round": 129,
-  "version": "Folio v12.9 KFX",
-  "codename": "Kindle-Native Book Details, Reading-Time Estimate & About Folio Theme",
+  "round": 130,
+  "version": "Folio v13.0 KFX",
+  "milestone": true,
+  "codename": "Milestone v13.0 \u2014 Reading Speed (WPM) Calibration, Pure-Kindle Book Details & GitHub Sync",
   "target_device": "Samsung Galaxy M30 (32001776e8e82623)",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
+  "git_push_requested": true,
   "dropin_files": [
     {
       "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
@@ -15,9 +17,9 @@
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.9_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v13.0_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r129_book_details_kindle.png",
-    "verify_r129_about_v129.png"
+    "verify_r130_reading_goal_wpm.png",
+    "verify_r130_book_details_pure_kindle.png"
   ]
 }

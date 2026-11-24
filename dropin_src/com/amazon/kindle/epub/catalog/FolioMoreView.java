@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v12.9 KFX");
+        badgeTv.setText("v13.0 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(TEXT_MUTED);
         badgeTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
@@ -470,6 +470,21 @@ public final class FolioMoreView {
         restV.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, Math.max(0f, 1f - ratio)));
     }
 
+    private static int getReadingSpeedWpm(Context ctx) {
+        try {
+            int w = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE).getInt("reading_speed_wpm", 250);
+            if (w >= 100 && w <= 800) return w;
+        } catch (Throwable ignored) {}
+        return 250;
+    }
+
+    private static void setReadingSpeedWpm(Context ctx, int wpm) {
+        try {
+            ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                    .edit().putInt("reading_speed_wpm", wpm).apply();
+        } catch (Throwable ignored) {}
+    }
+
     private static void showReadingGoalDialog(final Context ctx, final Runnable onSaved) {
         final float d = ctx.getResources().getDisplayMetrics().density;
         int cur = getReadingGoalTarget(ctx);
@@ -812,6 +827,57 @@ public final class FolioMoreView {
         }
         wrap.addView(presetRow);
         wrap.addView(et);
+
+        TextView wpmHdr = new TextView(ctx);
+        wpmHdr.setText("READING SPEED (WPM)");
+        wpmHdr.setTextColor(TEXT_MUTED);
+        wpmHdr.setTextSize(10.5f);
+        wpmHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        wpmHdr.setPadding(0, dp(d, 12), 0, dp(d, 6));
+        wrap.addView(wpmHdr);
+
+        final int[] chosenWpm = new int[] { getReadingSpeedWpm(ctx) };
+        final LinearLayout wpmRow = new LinearLayout(ctx);
+        wpmRow.setOrientation(LinearLayout.HORIZONTAL);
+        final Runnable[] renderWpmRef = new Runnable[1];
+        renderWpmRef[0] = new Runnable() {
+            @Override public void run() {
+                wpmRow.removeAllViews();
+                int[] speeds = new int[] { 180, 250, 330, 420 };
+                String[] lbls = new String[] { "180", "250", "330", "420" };
+                for (int si = 0; si < speeds.length; si++) {
+                    final int spVal = speeds[si];
+                    boolean active = (chosenWpm[0] == spVal);
+                    TextView spBtn = new TextView(ctx);
+                    spBtn.setText(lbls[si] + " wpm");
+                    spBtn.setTextSize(11.5f);
+                    spBtn.setTypeface(Typeface.DEFAULT_BOLD);
+                    spBtn.setGravity(Gravity.CENTER);
+                    spBtn.setTextColor(active ? 0xFF000000 : TEXT_PRIMARY);
+                    spBtn.setPadding(dp(d, 6), dp(d, 7), dp(d, 6), dp(d, 7));
+                    GradientDrawable sBg = new GradientDrawable();
+                    sBg.setColor(active ? ACCENT_TEAL : 0xFF1C1F22);
+                    sBg.setCornerRadius(dp(d, 8));
+                    if (!active) sBg.setStroke(dp(d, 1), BORDER_HAIRLINE);
+                    spBtn.setBackground(sBg);
+                    LinearLayout.LayoutParams sLp = new LinearLayout.LayoutParams(
+                            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                    if (si < speeds.length - 1) sLp.rightMargin = dp(d, 6);
+                    spBtn.setLayoutParams(sLp);
+                    spBtn.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            chosenWpm[0] = spVal;
+                            setReadingSpeedWpm(ctx, spVal);
+                            renderWpmRef[0].run();
+                            FolioTheme.applyToTree(ctx, wpmRow);
+                        }
+                    });
+                    wpmRow.addView(spBtn);
+                }
+            }
+        };
+        renderWpmRef[0].run();
+        wrap.addView(wpmRow);
 
         goalDlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setView(wrap)
@@ -5343,7 +5409,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v12.9 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v13.0 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
