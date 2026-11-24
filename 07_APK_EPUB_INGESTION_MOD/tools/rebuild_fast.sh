@@ -20,7 +20,7 @@ cp -a "${MOD_ROOT}/assets/azath_icons/"*.png "${WORK_DIR}/base_dec/assets/azath_
 mkdir -p "${WORK_DIR}/base_dec/assets/azath_fonts"
 cp -a "${MOD_ROOT}/assets/azath_fonts/"* "${WORK_DIR}/base_dec/assets/azath_fonts/"
 
-echo "[1b/5] Patching strings.xml & bottom nav Ember Crimson resources..."
+echo "[1b/5] Patching strings.xml, UI serif fonts (EB Garamond), & Limestone resources..."
 find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i \
     -e 's/in your Kindle library\./in your Azath library\./g' \
     -e 's/in your Folio library\./in your Azath library\./g' \
@@ -28,15 +28,18 @@ find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i \
     -e 's/your Folio library/your Azath library/g' \
     -e 's/>Search Folio</\>Search Azath</g' \
     -e 's/>Search Kindle</\>Search Azath</g' {} +
-sed -i 's/#ff2491ff/#ffe05a47/gI' \
+sed -i -e 's/#ff2491ff/#ffd4c9b8/gI' -e 's/#ffe05a47/#ffd4c9b8/gI' \
     "${WORK_DIR}/base_dec/res/values-night/colors.xml" \
     "${WORK_DIR}/base_dec/res/values/colors.xml" \
-    "${WORK_DIR}/base_dec/res/values/styles.xml"
-sed -i 's/android:color="@color\/accent_3_dark"/android:color="#ffe05a47"/g' \
+    "${WORK_DIR}/base_dec/res/values/styles.xml" \
+    "${WORK_DIR}/base_dec/res/drawable/bottom_bar_label_color_dark.xml"
+sed -i 's/android:color="@color\/accent_3_dark"/android:color="#ffd4c9b8"/g' \
     "${WORK_DIR}/base_dec/res/drawable/bottom_bar_label_color_dark.xml" || true
+cp -a "${MOD_ROOT}/assets/azath_fonts/EBGaramond-Regular.ttf" "${WORK_DIR}/base_dec/res/font/amazon_ember_serif_bold.ttf"
+cp -a "${MOD_ROOT}/assets/azath_fonts/EBGaramond-Regular.ttf" "${WORK_DIR}/base_dec/res/font/amazon_ember_serif_he.ttf"
 python3 "${MOD_ROOT}/tools/patch_res_azath_covers.py" "${WORK_DIR}/base_dec/res"
 
-echo "[1c/5] Updating launcher icons from dropin_res..."
+echo "[1c/5] Updating launcher icons from dropin_res (Stone #141517)..."
 python3 -c '
 import os, shutil
 from PIL import Image
@@ -44,11 +47,11 @@ from PIL import Image
 res_dir = "/tmp/kindle_clone_build/base_dec/res"
 dropin_res = "/home/bgg/projects/clunky/dropin_res"
 
-crimson = (26, 8, 8)
-bg_512 = Image.new("RGBA", (512, 512), crimson + (255,))
+stone_bg = (20, 21, 23)
+bg_512 = Image.new("RGBA", (512, 512), stone_bg + (255,))
 bg_512.save(os.path.join(res_dir, "drawable", "folio_icon_bg.png"))
 
-bg_432 = Image.new("RGB", (432, 432), crimson)
+bg_432 = Image.new("RGB", (432, 432), stone_bg)
 bg_432.save(os.path.join(res_dir, "drawable-xxxhdpi", "launcher_bg_adaptive.jpg"), "JPEG")
 
 shutil.copyfile(os.path.join(dropin_res, "ic_launcher_foreground.png"),
@@ -92,11 +95,11 @@ else
     echo "Device not currently attached via adb; skipping install for now."
 fi
 
-echo "[5/5] Staging Azath v15.1 KFX release..."
-mkdir -p "${MOD_ROOT}/release/azath_v15.1_kfx"
-cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v15.1_kfx/base.apk"
+echo "[5/5] Staging Azath v16.0 KFX release..."
+mkdir -p "${MOD_ROOT}/release/azath_v16.0_kfx"
+cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v16.0_kfx/base.apk"
 if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
-    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v15.1_kfx/base.apk.idsig"
+    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v16.0_kfx/base.apk.idsig"
 fi
 
-echo "Fast rebuild, deploy, and Azath v15.1 KFX staging successful!"
+echo "Fast rebuild, deploy, and Azath v16.0 KFX staging successful!"

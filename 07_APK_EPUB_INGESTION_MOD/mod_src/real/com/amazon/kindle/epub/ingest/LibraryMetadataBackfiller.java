@@ -174,7 +174,6 @@ public final class LibraryMetadataBackfiller {
                             changed = true;
                         }
                         if (changed) {
-                            Log.i(TAG, "Pass 3 updated [" + r.title + "]: " + cv);
                             metaDb.getWritableDatabase().update(
                                     "books_metadata", cv, "id = ?", new String[] { String.valueOf(r.id) });
                             added++;

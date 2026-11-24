@@ -37,14 +37,14 @@ public final class FolioMoreView {
     private static final String PREFS_NAME = "folio_catalog_prefs";
     private static final String KEY_CUSTOM_OPDS = "custom_opds_url";
 
-    private static final int BG_DARK = 0xFF0A0909;
-    private static final int BG_CARD = 0xFF181515;
-    private static final int BG_CARD_HOVER = 0xFF211C1B;
-    private static final int BORDER_HAIRLINE = 0xFF2A2423;
-    private static final int ACCENT_AMBER = 0xFFE05A47;
-    private static final int ACCENT_TEAL = 0xFFE05A47;
-    private static final int TEXT_PRIMARY = 0xFFF2EFE9;
-    private static final int TEXT_MUTED = 0xFF8E867E;
+    private static final int BG_DARK = 0xFF0E0F11;
+    private static final int BG_CARD = 0xFF1C1E22;
+    private static final int BG_CARD_HOVER = 0xFF25282D;
+    private static final int BORDER_HAIRLINE = 0xFF32353B;
+    private static final int ACCENT_AMBER = 0xFFD4C9B8;
+    private static final int ACCENT_TEAL = 0xFFD4C9B8;
+    private static final int TEXT_PRIMARY = 0xFFECE8E0;
+    private static final int TEXT_MUTED = 0xFF8A857D;
 
     public static View wrap(View originalView) {
         try {
@@ -108,7 +108,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v15.1 KFX");
+        badgeTv.setText("v16.0 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(FolioTheme.ACCENT_SOFT_TEXT);
         badgeTv.setTypeface(FolioTheme.sansBold(ctx));
@@ -247,7 +247,7 @@ public final class FolioMoreView {
         LinearLayout barTrack = new LinearLayout(ctx);
         barTrack.setOrientation(LinearLayout.HORIZONTAL);
         GradientDrawable trBg = new GradientDrawable();
-        trBg.setColor(0xFF2A2423);
+        trBg.setColor(0xFF32353B);
         trBg.setCornerRadius(dp(d, 3));
         barTrack.setBackground(trBg);
         barTrack.setLayoutParams(new LinearLayout.LayoutParams(
@@ -523,7 +523,7 @@ public final class FolioMoreView {
 
         LinearLayout wrap = new LinearLayout(ctx);
         wrap.setOrientation(LinearLayout.VERTICAL);
-        wrap.setBackgroundColor(0xFF121010);
+        wrap.setBackgroundColor(0xFF15171A);
         wrap.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
         java.util.Calendar calNow = java.util.Calendar.getInstance();
@@ -567,9 +567,9 @@ public final class FolioMoreView {
         shareGoalBtn.setTypeface(Typeface.DEFAULT_BOLD);
         shareGoalBtn.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
         GradientDrawable sgBg = new GradientDrawable();
-        sgBg.setColor(0xFF2A1816);
+        sgBg.setColor(0xFF282520);
         sgBg.setCornerRadius(dp(d, 9));
-        sgBg.setStroke(dp(d, 1), 0xFF5C2D26);
+        sgBg.setStroke(dp(d, 1), 0xFF524B41);
         shareGoalBtn.setBackground(sgBg);
         shareGoalBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -608,7 +608,7 @@ public final class FolioMoreView {
 
         TextView progSub = new TextView(ctx);
         progSub.setText(finCount + " of " + cur + " books finished (" + pct + "%)");
-        progSub.setTextColor(0xFFE05A47);
+        progSub.setTextColor(0xFFD4C9B8);
         progSub.setTextSize(12.5f);
         progSub.setTypeface(Typeface.DEFAULT_BOLD);
         progSub.setPadding(0, 0, 0, dp(d, 8));
@@ -617,7 +617,7 @@ public final class FolioMoreView {
         LinearLayout pTrack = new LinearLayout(ctx);
         pTrack.setOrientation(LinearLayout.HORIZONTAL);
         GradientDrawable ptBg = new GradientDrawable();
-        ptBg.setColor(0xFF211C1B);
+        ptBg.setColor(0xFF25282D);
         ptBg.setCornerRadius(dp(d, 4));
         pTrack.setBackground(ptBg);
         LinearLayout.LayoutParams ptLp = new LinearLayout.LayoutParams(
@@ -628,7 +628,7 @@ public final class FolioMoreView {
         float frac = Math.max(0.03f, Math.min(1f, finCount / (float) Math.max(1, cur)));
         View pFill = new View(ctx);
         GradientDrawable pfBg = new GradientDrawable();
-        pfBg.setColor(0xFFE05A47);
+        pfBg.setColor(0xFFD4C9B8);
         pfBg.setCornerRadius(dp(d, 4));
         pFill.setBackground(pfBg);
         pFill.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, frac));
@@ -652,9 +652,9 @@ public final class FolioMoreView {
                 paceVal
         };
         String[] pLbls = new String[] { "DAYS LEFT", "TO GO", "NEEDED PACE" };
-        int[] pCols = new int[] { ACCENT_TEAL, booksLeft == 0 ? 0xFFE05A47 : ACCENT_AMBER, 0xFFE05A47 };
-        int[] pBgs = new int[] { 0xFF2A1816, booksLeft == 0 ? 0xFF2A1816 : 0xFF2A1816, 0xFF2A1816 };
-        int[] pBrd = new int[] { 0xFF5C2D26, booksLeft == 0 ? 0xFF5C2D26 : 0xFF5C2D26, 0xFF5C2D26 };
+        int[] pCols = new int[] { ACCENT_TEAL, booksLeft == 0 ? 0xFFD4C9B8 : ACCENT_AMBER, 0xFFD4C9B8 };
+        int[] pBgs = new int[] { 0xFF282520, booksLeft == 0 ? 0xFF282520 : 0xFF282520, 0xFF282520 };
+        int[] pBrd = new int[] { 0xFF524B41, booksLeft == 0 ? 0xFF524B41 : 0xFF524B41, 0xFF524B41 };
 
         for (int ti = 0; ti < 3; ti++) {
             LinearLayout tile = new LinearLayout(ctx);
@@ -680,7 +680,7 @@ public final class FolioMoreView {
 
             TextView lTv = new TextView(ctx);
             lTv.setText(pLbls[ti]);
-            lTv.setTextColor(0xFF8E867E);
+            lTv.setTextColor(0xFF8A857D);
             lTv.setTextSize(9.5f);
             lTv.setTypeface(Typeface.DEFAULT_BOLD);
             lTv.setPadding(0, dp(d, 2), 0, 0);
@@ -696,7 +696,7 @@ public final class FolioMoreView {
         if (!finishedBooks.isEmpty()) {
             TextView trHdr = new TextView(ctx);
             trHdr.setText("COMPLETED BOOKS (" + finishedBooks.size() + ")");
-            trHdr.setTextColor(0xFFE05A47);
+            trHdr.setTextColor(0xFFD4C9B8);
             trHdr.setTextSize(10.5f);
             trHdr.setTypeface(Typeface.DEFAULT_BOLD);
             trHdr.setPadding(0, 0, 0, dp(d, 7));
@@ -717,9 +717,9 @@ public final class FolioMoreView {
                 card.setGravity(Gravity.CENTER_VERTICAL);
                 card.setPadding(dp(d, 9), dp(d, 8), dp(d, 10), dp(d, 8));
                 GradientDrawable cBg = new GradientDrawable();
-                cBg.setColor(0xFF181515);
+                cBg.setColor(0xFF1C1E22);
                 cBg.setCornerRadius(dp(d, 9));
-                cBg.setStroke(dp(d, 1), 0xFF5C2D26);
+                cBg.setStroke(dp(d, 1), 0xFF524B41);
                 card.setBackground(cBg);
                 LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
                         dp(d, 196), ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -743,7 +743,7 @@ public final class FolioMoreView {
 
                 TextView aTv = new TextView(ctx);
                 aTv.setText(!aDisp.isEmpty() ? aDisp : "Unknown Author");
-                aTv.setTextColor(0xFF8E867E);
+                aTv.setTextColor(0xFF8A857D);
                 aTv.setTextSize(10.5f);
                 aTv.setSingleLine(true);
                 aTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -751,7 +751,7 @@ public final class FolioMoreView {
 
                 TextView dTv = new TextView(ctx);
                 dTv.setText(finDt.isEmpty() ? "✓ Finished" : ("✓ " + finDt));
-                dTv.setTextColor(0xFFE05A47);
+                dTv.setTextColor(0xFFD4C9B8);
                 dTv.setTextSize(10.5f);
                 dTv.setTypeface(Typeface.DEFAULT_BOLD);
                 dTv.setPadding(0, dp(d, 2), 0, 0);
@@ -776,7 +776,7 @@ public final class FolioMoreView {
 
         TextView tgtLbl = new TextView(ctx);
         tgtLbl.setText("ANNUAL TARGET (BOOKS)");
-        tgtLbl.setTextColor(0xFF8E867E);
+        tgtLbl.setTextColor(0xFF8A857D);
         tgtLbl.setTextSize(10.5f);
         tgtLbl.setTypeface(Typeface.DEFAULT_BOLD);
         tgtLbl.setPadding(0, 0, 0, dp(d, 7));
@@ -787,12 +787,12 @@ public final class FolioMoreView {
         et.setText(String.valueOf(cur));
         et.setTextColor(TEXT_PRIMARY);
         et.setHint("Number of books (e.g. 12, 24, 52)");
-        et.setHintTextColor(0xFF8E867E);
+        et.setHintTextColor(0xFF8A857D);
         et.setPadding(dp(d, 12), dp(d, 10), dp(d, 12), dp(d, 10));
         GradientDrawable etBg = new GradientDrawable();
-        etBg.setColor(0xFF181515);
+        etBg.setColor(0xFF1C1E22);
         etBg.setCornerRadius(dp(d, 10));
-        etBg.setStroke(dp(d, 1), 0xFF2A2423);
+        etBg.setStroke(dp(d, 1), 0xFF32353B);
         et.setBackground(etBg);
 
         LinearLayout presetRow = new LinearLayout(ctx);
@@ -806,13 +806,13 @@ public final class FolioMoreView {
         for (final int pv : presets) {
             TextView pill = new TextView(ctx);
             pill.setText(String.valueOf(pv));
-            pill.setTextColor(pv == cur ? 0xFF121010 : 0xFFE05A47);
+            pill.setTextColor(pv == cur ? 0xFF15171A : 0xFFD4C9B8);
             pill.setTextSize(12);
             pill.setTypeface(Typeface.DEFAULT_BOLD);
             pill.setGravity(Gravity.CENTER);
             pill.setPadding(dp(d, 10), dp(d, 6), dp(d, 10), dp(d, 6));
             GradientDrawable pBg = new GradientDrawable();
-            pBg.setColor(pv == cur ? 0xFFE05A47 : 0xFF211C1B);
+            pBg.setColor(pv == cur ? 0xFFD4C9B8 : 0xFF25282D);
             pBg.setCornerRadius(dp(d, 12));
             pill.setBackground(pBg);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
@@ -854,10 +854,10 @@ public final class FolioMoreView {
                     spBtn.setTextSize(11.5f);
                     spBtn.setTypeface(Typeface.DEFAULT_BOLD);
                     spBtn.setGravity(Gravity.CENTER);
-                    spBtn.setTextColor(active ? 0xFF0A0909 : TEXT_PRIMARY);
+                    spBtn.setTextColor(active ? 0xFF0E0F11 : TEXT_PRIMARY);
                     spBtn.setPadding(dp(d, 6), dp(d, 7), dp(d, 6), dp(d, 7));
                     GradientDrawable sBg = new GradientDrawable();
-                    sBg.setColor(active ? ACCENT_TEAL : 0xFF211C1B);
+                    sBg.setColor(active ? ACCENT_TEAL : 0xFF25282D);
                     sBg.setCornerRadius(dp(d, 8));
                     if (!active) sBg.setStroke(dp(d, 1), BORDER_HAIRLINE);
                     spBtn.setBackground(sBg);
@@ -933,7 +933,7 @@ public final class FolioMoreView {
 
         if (topDivider) {
             View div = new View(ctx);
-            div.setBackgroundColor(0xFF211C1B);
+            div.setBackgroundColor(0xFF25282D);
             LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, Math.round(d * 0.8f)));
             dlp.leftMargin = dp(d, 48);
@@ -972,7 +972,7 @@ public final class FolioMoreView {
         col.addView(sTv);
         row.addView(col);
 
-        View chev = FolioIcons.makeIcon(ctx, FolioIcons.CHEVRON_RIGHT, 16, 0xFF8E867E);
+        View chev = FolioIcons.makeIcon(ctx, FolioIcons.CHEVRON_RIGHT, 16, 0xFF8A857D);
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(dp(d, 16), dp(d, 16));
         clp.leftMargin = dp(d, 8);
         row.addView(chev, clp);
@@ -994,7 +994,7 @@ public final class FolioMoreView {
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(BG_CARD);
         bg.setCornerRadius(dp(d, 12));
-        bg.setStroke(dp(d, 1), 0xFF2A2423);
+        bg.setStroke(dp(d, 1), 0xFF32353B);
         card.setBackground(bg);
         card.setClickable(true);
         card.setFocusable(true);
@@ -1036,7 +1036,7 @@ public final class FolioMoreView {
         TextView arrowTv = new TextView(ctx);
         arrowTv.setText("›");
         arrowTv.setTextSize(20);
-        arrowTv.setTextColor(0xFF8E867E);
+        arrowTv.setTextColor(0xFF8A857D);
         arrowTv.setPadding(dp(d, 8), 0, 0, 0);
         card.addView(arrowTv);
 
@@ -1071,7 +1071,7 @@ public final class FolioMoreView {
 
         TextView label = new TextView(ctx);
         label.setText("Quick OPDS Catalogs:");
-        label.setTextColor(0xFFC4BDB5);
+        label.setTextColor(0xFFBDB8AE);
         label.setTypeface(Typeface.DEFAULT_BOLD);
         label.setPadding(0, 0, 0, dp(d, 8));
         layout.addView(label);
@@ -1091,7 +1091,7 @@ public final class FolioMoreView {
         for (final String[] p : presets) {
             TextView btn = new TextView(ctx);
             btn.setText("• " + p[0]);
-            btn.setTextColor(0xFFE05A47);
+            btn.setTextColor(0xFFD4C9B8);
             btn.setPadding(dp(d, 4), dp(d, 6), dp(d, 4), dp(d, 6));
             btn.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -1104,7 +1104,7 @@ public final class FolioMoreView {
 
         TextView customLabel = new TextView(ctx);
         customLabel.setText("\nOr enter custom OPDS feed URL:");
-        customLabel.setTextColor(0xFFC4BDB5);
+        customLabel.setTextColor(0xFFBDB8AE);
         customLabel.setTypeface(Typeface.DEFAULT_BOLD);
         layout.addView(customLabel);
         layout.addView(input);
@@ -1309,9 +1309,9 @@ public final class FolioMoreView {
             card.setOrientation(LinearLayout.VERTICAL);
             card.setPadding(dp(d, 10), dp(d, 10), dp(d, 10), dp(d, 9));
             GradientDrawable cBg = new GradientDrawable();
-            cBg.setColor(0xFF121010);
+            cBg.setColor(0xFF15171A);
             cBg.setCornerRadius(dp(d, 10));
-            cBg.setStroke(dp(d, 1), 0xFF2A2423);
+            cBg.setStroke(dp(d, 1), 0xFF32353B);
             card.setBackground(cBg);
             LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
                     dp(d, 196), ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1342,7 +1342,7 @@ public final class FolioMoreView {
             String authorDisp = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(rec.author);
             TextView aTv = new TextView(ctx);
             aTv.setText(!authorDisp.isEmpty() ? authorDisp : "Unknown Author");
-            aTv.setTextColor(0xFF8E867E);
+            aTv.setTextColor(0xFF8A857D);
             aTv.setTextSize(10.5f);
             aTv.setSingleLine(true);
             aTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -1364,7 +1364,7 @@ public final class FolioMoreView {
             LinearLayout track = new LinearLayout(ctx);
             track.setOrientation(LinearLayout.HORIZONTAL);
             GradientDrawable trBg = new GradientDrawable();
-            trBg.setColor(0xFF211C1B);
+            trBg.setColor(0xFF25282D);
             trBg.setCornerRadius(dp(d, 2));
             track.setBackground(trBg);
             LinearLayout.LayoutParams trLp = new LinearLayout.LayoutParams(
@@ -1463,14 +1463,14 @@ public final class FolioMoreView {
 
             TextView pickBtn = new TextView(ctx);
             pickBtn.setText("+ Pick ›");
-            pickBtn.setTextColor(0xFFE05A47);
+            pickBtn.setTextColor(0xFFD4C9B8);
             pickBtn.setTextSize(12);
             pickBtn.setTypeface(Typeface.DEFAULT_BOLD);
             pickBtn.setPadding(dp(d, 10), dp(d, 6), dp(d, 10), dp(d, 6));
             GradientDrawable pBg = new GradientDrawable();
-            pBg.setColor(0xFF2A1816);
+            pBg.setColor(0xFF282520);
             pBg.setCornerRadius(dp(d, 8));
-            pBg.setStroke(dp(d, 1), 0xFF5C2D26);
+            pBg.setStroke(dp(d, 1), 0xFF524B41);
             pickBtn.setBackground(pBg);
             row.addView(pickBtn);
 
@@ -1515,7 +1515,7 @@ public final class FolioMoreView {
         reorderBtn.setTypeface(Typeface.DEFAULT_BOLD);
         reorderBtn.setPadding(dp(d, 8), dp(d, 3), dp(d, 8), dp(d, 3));
         GradientDrawable roBg = new GradientDrawable();
-        roBg.setColor(0xFF211C1B);
+        roBg.setColor(0xFF25282D);
         roBg.setCornerRadius(dp(d, 8));
         roBg.setStroke(dp(d, 1), BORDER_HAIRLINE);
         reorderBtn.setBackground(roBg);
@@ -1557,7 +1557,7 @@ public final class FolioMoreView {
             card.setGravity(Gravity.CENTER_VERTICAL);
             card.setPadding(dp(d, 10), dp(d, 9), dp(d, 8), dp(d, 9));
             GradientDrawable cBg = new GradientDrawable();
-            cBg.setColor(0xFF211C1B);
+            cBg.setColor(0xFF25282D);
             cBg.setCornerRadius(dp(d, 10));
             cBg.setStroke(dp(d, 1), BORDER_HAIRLINE);
             card.setBackground(cBg);
@@ -1584,7 +1584,7 @@ public final class FolioMoreView {
             String authorDisp = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(rec.author);
             TextView aTv = new TextView(ctx);
             aTv.setText(!authorDisp.isEmpty() ? authorDisp : "Unknown Author");
-            aTv.setTextColor(0xFF8E867E);
+            aTv.setTextColor(0xFF8A857D);
             aTv.setTextSize(10.5f);
             aTv.setSingleLine(true);
             aTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -1601,7 +1601,7 @@ public final class FolioMoreView {
 
             TextView rmBtn = new TextView(ctx);
             rmBtn.setText("✕");
-            rmBtn.setTextColor(0xFF8E867E);
+            rmBtn.setTextColor(0xFF8A857D);
             rmBtn.setTextSize(12);
             rmBtn.setPadding(dp(d, 6), dp(d, 4), dp(d, 4), dp(d, 4));
             rmBtn.setOnClickListener(new View.OnClickListener() {
@@ -1651,9 +1651,9 @@ public final class FolioMoreView {
     private static View makeMiniCoverView(Context ctx, float d, String kfxPath, String titleHint, int wDp, int hDp, int rightMarginDp) {
         FrameLayout covFrame = new FrameLayout(ctx);
         GradientDrawable cfBg = new GradientDrawable();
-        cfBg.setColor(0xFF211C1B);
+        cfBg.setColor(0xFF25282D);
         cfBg.setCornerRadius(dp(d, 6));
-        cfBg.setStroke(dp(d, 1), 0xFF2A2423);
+        cfBg.setStroke(dp(d, 1), 0xFF32353B);
         covFrame.setBackground(cfBg);
         LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(d, wDp), dp(d, hDp));
         ivLp.rightMargin = dp(d, rightMarginDp);
@@ -1668,7 +1668,7 @@ public final class FolioMoreView {
         } else {
             TextView phTv = new TextView(ctx);
             phTv.setText(extractCoverInitial(titleHint != null && !titleHint.trim().isEmpty() ? titleHint : kfxPath));
-            phTv.setTextColor(0xFF8E867E);
+            phTv.setTextColor(0xFF8A857D);
             phTv.setTextSize(wDp >= 44 ? 19 : 16);
             phTv.setTypeface(FolioTheme.serif(ctx));
             phTv.setGravity(Gravity.CENTER);
@@ -1677,7 +1677,7 @@ public final class FolioMoreView {
 
             View spineRule = new View(ctx);
             GradientDrawable ruleBg = new GradientDrawable();
-            ruleBg.setColor(0xFF5C2D26);
+            ruleBg.setColor(0xFF524B41);
             ruleBg.setCornerRadius(dp(d, 2));
             spineRule.setBackground(ruleBg);
             FrameLayout.LayoutParams ruleLp = new FrameLayout.LayoutParams(dp(d, Math.max(12, wDp / 2 - 4)), dp(d, 2));
@@ -1753,7 +1753,7 @@ public final class FolioMoreView {
 
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xFF121010);
+        root.setBackgroundColor(0xFF15171A);
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
 
         LinearLayout hdrRow = new LinearLayout(ctx);
@@ -1769,12 +1769,12 @@ public final class FolioMoreView {
         hdrRow.addView(titleHdr);
 
         final TextView countBadge = new TextView(ctx);
-        countBadge.setTextColor(0xFFE05A47);
+        countBadge.setTextColor(0xFFD4C9B8);
         countBadge.setTextSize(11);
         countBadge.setTypeface(Typeface.DEFAULT_BOLD);
         countBadge.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
         GradientDrawable cbBg = new GradientDrawable();
-        cbBg.setColor(0xFF2A1816);
+        cbBg.setColor(0xFF282520);
         cbBg.setCornerRadius(dp(d, 10));
         cbBg.setStroke(dp(d, 1), 0x664DA6FF);
         countBadge.setBackground(cbBg);
@@ -1825,7 +1825,7 @@ public final class FolioMoreView {
                     GradientDrawable rBg = new GradientDrawable();
                     rBg.setColor(BG_CARD);
                     rBg.setCornerRadius(dp(d, 10));
-                    rBg.setStroke(dp(d, 1), i == 0 ? 0xFFE05A47 : 0xFF2A2423);
+                    rBg.setStroke(dp(d, 1), i == 0 ? 0xFFD4C9B8 : 0xFF32353B);
                     row.setBackground(rBg);
                     LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1834,7 +1834,7 @@ public final class FolioMoreView {
 
                     TextView rankTv = new TextView(ctx);
                     rankTv.setText("#" + (i + 1));
-                    rankTv.setTextColor(i == 0 ? 0xFFE05A47 : 0xFF8E867E);
+                    rankTv.setTextColor(i == 0 ? 0xFFD4C9B8 : 0xFF8A857D);
                     rankTv.setTextSize(12);
                     rankTv.setTypeface(Typeface.DEFAULT_BOLD);
                     rankTv.setGravity(Gravity.CENTER);
@@ -1883,14 +1883,14 @@ public final class FolioMoreView {
                     boolean canUp = idx > 0;
                     TextView upBtn = new TextView(ctx);
                     upBtn.setText("↑");
-                    upBtn.setTextColor(canUp ? 0xFFE05A47 : 0xFF2A2423);
+                    upBtn.setTextColor(canUp ? 0xFFD4C9B8 : 0xFF32353B);
                     upBtn.setTextSize(14);
                     upBtn.setTypeface(Typeface.DEFAULT_BOLD);
                     upBtn.setGravity(Gravity.CENTER);
                     upBtn.setPadding(dp(d, 8), dp(d, 6), dp(d, 8), dp(d, 6));
                     if (canUp) {
                         GradientDrawable uBg = new GradientDrawable();
-                        uBg.setColor(0xFF2A1816);
+                        uBg.setColor(0xFF282520);
                         uBg.setCornerRadius(dp(d, 7));
                         upBtn.setBackground(uBg);
                         upBtn.setOnClickListener(new View.OnClickListener() {
@@ -1911,14 +1911,14 @@ public final class FolioMoreView {
                     boolean canDown = idx < queued.size() - 1;
                     TextView dnBtn = new TextView(ctx);
                     dnBtn.setText("↓");
-                    dnBtn.setTextColor(canDown ? 0xFFE05A47 : 0xFF2A2423);
+                    dnBtn.setTextColor(canDown ? 0xFFD4C9B8 : 0xFF32353B);
                     dnBtn.setTextSize(14);
                     dnBtn.setTypeface(Typeface.DEFAULT_BOLD);
                     dnBtn.setGravity(Gravity.CENTER);
                     dnBtn.setPadding(dp(d, 8), dp(d, 6), dp(d, 8), dp(d, 6));
                     if (canDown) {
                         GradientDrawable dBg = new GradientDrawable();
-                        dBg.setColor(0xFF2A1816);
+                        dBg.setColor(0xFF282520);
                         dBg.setCornerRadius(dp(d, 7));
                         dnBtn.setBackground(dBg);
                         dnBtn.setOnClickListener(new View.OnClickListener() {
@@ -1938,7 +1938,7 @@ public final class FolioMoreView {
 
                     TextView rmBtn = new TextView(ctx);
                     rmBtn.setText("✕");
-                    rmBtn.setTextColor(0xFF8E867E);
+                    rmBtn.setTextColor(0xFF8A857D);
                     rmBtn.setTextSize(12);
                     rmBtn.setGravity(Gravity.CENTER);
                     rmBtn.setPadding(dp(d, 7), dp(d, 6), dp(d, 6), dp(d, 6));
@@ -2012,7 +2012,7 @@ public final class FolioMoreView {
 
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xFF121010);
+        root.setBackgroundColor(0xFF15171A);
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
         LinearLayout hdrRow = new LinearLayout(ctx);
@@ -2029,12 +2029,12 @@ public final class FolioMoreView {
         hdrRow.addView(titleHdr);
 
         final TextView poolTag = new TextView(ctx);
-        poolTag.setTextColor(0xFFE05A47);
+        poolTag.setTextColor(0xFFD4C9B8);
         poolTag.setTextSize(11);
         poolTag.setTypeface(Typeface.DEFAULT_BOLD);
         poolTag.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
         GradientDrawable ptBg = new GradientDrawable();
-        ptBg.setColor(0xFF2A1816);
+        ptBg.setColor(0xFF282520);
         ptBg.setCornerRadius(dp(d, 10));
         ptBg.setStroke(dp(d, 1), 0x664DA6FF);
         poolTag.setBackground(ptBg);
@@ -2081,14 +2081,14 @@ public final class FolioMoreView {
                     pill.setText(labels[i]);
                     pill.setTextSize(11.5f);
                     pill.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-                    pill.setTextColor(active ? 0xFFE05A47 : 0xFF8E867E);
+                    pill.setTextColor(active ? 0xFFD4C9B8 : 0xFF8A857D);
                     pill.setGravity(Gravity.CENTER);
                     pill.setSingleLine(true);
                     pill.setPadding(dp(d, 10), dp(d, 6), dp(d, 10), dp(d, 6));
                     GradientDrawable pBg = new GradientDrawable();
-                    pBg.setColor(active ? 0xFF2A1816 : 0xFF181515);
+                    pBg.setColor(active ? 0xFF282520 : 0xFF1C1E22);
                     pBg.setCornerRadius(dp(d, 9));
-                    pBg.setStroke(dp(d, 1), active ? 0xFFE05A47 : 0xFF2A2423);
+                    pBg.setStroke(dp(d, 1), active ? 0xFFD4C9B8 : 0xFF32353B);
                     pill.setBackground(pBg);
                     LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
                             0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
@@ -2187,7 +2187,7 @@ public final class FolioMoreView {
                 if (metaLine.length() > 0) {
                     TextView bMeta = new TextView(ctx);
                     bMeta.setText(metaLine.toString());
-                    bMeta.setTextColor(0xFF8E867E);
+                    bMeta.setTextColor(0xFF8A857D);
                     bMeta.setTextSize(11.5f);
                     bMeta.setSingleLine(true);
                     bMeta.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -2206,11 +2206,11 @@ public final class FolioMoreView {
                         if (gShown++ >= 2) break;
                         TextView gp = new TextView(ctx);
                         gp.setText(g);
-                        gp.setTextColor(0xFFF5B8AE);
+                        gp.setTextColor(0xFFE6DDD0);
                         gp.setTextSize(10.5f);
                         gp.setPadding(dp(d, 8), dp(d, 3), dp(d, 8), dp(d, 3));
                         GradientDrawable gBg = new GradientDrawable();
-                        gBg.setColor(0xFF2A1816);
+                        gBg.setColor(0xFF282520);
                         gBg.setCornerRadius(dp(d, 8));
                         gp.setBackground(gBg);
                         LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(
@@ -2227,7 +2227,7 @@ public final class FolioMoreView {
                 if (rec.description != null && !rec.description.trim().isEmpty()) {
                     TextView descTv = new TextView(ctx);
                     descTv.setText(rec.description.trim());
-                    descTv.setTextColor(0xFFC4BDB5);
+                    descTv.setTextColor(0xFFBDB8AE);
                     descTv.setTextSize(12.5f);
                     descTv.setMaxLines(4);
                     descTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -2242,16 +2242,16 @@ public final class FolioMoreView {
 
                 TextView rerollBtn = new TextView(ctx);
                 rerollBtn.setText("Another");
-                rerollBtn.setTextColor(0xFFE05A47);
+                rerollBtn.setTextColor(0xFFD4C9B8);
                 rerollBtn.setTextSize(11.5f);
                 rerollBtn.setTypeface(Typeface.DEFAULT_BOLD);
                 rerollBtn.setGravity(Gravity.CENTER);
                 rerollBtn.setSingleLine(true);
                 rerollBtn.setPadding(dp(d, 8), dp(d, 8), dp(d, 8), dp(d, 8));
                 GradientDrawable rrBg = new GradientDrawable();
-                rrBg.setColor(0xFF2A1816);
+                rrBg.setColor(0xFF282520);
                 rrBg.setCornerRadius(dp(d, 9));
-                rrBg.setStroke(dp(d, 1), 0xFF5C2D26);
+                rrBg.setStroke(dp(d, 1), 0xFF524B41);
                 rerollBtn.setBackground(rrBg);
                 LinearLayout.LayoutParams rrLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
                 rrLp.rightMargin = dp(d, 6);
@@ -2273,16 +2273,16 @@ public final class FolioMoreView {
                 final boolean inQueue = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.isInQueue(ctx, rec.kfxPath);
                 TextView queueBtn = new TextView(ctx);
                 queueBtn.setText(inQueue ? "Queued" : "Queue");
-                queueBtn.setTextColor(inQueue ? 0xFFF2EFE9 : 0xFFC4BDB5);
+                queueBtn.setTextColor(inQueue ? 0xFFECE8E0 : 0xFFBDB8AE);
                 queueBtn.setTextSize(11.5f);
                 queueBtn.setTypeface(Typeface.DEFAULT_BOLD);
                 queueBtn.setGravity(Gravity.CENTER);
                 queueBtn.setSingleLine(true);
                 queueBtn.setPadding(dp(d, 8), dp(d, 8), dp(d, 8), dp(d, 8));
                 GradientDrawable qBg = new GradientDrawable();
-                qBg.setColor(inQueue ? 0xFF2A1816 : 0xFF181515);
+                qBg.setColor(inQueue ? 0xFF282520 : 0xFF1C1E22);
                 qBg.setCornerRadius(dp(d, 9));
-                qBg.setStroke(dp(d, 1), inQueue ? 0xFF5C2D26 : 0xFF2A2423);
+                qBg.setStroke(dp(d, 1), inQueue ? 0xFF524B41 : 0xFF32353B);
                 queueBtn.setBackground(qBg);
                 LinearLayout.LayoutParams qLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
                 qLp.rightMargin = dp(d, 6);
@@ -2308,9 +2308,9 @@ public final class FolioMoreView {
                 detBtn.setSingleLine(true);
                 detBtn.setPadding(dp(d, 8), dp(d, 8), dp(d, 8), dp(d, 8));
                 GradientDrawable dtBg = new GradientDrawable();
-                dtBg.setColor(0xFF2A1816);
+                dtBg.setColor(0xFF282520);
                 dtBg.setCornerRadius(dp(d, 9));
-                dtBg.setStroke(dp(d, 1), 0xFF5C2D26);
+                dtBg.setStroke(dp(d, 1), 0xFF524B41);
                 detBtn.setBackground(dtBg);
                 detBtn.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
                 detBtn.setOnClickListener(new View.OnClickListener() {
@@ -2411,7 +2411,7 @@ public final class FolioMoreView {
 
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xFF121010);
+        root.setBackgroundColor(0xFF15171A);
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
         final TextView titleTv = new TextView(ctx);
@@ -2435,9 +2435,9 @@ public final class FolioMoreView {
         searchWrap.setOrientation(LinearLayout.HORIZONTAL);
         searchWrap.setGravity(Gravity.CENTER_VERTICAL);
         GradientDrawable sBg = new GradientDrawable();
-        sBg.setColor(0xFF181515);
+        sBg.setColor(0xFF1C1E22);
         sBg.setCornerRadius(dp(d, 10));
-        sBg.setStroke(dp(d, 1), 0xFF2A2423);
+        sBg.setStroke(dp(d, 1), 0xFF32353B);
         searchWrap.setBackground(sBg);
         LinearLayout.LayoutParams swLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -2446,7 +2446,7 @@ public final class FolioMoreView {
 
         final EditText searchEt = new EditText(ctx);
         searchEt.setHint("Type title, author, genre, note, or shelf...");
-        searchEt.setHintTextColor(0xFF8E867E);
+        searchEt.setHintTextColor(0xFF8A857D);
         searchEt.setTextColor(TEXT_PRIMARY);
         searchEt.setTextSize(13.5f);
         searchEt.setSingleLine(true);
@@ -2457,7 +2457,7 @@ public final class FolioMoreView {
 
         final TextView clearBtn = new TextView(ctx);
         clearBtn.setText("✕");
-        clearBtn.setTextColor(0xFF8E867E);
+        clearBtn.setTextColor(0xFF8A857D);
         clearBtn.setTextSize(14);
         clearBtn.setTypeface(Typeface.DEFAULT_BOLD);
         clearBtn.setPadding(dp(d, 10), dp(d, 8), dp(d, 12), dp(d, 8));
@@ -2514,12 +2514,12 @@ public final class FolioMoreView {
                     boolean act = sk.equals(activeScope[0]);
                     TextView sp = new TextView(ctx);
                     sp.setText(scopeLabels[si]);
-                    sp.setTextColor(act ? 0xFF121010 : 0xFFC4BDB5);
+                    sp.setTextColor(act ? 0xFF15171A : 0xFFBDB8AE);
                     sp.setTextSize(11.5f);
                     sp.setTypeface(act ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                     sp.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
                     GradientDrawable spBg = new GradientDrawable();
-                    spBg.setColor(act ? 0xFFE05A47 : 0xFF211C1B);
+                    spBg.setColor(act ? 0xFFD4C9B8 : 0xFF25282D);
                     spBg.setCornerRadius(dp(d, 13));
                     sp.setBackground(spBg);
                     LinearLayout.LayoutParams spLp = new LinearLayout.LayoutParams(
@@ -2554,13 +2554,13 @@ public final class FolioMoreView {
                     for (final String rq : recents) {
                         TextView chip = new TextView(ctx);
                         chip.setText("" + rq);
-                        chip.setTextColor(0xFF8E867E);
+                        chip.setTextColor(0xFF8A857D);
                         chip.setTextSize(11);
                         chip.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
                         GradientDrawable rcBg = new GradientDrawable();
-                        rcBg.setColor(0xFF181515);
+                        rcBg.setColor(0xFF1C1E22);
                         rcBg.setCornerRadius(dp(d, 12));
-                        rcBg.setStroke(dp(d, 1), 0xFF2A2423);
+                        rcBg.setStroke(dp(d, 1), 0xFF32353B);
                         chip.setBackground(rcBg);
                         LinearLayout.LayoutParams rcLp = new LinearLayout.LayoutParams(
                                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -2576,7 +2576,7 @@ public final class FolioMoreView {
                     }
                     TextView clrH = new TextView(ctx);
                     clrH.setText("Clear");
-                    clrH.setTextColor(0xFFE87A6D);
+                    clrH.setTextColor(0xFFC99A7E);
                     clrH.setTextSize(11);
                     clrH.setPadding(dp(d, 6), dp(d, 4), dp(d, 4), dp(d, 4));
                     clrH.setOnClickListener(new View.OnClickListener() {
@@ -2608,9 +2608,9 @@ public final class FolioMoreView {
                     shRow.setGravity(Gravity.CENTER_VERTICAL);
                     shRow.setPadding(dp(d, 11), dp(d, 8), dp(d, 11), dp(d, 8));
                     GradientDrawable shBg = new GradientDrawable();
-                    shBg.setColor(0xFF181515);
+                    shBg.setColor(0xFF1C1E22);
                     shBg.setCornerRadius(dp(d, 9));
-                    shBg.setStroke(dp(d, 1), 0xFF2A2423);
+                    shBg.setStroke(dp(d, 1), 0xFF32353B);
                     shRow.setBackground(shBg);
                     LinearLayout.LayoutParams shLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -2619,7 +2619,7 @@ public final class FolioMoreView {
 
                     TextView shTv = new TextView(ctx);
                     shTv.setText("Shelf: " + shName);
-                    shTv.setTextColor(0xFFF2EFE9);
+                    shTv.setTextColor(0xFFECE8E0);
                     shTv.setTextSize(12.5f);
                     shTv.setTypeface(Typeface.DEFAULT_BOLD);
                     shTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
@@ -2628,7 +2628,7 @@ public final class FolioMoreView {
                     TextView shCnt = new TextView(ctx);
                     int sc = se.getValue();
                     shCnt.setText(sc + (sc == 1 ? " book ›" : " books ›"));
-                    shCnt.setTextColor(0xFF8E867E);
+                    shCnt.setTextColor(0xFF8A857D);
                     shCnt.setTextSize(11.5f);
                     shRow.addView(shCnt);
 
@@ -2691,7 +2691,7 @@ public final class FolioMoreView {
                     GradientDrawable cBg = new GradientDrawable();
                     cBg.setColor(BG_CARD);
                     cBg.setCornerRadius(dp(d, 9));
-                    cBg.setStroke(dp(d, 1), matchedNote ? 0xFF5C2D26 : 0xFF2A2423);
+                    cBg.setStroke(dp(d, 1), matchedNote ? 0xFF524B41 : 0xFF32353B);
                     card.setBackground(cBg);
                     LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -2700,9 +2700,9 @@ public final class FolioMoreView {
 
                     FrameLayout covFrame = new FrameLayout(ctx);
                     GradientDrawable cfBg = new GradientDrawable();
-                    cfBg.setColor(0xFF121010);
+                    cfBg.setColor(0xFF15171A);
                     cfBg.setCornerRadius(dp(d, 4));
-                    cfBg.setStroke(dp(d, 1), 0xFF211C1B);
+                    cfBg.setStroke(dp(d, 1), 0xFF25282D);
                     covFrame.setBackground(cfBg);
                     LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(d, 34), dp(d, 48));
                     ivLp.rightMargin = dp(d, 10);
@@ -2717,7 +2717,7 @@ public final class FolioMoreView {
                     } else {
                         TextView phTv = new TextView(ctx);
                         phTv.setText(extractCoverInitial(rec.title != null && !rec.title.isEmpty() ? rec.title : rec.kfxPath));
-                        phTv.setTextColor(0xFF8E867E);
+                        phTv.setTextColor(0xFF8A857D);
                         phTv.setTextSize(16);
                         phTv.setTypeface(FolioTheme.serif(ctx));
                         phTv.setGravity(Gravity.CENTER);
@@ -2725,7 +2725,7 @@ public final class FolioMoreView {
                                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                         View spineRule = new View(ctx);
                         GradientDrawable ruleBg = new GradientDrawable();
-                        ruleBg.setColor(0xFF5C2D26);
+                        ruleBg.setColor(0xFF524B41);
                         ruleBg.setCornerRadius(dp(d, 2));
                         spineRule.setBackground(ruleBg);
                         FrameLayout.LayoutParams ruleLp = new FrameLayout.LayoutParams(dp(d, 14), dp(d, 2));
@@ -2753,7 +2753,7 @@ public final class FolioMoreView {
                             : (com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.isInQueue(ctx, rec.kfxPath) ? "Up Next" : "Unread"));
                     TextView ba = new TextView(ctx);
                     ba.setText((!aStr.isEmpty() ? aStr : "Unknown Author") + " · " + statusTag);
-                    ba.setTextColor(0xFF8E867E);
+                    ba.setTextColor(0xFF8A857D);
                     ba.setTextSize(11);
                     ba.setSingleLine(true);
                     ba.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -2762,7 +2762,7 @@ public final class FolioMoreView {
                     if (!nStr.isEmpty() && (matchedNote || q.isEmpty())) {
                         TextView bn = new TextView(ctx);
                         bn.setText("" + nStr);
-                        bn.setTextColor(0xFFE05A47);
+                        bn.setTextColor(0xFFD4C9B8);
                         bn.setTextSize(10.5f);
                         bn.setSingleLine(true);
                         bn.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -2773,7 +2773,7 @@ public final class FolioMoreView {
                     final int cardPct = pct;
                     TextView infoPill = new TextView(ctx);
                     infoPill.setText("ⓘ");
-                    infoPill.setTextColor(0xFF8E867E);
+                    infoPill.setTextColor(0xFF8A857D);
                     infoPill.setTextSize(14);
                     infoPill.setPadding(dp(d, 8), dp(d, 6), dp(d, 6), dp(d, 6));
                     infoPill.setOnClickListener(new View.OnClickListener() {
@@ -2893,7 +2893,7 @@ public final class FolioMoreView {
 
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xFF121010);
+        root.setBackgroundColor(0xFF15171A);
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
         final AlertDialog[] nbDlgRef = new AlertDialog[1];
@@ -2913,14 +2913,14 @@ public final class FolioMoreView {
 
         TextView addNoteBtn = new TextView(ctx);
         addNoteBtn.setText("+ Add Note");
-        addNoteBtn.setTextColor(0xFFE05A47);
+        addNoteBtn.setTextColor(0xFFD4C9B8);
         addNoteBtn.setTextSize(11.5f);
         addNoteBtn.setTypeface(Typeface.DEFAULT_BOLD);
         addNoteBtn.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
         GradientDrawable anBg = new GradientDrawable();
-        anBg.setColor(0xFF2A1816);
+        anBg.setColor(0xFF282520);
         anBg.setCornerRadius(dp(d, 9));
-        anBg.setStroke(dp(d, 1), 0xFF5C2D26);
+        anBg.setStroke(dp(d, 1), 0xFF524B41);
         addNoteBtn.setBackground(anBg);
         addNoteBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -2953,9 +2953,9 @@ public final class FolioMoreView {
             copyAllPill.setSingleLine(true);
             copyAllPill.setPadding(dp(d, 8), dp(d, 6), dp(d, 8), dp(d, 6));
             GradientDrawable caBg = new GradientDrawable();
-            caBg.setColor(0xFF2A1816);
+            caBg.setColor(0xFF282520);
             caBg.setCornerRadius(dp(d, 8));
-            caBg.setStroke(dp(d, 1), 0xFF5C2D26);
+            caBg.setStroke(dp(d, 1), 0xFF524B41);
             copyAllPill.setBackground(caBg);
             LinearLayout.LayoutParams caLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
             caLp.rightMargin = dp(d, 6);
@@ -2982,9 +2982,9 @@ public final class FolioMoreView {
             shareAllPill.setSingleLine(true);
             shareAllPill.setPadding(dp(d, 8), dp(d, 6), dp(d, 8), dp(d, 6));
             GradientDrawable saBg = new GradientDrawable();
-            saBg.setColor(0xFF2A1816);
+            saBg.setColor(0xFF282520);
             saBg.setCornerRadius(dp(d, 8));
-            saBg.setStroke(dp(d, 1), 0xFF5C2D26);
+            saBg.setStroke(dp(d, 1), 0xFF524B41);
             shareAllPill.setBackground(saBg);
             LinearLayout.LayoutParams saLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
             saLp.rightMargin = dp(d, 6);
@@ -3007,16 +3007,16 @@ public final class FolioMoreView {
 
             TextView exportMdPill = new TextView(ctx);
             exportMdPill.setText("Export .md");
-            exportMdPill.setTextColor(0xFFE05A47);
+            exportMdPill.setTextColor(0xFFD4C9B8);
             exportMdPill.setTextSize(11.5f);
             exportMdPill.setTypeface(Typeface.DEFAULT_BOLD);
             exportMdPill.setGravity(Gravity.CENTER);
             exportMdPill.setSingleLine(true);
             exportMdPill.setPadding(dp(d, 8), dp(d, 6), dp(d, 8), dp(d, 6));
             GradientDrawable emBg = new GradientDrawable();
-            emBg.setColor(0xFF2A1816);
+            emBg.setColor(0xFF282520);
             emBg.setCornerRadius(dp(d, 8));
-            emBg.setStroke(dp(d, 1), 0xFF5C2D26);
+            emBg.setStroke(dp(d, 1), 0xFF524B41);
             exportMdPill.setBackground(emBg);
             exportMdPill.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             exportMdPill.setOnClickListener(new View.OnClickListener() {
@@ -3042,15 +3042,15 @@ public final class FolioMoreView {
 
         final EditText searchEt = new EditText(ctx);
         searchEt.setHint("Search notes, titles, or authors...");
-        searchEt.setHintTextColor(0xFF8E867E);
+        searchEt.setHintTextColor(0xFF8A857D);
         searchEt.setTextColor(TEXT_PRIMARY);
         searchEt.setTextSize(13);
         searchEt.setSingleLine(true);
         searchEt.setPadding(dp(d, 12), dp(d, 8), dp(d, 12), dp(d, 8));
         GradientDrawable sBg = new GradientDrawable();
-        sBg.setColor(0xFF181515);
+        sBg.setColor(0xFF1C1E22);
         sBg.setCornerRadius(dp(d, 8));
-        sBg.setStroke(dp(d, 1), 0xFF2A2423);
+        sBg.setStroke(dp(d, 1), 0xFF32353B);
         searchEt.setBackground(sBg);
         LinearLayout.LayoutParams sLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -3079,13 +3079,13 @@ public final class FolioMoreView {
                 if (annotated.isEmpty()) {
                     TextView emptyTv = new TextView(ctx);
                     emptyTv.setText("Open any book's Details (ⓘ) in the Metadata Catalog and tap \"Add Note\" to save personal thoughts or quotes.");
-                    emptyTv.setTextColor(0xFF8E867E);
+                    emptyTv.setTextColor(0xFF8A857D);
                     emptyTv.setTextSize(13);
                     emptyTv.setPadding(dp(d, 14), dp(d, 14), dp(d, 14), dp(d, 14));
                     GradientDrawable eBg = new GradientDrawable();
                     eBg.setColor(BG_CARD);
                     eBg.setCornerRadius(dp(d, 10));
-                    eBg.setStroke(dp(d, 1), 0xFF2A2423);
+                    eBg.setStroke(dp(d, 1), 0xFF32353B);
                     emptyTv.setBackground(eBg);
                     listBox.addView(emptyTv);
                     return;
@@ -3107,7 +3107,7 @@ public final class FolioMoreView {
                     GradientDrawable cBg = new GradientDrawable();
                     cBg.setColor(BG_CARD);
                     cBg.setCornerRadius(dp(d, 10));
-                    cBg.setStroke(dp(d, 1), 0xFF2A2423);
+                    cBg.setStroke(dp(d, 1), 0xFF32353B);
                     card.setBackground(cBg);
                     LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -3121,7 +3121,7 @@ public final class FolioMoreView {
 
                     android.widget.ImageView covIv = new android.widget.ImageView(ctx);
                     covIv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-                    covIv.setBackgroundColor(0xFF121010);
+                    covIv.setBackgroundColor(0xFF15171A);
                     LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(d, 32), dp(d, 46));
                     ivLp.rightMargin = dp(d, 10);
                     covIv.setLayoutParams(ivLp);
@@ -3150,7 +3150,7 @@ public final class FolioMoreView {
                     if (sh != null && !sh.isEmpty()) subMeta.append(" · ").append(sh);
                     TextView bSub = new TextView(ctx);
                     bSub.setText(subMeta.toString());
-                    bSub.setTextColor(0xFF8E867E);
+                    bSub.setTextColor(0xFF8A857D);
                     bSub.setTextSize(11);
                     bSub.setSingleLine(true);
                     bSub.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -3172,9 +3172,9 @@ public final class FolioMoreView {
                     LinearLayout quoteWrap = new LinearLayout(ctx);
                     quoteWrap.setOrientation(LinearLayout.HORIZONTAL);
                     GradientDrawable qBg = new GradientDrawable();
-                    qBg.setColor(0xFF2A1816);
+                    qBg.setColor(0xFF282520);
                     qBg.setCornerRadius(dp(d, 7));
-                    qBg.setStroke(dp(d, 1), 0xFF5C2D26);
+                    qBg.setStroke(dp(d, 1), 0xFF524B41);
                     quoteWrap.setBackground(qBg);
                     LinearLayout.LayoutParams qwLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -3183,13 +3183,13 @@ public final class FolioMoreView {
                     quoteWrap.setLayoutParams(qwLp);
 
                     View accentBar = new View(ctx);
-                    accentBar.setBackgroundColor(0xFFE05A47);
+                    accentBar.setBackgroundColor(0xFFD4C9B8);
                     accentBar.setLayoutParams(new LinearLayout.LayoutParams(dp(d, 3), ViewGroup.LayoutParams.MATCH_PARENT));
                     quoteWrap.addView(accentBar);
 
                     TextView noteTv = new TextView(ctx);
                     noteTv.setText(noteTxt);
-                    noteTv.setTextColor(0xFFF2EFE9);
+                    noteTv.setTextColor(0xFFECE8E0);
                     noteTv.setTextSize(12.5f);
                     noteTv.setPadding(dp(d, 10), dp(d, 8), dp(d, 10), dp(d, 8));
                     noteTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
@@ -3203,14 +3203,14 @@ public final class FolioMoreView {
 
                     TextView copyBtn = new TextView(ctx);
                     copyBtn.setText("Copy");
-                    copyBtn.setTextColor(0xFF8E867E);
+                    copyBtn.setTextColor(0xFF8A857D);
                     copyBtn.setTextSize(11);
                     copyBtn.setTypeface(Typeface.DEFAULT_BOLD);
                     copyBtn.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
                     GradientDrawable cpBg = new GradientDrawable();
-                    cpBg.setColor(0xFF211C1B);
+                    cpBg.setColor(0xFF25282D);
                     cpBg.setCornerRadius(dp(d, 6));
-                    cpBg.setStroke(dp(d, 1), 0xFF2A2423);
+                    cpBg.setStroke(dp(d, 1), 0xFF32353B);
                     copyBtn.setBackground(cpBg);
                     LinearLayout.LayoutParams cpLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -3236,9 +3236,9 @@ public final class FolioMoreView {
                     editBtn.setTypeface(Typeface.DEFAULT_BOLD);
                     editBtn.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
                     GradientDrawable edBg = new GradientDrawable();
-                    edBg.setColor(0xFF2A1816);
+                    edBg.setColor(0xFF282520);
                     edBg.setCornerRadius(dp(d, 6));
-                    edBg.setStroke(dp(d, 1), 0xFF5C2D26);
+                    edBg.setStroke(dp(d, 1), 0xFF524B41);
                     editBtn.setBackground(edBg);
                     editBtn.setOnClickListener(new View.OnClickListener() {
                         @Override public void onClick(View v) {
@@ -3320,7 +3320,7 @@ public final class FolioMoreView {
 
         LinearLayout wrap = new LinearLayout(ctx);
         wrap.setOrientation(LinearLayout.VERTICAL);
-        wrap.setBackgroundColor(0xFF121010);
+        wrap.setBackgroundColor(0xFF15171A);
         wrap.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
 
         TextView hdr = new TextView(ctx);
@@ -3333,15 +3333,15 @@ public final class FolioMoreView {
 
         final EditText filterEt = new EditText(ctx);
         filterEt.setHint("Filter books by title or author...");
-        filterEt.setHintTextColor(0xFF8E867E);
+        filterEt.setHintTextColor(0xFF8A857D);
         filterEt.setTextColor(TEXT_PRIMARY);
         filterEt.setTextSize(13);
         filterEt.setSingleLine(true);
         filterEt.setPadding(dp(d, 12), dp(d, 8), dp(d, 12), dp(d, 8));
         GradientDrawable fBg = new GradientDrawable();
-        fBg.setColor(0xFF181515);
+        fBg.setColor(0xFF1C1E22);
         fBg.setCornerRadius(dp(d, 8));
-        fBg.setStroke(dp(d, 1), 0xFF2A2423);
+        fBg.setStroke(dp(d, 1), 0xFF32353B);
         filterEt.setBackground(fBg);
         LinearLayout.LayoutParams fLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -3382,7 +3382,7 @@ public final class FolioMoreView {
                     GradientDrawable rBg = new GradientDrawable();
                     rBg.setColor(BG_CARD);
                     rBg.setCornerRadius(dp(d, 9));
-                    rBg.setStroke(dp(d, 1), hasNote ? 0xFF5C2D26 : 0xFF2A2423);
+                    rBg.setStroke(dp(d, 1), hasNote ? 0xFF524B41 : 0xFF32353B);
                     row.setBackground(rBg);
                     LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -3404,7 +3404,7 @@ public final class FolioMoreView {
 
                     TextView aTv = new TextView(ctx);
                     aTv.setText(!authStr.isEmpty() ? authStr : "Unknown Author");
-                    aTv.setTextColor(0xFF8E867E);
+                    aTv.setTextColor(0xFF8A857D);
                     aTv.setTextSize(11);
                     aTv.setMaxLines(1);
                     aTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -3413,7 +3413,7 @@ public final class FolioMoreView {
 
                     TextView tagTv = new TextView(ctx);
                     tagTv.setText(hasNote ? "Edit" : "+ Note");
-                    tagTv.setTextColor(hasNote ? ACCENT_AMBER : 0xFFE05A47);
+                    tagTv.setTextColor(hasNote ? ACCENT_AMBER : 0xFFD4C9B8);
                     tagTv.setTextSize(11.5f);
                     tagTv.setTypeface(Typeface.DEFAULT_BOLD);
                     tagTv.setPadding(dp(d, 8), 0, 0, 0);
@@ -3458,7 +3458,7 @@ public final class FolioMoreView {
         input.setGravity(Gravity.TOP | Gravity.START);
         input.setHint("Write your reading note (leave empty to delete)...");
         input.setTextColor(TEXT_PRIMARY);
-        input.setHintTextColor(0xFF8E867E);
+        input.setHintTextColor(0xFF8A857D);
         box.addView(input);
 
         new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
@@ -3489,7 +3489,7 @@ public final class FolioMoreView {
 
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xFF121010);
+        root.setBackgroundColor(0xFF15171A);
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
 
         LinearLayout hdrRow = new LinearLayout(ctx);
@@ -3506,14 +3506,14 @@ public final class FolioMoreView {
         hdrRow.addView(titleTv);
 
         final TextView countTag = new TextView(ctx);
-        countTag.setTextColor(0xFFE05A47);
+        countTag.setTextColor(0xFFD4C9B8);
         countTag.setTextSize(11);
         countTag.setTypeface(Typeface.DEFAULT_BOLD);
         countTag.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
         GradientDrawable ctBg = new GradientDrawable();
-        ctBg.setColor(0xFF2A1816);
+        ctBg.setColor(0xFF282520);
         ctBg.setCornerRadius(dp(d, 10));
-        ctBg.setStroke(dp(d, 1), 0xFF5C2D26);
+        ctBg.setStroke(dp(d, 1), 0xFF524B41);
         countTag.setBackground(ctBg);
         hdrRow.addView(countTag);
         root.addView(hdrRow);
@@ -3560,13 +3560,13 @@ public final class FolioMoreView {
                 if (files.isEmpty()) {
                     TextView emp = new TextView(ctx);
                     emp.setText("No saved backups or exports yet. Use Backup/Restore, Reading Log, or Reading Notes to export files.");
-                    emp.setTextColor(0xFF8E867E);
+                    emp.setTextColor(0xFF8A857D);
                     emp.setTextSize(12.5f);
                     emp.setPadding(dp(d, 14), dp(d, 16), dp(d, 14), dp(d, 16));
                     GradientDrawable eBg = new GradientDrawable();
                     eBg.setColor(BG_CARD);
                     eBg.setCornerRadius(dp(d, 10));
-                    eBg.setStroke(dp(d, 1), 0xFF2A2423);
+                    eBg.setStroke(dp(d, 1), 0xFF32353B);
                     emp.setBackground(eBg);
                     listHost.addView(emp);
                     return;
@@ -3579,12 +3579,12 @@ public final class FolioMoreView {
                     if (dot >= 0 && dot + 1 < fn.length()) {
                         ext = fn.substring(dot + 1).toUpperCase(java.util.Locale.US);
                     }
-                    int extCol = 0xFF8E867E;
-                    int extFill = 0xFF211C1B;
-                    if ("HTML".equals(ext)) { extCol = 0xFFE05A47; extFill = 0xFF2A1816; }
-                    else if ("MD".equals(ext)) { extCol = 0xFFE05A47; extFill = 0xFF2A1816; }
-                    else if ("JSON".equals(ext)) { extCol = 0xFFE05A47; extFill = 0xFF2A1816; }
-                    else if ("CSV".equals(ext)) { extCol = 0xFFE05A47; extFill = 0xFF2A1816; }
+                    int extCol = 0xFF8A857D;
+                    int extFill = 0xFF25282D;
+                    if ("HTML".equals(ext)) { extCol = 0xFFD4C9B8; extFill = 0xFF282520; }
+                    else if ("MD".equals(ext)) { extCol = 0xFFD4C9B8; extFill = 0xFF282520; }
+                    else if ("JSON".equals(ext)) { extCol = 0xFFD4C9B8; extFill = 0xFF282520; }
+                    else if ("CSV".equals(ext)) { extCol = 0xFFD4C9B8; extFill = 0xFF282520; }
 
                     LinearLayout card = new LinearLayout(ctx);
                     card.setOrientation(LinearLayout.HORIZONTAL);
@@ -3593,7 +3593,7 @@ public final class FolioMoreView {
                     GradientDrawable cBg = new GradientDrawable();
                     cBg.setColor(BG_CARD);
                     cBg.setCornerRadius(dp(d, 10));
-                    cBg.setStroke(dp(d, 1), 0xFF2A2423);
+                    cBg.setStroke(dp(d, 1), 0xFF32353B);
                     card.setBackground(cBg);
                     LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -3632,7 +3632,7 @@ public final class FolioMoreView {
 
                     TextView metaTv = new TextView(ctx);
                     metaTv.setText(formatBytesShort(f.length()) + " · " + sdf.format(new java.util.Date(f.lastModified())));
-                    metaTv.setTextColor(0xFF8E867E);
+                    metaTv.setTextColor(0xFF8A857D);
                     metaTv.setTextSize(10.5f);
                     mc.addView(metaTv);
                     card.addView(mc);
@@ -3643,9 +3643,9 @@ public final class FolioMoreView {
                     viewBtn.setTextSize(13);
                     viewBtn.setPadding(dp(d, 8), dp(d, 5), dp(d, 8), dp(d, 5));
                     GradientDrawable vBg = new GradientDrawable();
-                    vBg.setColor(0xFF2A1816);
+                    vBg.setColor(0xFF282520);
                     vBg.setCornerRadius(dp(d, 7));
-                    vBg.setStroke(dp(d, 1), 0xFF5C2D26);
+                    vBg.setStroke(dp(d, 1), 0xFF524B41);
                     viewBtn.setBackground(vBg);
                     LinearLayout.LayoutParams vLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -3660,14 +3660,14 @@ public final class FolioMoreView {
 
                     TextView delBtn = new TextView(ctx);
                     delBtn.setText("✕");
-                    delBtn.setTextColor(0xFFE87A6D);
+                    delBtn.setTextColor(0xFFC99A7E);
                     delBtn.setTextSize(12);
                     delBtn.setTypeface(Typeface.DEFAULT_BOLD);
                     delBtn.setPadding(dp(d, 8), dp(d, 5), dp(d, 8), dp(d, 5));
                     GradientDrawable dBg = new GradientDrawable();
-                    dBg.setColor(0xFF2A1816);
+                    dBg.setColor(0xFF282520);
                     dBg.setCornerRadius(dp(d, 7));
-                    dBg.setStroke(dp(d, 1), 0xFF5C2D26);
+                    dBg.setStroke(dp(d, 1), 0xFF524B41);
                     delBtn.setBackground(dBg);
                     LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -3719,11 +3719,11 @@ public final class FolioMoreView {
         final String previewText = sb.toString();
 
         ScrollView sv = new ScrollView(ctx);
-        sv.setBackgroundColor(0xFF121010);
+        sv.setBackgroundColor(0xFF15171A);
         sv.setPadding(dp(d, 14), dp(d, 12), dp(d, 14), dp(d, 12));
         TextView tv = new TextView(ctx);
         tv.setText(previewText);
-        tv.setTextColor(0xFFC4BDB5);
+        tv.setTextColor(0xFFBDB8AE);
         tv.setTextSize(11.5f);
         tv.setTypeface(Typeface.MONOSPACE);
         tv.setTextIsSelectable(true);
@@ -3814,7 +3814,7 @@ public final class FolioMoreView {
 
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xFF121010);
+        root.setBackgroundColor(0xFF15171A);
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
         TextView titleTv = new TextView(ctx);
@@ -3846,7 +3846,7 @@ public final class FolioMoreView {
         // Section 1: 3-Tile Storage Footprint Breakdown
         TextView sHdr = new TextView(ctx);
         sHdr.setText("STORAGE FOOTPRINT");
-        sHdr.setTextColor(0xFFE05A47);
+        sHdr.setTextColor(0xFFD4C9B8);
         sHdr.setTextSize(11);
         sHdr.setTypeface(Typeface.DEFAULT_BOLD);
         sHdr.setPadding(0, 0, 0, dp(d, 8));
@@ -3860,21 +3860,21 @@ public final class FolioMoreView {
         tileRow.setLayoutParams(trLp);
 
         tileRow.addView(makeHealthBadge(ctx, d, "App Library", formatBytesShort(appLibBytes),
-                0xFFE05A47, 0xFF2A1816, true, null));
+                0xFFD4C9B8, 0xFF282520, true, null));
         tileRow.addView(makeHealthBadge(ctx, d, "Backups ›", formatBytesShort(backupBytes),
-                0xFFE05A47, 0xFF2A1816, true, new View.OnClickListener() {
+                0xFFD4C9B8, 0xFF282520, true, new View.OnClickListener() {
                     @Override public void onClick(View v) {
                         showSavedBackupsDialog(ctx, storDlgRef[0]);
                     }
                 }));
         tileRow.addView(makeHealthBadge(ctx, d, "Temp Cache", formatBytesShort(tempCacheBytes),
-                0xFFE05A47, 0xFF211C1B, false, null));
+                0xFFD4C9B8, 0xFF25282D, false, null));
         content.addView(tileRow);
 
         // Section 2: Top 5 Largest Books (tap to locate in catalog)
         TextView lHdr = new TextView(ctx);
         lHdr.setText("LARGEST BOOKS (TAP TO LOCATE)");
-        lHdr.setTextColor(0xFFE05A47);
+        lHdr.setTextColor(0xFFD4C9B8);
         lHdr.setTextSize(11);
         lHdr.setTypeface(Typeface.DEFAULT_BOLD);
         lHdr.setPadding(0, 0, 0, dp(d, 8));
@@ -3915,7 +3915,7 @@ public final class FolioMoreView {
 
                 TextView szTv = new TextView(ctx);
                 szTv.setText(szLabel);
-                szTv.setTextColor(0xFFE05A47);
+                szTv.setTextColor(0xFFD4C9B8);
                 szTv.setTextSize(12);
                 szTv.setTypeface(Typeface.DEFAULT_BOLD);
                 topR.addView(szTv);
@@ -3924,7 +3924,7 @@ public final class FolioMoreView {
                 LinearLayout barTrack = new LinearLayout(ctx);
                 barTrack.setOrientation(LinearLayout.HORIZONTAL);
                 GradientDrawable tbBg = new GradientDrawable();
-                tbBg.setColor(0xFF211C1B);
+                tbBg.setColor(0xFF25282D);
                 tbBg.setCornerRadius(dp(d, 3));
                 barTrack.setBackground(tbBg);
                 LinearLayout.LayoutParams btLp = new LinearLayout.LayoutParams(
@@ -3934,7 +3934,7 @@ public final class FolioMoreView {
 
                 View barFill = new View(ctx);
                 GradientDrawable bfBg = new GradientDrawable();
-                bfBg.setColor(0xFFE05A47);
+                bfBg.setColor(0xFFD4C9B8);
                 bfBg.setCornerRadius(dp(d, 3));
                 barFill.setBackground(bfBg);
                 barFill.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, frac));
@@ -3959,7 +3959,7 @@ public final class FolioMoreView {
         // Section 3: Duplicate Titles Audit
         TextView dHdr = new TextView(ctx);
         dHdr.setText("DUPLICATE TITLES AUDIT");
-        dHdr.setTextColor(dupKeys.isEmpty() ? 0xFFE05A47 : 0xFFE87A6D);
+        dHdr.setTextColor(dupKeys.isEmpty() ? 0xFFD4C9B8 : 0xFFC99A7E);
         dHdr.setTextSize(11);
         dHdr.setTypeface(Typeface.DEFAULT_BOLD);
         dHdr.setPadding(0, dp(d, 12), 0, dp(d, 8));
@@ -3968,14 +3968,14 @@ public final class FolioMoreView {
         if (dupKeys.isEmpty()) {
             TextView okTv = new TextView(ctx);
             okTv.setText("✓ No duplicate titles found across " + all.size() + " cataloged books");
-            okTv.setTextColor(0xFFE05A47);
+            okTv.setTextColor(0xFFD4C9B8);
             okTv.setTextSize(12.5f);
             okTv.setTypeface(Typeface.DEFAULT_BOLD);
             okTv.setPadding(dp(d, 12), dp(d, 10), dp(d, 12), dp(d, 10));
             GradientDrawable okBg = new GradientDrawable();
-            okBg.setColor(0xFF2A1816);
+            okBg.setColor(0xFF282520);
             okBg.setCornerRadius(dp(d, 8));
-            okBg.setStroke(dp(d, 1), 0xFF5C2D26);
+            okBg.setStroke(dp(d, 1), 0xFF524B41);
             okTv.setBackground(okBg);
             content.addView(okTv);
         } else {
@@ -3987,9 +3987,9 @@ public final class FolioMoreView {
                 dRow.setGravity(Gravity.CENTER_VERTICAL);
                 dRow.setPadding(dp(d, 12), dp(d, 9), dp(d, 12), dp(d, 9));
                 GradientDrawable dBg = new GradientDrawable();
-                dBg.setColor(0xFF2A1816);
+                dBg.setColor(0xFF282520);
                 dBg.setCornerRadius(dp(d, 8));
-                dBg.setStroke(dp(d, 1), 0xFF5C2D26);
+                dBg.setStroke(dp(d, 1), 0xFF524B41);
                 dRow.setBackground(dBg);
                 LinearLayout.LayoutParams drLp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -4007,7 +4007,7 @@ public final class FolioMoreView {
 
                 TextView dcTv = new TextView(ctx);
                 dcTv.setText(cnt + " copies ›");
-                dcTv.setTextColor(0xFFE87A6D);
+                dcTv.setTextColor(0xFFC99A7E);
                 dcTv.setTextSize(12);
                 dcTv.setTypeface(Typeface.DEFAULT_BOLD);
                 dRow.addView(dcTv);
@@ -4075,7 +4075,7 @@ public final class FolioMoreView {
 
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xFF121010);
+        root.setBackgroundColor(0xFF15171A);
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
         final AlertDialog[] mgrDlgRef = new AlertDialog[1];
@@ -4095,14 +4095,14 @@ public final class FolioMoreView {
 
         TextView newShelfBtn = new TextView(ctx);
         newShelfBtn.setText("+ New Shelf");
-        newShelfBtn.setTextColor(0xFFE05A47);
+        newShelfBtn.setTextColor(0xFFD4C9B8);
         newShelfBtn.setTextSize(11.5f);
         newShelfBtn.setTypeface(Typeface.DEFAULT_BOLD);
         newShelfBtn.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
         GradientDrawable nsBg = new GradientDrawable();
-        nsBg.setColor(0xFF2A1816);
+        nsBg.setColor(0xFF282520);
         nsBg.setCornerRadius(dp(d, 9));
-        nsBg.setStroke(dp(d, 1), 0xFF5C2D26);
+        nsBg.setStroke(dp(d, 1), 0xFF524B41);
         newShelfBtn.setBackground(nsBg);
         newShelfBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -4127,13 +4127,13 @@ public final class FolioMoreView {
         if (shelves.isEmpty()) {
             TextView emptyTv = new TextView(ctx);
             emptyTv.setText("Open any book's Details (ⓘ) in the Metadata Catalog to assign a custom reading shelf (e.g. Classics, Sci-Fi, Study).");
-            emptyTv.setTextColor(0xFF8E867E);
+            emptyTv.setTextColor(0xFF8A857D);
             emptyTv.setTextSize(13);
             emptyTv.setPadding(dp(d, 14), dp(d, 16), dp(d, 14), dp(d, 16));
             GradientDrawable emptyBg = new GradientDrawable();
             emptyBg.setColor(BG_CARD);
             emptyBg.setCornerRadius(dp(d, 10));
-            emptyBg.setStroke(dp(d, 1), 0xFF2A2423);
+            emptyBg.setStroke(dp(d, 1), 0xFF32353B);
             emptyTv.setBackground(emptyBg);
             root.addView(emptyTv);
         } else {
@@ -4152,7 +4152,7 @@ public final class FolioMoreView {
                 GradientDrawable rowBg = new GradientDrawable();
                 rowBg.setColor(BG_CARD);
                 rowBg.setCornerRadius(dp(d, 10));
-                rowBg.setStroke(dp(d, 1), 0xFF2A2423);
+                rowBg.setStroke(dp(d, 1), 0xFF32353B);
                 row.setBackground(rowBg);
                 LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -4170,7 +4170,7 @@ public final class FolioMoreView {
 
                 TextView nameTv = new TextView(ctx);
                 nameTv.setText(shelfName);
-                nameTv.setTextColor(0xFFF2EFE9);
+                nameTv.setTextColor(0xFFECE8E0);
                 nameTv.setTextSize(13.5f);
                 nameTv.setTypeface(Typeface.DEFAULT_BOLD);
                 nameTv.setSingleLine(true);
@@ -4179,7 +4179,7 @@ public final class FolioMoreView {
 
                 TextView cntTv = new TextView(ctx);
                 cntTv.setText(cnt + (cnt == 1 ? " book ›" : " books ›"));
-                cntTv.setTextColor(0xFF8E867E);
+                cntTv.setTextColor(0xFF8A857D);
                 cntTv.setTextSize(11.5f);
                 infoCol.addView(cntTv);
 
@@ -4195,14 +4195,14 @@ public final class FolioMoreView {
                 // + Books pill
                 TextView addBBtn = new TextView(ctx);
                 addBBtn.setText("+ Books");
-                addBBtn.setTextColor(0xFFE05A47);
+                addBBtn.setTextColor(0xFFD4C9B8);
                 addBBtn.setTextSize(11);
                 addBBtn.setTypeface(Typeface.DEFAULT_BOLD);
                 addBBtn.setPadding(dp(d, 8), dp(d, 6), dp(d, 8), dp(d, 6));
                 GradientDrawable abBg = new GradientDrawable();
-                abBg.setColor(0xFF2A1816);
+                abBg.setColor(0xFF282520);
                 abBg.setCornerRadius(dp(d, 7));
-                abBg.setStroke(dp(d, 1), 0xFF5C2D26);
+                abBg.setStroke(dp(d, 1), 0xFF524B41);
                 addBBtn.setBackground(abBg);
                 LinearLayout.LayoutParams abLp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -4222,9 +4222,9 @@ public final class FolioMoreView {
                 renBtn.setTextSize(12);
                 renBtn.setPadding(dp(d, 8), dp(d, 5), dp(d, 8), dp(d, 5));
                 GradientDrawable renBg = new GradientDrawable();
-                renBg.setColor(0xFF2A1816);
+                renBg.setColor(0xFF282520);
                 renBg.setCornerRadius(dp(d, 7));
-                renBg.setStroke(dp(d, 1), 0xFF5C2D26);
+                renBg.setStroke(dp(d, 1), 0xFF524B41);
                 renBtn.setBackground(renBg);
                 LinearLayout.LayoutParams renLp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -4241,14 +4241,14 @@ public final class FolioMoreView {
                 // Remove pill
                 TextView delBtn = new TextView(ctx);
                 delBtn.setText("✕");
-                delBtn.setTextColor(0xFFE87A6D);
+                delBtn.setTextColor(0xFFC99A7E);
                 delBtn.setTextSize(12);
                 delBtn.setTypeface(Typeface.DEFAULT_BOLD);
                 delBtn.setPadding(dp(d, 8), dp(d, 5), dp(d, 8), dp(d, 5));
                 GradientDrawable delBg = new GradientDrawable();
-                delBg.setColor(0xFF2A1816);
+                delBg.setColor(0xFF282520);
                 delBg.setCornerRadius(dp(d, 7));
-                delBg.setStroke(dp(d, 1), 0xFF5C2D26);
+                delBg.setStroke(dp(d, 1), 0xFF524B41);
                 delBtn.setBackground(delBg);
                 delBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -4317,7 +4317,7 @@ public final class FolioMoreView {
 
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xFF121010);
+        root.setBackgroundColor(0xFF15171A);
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
 
         final TextView hdr = new TextView(ctx);
@@ -4330,16 +4330,16 @@ public final class FolioMoreView {
 
         final EditText nameEt = new EditText(ctx);
         nameEt.setHint("Shelf name (e.g. Philosophy, Sci-Fi, Study)...");
-        nameEt.setHintTextColor(0xFF8E867E);
+        nameEt.setHintTextColor(0xFF8A857D);
         nameEt.setTextColor(TEXT_PRIMARY);
         nameEt.setTextSize(13.5f);
         nameEt.setSingleLine(true);
         if (isEditExisting) nameEt.setText(initialShelfName);
         nameEt.setPadding(dp(d, 12), dp(d, 8), dp(d, 12), dp(d, 8));
         GradientDrawable nBg = new GradientDrawable();
-        nBg.setColor(0xFF181515);
+        nBg.setColor(0xFF1C1E22);
         nBg.setCornerRadius(dp(d, 8));
-        nBg.setStroke(dp(d, 1), 0xFF5C2D26);
+        nBg.setStroke(dp(d, 1), 0xFF524B41);
         nameEt.setBackground(nBg);
         LinearLayout.LayoutParams nLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -4357,11 +4357,11 @@ public final class FolioMoreView {
             for (final String pr : presets) {
                 TextView pc = new TextView(ctx);
                 pc.setText(pr);
-                pc.setTextColor(0xFFE05A47);
+                pc.setTextColor(0xFFD4C9B8);
                 pc.setTextSize(11);
                 pc.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
                 GradientDrawable pBg = new GradientDrawable();
-                pBg.setColor(0xFF2A1816);
+                pBg.setColor(0xFF282520);
                 pBg.setCornerRadius(dp(d, 8));
                 pBg.setStroke(dp(d, 1), 0x664DA6FF);
                 pc.setBackground(pBg);
@@ -4383,15 +4383,15 @@ public final class FolioMoreView {
 
         final EditText filterEt = new EditText(ctx);
         filterEt.setHint("Filter books to include...");
-        filterEt.setHintTextColor(0xFF8E867E);
+        filterEt.setHintTextColor(0xFF8A857D);
         filterEt.setTextColor(TEXT_PRIMARY);
         filterEt.setTextSize(12.5f);
         filterEt.setSingleLine(true);
         filterEt.setPadding(dp(d, 12), dp(d, 7), dp(d, 12), dp(d, 7));
         GradientDrawable fBg = new GradientDrawable();
-        fBg.setColor(0xFF181515);
+        fBg.setColor(0xFF1C1E22);
         fBg.setCornerRadius(dp(d, 8));
-        fBg.setStroke(dp(d, 1), 0xFF2A2423);
+        fBg.setStroke(dp(d, 1), 0xFF32353B);
         filterEt.setBackground(fBg);
         LinearLayout.LayoutParams fLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -4400,7 +4400,7 @@ public final class FolioMoreView {
         root.addView(filterEt);
 
         final TextView selCountTv = new TextView(ctx);
-        selCountTv.setTextColor(0xFFE05A47);
+        selCountTv.setTextColor(0xFFD4C9B8);
         selCountTv.setTextSize(11.5f);
         selCountTv.setTypeface(Typeface.DEFAULT_BOLD);
         selCountTv.setPadding(0, 0, 0, dp(d, 6));
@@ -4436,9 +4436,9 @@ public final class FolioMoreView {
                     row.setGravity(Gravity.CENTER_VERTICAL);
                     row.setPadding(dp(d, 10), dp(d, 8), dp(d, 10), dp(d, 8));
                     GradientDrawable rBg = new GradientDrawable();
-                    rBg.setColor(isSel ? 0xFF2A1816 : BG_CARD);
+                    rBg.setColor(isSel ? 0xFF282520 : BG_CARD);
                     rBg.setCornerRadius(dp(d, 8));
-                    rBg.setStroke(dp(d, 1), isSel ? 0xFFE05A47 : 0xFF2A2423);
+                    rBg.setStroke(dp(d, 1), isSel ? 0xFFD4C9B8 : 0xFF32353B);
                     row.setBackground(rBg);
                     LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -4447,7 +4447,7 @@ public final class FolioMoreView {
 
                     TextView chk = new TextView(ctx);
                     chk.setText(isSel ? "☑" : "☐");
-                    chk.setTextColor(isSel ? 0xFFE05A47 : 0xFF8E867E);
+                    chk.setTextColor(isSel ? 0xFFD4C9B8 : 0xFF8A857D);
                     chk.setTextSize(16);
                     chk.setPadding(0, 0, dp(d, 10), 0);
                     row.addView(chk);
@@ -4467,7 +4467,7 @@ public final class FolioMoreView {
 
                     TextView aTv = new TextView(ctx);
                     aTv.setText(!authStr.isEmpty() ? authStr : "Unknown Author");
-                    aTv.setTextColor(0xFF8E867E);
+                    aTv.setTextColor(0xFF8A857D);
                     aTv.setTextSize(11);
                     aTv.setMaxLines(1);
                     aTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -4541,7 +4541,7 @@ public final class FolioMoreView {
         input.setSingleLine(true);
         input.setHint("New shelf name");
         input.setTextColor(TEXT_PRIMARY);
-        input.setHintTextColor(0xFF8E867E);
+        input.setHintTextColor(0xFF8A857D);
         box.addView(input);
 
         new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
@@ -4723,7 +4723,7 @@ public final class FolioMoreView {
         int[] qs = readQuickStats(ctx);
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xFF121010);
+        root.setBackgroundColor(0xFF15171A);
         root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
         TextView titleTv = new TextView(ctx);
@@ -4765,7 +4765,7 @@ public final class FolioMoreView {
 
         TextView rtHdr = new TextView(ctx);
         rtHdr.setText("READING TIME PORTFOLIO (" + userWpm + " WPM · TAP TO CALIBRATE)");
-        rtHdr.setTextColor(0xFFE05A47);
+        rtHdr.setTextColor(0xFFD4C9B8);
         rtHdr.setTextSize(11);
         rtHdr.setTypeface(Typeface.DEFAULT_BOLD);
         rtHdr.setPadding(0, 0, 0, dp(d, 7));
@@ -4796,9 +4796,9 @@ public final class FolioMoreView {
             rTile.setGravity(Gravity.CENTER);
             rTile.setPadding(dp(d, 8), dp(d, 9), dp(d, 8), dp(d, 9));
             GradientDrawable rtBg = new GradientDrawable();
-            rtBg.setColor(ri == 1 ? 0xFF2A1816 : BG_CARD);
+            rtBg.setColor(ri == 1 ? 0xFF282520 : BG_CARD);
             rtBg.setCornerRadius(dp(d, 9));
-            rtBg.setStroke(dp(d, 1), ri == 1 ? 0xFF5C2D26 : BORDER_HAIRLINE);
+            rtBg.setStroke(dp(d, 1), ri == 1 ? 0xFF524B41 : BORDER_HAIRLINE);
             rTile.setBackground(rtBg);
             LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
             if (ri < 2) rLp.rightMargin = dp(d, 7);
@@ -4806,7 +4806,7 @@ public final class FolioMoreView {
 
             TextView rv = new TextView(ctx);
             rv.setText(rtVals[ri]);
-            rv.setTextColor(ri == 1 ? 0xFFE05A47 : TEXT_PRIMARY);
+            rv.setTextColor(ri == 1 ? 0xFFD4C9B8 : TEXT_PRIMARY);
             rv.setTextSize(16);
             rv.setTypeface(Typeface.DEFAULT_BOLD);
             rTile.addView(rv);
@@ -4838,7 +4838,7 @@ public final class FolioMoreView {
 
         TextView stHdr = new TextView(ctx);
         stHdr.setText("READING STATUS (TAP TO FILTER)");
-        stHdr.setTextColor(0xFFE05A47);
+        stHdr.setTextColor(0xFFD4C9B8);
         stHdr.setTextSize(11);
         stHdr.setTypeface(Typeface.DEFAULT_BOLD);
         stHdr.setPadding(0, 0, 0, dp(d, 6));
@@ -4854,7 +4854,7 @@ public final class FolioMoreView {
         if (finCnt > 0) {
             View segF = new View(ctx);
             GradientDrawable sfBg = new GradientDrawable();
-            sfBg.setColor(0xFFE05A47);
+            sfBg.setColor(0xFFD4C9B8);
             sfBg.setCornerRadius(dp(d, 4));
             segF.setBackground(sfBg);
             LinearLayout.LayoutParams lpF = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, Math.max(0.06f, finCnt / (float) totalStat));
@@ -4871,7 +4871,7 @@ public final class FolioMoreView {
         if (readCnt > 0) {
             View segR = new View(ctx);
             GradientDrawable srBg = new GradientDrawable();
-            srBg.setColor(0xFFE05A47);
+            srBg.setColor(0xFFD4C9B8);
             srBg.setCornerRadius(dp(d, 4));
             segR.setBackground(srBg);
             LinearLayout.LayoutParams lpR = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, Math.max(0.06f, readCnt / (float) totalStat));
@@ -4888,7 +4888,7 @@ public final class FolioMoreView {
         if (unrdCnt > 0) {
             View segU = new View(ctx);
             GradientDrawable suBg = new GradientDrawable();
-            suBg.setColor(0xFF2A2423);
+            suBg.setColor(0xFF32353B);
             suBg.setCornerRadius(dp(d, 4));
             segU.setBackground(suBg);
             segU.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, Math.max(0.06f, unrdCnt / (float) totalStat)));
@@ -4906,9 +4906,9 @@ public final class FolioMoreView {
         legendRow.setOrientation(LinearLayout.HORIZONTAL);
         legendRow.setPadding(0, 0, 0, dp(d, 14));
         String[][] legItems = new String[][] {
-            { "● Finished (" + finCnt + ")", "Finished", "#E05A47" },
-            { "● Reading (" + readCnt + ")", "Reading", "#E05A47" },
-            { "● Unread (" + unrdCnt + ")", "Unread", "#8E867E" }
+            { "● Finished (" + finCnt + ")", "Finished", "#D4C9B8" },
+            { "● Reading (" + readCnt + ")", "Reading", "#D4C9B8" },
+            { "● Unread (" + unrdCnt + ")", "Unread", "#8A857D" }
         };
         for (final String[] item : legItems) {
             TextView lt = new TextView(ctx);
@@ -4935,7 +4935,7 @@ public final class FolioMoreView {
         TextView hHdr = new TextView(ctx);
         hHdr.setText("METADATA HEALTH — " + healthPct + "% COMPLETE"
                 + ((missingCover + missingGenre + missingDesc > 0) ? " (TAP TO FIX)" : ""));
-        hHdr.setTextColor(healthPct >= 85 ? 0xFFE05A47 : 0xFFE05A47);
+        hHdr.setTextColor(healthPct >= 85 ? 0xFFD4C9B8 : 0xFFD4C9B8);
         hHdr.setTextSize(11);
         hHdr.setTypeface(Typeface.DEFAULT_BOLD);
         hHdr.setPadding(0, 0, 0, dp(d, 8));
@@ -4955,8 +4955,8 @@ public final class FolioMoreView {
         healthRow.addView(makeHealthBadge(ctx, d,
                 fMissCov == 0 ? "✓ Covers" : "No Cover",
                 fMissCov == 0 ? "100%" : (fMissCov + " ›"),
-                fMissCov == 0 ? 0xFFE05A47 : 0xFFE87A6D,
-                fMissCov == 0 ? 0xFF2A1816 : 0xFF2A1816,
+                fMissCov == 0 ? 0xFFD4C9B8 : 0xFFC99A7E,
+                fMissCov == 0 ? 0xFF282520 : 0xFF282520,
                 true,
                 fMissCov > 0 ? new View.OnClickListener() {
                     @Override public void onClick(View v) {
@@ -4968,8 +4968,8 @@ public final class FolioMoreView {
         healthRow.addView(makeHealthBadge(ctx, d,
                 fMissGen == 0 ? "✓ Genres" : "No Genre",
                 fMissGen == 0 ? "100%" : (fMissGen + " ›"),
-                fMissGen == 0 ? 0xFFE05A47 : 0xFFE05A47,
-                fMissGen == 0 ? 0xFF2A1816 : 0xFF2A1816,
+                fMissGen == 0 ? 0xFFD4C9B8 : 0xFFD4C9B8,
+                fMissGen == 0 ? 0xFF282520 : 0xFF282520,
                 true,
                 fMissGen > 0 ? new View.OnClickListener() {
                     @Override public void onClick(View v) {
@@ -4981,8 +4981,8 @@ public final class FolioMoreView {
         healthRow.addView(makeHealthBadge(ctx, d,
                 fMissDesc == 0 ? "✓ Synopsis" : "No Synopsis",
                 fMissDesc == 0 ? "100%" : (fMissDesc + " ›"),
-                fMissDesc == 0 ? 0xFFE05A47 : 0xFFE05A47,
-                fMissDesc == 0 ? 0xFF2A1816 : 0xFF211C1B,
+                fMissDesc == 0 ? 0xFFD4C9B8 : 0xFFD4C9B8,
+                fMissDesc == 0 ? 0xFF282520 : 0xFF25282D,
                 false,
                 fMissDesc > 0 ? new View.OnClickListener() {
                     @Override public void onClick(View v) {
@@ -4995,7 +4995,7 @@ public final class FolioMoreView {
         // Section 1: Top Genres Bar Chart (tap any bar to filter catalog)
         TextView gHdr = new TextView(ctx);
         gHdr.setText("TOP GENRES (TAP TO FILTER)");
-        gHdr.setTextColor(0xFFE05A47);
+        gHdr.setTextColor(0xFFD4C9B8);
         gHdr.setTextSize(11);
         gHdr.setTypeface(Typeface.DEFAULT_BOLD);
         gHdr.setPadding(0, 0, 0, dp(d, 8));
@@ -5005,7 +5005,7 @@ public final class FolioMoreView {
         for (int i = 0; i < Math.min(5, topGenres.size()); i++) {
             String k = topGenres.get(i);
             final String gName = genreLabel.get(k);
-            content.addView(makeInsightBarRow(ctx, d, gName, genreFreq.get(k), maxG, 0xFFE05A47,
+            content.addView(makeInsightBarRow(ctx, d, gName, genreFreq.get(k), maxG, 0xFFD4C9B8,
                     new View.OnClickListener() {
                         @Override public void onClick(View v) {
                             if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
@@ -5017,7 +5017,7 @@ public final class FolioMoreView {
         // Section 2: Top Authors Bar Chart (tap any bar to filter catalog)
         TextView aHdr = new TextView(ctx);
         aHdr.setText("TOP AUTHORS (TAP TO FILTER)");
-        aHdr.setTextColor(0xFFE05A47);
+        aHdr.setTextColor(0xFFD4C9B8);
         aHdr.setTextSize(11);
         aHdr.setTypeface(Typeface.DEFAULT_BOLD);
         aHdr.setPadding(0, dp(d, 14), 0, dp(d, 8));
@@ -5027,7 +5027,7 @@ public final class FolioMoreView {
         for (int i = 0; i < Math.min(5, topAuthors.size()); i++) {
             String k = topAuthors.get(i);
             final String aName = authorLabel.get(k);
-            content.addView(makeInsightBarRow(ctx, d, aName, authorFreq.get(k), maxA, 0xFFE05A47,
+            content.addView(makeInsightBarRow(ctx, d, aName, authorFreq.get(k), maxA, 0xFFD4C9B8,
                     new View.OnClickListener() {
                         @Override public void onClick(View v) {
                             if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
@@ -5045,7 +5045,7 @@ public final class FolioMoreView {
             });
             TextView sHdr = new TextView(ctx);
             sHdr.setText("CUSTOM SHELVES (TAP TO FILTER)");
-            sHdr.setTextColor(0xFFE05A47);
+            sHdr.setTextColor(0xFFD4C9B8);
             sHdr.setTextSize(11);
             sHdr.setTypeface(Typeface.DEFAULT_BOLD);
             sHdr.setPadding(0, dp(d, 14), 0, dp(d, 8));
@@ -5053,7 +5053,7 @@ public final class FolioMoreView {
 
             int maxS = Math.max(1, shelfFreq.get(topShelves.get(0)));
             for (final String sh : topShelves) {
-                content.addView(makeInsightBarRow(ctx, d, "" + sh, shelfFreq.get(sh), maxS, 0xFFE05A47,
+                content.addView(makeInsightBarRow(ctx, d, "" + sh, shelfFreq.get(sh), maxS, 0xFFD4C9B8,
                         new View.OnClickListener() {
                             @Override public void onClick(View v) {
                                 if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
@@ -5067,7 +5067,7 @@ public final class FolioMoreView {
         if (datedCount > 0) {
             TextView eHdr = new TextView(ctx);
             eHdr.setText("PUBLICATION ERAS · " + minYear + "–" + maxYear + " (TAP TO FILTER)");
-            eHdr.setTextColor(0xFFE05A47);
+            eHdr.setTextColor(0xFFD4C9B8);
             eHdr.setTextSize(11);
             eHdr.setTypeface(Typeface.DEFAULT_BOLD);
             eHdr.setPadding(0, dp(d, 14), 0, dp(d, 8));
@@ -5081,7 +5081,7 @@ public final class FolioMoreView {
                 final String eraName = ee.getKey();
                 int eCnt = ee.getValue();
                 if (eCnt <= 0) continue;
-                content.addView(makeInsightBarRow(ctx, d, "" + eraName, eCnt, maxE, 0xFFE05A47,
+                content.addView(makeInsightBarRow(ctx, d, "" + eraName, eCnt, maxE, 0xFFD4C9B8,
                         new View.OnClickListener() {
                             @Override public void onClick(View v) {
                                 if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
@@ -5100,7 +5100,7 @@ public final class FolioMoreView {
             });
             TextView pHdr = new TextView(ctx);
             pHdr.setText("TOP PUBLISHERS (TAP TO FILTER)");
-            pHdr.setTextColor(0xFFE05A47);
+            pHdr.setTextColor(0xFFD4C9B8);
             pHdr.setTextSize(11);
             pHdr.setTypeface(Typeface.DEFAULT_BOLD);
             pHdr.setPadding(0, dp(d, 14), 0, dp(d, 8));
@@ -5110,7 +5110,7 @@ public final class FolioMoreView {
             for (int i = 0; i < Math.min(4, topPubs.size()); i++) {
                 String k = topPubs.get(i);
                 final String pName = pubLabel.get(k);
-                content.addView(makeInsightBarRow(ctx, d, pName, pubFreq.get(k), maxP, 0xFFE05A47,
+                content.addView(makeInsightBarRow(ctx, d, pName, pubFreq.get(k), maxP, 0xFFD4C9B8,
                         new View.OnClickListener() {
                             @Override public void onClick(View v) {
                                 if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
@@ -5124,7 +5124,7 @@ public final class FolioMoreView {
         if (ratedCount > 0) {
             TextView rHdr = new TextView(ctx);
             rHdr.setText("STAR RATINGS · " + avgStr.toUpperCase(java.util.Locale.US) + " (TAP TO FILTER)");
-            rHdr.setTextColor(0xFFE05A47);
+            rHdr.setTextColor(0xFFD4C9B8);
             rHdr.setTextSize(11);
             rHdr.setTypeface(Typeface.DEFAULT_BOLD);
             rHdr.setPadding(0, dp(d, 14), 0, dp(d, 8));
@@ -5138,7 +5138,7 @@ public final class FolioMoreView {
                 StringBuilder stLbl = new StringBuilder();
                 for (int k = 0; k < s; k++) stLbl.append("★");
                 stLbl.append(" (").append(s).append("★)");
-                content.addView(makeInsightBarRow(ctx, d, stLbl.toString(), starBuckets[s], maxR, 0xFFE05A47,
+                content.addView(makeInsightBarRow(ctx, d, stLbl.toString(), starBuckets[s], maxR, 0xFFD4C9B8,
                         new View.OnClickListener() {
                             @Override public void onClick(View v) {
                                 if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
@@ -5248,7 +5248,7 @@ public final class FolioMoreView {
 
         TextView lblTv = new TextView(ctx);
         lblTv.setText(label);
-        lblTv.setTextColor(0xFFC4BDB5);
+        lblTv.setTextColor(0xFFBDB8AE);
         lblTv.setTextSize(10.5f);
         lblTv.setSingleLine(true);
         lblTv.setGravity(Gravity.CENTER);
@@ -5286,7 +5286,7 @@ public final class FolioMoreView {
         LinearLayout track = new LinearLayout(ctx);
         track.setOrientation(LinearLayout.HORIZONTAL);
         GradientDrawable trBg = new GradientDrawable();
-        trBg.setColor(0xFF211C1B);
+        trBg.setColor(0xFF25282D);
         trBg.setCornerRadius(dp(d, 4));
         track.setBackground(trBg);
         LinearLayout.LayoutParams trLp = new LinearLayout.LayoutParams(
@@ -5322,14 +5322,14 @@ public final class FolioMoreView {
 
         LinearLayout box = new LinearLayout(ctx);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setBackgroundColor(0xFF181515);
+        box.setBackgroundColor(0xFF1C1E22);
         box.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 12));
 
         final TextView pathTv = new TextView(ctx);
         pathTv.setText(initFile != null
                 ? "Saved: " + initFile.getAbsolutePath()
                 : "Markdown preview ready");
-        pathTv.setTextColor(0xFFE05A47);
+        pathTv.setTextColor(0xFFD4C9B8);
         pathTv.setTextSize(11);
         pathTv.setTypeface(Typeface.DEFAULT_BOLD);
         pathTv.setPadding(0, 0, 0, dp(d, 8));
@@ -5342,12 +5342,12 @@ public final class FolioMoreView {
 
         final TextView scopeBtn = new TextView(ctx);
         scopeBtn.setText("Scope: Curated Only");
-        scopeBtn.setTextColor(0xFFE05A47);
+        scopeBtn.setTextColor(0xFFD4C9B8);
         scopeBtn.setTextSize(11);
         scopeBtn.setTypeface(Typeface.DEFAULT_BOLD);
         scopeBtn.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
         final GradientDrawable scopeBg = new GradientDrawable();
-        scopeBg.setColor(0xFF2A1816);
+        scopeBg.setColor(0xFF282520);
         scopeBg.setCornerRadius(dp(d, 10));
         scopeBg.setStroke(dp(d, 1), 0x884DA6FF);
         scopeBtn.setBackground(scopeBg);
@@ -5359,12 +5359,12 @@ public final class FolioMoreView {
 
         TextView csvBtn = new TextView(ctx);
         csvBtn.setText("CSV");
-        csvBtn.setTextColor(0xFFE05A47);
+        csvBtn.setTextColor(0xFFD4C9B8);
         csvBtn.setTextSize(11);
         csvBtn.setTypeface(Typeface.DEFAULT_BOLD);
         csvBtn.setPadding(dp(d, 9), dp(d, 5), dp(d, 9), dp(d, 5));
         GradientDrawable csvBg = new GradientDrawable();
-        csvBg.setColor(0xFF2A1816);
+        csvBg.setColor(0xFF282520);
         csvBg.setCornerRadius(dp(d, 10));
         csvBg.setStroke(dp(d, 1), 0x664DA6FF);
         csvBtn.setBackground(csvBg);
@@ -5383,12 +5383,12 @@ public final class FolioMoreView {
 
         TextView htmlBtn = new TextView(ctx);
         htmlBtn.setText("HTML");
-        htmlBtn.setTextColor(0xFFE05A47);
+        htmlBtn.setTextColor(0xFFD4C9B8);
         htmlBtn.setTextSize(11);
         htmlBtn.setTypeface(Typeface.DEFAULT_BOLD);
         htmlBtn.setPadding(dp(d, 9), dp(d, 5), dp(d, 9), dp(d, 5));
         GradientDrawable htmlBg = new GradientDrawable();
-        htmlBg.setColor(0xFF2A1816);
+        htmlBg.setColor(0xFF282520);
         htmlBg.setCornerRadius(dp(d, 10));
         htmlBg.setStroke(dp(d, 1), 0x664DA6FF);
         htmlBtn.setBackground(htmlBg);
@@ -5415,14 +5415,14 @@ public final class FolioMoreView {
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 330)));
         final TextView mdTv = new TextView(ctx);
         mdTv.setText(currentMd[0]);
-        mdTv.setTextColor(0xFFF2EFE9);
+        mdTv.setTextColor(0xFFECE8E0);
         mdTv.setTextSize(12);
         mdTv.setTypeface(Typeface.MONOSPACE);
         mdTv.setPadding(dp(d, 12), dp(d, 10), dp(d, 12), dp(d, 10));
         GradientDrawable mdBg = new GradientDrawable();
-        mdBg.setColor(0xFF121010);
+        mdBg.setColor(0xFF15171A);
         mdBg.setCornerRadius(dp(d, 10));
-        mdBg.setStroke(dp(d, 1), 0xFF2A2423);
+        mdBg.setStroke(dp(d, 1), 0xFF32353B);
         mdTv.setBackground(mdBg);
         sv.addView(mdTv);
         box.addView(sv);
@@ -5436,13 +5436,13 @@ public final class FolioMoreView {
                 if (saved != null) pathTv.setText("Saved: " + saved.getAbsolutePath());
                 if (curatedOnly[0]) {
                     scopeBtn.setText("Scope: Curated Only");
-                    scopeBtn.setTextColor(0xFFE05A47);
-                    scopeBg.setColor(0xFF2A1816);
+                    scopeBtn.setTextColor(0xFFD4C9B8);
+                    scopeBg.setColor(0xFF282520);
                     scopeBg.setStroke(dp(d, 1), 0x884DA6FF);
                 } else {
                     scopeBtn.setText("Scope: All Books");
-                    scopeBtn.setTextColor(0xFFE05A47);
-                    scopeBg.setColor(0xFF2A1816);
+                    scopeBtn.setTextColor(0xFFD4C9B8);
+                    scopeBg.setColor(0xFF282520);
                     scopeBg.setStroke(dp(d, 1), 0x884DA6FF);
                 }
             }
@@ -5541,7 +5541,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Azath — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Azath v15.1 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Azath v16.0 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
@@ -5560,7 +5560,7 @@ public final class FolioMoreView {
         sb.append("Hardware: ").append(hw.toString()).append("\n\n");
 
         sb.append("Pure-Rust Engine (libkfxconv.so):\n");
-        sb.append("• Standalone $270 Cover Container (#0A0909, 0% margin)\n");
+        sb.append("• Standalone $270 Cover Container (#0E0F11, 0% margin)\n");
         sb.append("• Native YellowJersey Tables ($278/$279/$269)\n");
         sb.append("• Proportional Column-Width Image Scaling ($422/$423)\n");
         sb.append("• Unicode NFC Polytonic Greek & Non-Latin Normalization\n");

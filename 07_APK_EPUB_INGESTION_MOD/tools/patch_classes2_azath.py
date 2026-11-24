@@ -48,8 +48,9 @@ def get_method_name(idx):
     _, _, n_idx = struct.unpack_from("<HHI", dex, m_off + idx * 8)
     return get_str(n_idx)
 
-OLD_LIT = bytes([0xff, 0x91, 0x24, 0xff, 0x00, 0x00, 0x00, 0x00])  # 0xff2491ffL LE
-NEW_LIT = bytes([0x47, 0x5a, 0xe0, 0xff, 0x00, 0x00, 0x00, 0x00])  # 0xffe05a47L LE
+OLD_BLUE = bytes([0xff, 0x91, 0x24, 0xff, 0x00, 0x00, 0x00, 0x00])     # 0xff2491ffL LE
+OLD_CRIMSON = bytes([0x47, 0x5a, 0xe0, 0xff, 0x00, 0x00, 0x00, 0x00])  # 0xffe05a47L LE
+NEW_LIT = bytes([0xb8, 0xc9, 0xd4, 0xff, 0x00, 0x00, 0x00, 0x00])       # 0xffd4c9b8L LE (Limestone)
 
 patched = False
 for i in range(c_size):
@@ -75,13 +76,15 @@ for i in range(c_size):
                 insns_start = code_off + 16
                 insns_end = insns_start + insns_size * 2
                 slice_bytes = bytes(dex[insns_start:insns_end])
-                idx = slice_bytes.find(OLD_LIT)
+                idx = slice_bytes.find(OLD_BLUE)
+                if idx == -1:
+                    idx = slice_bytes.find(OLD_CRIMSON)
                 if idx != -1:
                     dex[insns_start + idx : insns_start + idx + 8] = NEW_LIT
                     patched = True
-                    print(f"Patched Lib/b.<clinit> at 0x{insns_start + idx:x}: 0xff2491ffL -> 0xffe05a47L")
+                    print(f"Patched Lib/b.<clinit> at 0x{insns_start + idx:x} -> 0xffd4c9b8L (Limestone)")
                 elif NEW_LIT in slice_bytes:
-                    print("Lib/b.<clinit> already patched to 0xffe05a47L.")
+                    print("Lib/b.<clinit> already patched to 0xffd4c9b8L.")
                 else:
                     print("WARNING: Neither old nor new literal found in Lib/b.<clinit>!", file=sys.stderr)
                     sys.exit(1)

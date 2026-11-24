@@ -63,13 +63,13 @@ public final class FolioWebBrowserDialog {
     private static final String KEY_RECENT_IMPORTS = "web_recent_imports";
     public static final String DEFAULT_URL = "https://standardebooks.org/ebooks";
 
-    private static final int BG_CANVAS = 0xFF121010;
-    private static final int BG_SURFACE = 0xFF181515;
-    private static final int BG_CONTROL = 0xFF211C1B;
-    private static final int BORDER = 0xFF2A2423;
-    private static final int TEXT_PRIMARY = 0xFFF2EFE9;
-    private static final int TEXT_MUTED = 0xFF8E867E;
-    private static final int ACCENT_BLUE = 0xFFE05A47;
+    private static final int BG_CANVAS = 0xFF15171A;
+    private static final int BG_SURFACE = 0xFF1C1E22;
+    private static final int BG_CONTROL = 0xFF25282D;
+    private static final int BORDER = 0xFF32353B;
+    private static final int TEXT_PRIMARY = 0xFFECE8E0;
+    private static final int TEXT_MUTED = 0xFF8A857D;
+    private static final int ACCENT_BLUE = 0xFFD4C9B8;
 
     private FolioWebBrowserDialog() {}
 
@@ -364,7 +364,7 @@ public final class FolioWebBrowserDialog {
         final EditText urlEt = new EditText(ctx);
         urlEt.setText(getHomeUrl(ctx));
         urlEt.setHint("https://standardebooks.org/ebooks");
-        urlEt.setHintTextColor(0xFF8E867E);
+        urlEt.setHintTextColor(0xFF8A857D);
         urlEt.setTextColor(TEXT_PRIMARY);
         urlEt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         urlEt.setSingleLine(true);
@@ -432,7 +432,7 @@ public final class FolioWebBrowserDialog {
                 GradientDrawable ctBg = new GradientDrawable();
                 ctBg.setColor(BG_CONTROL);
                 ctBg.setCornerRadius(dp(d, 8));
-                ctBg.setStroke(dp(d, 1), on ? 0xFF5C2D26 : BORDER);
+                ctBg.setStroke(dp(d, 1), on ? 0xFF524B41 : BORDER);
                 cleanToggle.setBackground(ctBg);
             }
         };
@@ -558,7 +558,7 @@ public final class FolioWebBrowserDialog {
 
         final TextView openNowBtn = new TextView(ctx);
         openNowBtn.setText("Open");
-        openNowBtn.setTextColor(0xFF0A0909);
+        openNowBtn.setTextColor(0xFF0E0F11);
         openNowBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         openNowBtn.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
         openNowBtn.setPadding(dp(d, 10), dp(d, 4), dp(d, 10), dp(d, 4));
@@ -597,7 +597,7 @@ public final class FolioWebBrowserDialog {
                 GradientDrawable bg = new GradientDrawable();
                 bg.setColor(BG_CONTROL);
                 bg.setCornerRadius(dp(d, 7));
-                bg.setStroke(dp(d, 1), on ? 0xFF5C2D26 : BORDER);
+                bg.setStroke(dp(d, 1), on ? 0xFF524B41 : BORDER);
                 btnClean.setBackground(bg);
                 FolioIcons.setButtonIconColor(btnClean, on ? ACCENT_BLUE : FolioIcons.COLOR_MUTED);
             }
@@ -646,12 +646,12 @@ public final class FolioWebBrowserDialog {
                 String safeUrl = failingUrl != null ? failingUrl.replace("<", "&lt;").replace(">", "&gt;") : "";
                 String safeDesc = description != null ? description.replace("<", "&lt;").replace(">", "&gt;") : "No internet connection";
                 String html = "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
-                        + "<style>body{margin:0;padding:36px 24px;background:#0A0909;color:#F2EFE9;font-family:sans-serif;}"
-                        + ".card{background:#181515;border:1px solid #2A2423;border-radius:16px;padding:24px;}"
-                        + "h2{margin:0 0 8px;font-family:Georgia,serif;font-weight:400;font-size:22px;color:#F2EFE9;}"
-                        + "p{margin:0 0 12px;font-size:13px;line-height:1.5;color:#8E867E;word-break:break-word;}"
-                        + ".code{display:inline-block;padding:4px 10px;border-radius:999px;background:#2A1816;border:1px solid #5C2D26;color:#F5B8AE;font-size:11px;margin-bottom:16px;}"
-                        + "a.btn{display:inline-block;padding:10px 18px;border-radius:999px;background:#E05A47;color:#0A0909;text-decoration:none;font-weight:700;font-size:13px;}"
+                        + "<style>body{margin:0;padding:36px 24px;background:#0E0F11;color:#ECE8E0;font-family:sans-serif;}"
+                        + ".card{background:#1C1E22;border:1px solid #32353B;border-radius:16px;padding:24px;}"
+                        + "h2{margin:0 0 8px;font-family:Georgia,serif;font-weight:400;font-size:22px;color:#ECE8E0;}"
+                        + "p{margin:0 0 12px;font-size:13px;line-height:1.5;color:#8A857D;word-break:break-word;}"
+                        + ".code{display:inline-block;padding:4px 10px;border-radius:999px;background:#282520;border:1px solid #524B41;color:#E6DDD0;font-size:11px;margin-bottom:16px;}"
+                        + "a.btn{display:inline-block;padding:10px 18px;border-radius:999px;background:#D4C9B8;color:#0E0F11;text-decoration:none;font-weight:700;font-size:13px;}"
                         + "</style></head><body><div class='card'><h2>Page unavailable offline</h2>"
                         + "<p>" + safeUrl + "</p><div class='code'>" + safeDesc + "</div><br/>"
                         + "<a class='btn' href='" + safeUrl + "'>Try Again</a></div></body></html>";
@@ -721,7 +721,7 @@ public final class FolioWebBrowserDialog {
 
                 // EPUB Scanner button (single Kindle blue accent)
                 LinearLayout scanBtn = makeChipWithIcon(ctx, d, FolioIcons.DOWNLOAD, "EPUBs",
-                        ACCENT_BLUE, BG_CONTROL, 0xFF5C2D26);
+                        ACCENT_BLUE, BG_CONTROL, 0xFF524B41);
                 scanBtn.setOnClickListener(new View.OnClickListener() {
                     @Override public void onClick(View v) {
                         scanPageForEpubLinks(ctx, webView, mainHandler, statusBanner, statusTv, openNowBtn, dlgRef, onImported);
@@ -874,7 +874,7 @@ public final class FolioWebBrowserDialog {
         et.setText(cur != null && !cur.isEmpty() ? cur : getHomeUrl(ctx));
         et.setSelectAllOnFocus(true);
         et.setHint("https://...");
-        et.setHintTextColor(0xFF8E867E);
+        et.setHintTextColor(0xFF8A857D);
         et.setTextColor(TEXT_PRIMARY);
         et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         et.setSingleLine(true);
@@ -1174,7 +1174,7 @@ public final class FolioWebBrowserDialog {
                     mainHandler.post(new Runnable() {
                         @Override public void run() {
                             statusBanner.setBackgroundColor(BG_CONTROL);
-                            statusTv.setTextColor(0xFFE87A6D);
+                            statusTv.setTextColor(0xFFC99A7E);
                             statusTv.setText(t.getMessage() != null ? t.getMessage() : "Download failed");
                             openNowBtn.setVisibility(View.GONE);
                         }

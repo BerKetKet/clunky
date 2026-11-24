@@ -1,32 +1,32 @@
-# Antigravity Report — Round 145 Deliverables (`Azath v15.1 KFX`)
+# Antigravity Report — Round 146 Stone Edition (`Azath v16.0 KFX`)
 
 ## Summary
-Built, deployed, and hardware-tested Round 145 (`Azath v15.1 KFX`) on the physical **Samsung Galaxy M30** (`32001776e8e82623`, TrebleDroid Android 13 GSI), integrating `ExternalEpubActivity.resolveExistingKfxFile(...)`, Azath Obsidian-Ivory-Crimson unification in `ExternalEpubActivity.java`, and the `Azath v15.1 KFX` version bump. Hardware verification identified the exact root cause why **Brave New World** could not launch `StandAloneBookReaderActivity` from Control Center on this device.
+Implemented, built, deployed, and hardware-verified Round 146 (**Major Stone Edition `Azath v16.0 KFX`**) on the physical **Samsung Galaxy M30** (`32001776e8e82623`, TrebleDroid Android 13 GSI), migrating all 8 Java UI modules, bespoke icons, launcher icon, Compose bottom nav tint, generic Library cover tiles, and `Library` header typography into the unified **Granite & Limestone Stone** design system.
 
 ---
 
 ## Verification Matrix
 | Check / Deliverable | Status | Verified Evidence |
 | :--- | :--- | :--- |
-| Drop-In Sources (`ExternalEpubActivity.java`, `FolioMoreView.java`) | **VERIFIED** | Integrated `resolveExistingKfxFile(ctx, rawFile)` into `launchKfxReader` and `FolioMoreView` click handlers, plus Obsidian-Ivory-Crimson dialog theming (`#121010`, `#E05A47`, `#F2EFE9`) and `v15.1 KFX` bump. (Visual note from an accidental Home tap on *Rashomon*: `ExternalEpubActivity` renders the new `#121010`/`#E05A47`/`#F2EFE9` dialog cleanly, though the badge copy still reads `"FOLIO EPUB IMPORT"` / `"ALREADY IN FOLIO LIBRARY"`.) |
-| APK Build & Staging (`v15.1 KFX`) | **VERIFIED** | `bash 07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` exited `0` (`classes9.dex` `468980` bytes, `Lib/b.<clinit>` Ember Crimson `0xffe05a47L`, `patch_classes3_azath.sh`, `patch_res_azath_covers.py`, XML patches). Staged APK: `07_APK_EPUB_INGESTION_MOD/release/azath_v15.1_kfx/base.apk` (`138541159` bytes, SHA256 `17f18cf285e500baf079b7b37fda1ffbd7db7436352b9101bbbc234e001adac4`). |
-| Device Deployment (`com.azath.reader`) | **VERIFIED** | `dumpsys package com.azath.reader` -> `versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-25 01:46:22`. `v15.1 KFX` confirmed in `logs/azath_more_r145.xml`. Logcat (`FATAL EXCEPTION`) -> `NO_FATAL_EXCEPTIONS`. |
-| Stock Kindle Preservation (`com.amazon.kindle`) | **VERIFIED** | `dumpsys package com.amazon.kindle` -> `versionName=8.160.1.0(2.0.124621.0)`, `lastUpdateTime=2026-11-19 21:59:23` (100% untouched & read-only). |
-| Control Center `Brave New World` Launch (`verify_r145_azath_continue_reading_launch.png`) | **BLOCKED / DIAGNOSED** | Captured `verify_r145_azath_continue_reading_launch.png` (`312292` bytes) after tapping **Brave New World** `(380, 960)` in Control Center's `Continue Reading` row: remained on `MainActivity` after toasting `"Book file not found"`. **Root Cause**: `Brave_New_World_FOLIO_621B293A3B8F.kfx` (along with `Moksha`, `Crome Yellow`, `The Dream of the Red Chamber`, and `Island` `.kfx` files) resided only inside `/data/user/0/com.amazon.kindle.epub/files/folio_library/` and was permanently deleted by Android when `com.amazon.kindle.epub` was uninstalled in Round 136. `find /sdcard/ -iname '*brave*'` shows only the unimported source EPUB `/sdcard/en/0/Aldous Huxley - Brave New World.epub`. Tapping Control Center Card #2 (*Delphi Complete Works of Aristotle*, `/sdcard/kindle/Aristotle - Delphi Complete Works.kfx`) invokes `launchKfxReader` -> `ThirdPartyUpgradePage` -> `AlertActivity` (`"Incompatible Version"`), identical to tapping *Aristotle* inside the stock `Library` tab. |
-
----
-
-## Actionable Findings for Round 146
-1. **Fallback EPUB Re-Import / Stale Record Reconciliation**: When `resolveExistingKfxFile` finds that a legacy `/com.amazon.kindle.epub/files/folio_library/*_FOLIO_*.kfx` file no longer exists on disk, offer/trigger fallback import from matching source EPUBs in `/sdcard/en/0/` (e.g., `/sdcard/en/0/Aldous Huxley - Brave New World.epub`), or prune/hide orphaned entries from `Continue Reading`.
-2. **`ExternalEpubActivity.java` Badge Copy**: Update `"ALREADY IN FOLIO LIBRARY"` / `"FOLIO EPUB IMPORT"` to `"ALREADY IN AZATH LIBRARY"` / `"AZATH EPUB IMPORT"`.
+| Stone Java Modules (All 8 Files) | **VERIFIED** | Integrated all 8 drop-in files (`FolioTheme`, `FolioMoreView`, `OpenCatalogView`, `FolioMetadataCatalogDialog`, `FolioFolderBrowserDialog`, `FolioMetadataBackup`, `FolioWebBrowserDialog`, `ExternalEpubActivity`) into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/`. Verified Granite dark mode across Home, Library, Control Center, and `"AZATH"`/`v16.0 KFX` branding. (Note: Limestone light theme toggle inside Settings was compiled in `FolioTheme.java` and not toggled in R146.) |
+| Limestone Launcher & 17 UI Icons (`azath_icons/`, `dropin_res/`) | **VERIFIED** | Installed `dropin_assets/azath_launcher/ic_launcher_foreground_432.png` & `azath_icon_limestone_512.png` + `mipmap-*` with `#141517` Stone adaptive background (`rebuild_fast.sh`); synced all 16 re-tinted `azath_icons/` and re-tinted `ic_authors.png` to `#ECE8E0` / `#D4C9B8`. |
+| DEX & Resource Patchers (`patch_classes2_azath.py`, `patch_res_azath_covers.py`, `rebuild_fast.sh`) | **VERIFIED** | Updated `patch_classes2_azath.py` to patch `Lib/b.<clinit>` (`0xff2491ffL`/`0xffe05a47L` -> `0xffd4c9b8L`, applied at `0x4d6f50`), updated `patch_res_azath_covers.py` to Granite `#1C1E22`/`#32353B`/`#8A857D`/`#524B41`/`#ECE8E0`, and replaced `res/font/amazon_ember_serif_{bold,he}.ttf` with `EBGaramond-Regular.ttf` in `rebuild_fast.sh` (keeping reader `Bookerly-*.ttf` in `assets/` completely untouched). |
+| APK Build & Staging (`v16.0 KFX`) | **VERIFIED** | `bash 07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` exited `0` (`classes9.dex` `470136` bytes, `classes2.dex` `8,413,156` bytes). Staged APK: `07_APK_EPUB_INGESTION_MOD/release/azath_v16.0_kfx/base.apk` (`139032679` bytes, SHA256 `f995e5a0372907cadce08240c7189dc2cd9e9967e39836a252f0ba239f8ca0b6`). |
+| Device Deployment & Invariants | **VERIFIED** | `com.azath.reader` updated `2026-11-25 02:06:48`; stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`); `NO_FATAL_EXCEPTIONS` in `logcat -d`; `text="v16.0 KFX"` confirmed in `logs/azath_more_r146.xml`; zero `ct.reader` launches/references. |
+| App Drawer Limestone Icon (`verify_r146_azath_launcher_limestone.png`) | **VERIFIED** | Captured (`320969` bytes) & visually inspected: circular Limestone moonlit sky + tree silhouette `Azath` icon in Android app drawer (zero crimson). |
+| Home Screen (`verify_r146_azath_home_granite.png`) | **VERIFIED** | Captured (`642942` bytes) & visually inspected: Granite `#1C1E22`/`#32353B` cards, luminous Limestone `#D4C9B8` `Search` CTA & active `Home` tab, EB Garamond headings, `#1C1E22` *Moksha* monogram, and `Offline Mode` card. |
+| Library Screen (`verify_r146_azath_library_garamond.png`) | **VERIFIED** | Captured (`1079394` bytes) & visually inspected: top-left **`Library`** title now renders in airy **Regular EB Garamond** (`amazon_ember_serif_{bold,he}.ttf` patched), dark Granite `#1C1E22` generic covers with `#8A857D` open-book emblems & `#ECE8E0` ivory text, and `#D4C9B8` active `Library` tab. |
+| Control Center (`verify_r146_azath_control_center_granite.png`) | **VERIFIED** | Captured (`314365` bytes) & visually inspected: **`Control Center`** (`v16.0 KFX`), Limestone-tinted `azath_icons/` (`Library Metadata & Genres`, `Import EPUBs from Storage`, `Web Book Browser`, `OPDS Catalogs`), Granite stat cards, tonal `+ Pick ›`, and `#D4C9B8` active `More` tab. |
 
 ---
 
 ## Modified / Added Files
-- `dropin_src/com/amazon/kindle/epub/{ingest/ExternalEpubActivity.java,catalog/FolioMoreView.java}` & `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/{ingest/ExternalEpubActivity.java,catalog/FolioMoreView.java}`
-- `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` (`azath_v15.1_kfx` staging)
-- `07_APK_EPUB_INGESTION_MOD/dex/classes9.dex` (`468980` bytes)
-- `verify_r145_azath_continue_reading_launch.png`
+- `dropin_res/` & `dropin_assets/azath_launcher/` (Limestone launcher icons + `#141517` background)
+- `dropin_assets/azath_icons/*.png` & `07_APK_EPUB_INGESTION_MOD/assets/azath_icons/*.png` (all 17 Stone icons including re-tinted `ic_authors.png`)
+- `dropin_src/com/amazon/kindle/epub/{catalog,ingest}/*.java` & `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/{catalog,ingest}/*.java` (all 8 Java files)
+- `07_APK_EPUB_INGESTION_MOD/tools/{patch_classes2_azath.py,patch_res_azath_covers.py,rebuild_fast.sh}`
+- `07_APK_EPUB_INGESTION_MOD/dex/classes9.dex` (`470136` bytes)
+- `verify_r146_azath_launcher_limestone.png`, `verify_r146_azath_home_granite.png`, `verify_r146_azath_library_garamond.png`, `verify_r146_azath_control_center_granite.png`
 
 ---
 

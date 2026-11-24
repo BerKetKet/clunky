@@ -53,13 +53,13 @@ public final class OpenCatalogView {
     private static final String PREFS_NAME = "folio_catalog_prefs";
     private static final String KEY_CUSTOM_OPDS = "custom_opds_url";
 
-    private static final int BG_DARK = 0xFF0A0909;
-    private static final int BG_SURFACE = 0xFF181515;
-    private static final int BG_CARD = 0xFF211C1B;
-    private static final int ACCENT_AMBER = 0xFFE05A47;
-    private static final int ACCENT_TEAL = 0xFFF5B8AE;
-    private static final int TEXT_PRIMARY = 0xFFF2EFE9;
-    private static final int TEXT_MUTED = 0xFF8E867E;
+    private static final int BG_DARK = 0xFF0E0F11;
+    private static final int BG_SURFACE = 0xFF1C1E22;
+    private static final int BG_CARD = 0xFF25282D;
+    private static final int ACCENT_AMBER = 0xFFD4C9B8;
+    private static final int ACCENT_TEAL = 0xFFE6DDD0;
+    private static final int TEXT_PRIMARY = 0xFFECE8E0;
+    private static final int TEXT_MUTED = 0xFF8A857D;
 
     private static final ExecutorService IMG_POOL = Executors.newFixedThreadPool(4);
 
@@ -194,7 +194,7 @@ public final class OpenCatalogView {
 
     private static View makeBellIconButton(final Context ctx, final float d) {
         FrameLayout btn = new FrameLayout(ctx);
-        btn.setBackground(roundRect(BG_SURFACE, dp(d, 999), 0xFF2A2423, dp(d, 1)));
+        btn.setBackground(roundRect(BG_SURFACE, dp(d, 999), 0xFF32353B, dp(d, 1)));
         int size = dp(d, 34);
         btn.setLayoutParams(new LinearLayout.LayoutParams(size, size));
 
@@ -322,7 +322,7 @@ public final class OpenCatalogView {
         LinearLayout searchBar = new LinearLayout(ctx);
         searchBar.setOrientation(LinearLayout.HORIZONTAL);
         searchBar.setGravity(Gravity.CENTER_VERTICAL);
-        searchBar.setBackground(roundRect(BG_SURFACE, dp(d, 24), 0xFF2A2423, dp(d, 1)));
+        searchBar.setBackground(roundRect(BG_SURFACE, dp(d, 24), 0xFF32353B, dp(d, 1)));
         searchBar.setPadding(dp(d, 16), dp(d, 4), dp(d, 8), dp(d, 4));
         LinearLayout.LayoutParams sbLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -338,7 +338,7 @@ public final class OpenCatalogView {
         searchInput.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         searchBar.addView(searchInput, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        final TextView searchGo = makePill(ctx, d, "Search", ACCENT_AMBER, 0xFF0A0909);
+        final TextView searchGo = makePill(ctx, d, "Search", ACCENT_AMBER, 0xFF0E0F11);
         searchBar.addView(searchGo);
         root.addView(searchBar, sbLp);
 
@@ -569,7 +569,7 @@ public final class OpenCatalogView {
         // --- Async Load 2: Popular Free EPUBs Carousel (Gutendex) ---
         final LinearLayout offlineCard = new LinearLayout(ctx);
         offlineCard.setOrientation(LinearLayout.VERTICAL);
-        offlineCard.setBackground(roundRect(BG_SURFACE, dp(d, 16), 0xFF2A2423, dp(d, 1)));
+        offlineCard.setBackground(roundRect(BG_SURFACE, dp(d, 16), 0xFF32353B, dp(d, 1)));
         offlineCard.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 16));
         LinearLayout.LayoutParams ocLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -692,7 +692,7 @@ public final class OpenCatalogView {
         card.setLayoutParams(lp);
 
         FrameLayout coverFrame = new FrameLayout(ctx);
-        coverFrame.setBackground(roundRect(BG_CARD, dp(d, 8), 0xFF2A2423, dp(d, 1)));
+        coverFrame.setBackground(roundRect(BG_CARD, dp(d, 8), 0xFF32353B, dp(d, 1)));
         coverFrame.setClipToOutline(true);
         LinearLayout.LayoutParams cfLp = new LinearLayout.LayoutParams(dp(d, 114), dp(d, 168));
         cfLp.bottomMargin = dp(d, 6);
@@ -719,14 +719,14 @@ public final class OpenCatalogView {
         }
         TextView dropCap = new TextView(ctx);
         dropCap.setText(initial);
-        dropCap.setTextColor(0xFF8E867E);
+        dropCap.setTextColor(0xFF8A857D);
         dropCap.setTextSize(34f);
         dropCap.setTypeface(FolioTheme.serif(ctx));
         dropCap.setGravity(Gravity.CENTER);
         fallback.addView(dropCap);
 
         View spineRule = new View(ctx);
-        spineRule.setBackground(roundRect(0xFF5C2D26, dp(d, 2), 0, 0));
+        spineRule.setBackground(roundRect(0xFF524B41, dp(d, 2), 0, 0));
         LinearLayout.LayoutParams srLp = new LinearLayout.LayoutParams(dp(d, 26), dp(d, 2));
         srLp.topMargin = dp(d, 4);
         srLp.bottomMargin = dp(d, 10);
@@ -734,7 +734,7 @@ public final class OpenCatalogView {
 
         TextView fbTitle = new TextView(ctx);
         fbTitle.setText(lb.title);
-        fbTitle.setTextColor(0xFFC4BDB5);
+        fbTitle.setTextColor(0xFFBDB8AE);
         fbTitle.setTextSize(11.5f);
         fbTitle.setTypeface(FolioTheme.serif(ctx));
         fbTitle.setGravity(Gravity.CENTER);
@@ -836,7 +836,7 @@ public final class OpenCatalogView {
         card.setLayoutParams(lp);
 
         FrameLayout coverFrame = new FrameLayout(ctx);
-        coverFrame.setBackground(roundRect(BG_CARD, dp(d, 8), 0xFF2A2423, dp(d, 1)));
+        coverFrame.setBackground(roundRect(BG_CARD, dp(d, 8), 0xFF32353B, dp(d, 1)));
         coverFrame.setClipToOutline(true);
         LinearLayout.LayoutParams cfLp = new LinearLayout.LayoutParams(dp(d, 114), dp(d, 168));
         cfLp.bottomMargin = dp(d, 6);
@@ -889,7 +889,7 @@ public final class OpenCatalogView {
         LinearLayout row = new LinearLayout(ctx);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setBackground(roundRect(BG_SURFACE, dp(d, 10), 0xFF211C1B, dp(d, 1)));
+        row.setBackground(roundRect(BG_SURFACE, dp(d, 10), 0xFF25282D, dp(d, 1)));
         row.setPadding(dp(d, 10), dp(d, 10), dp(d, 12), dp(d, 10));
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -1001,7 +1001,7 @@ public final class OpenCatalogView {
         tv.setTextColor(textColor);
         tv.setTextSize(12.5f);
         tv.setTypeface(FolioTheme.sansBold(ctx));
-        tv.setBackground(roundRect(bgColor, dp(d, 999), 0xFF2A2423, dp(d, 1)));
+        tv.setBackground(roundRect(bgColor, dp(d, 999), 0xFF32353B, dp(d, 1)));
         tv.setPadding(dp(d, 14), dp(d, 7), dp(d, 14), dp(d, 7));
         return tv;
     }

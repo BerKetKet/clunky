@@ -123,18 +123,18 @@ public class ExternalEpubActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(20);
         root.setPadding(pad, pad, pad, dp(16));
-        root.setBackgroundColor(Color.parseColor("#121010"));
+        root.setBackgroundColor(Color.parseColor("#15171A"));
 
         TextView badge = new TextView(this);
-        badge.setText(existing != null ? "ALREADY IN FOLIO LIBRARY" : "FOLIO EPUB IMPORT");
-        badge.setTextColor(Color.parseColor(existing != null ? "#E05A47" : "#E05A47"));
+        badge.setText(existing != null ? "ALREADY IN AZATH LIBRARY" : "AZATH EPUB IMPORT");
+        badge.setTextColor(Color.parseColor(existing != null ? "#D4C9B8" : "#D4C9B8"));
         badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         badge.setTypeface(Typeface.DEFAULT_BOLD);
         root.addView(badge);
 
         TextView titleView = new TextView(this);
         titleView.setText(meta.title);
-        titleView.setTextColor(Color.parseColor("#F2EFE9"));
+        titleView.setTextColor(Color.parseColor("#ECE8E0"));
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
         titleView.setTypeface(Typeface.DEFAULT_BOLD);
         titleView.setPadding(0, dp(6), 0, dp(4));
@@ -147,7 +147,7 @@ public class ExternalEpubActivity extends Activity {
         }
         TextView authorView = new TextView(this);
         authorView.setText(sub.toString());
-        authorView.setTextColor(Color.parseColor("#C4BDB5"));
+        authorView.setTextColor(Color.parseColor("#BDB8AE"));
         authorView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         authorView.setPadding(0, 0, 0, dp(12));
         root.addView(authorView);
@@ -158,13 +158,13 @@ public class ExternalEpubActivity extends Activity {
         } else {
             desc.setText("Add to your Azath library (saves converted book & metadata in app storage) or open once without saving.");
         }
-        desc.setTextColor(Color.parseColor("#8E867E"));
+        desc.setTextColor(Color.parseColor("#8A857D"));
         desc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         desc.setPadding(0, 0, 0, dp(18));
         root.addView(desc);
 
         if (existing != null) {
-            TextView btnOpenExisting = makeButton("Open Existing Copy", "#E05A47", "#0A0909");
+            TextView btnOpenExisting = makeButton("Open Existing Copy", "#D4C9B8", "#0E0F11");
             btnOpenExisting.setOnClickListener(v -> {
                 stagedEpub.delete();
                 dismissActiveDialog();
@@ -177,11 +177,11 @@ public class ExternalEpubActivity extends Activity {
             sp0.setLayoutParams(new LinearLayout.LayoutParams(1, dp(10)));
             root.addView(sp0);
 
-            TextView btnReimport = makeButton("Re-Import & Replace", "#211C1B", "#F2EFE9");
+            TextView btnReimport = makeButton("Re-Import & Replace", "#25282D", "#ECE8E0");
             btnReimport.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
             root.addView(btnReimport);
         } else {
-            TextView btnAdd = makeButton("Add to Library & Read", "#E05A47", "#0A0909");
+            TextView btnAdd = makeButton("Add to Library & Read", "#D4C9B8", "#0E0F11");
             btnAdd.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
             root.addView(btnAdd);
 
@@ -189,7 +189,7 @@ public class ExternalEpubActivity extends Activity {
             spacer.setLayoutParams(new LinearLayout.LayoutParams(1, dp(10)));
             root.addView(spacer);
 
-            TextView btnOnce = makeButton("Open Once (Don't Add)", "#211C1B", "#F2EFE9");
+            TextView btnOnce = makeButton("Open Once (Don't Add)", "#25282D", "#ECE8E0");
             btnOnce.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, false));
             root.addView(btnOnce);
         }
@@ -201,7 +201,7 @@ public class ExternalEpubActivity extends Activity {
         TextView btnCancel = new TextView(this);
         btnCancel.setText("Cancel");
         btnCancel.setGravity(Gravity.CENTER);
-        btnCancel.setTextColor(Color.parseColor("#8E867E"));
+        btnCancel.setTextColor(Color.parseColor("#8A857D"));
         btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         btnCancel.setPadding(0, dp(10), 0, dp(6));
         btnCancel.setOnClickListener(v -> {
@@ -404,7 +404,7 @@ public class ExternalEpubActivity extends Activity {
         box.setOrientation(LinearLayout.HORIZONTAL);
         box.setGravity(Gravity.CENTER_VERTICAL);
         box.setPadding(dp(20), dp(20), dp(20), dp(20));
-        box.setBackgroundColor(Color.parseColor("#121010"));
+        box.setBackgroundColor(Color.parseColor("#15171A"));
 
         ProgressBar pb = new ProgressBar(this);
         pb.setIndeterminate(true);
@@ -416,14 +416,14 @@ public class ExternalEpubActivity extends Activity {
 
         TextView tvTitle = new TextView(this);
         tvTitle.setText(title);
-        tvTitle.setTextColor(Color.parseColor("#F2EFE9"));
+        tvTitle.setTextColor(Color.parseColor("#ECE8E0"));
         tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
         textCol.addView(tvTitle);
 
         TextView tvSub = new TextView(this);
         tvSub.setText(subtitle);
-        tvSub.setTextColor(Color.parseColor("#8E867E"));
+        tvSub.setTextColor(Color.parseColor("#8A857D"));
         tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         textCol.addView(tvSub);
 

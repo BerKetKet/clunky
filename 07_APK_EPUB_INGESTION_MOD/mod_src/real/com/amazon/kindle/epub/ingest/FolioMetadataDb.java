@@ -88,20 +88,6 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
 
     public void upsertBook(String bookKey, File kfxFile, File coverFile,
                            String sourceName, EpubMetadataExtractor.BookMeta meta) {
-        BookRecord prior = findExisting(bookKey, meta.title, meta.author);
-        String genres = meta.genresCsv();
-        if (genres.isEmpty() && prior != null && !prior.genres.isEmpty()) {
-            genres = prior.genres;
-        }
-        String publisher = meta.publisher != null && !meta.publisher.isEmpty()
-                ? meta.publisher : (prior != null ? prior.publisher : "");
-        String pubDate = meta.pubDate != null && !meta.pubDate.isEmpty()
-                ? meta.pubDate : (prior != null ? prior.pubDate : "");
-        String isbn = meta.isbn != null && !meta.isbn.isEmpty()
-                ? meta.isbn : (prior != null ? prior.isbn : "");
-        String olKey = meta.openLibraryKey != null && !meta.openLibraryKey.isEmpty()
-                ? meta.openLibraryKey : (prior != null ? prior.openLibraryKey : "");
-
         SQLiteDatabase db = getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put("book_key", bookKey);
@@ -110,13 +96,13 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         cv.put("source_name", sourceName != null ? sourceName : kfxFile.getName());
         cv.put("title", meta.title != null ? meta.title : kfxFile.getName());
         cv.put("author", meta.author != null ? meta.author : "Unknown Author");
-        cv.put("publisher", publisher);
-        cv.put("pub_date", pubDate);
-        cv.put("genres", genres);
+        cv.put("publisher", meta.publisher != null ? meta.publisher : "");
+        cv.put("pub_date", meta.pubDate != null ? meta.pubDate : "");
+        cv.put("genres", meta.genresCsv());
         cv.put("language", meta.language != null ? meta.language : "");
-        cv.put("isbn", isbn);
+        cv.put("isbn", meta.isbn != null ? meta.isbn : "");
         cv.put("description", meta.description != null ? meta.description : "");
-        cv.put("open_library_key", olKey);
+        cv.put("open_library_key", meta.openLibraryKey != null ? meta.openLibraryKey : "");
         cv.put("added_at", System.currentTimeMillis());
         db.insertWithOnConflict("books_metadata", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
     }
@@ -285,14 +271,13 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             Set<String> lcCols = tableColumns(db, "LocalContent");
             if (!lcCols.isEmpty()) {
                 ContentValues lc = new ContentValues();
-                putIfPresent(lc, lcCols, "KEY", amznId);
-                putIfPresent(lc, lcCols, "CONTENT_ID", amznId);
+                putIfPresent(lc, lcCols, "ID", amznId);
+                putIfPresent(lc, lcCols, "KEY", bookKey);
+                putIfPresent(lc, lcCols, "CONTENT_ID", bookKey);
                 putIfPresent(lc, lcCols, "FILE_PATH", path);
-                putIfPresent(lc, lcCols, "GUID", asin);
                 putIfPresent(lc, lcCols, "COVER_PATH", coverPath);
                 putIfPresent(lc, lcCols, "FILE_SIZE", kfxFile.length());
                 putIfPresent(lc, lcCols, "LAST_MODIFIED", now);
-                putIfPresent(lc, lcCols, "OWNERSHIP_TYPE", "Unknown");
                 putIfPresent(lc, lcCols, "MIME_TYPE", "application/x-kfx-ebook");
                 db.insertWithOnConflict("LocalContent", null, lc, SQLiteDatabase.CONFLICT_REPLACE);
             }
@@ -301,13 +286,14 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             Set<String> ucCols = tableColumns(db, "UserContent");
             if (!ucCols.isEmpty()) {
                 ContentValues uc = new ContentValues();
-                putIfPresent(uc, ucCols, "KEY", amznId);
+                putIfPresent(uc, ucCols, "ID", amznId);
+                putIfPresent(uc, ucCols, "KEY", bookKey);
+                putIfPresent(uc, ucCols, "CONTENT_ID", bookKey);
                 putIfPresent(uc, ucCols, "USER_ID", "MASTER");
-                putIfPresent(uc, ucCols, "LAST_ACCESSED", now);
-                putIfPresent(uc, ucCols, "LAST_ACCESS_TIME", now);
                 putIfPresent(uc, ucCols, "IS_IN_CAROUSEL", 1);
-                putIfPresent(uc, ucCols, "CLIPPING_BALANCE", 0);
-                putIfPresent(uc, ucCols, "READING_PROGRESS", 0);
+                putIfPresent(uc, ucCols, "LAST_ACCESS_TIME", now);
+                putIfPresent(uc, ucCols, "PERCENT_COMPLETE", 0.0);
+                putIfPresent(uc, ucCols, "IS_READ", 0);
                 db.insertWithOnConflict("UserContent", null, uc, SQLiteDatabase.CONFLICT_REPLACE);
             }
 
