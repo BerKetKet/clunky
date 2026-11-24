@@ -1,6 +1,31 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v13.3 KFX") deployed and fully verified on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 133 complete:
+  1. **Kindle-Native Reading Log Modal & Editorial Offline HTML Export (Task A)**:
+     - Target Hardware: Physical Samsung Galaxy M30 (`32001776e8e82623`).
+     - `FolioMetadataBackup.java` (`exportLibraryHtml`): Redesigned offline `/sdcard/kindle/backups/folio_library.html` CSS to Kindle-Native Editorial Dark Theme (`#000000` canvas, `#141618` cards, Georgia serif headings, `#4DA6FF` Kindle blue accents, zero neon colors).
+     - `FolioMoreView.java`: Wired `FolioTheme.applyToDialog(ctx, logDlg)` post-`.show()` onto `showReadingLogDialog`. Shared `calibrateClick` listener across `rtHdr` and `rtRow`, preserved `Reading Time (WPM)` snapshot line in `snapshotText`, and bumped badge + `About Folio` to **`Folio v13.3 KFX`**.
+     - Recompiled `classes9.dex` (`458,484` bytes), rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, signed with `apksigner`.
+     - Streamed APK install to Galaxy M30 (`lastUpdateTime=2026-11-24 23:41:43`) with zero fatal crashes logged.
+     - Staged release APK at `07_APK_EPUB_INGESTION_MOD/release/folio_v13.3_kfx/base.apk` (`137,740,774` bytes, SHA256: `b46ca94d9cd3e58bf3d846da0fa5091bc0f89f5a77888fcd99c638d19fedb144`).
+  2. **Visual Verification & Invariant Proofs (Task B)**:
+     - Regenerated `/sdcard/kindle/backups/folio_library.html` via **HTML** button (`8,778` bytes, up from `7,486` bytes; verified `#000000` / Georgia / `#4DA6FF` CSS in pulled copy).
+     - Captured hardware proof screenshots on Samsung Galaxy M30:
+       * `verify_r133_reading_log_kindle.png` (`234,189` bytes) — Reading Log dialog showing `Reading Log (.md)`, `Saved HTML: /sdcard/kindle/backups/folio_library.html`, export toast, and styled Kindle footer buttons.
+       * `verify_r133_about_v133.png` (`338,933` bytes) — About Folio modal showing `Version: Folio v13.3 KFX (Enhanced Typesetting)`.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Cloned Invariant: `com.amazon.kindle.epub` updated (`lastUpdateTime=2026-11-24 23:41:43`), zero crashes.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+  4. Packaged `antig_to_gemini_neon_clunky_report133.zip` and submitted to Gemini Neon (`clunky` tab).
+
+## Verification Evidence (Round 133)
+1. `verify_r133_reading_log_kindle.png`: Reading Log modal with Kindle theme & HTML export confirmation.
+2. `verify_r133_about_v133.png`: About Folio modal showing Folio v13.3 KFX.
+3. `/sdcard/kindle/backups/folio_library.html`: Verified regenerated `8,778` bytes on device with Kindle Editorial Dark CSS.
+4. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+5. `dumpsys package com.amazon.kindle.epub`: Folio v13.3 KFX deployed (`lastUpdateTime=2026-11-24 23:41:43`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v13.2 KFX") deployed and fully verified on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 132 complete:
   1. **Insights WPM Tap-to-Calibrate, Snapshot Telemetry & Clean Dialog Theming Sync (Task A)**:
      - Target Hardware: Physical Samsung Galaxy M30 (`32001776e8e82623`).

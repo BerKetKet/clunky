@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v13.2 KFX");
+        badgeTv.setText("v13.3 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(TEXT_MUTED);
         badgeTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
@@ -4722,12 +4722,21 @@ public final class FolioMoreView {
                 : (Math.round(readMinsSoFar) + "m");
         String remHrStr = remMins >= 60.0 ? (Math.round(remMins / 60.0) + "h") : (Math.round(remMins) + "m");
 
+        View.OnClickListener calibrateClick = new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
+                showReadingGoalDialog(ctx, new Runnable() {
+                    @Override public void run() { showLibraryInsightsDialog(ctx); }
+                });
+            }
+        };
         TextView rtHdr = new TextView(ctx);
         rtHdr.setText("READING TIME PORTFOLIO (" + userWpm + " WPM · TAP TO CALIBRATE)");
         rtHdr.setTextColor(0xFF4DA6FF);
         rtHdr.setTextSize(11);
         rtHdr.setTypeface(Typeface.DEFAULT_BOLD);
         rtHdr.setPadding(0, 0, 0, dp(d, 7));
+        rtHdr.setOnClickListener(calibrateClick);
         content.addView(rtHdr);
 
         LinearLayout rtRow = new LinearLayout(ctx);
@@ -4769,15 +4778,6 @@ public final class FolioMoreView {
             rTile.addView(rl);
             rtRow.addView(rTile);
         }
-        View.OnClickListener calibrateClick = new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                if (insightDlgRef[0] != null) insightDlgRef[0].dismiss();
-                showReadingGoalDialog(ctx, new Runnable() {
-                    @Override public void run() { showLibraryInsightsDialog(ctx); }
-                });
-            }
-        };
-        rtHdr.setOnClickListener(calibrateClick);
         rtRow.setOnClickListener(calibrateClick);
         content.addView(rtRow);
 
@@ -5402,7 +5402,7 @@ public final class FolioMoreView {
             }
         });
 
-        new AlertDialog.Builder(ctx)
+        AlertDialog logDlg = new AlertDialog.Builder(ctx)
                 .setTitle("Reading Log (.md)")
                 .setView(box)
                 .setPositiveButton("Close", null)
@@ -5430,6 +5430,7 @@ public final class FolioMoreView {
                     }
                 })
                 .show();
+        FolioTheme.applyToDialog(ctx, logDlg);
     }
 
     private static void showAboutDialog(final Context ctx) {
@@ -5494,7 +5495,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v13.2 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v13.3 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

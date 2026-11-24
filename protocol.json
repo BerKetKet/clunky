@@ -1,19 +1,23 @@
 {
-  "round": 132,
-  "version": "Folio v13.2 KFX",
-  "codename": "Insights WPM Tap-to-Calibrate, Snapshot Telemetry & Clean Dialog Theming Sync",
+  "round": 133,
+  "version": "Folio v13.3 KFX",
+  "codename": "Kindle-Native Reading Log Modal & Editorial Offline HTML Export",
   "target_device": "Samsung Galaxy M30 (32001776e8e82623)",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
     {
+      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataBackup.java"
+    },
+    {
       "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v13.2_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v13.3_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r132_insights_calibrate.png",
-    "verify_r132_about_v132.png"
+    "verify_r133_reading_log_kindle.png",
+    "verify_r133_about_v133.png"
   ]
 }
