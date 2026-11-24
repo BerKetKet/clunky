@@ -1,14 +1,11 @@
 {
-  "round": 123,
-  "version": "Folio v12.3 KFX",
-  "codename": "Full-App Kindle-Native Editorial Unification (Catalog, Importer & Modals)",
+  "round": 124,
+  "version": "Folio v12.4 KFX",
+  "codename": "Kindle-Native Final Chip Polish & GitHub Repository Push",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
+  "git_push_requested": true,
   "dropin_files": [
-    {
-      "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioIcons.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioIcons.java"
-    },
     {
       "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
@@ -22,9 +19,9 @@
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.3_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.4_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r123_kindle_catalog.png",
-    "verify_r123_kindle_importer.png"
+    "verify_r124_catalog_chips_polished.png",
+    "verify_r124_importer_polished.png"
   ]
 }

@@ -429,24 +429,16 @@ public final class FolioMetadataCatalogDialog {
                     else gCount = countBooksInGenre(allBooks, g);
 
                     TextView chip = new TextView(ctx);
-                    String chipPrefix = isQueueChip ? "📌 " : (isStarChip ? "★ " : (isEraChip ? "📅 " : (isFavChip ? "★ " : (isNotesChip ? "📝 " : (isShelfChip ? "🏷 " : (isAuditChip ? "🩺 " : ""))))));
+                    String chipPrefix = isStarChip ? "★ " : "";
                     chip.setText(chipPrefix + labelText + " (" + gCount + ")");
                     chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                     chip.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-                    chip.setTextColor(Color.parseColor(active ? "#111827"
-                            : (isQueueChip ? "#C084FC"
-                            : ((isFavChip || isNotesChip) ? "#FBBF24"
-                            : (isShelfChip ? "#A5B4FC"
-                            : (isStatusChip ? "#5EEAD4" : "#CBD5E1"))))));
+                    chip.setTextColor(Color.parseColor(active ? "#000000" : "#C4CBD2"));
                     chip.setPadding(dp(ctx, 12), dp(ctx, 6), dp(ctx, 12), dp(ctx, 6));
                     GradientDrawable bg = new GradientDrawable();
-                    bg.setColor(Color.parseColor(active
-                            ? (isQueueChip ? "#A855F7"
-                            : ((isFavChip || isNotesChip) ? "#FBBF24"
-                            : (isShelfChip ? "#818CF8"
-                            : (isStatusChip ? "#14B8A6" : "#F59E0B"))))
-                            : "#1C1F22"));
+                    bg.setColor(Color.parseColor(active ? "#4DA6FF" : "#1C1F22"));
                     bg.setCornerRadius(dp(ctx, 16));
+                    if (!active) bg.setStroke(dp(ctx, 1), Color.parseColor("#262A2E"));
                     chip.setBackground(bg);
                     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);

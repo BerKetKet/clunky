@@ -1,6 +1,27 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.4 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 124 complete:
+  1. **Kindle-Native Final Chip Polish & GitHub Repository Push (Task A, B & C)**:
+     - Integrated `FolioMoreView.java`, `FolioMetadataCatalogDialog.java`, and `FolioFolderBrowserDialog.java` into `mod_src/real/`.
+     - Stripped emojis and multi-colored neon fills from `FolioMetadataCatalogDialog.java` filter chips (`All`, `Up Next`, `Favorites`, `Notes`), unifying all chips to Kindle monochrome charcoal (`#1C1F22` with `1px #262A2E` border) when inactive and calm Kindle blue (`#4DA6FF`, black text) when active.
+     - Updated `FolioFolderBrowserDialog.java` so `Import Selected` and the active folder chip use calm Kindle blue (`#4DA6FF`, black text) and synced `btnUpDir` click-listener placement.
+     - Bumped badge and About Folio string to `Folio v12.4 KFX (Enhanced Typesetting)`.
+     - Committed and pushed repository to GitHub remote (`https://github.com/BerKetKet/clunky.git`).
+  2. **Visual Verification & Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r124_catalog_chips_polished.png` (821 KB) — Library Metadata & Genres modal showing clean monochrome + Kindle-blue filter chips (`All`, `Up Next`, `Favorites`, `Notes`) with zero emojis.
+       * `verify_r124_importer_polished.png` (203 KB) — Import EPUBs from Storage modal showing calm Kindle-blue `Open`, active folder chip, and `Import Selected (0)` action button.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v12.4 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v12.4_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 124)
+1. `verify_r124_catalog_chips_polished.png`: Library Metadata & Genres modal with emoji-free monochrome charcoal and Kindle-blue chips.
+2. `verify_r124_importer_polished.png`: Import EPUBs modal with calm Kindle-blue action buttons and active folder chip.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v12.4 KFX deployed (`lastUpdateTime=2026-11-24 04:58:51`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.3 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 123 complete:
   1. **Full-App Kindle-Native Editorial Unification (Task A & B)**:
      - Integrated `FolioIcons.java`, `FolioMoreView.java`, `FolioMetadataCatalogDialog.java`, and `FolioFolderBrowserDialog.java` into `mod_src/real/`.

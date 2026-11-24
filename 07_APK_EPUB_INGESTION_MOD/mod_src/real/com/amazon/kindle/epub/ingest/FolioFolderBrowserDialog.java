@@ -269,12 +269,12 @@ public final class FolioFolderBrowserDialog {
         final TextView btnImport = new TextView(ctx);
         btnImport.setText("Import Selected (0)");
         btnImport.setGravity(Gravity.CENTER);
-        btnImport.setTextColor(Color.parseColor("#111827"));
+        btnImport.setTextColor(Color.parseColor("#000000"));
         btnImport.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         btnImport.setTypeface(Typeface.DEFAULT_BOLD);
         btnImport.setPadding(dp(ctx, 16), dp(ctx, 12), dp(ctx, 16), dp(ctx, 12));
         GradientDrawable impBg = new GradientDrawable();
-        impBg.setColor(Color.parseColor("#34D399"));
+        impBg.setColor(Color.parseColor("#4DA6FF"));
         impBg.setCornerRadius(dp(ctx, 10));
         btnImport.setBackground(impBg);
         LinearLayout.LayoutParams impLp = new LinearLayout.LayoutParams(
@@ -306,7 +306,7 @@ public final class FolioFolderBrowserDialog {
             }
             if (nSel > 0) {
                 btnSelectBatch.setText("Clear (" + nSel + ")");
-                btnSelectBatch.setTextColor(Color.parseColor("#F59E0B"));
+                btnSelectBatch.setTextColor(Color.parseColor("#4DA6FF"));
             } else {
                 btnSelectBatch.setText("Select New");
                 btnSelectBatch.setTextColor(Color.parseColor("#5EEAD4"));
@@ -542,9 +542,9 @@ public final class FolioFolderBrowserDialog {
                 chip.setTypeface(isCur || isPin ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                 chip.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
                 GradientDrawable cbg = new GradientDrawable();
-                cbg.setColor(Color.parseColor(isCur ? "#F59E0B" : (isPin ? "#251F14" : "#1C1F22")));
+                cbg.setColor(Color.parseColor(isCur ? "#4DA6FF" : "#1C1F22"));
                 cbg.setCornerRadius(dp(ctx, 14));
-                if (isPin && !isCur) cbg.setStroke(dp(ctx, 1), Color.parseColor("#78501A"));
+                if (!isCur) cbg.setStroke(dp(ctx, 1), Color.parseColor(isPin ? "#2C5278" : "#262A2E"));
                 chip.setBackground(cbg);
                 LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -559,7 +559,6 @@ public final class FolioFolderBrowserDialog {
             }
         };
         refreshChipsHolder[0] = refreshDirChipsRef[0];
-
         btnUpDir.setOnClickListener(v -> {
             String cur = etPath.getText() != null ? etPath.getText().toString().trim() : "";
             File curF = new File(cur);
