@@ -235,6 +235,13 @@ public final class OpenCatalogView {
         btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                try {
+                    Intent ni = new Intent();
+                    ni.setClassName(ctx.getPackageName(), "com.amazon.kindle.inapp.notifications.InAppNotificationsActivity");
+                    ni.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    ctx.startActivity(ni);
+                    return;
+                } catch (Throwable ignored) {}
                 View stockBell = sStockBellRef != null ? sStockBellRef.get() : null;
                 if (stockBell != null) {
                     try {
@@ -242,15 +249,6 @@ public final class OpenCatalogView {
                         return;
                     } catch (Throwable ignored) {}
                 }
-                try {
-                    Class<?> cls = Class.forName("com.amazon.kindle.inapp.notifications.InAppNotificationsActivity");
-                    android.content.Intent intent = new android.content.Intent(ctx, cls);
-                    if (!(ctx instanceof android.app.Activity)) {
-                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                    }
-                    ctx.startActivity(intent);
-                    return;
-                } catch (Throwable ignored) {}
                 Toast.makeText(ctx, "No new notifications", Toast.LENGTH_SHORT).show();
             }
         });
@@ -665,6 +663,27 @@ public final class OpenCatalogView {
         return mainScroll;
     }
 
+    private static String formatHomeAuthor(String raw) {
+        if (raw == null) return "";
+        String s = raw.trim();
+        if (s.isEmpty()) return "";
+        int semi = s.indexOf(';');
+        if (semi > 0) s = s.substring(0, semi).trim();
+        int colon = s.indexOf(':');
+        if (colon > 0 && s.length() - colon > 2 && s.substring(0, colon).toLowerCase(Locale.US).contains("by")) {
+            s = s.substring(colon + 1).trim();
+        }
+        int comma = s.indexOf(',');
+        if (comma > 0 && comma == s.lastIndexOf(',')) {
+            String last = s.substring(0, comma).trim();
+            String first = s.substring(comma + 1).trim();
+            if (!first.isEmpty() && !last.isEmpty() && !first.matches(".*[0-9].*")) {
+                s = first + " " + last;
+            }
+        }
+        return s;
+    }
+
     private static View buildLocalCoverCard(final Context ctx, float d, final Handler mainHandler, final LocalLibraryReader.LocalBook lb) {
         LinearLayout card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.VERTICAL);
@@ -736,9 +755,10 @@ public final class OpenCatalogView {
         titleTv.setEllipsize(TextUtils.TruncateAt.END);
         card.addView(titleTv);
 
-        if (!lb.author.isEmpty()) {
+        String cleanAuth = formatHomeAuthor(lb.author);
+        if (!cleanAuth.isEmpty()) {
             TextView authTv = new TextView(ctx);
-            authTv.setText(lb.author);
+            authTv.setText(cleanAuth);
             authTv.setTextColor(TEXT_MUTED);
             authTv.setTextSize(11f);
             authTv.setMaxLines(1);

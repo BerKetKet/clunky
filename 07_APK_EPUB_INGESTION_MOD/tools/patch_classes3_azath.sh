@@ -18,18 +18,15 @@ trap 'rm -rf "${TMP_DIR}"' EXIT
 
 java -cp "${APKTOOL_JAR}" com.android.tools.smali.baksmali.Main d "${INPUT_DEX}" -o "${TMP_DIR}"
 
-HOME_SMALI="${TMP_DIR}/com/amazon/kcp/home/a.smali"
-if [[ ! -f "${HOME_SMALI}" ]]; then
-    echo "ERROR: ${HOME_SMALI} not found."
-    exit 1
-fi
-
-python3 - "${HOME_SMALI}" << 'PYEOF'
+python3 - "${TMP_DIR}" << 'PYEOF'
+import os
 import sys
 
-path = sys.argv[1]
-with open(path, "r", encoding="utf-8") as f:
-    src = f.read()
+tmp_dir = sys.argv[1]
+targets = [
+    ("HomeScreenlet", "com/amazon/kcp/home/a.smali"),
+    ("MoreScreenlet", "com/amazon/kcp/more/w.smali"),
+]
 
 old_j = """.method public j()Lcom/amazon/android/navigation/screenlet/HeaderMode;
     .registers 1
@@ -47,15 +44,25 @@ new_j = """.method public j()Lcom/amazon/android/navigation/screenlet/HeaderMode
     return-object p0
 .end method"""
 
-if new_j in src:
-    print("HomeScreenlet (com/amazon/kcp/home/a.smali) HeaderMode already patched to c (NoHeader).")
-    sys.exit(0)
+changed = False
+for label, rel in targets:
+    path = os.path.join(tmp_dir, rel)
+    if not os.path.isfile(path):
+        raise SystemExit(f"ERROR: {path} not found.")
+    with open(path, "r", encoding="utf-8") as f:
+        src = f.read()
+    if new_j in src:
+        print(f"{label} ({rel}) HeaderMode already patched to c (NoHeader).")
+        continue
+    assert old_j in src, f"Missing {label}.j() HeaderMode target in {rel}"
+    src = src.replace(old_j, new_j, 1)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(src)
+    print(f"Patched {label}.j() ({rel}) HeaderMode: d -> c (collapses Compose TopAppBar).")
+    changed = True
 
-assert old_j in src, "Missing HomeScreenlet.j() HeaderMode target in a.smali"
-src = src.replace(old_j, new_j, 1)
-with open(path, "w", encoding="utf-8") as f:
-    f.write(src)
-print("Patched HomeScreenlet.j() HeaderMode: d -> c (collapses Compose Home TopAppBar).")
+if not changed:
+    print("All target Screenlets already patched.")
 PYEOF
 
 java -cp "${APKTOOL_JAR}" com.android.tools.smali.smali.Main a "${TMP_DIR}" -o "${INPUT_DEX}"
