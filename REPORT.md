@@ -1,8 +1,8 @@
-# Round 136 Deliverables Report — Azath v14.2 KFX (Bottom Nav Ember-Crimson Alignment, Archival Monogram Covers & Tonal Catalog Polish)
+# Round 137 Deliverables Report — Azath v14.3 KFX (Continue Reading Archival Monograms, Bespoke Catalog Authors Icon, Web Browser Verification & GitHub Sync)
 **Environment**: Samsung Galaxy M30 (`32001776e8e82623`), TrebleDroid Android 13 (arm64-v8a).  
 **Target Device**: Physical **Samsung Galaxy M30** (`32001776e8e82623`).  
 **Stock Kindle Invariant**: Package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Azath Version**: `Azath v14.2 KFX` (`com.azath.reader`) installed on device at `2026-11-25 00:24:20`.
+**Azath Version**: `Azath v14.3 KFX` (`com.azath.reader`) installed on device at `2026-11-25 00:33:28`.
 
 ---
 
@@ -11,26 +11,24 @@
 
 ---
 
-## 1. Task A: Drop-In Integration, Bottom Nav Ember-Crimson Resource + DEX Patch, Build & Stage
-1. **Drop-In Integration**:
-   - Copied `FolioMoreView.java` (`v14.2 KFX`, preserved `Reading Time (WPM)` snapshot summary + updated title to `Azath Library Insights` + shared `calibrateClick`) and `FolioMetadataCatalogDialog.java` (Archival Spine Monogram covers + Tonal `#2A1816`/`#5C2D26`/`#F5B8AE` active filter chips + `#8E867E` muted genre hierarchy + `#F2EFE9` ivory titles) into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`.
-2. **Bottom Navigation Bar Active Tint (`#2491FF` -> `#E05A47`)**:
-   - Pixel inspection of `More` tab initially identified stock `#2491ff`.
-   - Patched XML tokens (`#ff2491ff -> #ffe05a47` across `values-night/colors.xml`, `values/colors.xml`, `values/styles.xml`, and `drawable/bottom_bar_label_color_dark.xml`).
-   - Hardware pixel sampling revealed Jetpack Compose (`compose_content`) reads dark palette color `functionalCorePrimary` directly from compiled bytecode constant `0xff2491ffL` in `classes2.dex` (`Lib/b.<clinit>`).
-   - Created idempotent binary DEX patcher `07_APK_EPUB_INGESTION_MOD/tools/patch_classes2_azath.py` (`0xff2491ffL -> 0xffe05a47L` at `0x4d6f50` with SHA1/Adler32 update) and persisted both DEX + XML patches into `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh`.
-3. **Device Storage Cleanup & Deployment**:
-   - Uninstalled superseded mod package `com.amazon.kindle.epub` and cleared old scratch files in `/data/local/tmp/` with explicit user approval (`1.6G` free on `/data`).
-   - Recompiled `classes9.dex` (`460,968` bytes), patched `classes2.dex` (`8,413,156` bytes), rebuilt APK, aligned via `zipalign`, signed with apksigner, and deployed `com.azath.reader` (`lastUpdateTime=2026-11-25 00:24:20`) with zero `FATAL EXCEPTION` entries in `logcat`.
-   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/azath_v14.2_kfx/base.apk` (`137,856,708` bytes ~132 MB, SHA256: `8cb1e59a65dec11292b5efed8a289d31150cf2b4e4ff92e16e9d93cc13e11a9a`).
+## 1. Task A: Build, Deploy, Stage & GitHub Sync
+1. **Drop-In Integration & Fixes Caught Before Build**:
+   - **Missing Asset/Constant Resolved (`FolioIcons.AUTHORS` & `ic_authors.png`)**: `FolioMetadataCatalogDialog.java` referenced `FolioIcons.AUTHORS`, which was omitted along with `ic_authors.png` from `to_antig_clunky_round_137.zip`. Generated a matching 96x96 transparent `#EFECE6` + `#E05A47` editorial portrait+quill asset (`dropin_assets/azath_icons/ic_authors.png` and `07_APK_EPUB_INGESTION_MOD/assets/azath_icons/ic_authors.png`) and wired `FolioIcons.AUTHORS = 28` -> `"azath_icons/ic_authors.png"` in `FolioIcons.java`.
+   - **Continue Reading Title Hint (`FolioMoreView.java`)**: Added a `makeMiniCoverView(..., String titleHint, ...)` overload passing `rec.title` for `Continue Reading` cards so fallback initials match book titles (`B` for *Brave New World*) regardless of `.kfx` filename, and kept the `"Azath Library Insights\n"` snapshot header.
+   - Copied both updated Java files into `07_APK_EPUB_INGESTION_MOD/mod_src/real/`.
+2. **Compilation, Deployment & Staging**:
+   - Recompiled `classes9.dex` (`461,852` bytes), ran `patch_classes2_azath.py` + XML bottom nav patches in `rebuild_fast.sh` (`azath_v14.3_kfx`).
+   - Deployed `com.azath.reader` to **Samsung Galaxy M30** (`lastUpdateTime=2026-11-25 00:33:28`) with zero `FATAL EXCEPTION` entries in `logcat`.
+   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/azath_v14.3_kfx/base.apk` (`137,860,883` bytes ~132 MB, SHA256: `2e269a19b6a555aa7894fe49375532a0fada254bb7c040d596783efe7f3cf6be`).
 
 ---
 
 ## 2. Task B: Hardware Verification Screenshots (Samsung Galaxy M30)
-1. **`verify_r136_azath_control_center.png` (229,874 bytes)**:
-   - Captured **Azath** Control Center showing **`v14.2 KFX`** badge, Regular Bookerly heading, restored library metrics (`26 BOOKS`, `5 READING`), bespoke icons, and the bottom navigation **`More` tab** verified via pixel sampling at exact **`#e05a47` Ember Crimson** (zero remaining stock `#2491ff` blue).
-2. **`verify_r136_azath_catalog_polish.png` (309,600 bytes)**:
-   - Captured **Library Metadata & Genres (24)** showing tonal `#2A1816`/`#5C2D26`/`#F5B8AE` active `All (24)` chip beside single primary `#E05A47` `Sync & Enrich` CTA, rounded `#211C1B` Archival Bookerly Monogram covers (`B` for *Brave New World*, `I` for *Island*) with `#5C2D26` spine rules, warm `#F2EFE9` ivory titles, and `#8E867E` muted genre tags.
+1. **`verify_r137_azath_control_center.png` (230,136 bytes)**:
+   - Captured **Azath** Control Center showing **`v14.3 KFX`** pill badge, *Brave New World* displaying its Regular Bookerly **`B`** archival monogram with `#5C2D26` crimson spine rule in `Continue Reading`, and `#E05A47` Ember Crimson bottom navigation `More` tab.
+2. **`verify_r137_azath_web_browser.png` (104,589 bytes)**:
+   - Captured **Web Book Browser** opened from Control Center displaying the unified Obsidian-Ivory-Crimson toolbar (`standardebooks.org/ebo...`), `#E05A47` reader-mode chip, `Pin`, tonal crimson `EPUBs` chip, `Downloads` chip (`ic_import.png`), `Standard Ebooks`, and `Gutenberg`.
+   - *(Note for Round 138 polish: When the phone has no active internet connection, stock Chromium WebView's built-in `net::ERR_INTERNET_DISCONNECTED` error page uses dark-on-dark default text inside `#121010`; injecting a dark-themed `onReceivedError` fallback HTML page or checking Settings/Catalog offline states would fix contrast.)*
 3. **Safety Invariant**:
    - Stock `com.amazon.kindle` (`8.160.1.0`) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).
    - Zero crashes logged in `logcat`.

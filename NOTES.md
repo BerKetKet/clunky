@@ -1,6 +1,26 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.azath.reader` ("Azath v14.3 KFX") deployed and verified on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 137 complete:
+  1. **Continue Reading Archival Monograms, Bespoke Catalog Authors Icon & Web Browser Verification (Task A)**:
+     - Target Hardware: Physical Samsung Galaxy M30 (`32001776e8e82623`).
+     - Added matching 96x96 transparent `#EFECE6`+`#E05A47` `ic_authors.png` + `FolioIcons.AUTHORS = 28` in `FolioIcons.java` (since `FolioMetadataCatalogDialog.java` referenced `FolioIcons.AUTHORS` while zip omitted `FolioIcons.java`/`ic_authors.png`).
+     - Integrated `FolioMoreView.java` (`v14.3 KFX`, `extractCoverInitial(...)` + `#5C2D26` spine rules in `makeMiniCoverView` & Global Search, added `titleHint` overload passing `rec.title` so *Brave New World* displays `B`, kept `"Azath Library Insights"` snapshot header) and `FolioMetadataCatalogDialog.java` (`FolioIcons.AUTHORS`).
+     - Updated `rebuild_fast.sh` to stage `azath_v14.3_kfx`, compiled `classes9.dex` (`461,852` bytes), kept `Lib/b.<clinit>` Ember Crimson DEX patch + XML patches, deployed `com.azath.reader` (`lastUpdateTime=2026-11-25 00:33:28`), staged `07_APK_EPUB_INGESTION_MOD/release/azath_v14.3_kfx/base.apk` (`137,860,883` bytes, SHA256: `2e269a19b6a555aa7894fe49375532a0fada254bb7c040d596783efe7f3cf6be`).
+  2. **Visual Verification & Invariant Proofs (Task B)**:
+     - Captured on Samsung Galaxy M30:
+       * `verify_r137_azath_control_center.png` (`230,136` bytes) — `v14.3 KFX` badge, Regular Bookerly **`B`** archival monogram + `#5C2D26` spine rule on *Brave New World* in `Continue Reading`, `#E05A47` Ember Crimson `More` tab.
+       * `verify_r137_azath_web_browser.png` (`104,589` bytes) — Web Book Browser unified Obsidian-Ivory-Crimson toolbar & bookmarks bar (`Pin`, tonal `EPUBs`, `Downloads`, `Standard Ebooks`, `Gutenberg`). Noted Chromium's default offline error text is dark-on-dark on M30 without Wi-Fi.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`), zero crashes.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+  4. Packaged `antig_to_gemini_neon_clunky_report137.zip` and submitted to Gemini Neon (`clunky` tab).
+
+## Verification Evidence (Round 137)
+1. `verify_r137_azath_control_center.png`: Control Center (`v14.3 KFX`), *Brave New World* `B` monogram, `#E05A47` `More` tab.
+2. `verify_r137_azath_web_browser.png`: Web Book Browser Obsidian-Ivory-Crimson toolbar & bookmark chips.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.azath.reader`: Azath v14.3 KFX deployed cleanly (`lastUpdateTime=2026-11-25 00:33:28`).
 - **Current State**: Cloned package `com.azath.reader` ("Azath v14.2 KFX") deployed and verified on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 136 complete:
   1. **Bottom Nav Ember-Crimson Alignment, Archival Monogram Covers & Tonal Catalog Polish (Task A)**:
      - Target Hardware: Physical Samsung Galaxy M30 (`32001776e8e82623`).

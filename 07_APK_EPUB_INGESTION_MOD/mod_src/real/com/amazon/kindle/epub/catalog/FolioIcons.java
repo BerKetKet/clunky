@@ -50,6 +50,7 @@ public final class FolioIcons {
     public static final int CHEVRON_RIGHT = 25;
     public static final int USER = 26;
     public static final int UP_ARROW = 27;
+    public static final int AUTHORS = 28;
 
     public static final int COLOR_PRIMARY = 0xFFECEFF1;
     public static final int COLOR_ICON = 0xFFC4CBD2;
@@ -78,6 +79,7 @@ public final class FolioIcons {
             case INFO: return "azath_icons/ic_info.png";
             case SHUFFLE: return "azath_icons/ic_compass.png";
             case SEARCH: return "azath_icons/ic_search.png";
+            case AUTHORS: return "azath_icons/ic_authors.png";
             default: return null;
         }
     }

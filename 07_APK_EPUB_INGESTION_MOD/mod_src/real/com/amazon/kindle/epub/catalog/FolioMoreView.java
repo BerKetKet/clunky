@@ -108,7 +108,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v14.2 KFX");
+        badgeTv.setText("v14.3 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(FolioTheme.ACCENT_SOFT_TEXT);
         badgeTv.setTypeface(FolioTheme.sansBold(ctx));
@@ -1323,7 +1323,7 @@ public final class FolioMoreView {
             topRow.setGravity(Gravity.CENTER_VERTICAL);
 
             // Dedicated standalone cover thumbnail (FIT_CENTER on dark matte or placeholder)
-            topRow.addView(makeMiniCoverView(ctx, d, rec.kfxPath, 38, 54, 9));
+            topRow.addView(makeMiniCoverView(ctx, d, rec.kfxPath, rec.title, 38, 54, 9));
 
             LinearLayout metaCol = new LinearLayout(ctx);
             metaCol.setOrientation(LinearLayout.VERTICAL);
@@ -1629,12 +1629,31 @@ public final class FolioMoreView {
         host.addView(wrapper);
     }
 
+    private static String extractCoverInitial(String text) {
+        if (text != null) {
+            String baseName = text.trim();
+            int sl = baseName.lastIndexOf('/');
+            if (sl >= 0 && sl + 1 < baseName.length()) baseName = baseName.substring(sl + 1);
+            for (int ci = 0; ci < baseName.length(); ci++) {
+                char ch = baseName.charAt(ci);
+                if (Character.isLetterOrDigit(ch)) {
+                    return String.valueOf(Character.toUpperCase(ch));
+                }
+            }
+        }
+        return "A";
+    }
+
     private static View makeMiniCoverView(Context ctx, float d, String kfxPath, int wDp, int hDp, int rightMarginDp) {
+        return makeMiniCoverView(ctx, d, kfxPath, kfxPath, wDp, hDp, rightMarginDp);
+    }
+
+    private static View makeMiniCoverView(Context ctx, float d, String kfxPath, String titleHint, int wDp, int hDp, int rightMarginDp) {
         FrameLayout covFrame = new FrameLayout(ctx);
         GradientDrawable cfBg = new GradientDrawable();
-        cfBg.setColor(0xFF121010);
-        cfBg.setCornerRadius(dp(d, 4));
-        cfBg.setStroke(dp(d, 1), 0xFF211C1B);
+        cfBg.setColor(0xFF211C1B);
+        cfBg.setCornerRadius(dp(d, 6));
+        cfBg.setStroke(dp(d, 1), 0xFF2A2423);
         covFrame.setBackground(cfBg);
         LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(d, wDp), dp(d, hDp));
         ivLp.rightMargin = dp(d, rightMarginDp);
@@ -1648,12 +1667,24 @@ public final class FolioMoreView {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         } else {
             TextView phTv = new TextView(ctx);
-            phTv.setText("A");
+            String hint = (titleHint != null && !titleHint.trim().isEmpty()) ? titleHint : kfxPath;
+            phTv.setText(extractCoverInitial(hint));
             phTv.setTextColor(0xFF8E867E);
-            phTv.setTextSize(14);
+            phTv.setTextSize(wDp >= 44 ? 19 : 16);
+            phTv.setTypeface(FolioTheme.serif(ctx));
             phTv.setGravity(Gravity.CENTER);
             covFrame.addView(phTv, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+            View spineRule = new View(ctx);
+            GradientDrawable ruleBg = new GradientDrawable();
+            ruleBg.setColor(0xFF5C2D26);
+            ruleBg.setCornerRadius(dp(d, 2));
+            spineRule.setBackground(ruleBg);
+            FrameLayout.LayoutParams ruleLp = new FrameLayout.LayoutParams(dp(d, Math.max(12, wDp / 2 - 4)), dp(d, 2));
+            ruleLp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+            ruleLp.bottomMargin = dp(d, 6);
+            covFrame.addView(spineRule, ruleLp);
         }
         return covFrame;
     }
@@ -2686,12 +2717,22 @@ public final class FolioMoreView {
                                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                     } else {
                         TextView phTv = new TextView(ctx);
-                        phTv.setText("A");
-            phTv.setTextColor(0xFF8E867E);
-                        phTv.setTextSize(14);
+                        phTv.setText(extractCoverInitial(rec.title != null && !rec.title.isEmpty() ? rec.title : rec.kfxPath));
+                        phTv.setTextColor(0xFF8E867E);
+                        phTv.setTextSize(16);
+                        phTv.setTypeface(FolioTheme.serif(ctx));
                         phTv.setGravity(Gravity.CENTER);
                         covFrame.addView(phTv, new FrameLayout.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                        View spineRule = new View(ctx);
+                        GradientDrawable ruleBg = new GradientDrawable();
+                        ruleBg.setColor(0xFF5C2D26);
+                        ruleBg.setCornerRadius(dp(d, 2));
+                        spineRule.setBackground(ruleBg);
+                        FrameLayout.LayoutParams ruleLp = new FrameLayout.LayoutParams(dp(d, 14), dp(d, 2));
+                        ruleLp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+                        ruleLp.bottomMargin = dp(d, 5);
+                        covFrame.addView(spineRule, ruleLp);
                     }
                     card.addView(covFrame);
 
@@ -5501,7 +5542,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Azath — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Azath v14.2 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Azath v14.3 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

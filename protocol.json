@@ -1,8 +1,8 @@
 {
-  "round": 136,
+  "round": 137,
   "app_name": "Azath",
   "package_name": "com.azath.reader",
-  "version_label": "Azath v14.2 KFX",
+  "version_label": "Azath v14.3 KFX",
   "target_hardware": "Samsung Galaxy M30 (32001776e8e82623)",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% UNTOUCHED and READ-ONLY",
   "deliverables": [

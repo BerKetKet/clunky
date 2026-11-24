@@ -126,7 +126,7 @@ public final class FolioMetadataCatalogDialog {
         topRow.addView(btnViewMode);
 
         final FrameLayout btnAuthors = FolioIcons.makeIconButton(
-                ctx, FolioIcons.USER, 15, 6, FolioIcons.COLOR_ICON, 0xFF211C1B, 0xFF2A2423, 8);
+                ctx, FolioIcons.AUTHORS, 15, 6, FolioIcons.COLOR_ICON, 0xFF211C1B, 0xFF2A2423, 8);
         LinearLayout.LayoutParams authLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         authLp.setMargins(0, 0, dp(ctx, 5), 0);
