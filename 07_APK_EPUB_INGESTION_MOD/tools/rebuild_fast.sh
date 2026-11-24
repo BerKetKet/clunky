@@ -38,11 +38,11 @@ else
     echo "Device not currently attached via adb; skipping install for now."
 fi
 
-echo "[5/5] Staging Folio v11.9 KFX release..."
-mkdir -p "${MOD_ROOT}/release/folio_v11.9_kfx"
-cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/folio_v11.9_kfx/base.apk"
+echo "[5/5] Staging Folio v12.0 KFX release..."
+mkdir -p "${MOD_ROOT}/release/folio_v12.0_kfx"
+cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/folio_v12.0_kfx/base.apk"
 if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
-    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/folio_v11.9_kfx/base.apk.idsig"
+    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/folio_v12.0_kfx/base.apk.idsig"
 fi
 
-echo "Fast rebuild, deploy, and Folio v11.9 KFX staging successful!"
+echo "Fast rebuild, deploy, and Folio v12.0 KFX staging successful!"

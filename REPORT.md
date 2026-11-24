@@ -1,7 +1,7 @@
-# Round 119 Deliverables Report — Folio v11.9 KFX (Simplified Web Book Browser & Auto-Ingest EPUB Pipeline)
+# Round 120 Deliverables Report — Milestone Folio v12.0 KFX (Web Book Browser Bookmarks Bar & Live EPUB Download Progress)
 **Environment**: Samsung Galaxy M32 (`32001776e8e82623`), TrebleDroid Android 13 (arm64-v8a).  
 **Stock Kindle Invariant**: Package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Folio Version**: `Folio v11.9 KFX (Enhanced Typesetting)` installed on device at `2026-11-24 04:10:44`.
+**Folio Version**: `Milestone Folio v12.0 KFX (Enhanced Typesetting)` installed on device at `2026-11-24 04:17:54`.
 
 ---
 
@@ -10,38 +10,47 @@
 
 ---
 
-## 1. Task A: Source Integration & Release Staging
+## 1. Task A: Source Integration & Milestone Release Staging
 1. **Drop-In Source Integration**:
    - **`FolioWebBrowserDialog.java`** (`com.amazon.kindle.epub.ingest.FolioWebBrowserDialog`):
-     - **Simplified Web Book Browser (`show(ctx, onImported)`)**: Implemented a dark modal `WebView` with compact navigation bar (`←`, `↻`, `🏠`, clickable host/path pill, `✨` Simplified View CSS toggle, `⚙` URL Settings, `✕` Close) and linear load progress bar.
-     - **Configurable Homepage URL & Simplified View Settings (`showUrlSettingsDialog`)**: Persisted in `SharedPreferences("folio_ui_prefs", "web_browser_home_url")` (defaults to `https://standardebooks.org/ebooks`) with 1-tap presets (`Standard Ebooks`, `Project Gutenberg`, `Open Library`, `Calibre LAN`) and a `✨ Simplified View` toggle (`web_browser_clean_mode`, ON by default) that injects CSS stripping clutter, sticky headers, and cookie banners.
-     - **Automatic EPUB Download -> KFX Conversion -> Library Ingestion**: Intercepts `.epub` navigations and `DownloadListener` events (forwarding active WebView session cookies & User-Agent across redirects), validates downloaded ZIP/EPUB headers, converts to native KFX via `ExternalEpubActivity.convertEpubToKfx`, enriches metadata via `MetadataEnricher.enrichInPlace`, indexes into `FolioMetadataDb` + `kindle_library.db`, and presents an inline green success banner `✓ Added "<Title>" to Library` with a 1-tap **`Open ›`** button.
+     - **Quick Bookmarks Bar**: Added a persistent, horizontally scrollable bookmark chip bar right beneath the browser navigation bar:
+       * **`+ ★` Amber Pin Button**: Pins the active webpage title and URL as a bookmark with 1 tap.
+       * **1-Tap `★` Bookmark Chips**: Pre-seeded with `★ Standard Ebooks` (`standardebooks.org/ebooks`) and `★ Gutenberg` (`m.gutenberg.org`). Tapping any chip immediately navigates the WebView.
+       * **Long-Press Deletion**: Long-pressing custom bookmark chips triggers deletion with instant list refresh.
+     - **Live EPUB Download Progress & Referer Forwarding**:
+       * Streaming EPUB downloader now posts dynamic progress updates (`⬇ Downloading <file>.epub (X% · Y KB)...`) to the status banner.
+       * Forwards configured `Referer` headers along with session cookies and User-Agent to ensure compatibility with CDNs.
    - **`FolioMoreView.java`**:
-     - Added **`🌐 Web Book Browser`** card right beneath `📥 Import EPUBs from Storage`.
-     - Added **`🔗 Web Browser URL`** settings card right beneath `⚙️ Reader & App Settings`.
-     - Bumped Control Center badge and `About Folio` dialog string to `Folio v11.9 KFX (Enhanced Typesetting)`.
+     - Bumped Control Center badge and `About Folio` dialog string to **Milestone `Folio v12.0 KFX (Enhanced Typesetting)`**.
      - Invariants: `MetadataEnricher.java` and `OpenCatalogView.java` strictly preserved and untouched.
 
 2. **Compilation, Packaging & Deployment**:
-   - Recompiled `classes9.dex` (430,344 bytes) via `d8`.
+   - Recompiled `classes9.dex` (434,840 bytes) via `d8`.
    - Rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, and signed with `apksigner`.
-   - Streamed APK install to physical Samsung Galaxy M32 (`lastUpdateTime=2026-11-24 04:10:44`).
-   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v11.9_kfx/base.apk` (132 MB).
+   - Streamed APK install to physical Samsung Galaxy M32 (`lastUpdateTime=2026-11-24 04:17:54`).
+   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v12.0_kfx/base.apk` (132 MB).
 
 ---
 
 ## 2. Task B: Hardware Verification on Physical Galaxy M32
 Verified on physical Samsung Galaxy M32 hardware:
 
-1. **`verify_r119_web_browser.png` (194,690 bytes)**:
-   - Captured **🌐 Web Book Browser** modal opened from Control Center.
-   - Shows compact navigation bar: `←`, `↻`, `🏠`, address pill `standardebooks.org/ebooks`, `✨` (clean view enabled), `⚙`, and `✕`.
+1. **`verify_r120_web_browser_bookmarks.png` (198,509 bytes)**:
+   - Captured **🌐 Web Book Browser** modal opened from Control Center (`Folio v12.0 KFX`).
+   - Shows compact navigation bar (`←`, `↻`, `🏠`, `standardebooks.org/ebooks`, `✨`, `⚙`, `✕`).
+   - Shows new Quick Bookmarks Bar:
+     * `+ ★` amber pin action
+     * `★ Standard Ebooks`
+     * `★ Gutenberg`
    - Shows active `WebView` container displaying the Standard Ebooks catalog.
-2. **`verify_r119_web_browser_settings.png` (173,369 bytes)**:
-   - Captured **🌐 Web Browser Settings** modal opened from Control Center / browser toolbar.
-   - Shows configurable Homepage URL input field (`https://standardebooks.org/ebooks`).
-   - Shows 1-tap quick preset chips: `Standard Ebooks`, `Project Gutenberg`, `Open Library`, `Calibre LAN`.
-   - Shows `✨ Simplified View: ON  (hides clutter & popups)` toggle and `Save` / `Cancel` buttons.
+2. **`verify_r120_about_v120.png` (355,086 bytes)**:
+   - About Folio dialog confirming:
+     * `Version: Folio v12.0 KFX (Enhanced Typesetting)`
+     * `Hardware: TrebleDroid with GApps · Android 13 (arm64-v8a)`
+     * `Indexed Library Books: 34 · Enriched Metadata Records: 32`
+     * `Reading Progress: 5 in progress · 1 finished`
+     * `Up Next & Goal: 2 queued · 1/5 annual goal`
+     * `Privacy Mode: Local-First (Zero Amazon Telemetry)`
 3. **Crash & Invariant Log Check**:
    - Zero crashes logged for `com.amazon.kindle.epub`.
    - Stock Kindle (`com.amazon.kindle` v8.160.1.0) verified **100% untouched** (`lastUpdateTime=2026-11-19 21:59:23`).
@@ -49,9 +58,9 @@ Verified on physical Samsung Galaxy M32 hardware:
 ---
 
 ## 3. Package Verification Artifacts
-- Archive: `antig_to_gemini_neon_clunky_report119.zip`
+- Archive: `antig_to_gemini_neon_clunky_report120.zip`
   * `REPORT.md`
-  * `INSTRUCTIONS_ROUND_119.md`
+  * `INSTRUCTIONS_ROUND_120.md`
   * `protocol.json`
-  * `verify_r119_web_browser.png`
-  * `verify_r119_web_browser_settings.png`
+  * `verify_r120_web_browser_bookmarks.png`
+  * `verify_r120_about_v120.png`

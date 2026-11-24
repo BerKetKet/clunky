@@ -53,6 +53,7 @@ public final class FolioWebBrowserDialog {
     private static final String PREFS = "folio_ui_prefs";
     private static final String KEY_HOME_URL = "web_browser_home_url";
     private static final String KEY_CLEAN_MODE = "web_browser_clean_mode";
+    private static final String KEY_BOOKMARKS = "web_browser_bookmarks";
     public static final String DEFAULT_URL = "https://standardebooks.org/ebooks";
 
     private FolioWebBrowserDialog() {}
@@ -108,6 +109,39 @@ public final class FolioWebBrowserDialog {
             s = "https://" + s;
         }
         return s;
+    }
+
+    private static java.util.List<String[]> loadBookmarks(Context ctx) {
+        java.util.List<String[]> out = new java.util.ArrayList<>();
+        try {
+            String raw = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_BOOKMARKS, null);
+            if (raw == null) {
+                out.add(new String[] { "Standard Ebooks", "https://standardebooks.org/ebooks" });
+                out.add(new String[] { "Gutenberg", "https://www.gutenberg.org/ebooks/" });
+                return out;
+            }
+            for (String line : raw.split("\n")) {
+                int sep = line.indexOf('|');
+                if (sep > 0 && sep + 1 < line.length()) {
+                    out.add(new String[] { line.substring(0, sep).trim(), line.substring(sep + 1).trim() });
+                }
+            }
+        } catch (Throwable ignored) {}
+        return out;
+    }
+
+    private static void saveBookmarks(Context ctx, java.util.List<String[]> list) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) sb.append('\n');
+                sb.append(list.get(i)[0].replace("|", " ").replace("\n", " "))
+                        .append('|')
+                        .append(list.get(i)[1].replace("\n", ""));
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                    .edit().putString(KEY_BOOKMARKS, sb.toString()).apply();
+        } catch (Throwable ignored) {}
     }
 
     public static void showUrlSettingsDialog(final Context ctx, final Runnable onSaved) {
@@ -290,6 +324,17 @@ public final class FolioWebBrowserDialog {
         topBar.addView(btnClose);
         root.addView(topBar);
 
+        // Quick Bookmarks Bar (+ ★ Pin Current · tap chip to jump · long-press to remove)
+        HorizontalScrollView bmScroll = new HorizontalScrollView(ctx);
+        bmScroll.setHorizontalScrollBarEnabled(false);
+        bmScroll.setBackgroundColor(0xFF10131C);
+        bmScroll.setPadding(dp(d, 8), dp(d, 5), dp(d, 8), dp(d, 5));
+        final LinearLayout bmRow = new LinearLayout(ctx);
+        bmRow.setOrientation(LinearLayout.HORIZONTAL);
+        bmRow.setGravity(Gravity.CENTER_VERTICAL);
+        bmScroll.addView(bmRow);
+        root.addView(bmScroll);
+
         final ProgressBar progBar = new ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal);
         progBar.setMax(100);
         progBar.setProgress(0);
@@ -427,6 +472,87 @@ public final class FolioWebBrowserDialog {
 
         root.addView(webView);
 
+        final Runnable[] renderBookmarksRef = new Runnable[1];
+        renderBookmarksRef[0] = new Runnable() {
+            @Override public void run() {
+                bmRow.removeAllViews();
+                final java.util.List<String[]> bms = loadBookmarks(ctx);
+
+                TextView pinBtn = new TextView(ctx);
+                pinBtn.setText("+ ★");
+                pinBtn.setTextColor(0xFFFBBF24);
+                pinBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                pinBtn.setTypeface(Typeface.DEFAULT_BOLD);
+                pinBtn.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
+                GradientDrawable pbBg = new GradientDrawable();
+                pbBg.setColor(0xFF2A2011);
+                pbBg.setCornerRadius(dp(d, 8));
+                pbBg.setStroke(dp(d, 1), 0xFF854D0E);
+                pinBtn.setBackground(pbBg);
+                LinearLayout.LayoutParams pbLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                pbLp.rightMargin = dp(d, 6);
+                pinBtn.setLayoutParams(pbLp);
+                pinBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        String curUrl = webView.getUrl();
+                        if (curUrl == null || curUrl.trim().isEmpty()) curUrl = getHomeUrl(ctx);
+                        for (String[] existing : bms) {
+                            if (curUrl.equalsIgnoreCase(existing[1])) {
+                                Toast.makeText(ctx, "Already bookmarked", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                        }
+                        String lbl = webView.getTitle();
+                        if (lbl == null || lbl.trim().isEmpty()) {
+                            try { lbl = Uri.parse(curUrl).getHost(); } catch (Throwable ignored) {}
+                        }
+                        if (lbl == null || lbl.trim().isEmpty()) lbl = "Bookmark";
+                        lbl = lbl.trim();
+                        if (lbl.length() > 18) lbl = lbl.substring(0, 18).trim() + "…";
+                        bms.add(new String[] { lbl, curUrl });
+                        saveBookmarks(ctx, bms);
+                        Toast.makeText(ctx, "Bookmarked " + lbl, Toast.LENGTH_SHORT).show();
+                        renderBookmarksRef[0].run();
+                    }
+                });
+                bmRow.addView(pinBtn);
+
+                for (int i = 0; i < bms.size(); i++) {
+                    final int idx = i;
+                    final String[] item = bms.get(i);
+                    TextView chip = new TextView(ctx);
+                    chip.setText("★ " + item[0]);
+                    chip.setTextColor(0xFFCBD5E1);
+                    chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                    chip.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
+                    GradientDrawable cBg = new GradientDrawable();
+                    cBg.setColor(0xFF1A1F2E);
+                    cBg.setCornerRadius(dp(d, 8));
+                    cBg.setStroke(dp(d, 1), 0xFF2A3142);
+                    chip.setBackground(cBg);
+                    LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    cLp.rightMargin = dp(d, 6);
+                    chip.setLayoutParams(cLp);
+                    chip.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) { webView.loadUrl(item[1]); }
+                    });
+                    chip.setOnLongClickListener(new View.OnLongClickListener() {
+                        @Override public boolean onLongClick(View v) {
+                            bms.remove(idx);
+                            saveBookmarks(ctx, bms);
+                            Toast.makeText(ctx, "Removed bookmark", Toast.LENGTH_SHORT).show();
+                            renderBookmarksRef[0].run();
+                            return true;
+                        }
+                    });
+                    bmRow.addView(chip);
+                }
+            }
+        };
+        renderBookmarksRef[0].run();
+
         btnBack.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 if (webView.canGoBack()) webView.goBack();
@@ -550,6 +676,12 @@ public final class FolioWebBrowserDialog {
                             conn.setRequestProperty("User-Agent", userAgent);
                         }
                         try {
+                            String homeRef = getHomeUrl(ctx);
+                            if (homeRef != null && !homeRef.isEmpty()) {
+                                conn.setRequestProperty("Referer", homeRef);
+                            }
+                        } catch (Throwable ignored) {}
+                        try {
                             String cookie = CookieManager.getInstance().getCookie(currentUrl);
                             if (cookie != null && !cookie.isEmpty()) {
                                 conn.setRequestProperty("Cookie", cookie);
@@ -569,12 +701,29 @@ public final class FolioWebBrowserDialog {
                         throw new Exception("HTTP " + (conn != null ? conn.getResponseCode() : -1));
                     }
 
+                    final long totalLen = conn.getContentLengthLong();
                     InputStream in = new BufferedInputStream(conn.getInputStream());
                     FileOutputStream fos = new FileOutputStream(dlFile);
                     byte[] buf = new byte[16384];
+                    long readBytes = 0;
+                    long lastUiMs = 0;
                     int r;
                     while ((r = in.read(buf)) != -1) {
                         fos.write(buf, 0, r);
+                        readBytes += r;
+                        long now = System.currentTimeMillis();
+                        if (now - lastUiMs > 220) {
+                            lastUiMs = now;
+                            final long kb = Math.max(1L, readBytes / 1024L);
+                            final int pct = (totalLen > 0) ? (int) Math.min(100L, (readBytes * 100L) / totalLen) : -1;
+                            mainHandler.post(new Runnable() {
+                                @Override public void run() {
+                                    statusTv.setText(pct >= 0
+                                            ? ("⬇ Downloading " + displayFile + " (" + pct + "% · " + kb + " KB)...")
+                                            : ("⬇ Downloading " + displayFile + " (" + kb + " KB)..."));
+                                }
+                            });
+                        }
                     }
                     fos.close();
                     in.close();

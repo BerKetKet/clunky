@@ -1,7 +1,8 @@
 {
-  "round": 119,
-  "version": "Folio v11.9 KFX",
-  "codename": "Simplified Web Book Browser & Auto-Ingest EPUB Pipeline",
+  "round": 120,
+  "version": "Folio v12.0 KFX",
+  "milestone": true,
+  "codename": "Web Book Browser Bookmarks Bar & Live EPUB Download Progress",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
@@ -14,9 +15,9 @@
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.9_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.0_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r119_web_browser.png",
-    "verify_r119_web_browser_settings.png"
+    "verify_r120_web_browser_bookmarks.png",
+    "verify_r120_about_v120.png"
   ]
 }
