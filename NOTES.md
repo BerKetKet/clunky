@@ -1,6 +1,27 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v11.1 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 111 complete:
+  1. **Tonight's Pick Pool Switcher & 1-Tap Queue (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java`.
+     - Added 3 interactive pool scope switcher pills beneath `🎲 Tonight's Pick` header: `Unread (N)`, `📌 Queue (N)`, `All (N)`.
+     - Added 1-tap `📌 Queue` / `📌 Queued` toggle action button inline with `🎲 Another` and `ⓘ Details`.
+     - Dynamically bookmarks candidate picks into `📌 Up Next` queue, updating button label to amber `📌 Queued` and incrementing the `📌 Queue (N)` counter.
+     - Bumped badge and About Folio string to `Folio v11.1 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Milestone Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r111_tonights_pick_pools.png` (283 KB) — Tonight's Pick modal showing 3 scope pills (`Unread (26)`, `📌 Queue (2)`, `All (32)`), `Choke` book card, and 3 action buttons (`🎲 Another`, `📌 Queued`, `ⓘ Details`).
+       * `verify_r111_about_v111.png` (354 KB) — About Folio modal showing `Version: Folio v11.1 KFX (Enhanced Typesetting)`, `Up Next & Goal: 2 queued · 1/5 annual goal`, and live telemetry.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v11.1 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v11.1_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 111)
+1. `verify_r111_tonights_pick_pools.png`: Tonight's Pick modal with 3 scope pills and toggled `📌 Queued` button.
+2. `verify_r111_about_v111.png`: About Folio modal confirming `Version: Folio v11.1 KFX (Enhanced Typesetting)`.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v11.1 KFX deployed (`lastUpdateTime=2026-11-24 03:04:09`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v10.1 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 101 complete:
   1. **Quick Search Scope Filter Pills & Recent Search History (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java`.

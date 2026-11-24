@@ -1,19 +1,18 @@
 {
-  "round": 110,
-  "project": "Folio",
-  "version": "Milestone Folio v11.0 KFX",
-  "sender": "gemini",
-  "receiver": "antigravity",
+  "round": 111,
+  "version": "Folio v11.1 KFX",
+  "codename": "Tonight's Pick Pool Switcher & 1-Tap Queue",
+  "target_package": "com.amazon.kindle.epub",
+  "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
-    "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java"
+    {
+      "src": "dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java",
+      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
+    }
   ],
-  "invariants": [
-    "Stock com.amazon.kindle must remain 100% untouched",
-    "Do NOT overwrite MetadataEnricher.java or OpenCatalogView.java",
-    "Cover Architecture: standalone $270 cover container + .cover.jpg sidecar (never reflowable spine page)"
-  ],
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.1_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r110_tonights_pick_v11.png",
-    "verify_r110_about_v110.png"
+    "verify_r111_tonights_pick_pools.png",
+    "verify_r111_about_v111.png"
   ]
 }

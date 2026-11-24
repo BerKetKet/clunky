@@ -125,7 +125,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v11.0 KFX");
+        badgeTv.setText("Folio v11.1 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1492,17 +1492,21 @@ public final class FolioMoreView {
         final java.util.Map<String, Integer> progMap =
                 com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.loadProgressMap(ctx);
 
-        // Prefer unread books; fall back to all books if every book is started/finished
-        final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> pool = new java.util.ArrayList<>();
+        final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> unreadPool = new java.util.ArrayList<>();
         for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : all) {
             Integer pv = (r.kfxPath != null) ? progMap.get(r.kfxPath) : null;
             int p = pv != null ? pv : 0;
-            if (p == 0) pool.add(r);
+            if (p == 0) unreadPool.add(r);
         }
-        if (pool.isEmpty()) pool.addAll(all);
+
+        // Scope: 0 = Unread, 1 = Up Next Queue, 2 = All Books
+        final int[] scopeIdx = new int[] { unreadPool.isEmpty() ? 2 : 0 };
+        final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> activePool = new java.util.ArrayList<>();
+        if (scopeIdx[0] == 0) activePool.addAll(unreadPool);
+        else activePool.addAll(all);
 
         final java.util.Random rng = new java.util.Random();
-        final int[] curIdx = new int[] { rng.nextInt(pool.size()) };
+        final int[] curIdx = new int[] { rng.nextInt(activePool.size()) };
 
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -1512,7 +1516,7 @@ public final class FolioMoreView {
         LinearLayout hdrRow = new LinearLayout(ctx);
         hdrRow.setOrientation(LinearLayout.HORIZONTAL);
         hdrRow.setGravity(Gravity.CENTER_VERTICAL);
-        hdrRow.setPadding(0, 0, 0, dp(d, 12));
+        hdrRow.setPadding(0, 0, 0, dp(d, 10));
 
         TextView titleHdr = new TextView(ctx);
         titleHdr.setText("🎲 Tonight's Pick");
@@ -1522,8 +1526,7 @@ public final class FolioMoreView {
         titleHdr.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         hdrRow.addView(titleHdr);
 
-        TextView poolTag = new TextView(ctx);
-        poolTag.setText(pool.size() + " unread");
+        final TextView poolTag = new TextView(ctx);
         poolTag.setTextColor(0xFFC084FC);
         poolTag.setTextSize(11);
         poolTag.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1536,18 +1539,98 @@ public final class FolioMoreView {
         hdrRow.addView(poolTag);
         root.addView(hdrRow);
 
+        // Pool Scope Selector Row (Unread / 📌 Queue / All)
+        final LinearLayout scopeRow = new LinearLayout(ctx);
+        scopeRow.setOrientation(LinearLayout.HORIZONTAL);
+        scopeRow.setPadding(0, 0, 0, dp(d, 10));
+        root.addView(scopeRow);
+
         final LinearLayout cardHost = new LinearLayout(ctx);
         cardHost.setOrientation(LinearLayout.VERTICAL);
         root.addView(cardHost);
 
         final AlertDialog[] pickDlgRef = new AlertDialog[1];
-
+        final Runnable[] renderScopeRef = new Runnable[1];
         final Runnable[] renderPickRef = new Runnable[1];
+
+        renderScopeRef[0] = new Runnable() {
+            @Override
+            public void run() {
+                scopeRow.removeAllViews();
+                final java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> queuePool = new java.util.ArrayList<>();
+                for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : all) {
+                    if (com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath)) {
+                        queuePool.add(r);
+                    }
+                }
+                String[] labels = new String[] {
+                        "Unread (" + unreadPool.size() + ")",
+                        "📌 Queue (" + queuePool.size() + ")",
+                        "All (" + all.size() + ")"
+                };
+                if (scopeIdx[0] == 0) poolTag.setText(unreadPool.size() + " unread");
+                else if (scopeIdx[0] == 1) poolTag.setText(queuePool.size() + " queued");
+                else poolTag.setText(all.size() + " books");
+
+                for (int i = 0; i < labels.length; i++) {
+                    final int targetScope = i;
+                    boolean active = (scopeIdx[0] == i);
+                    TextView pill = new TextView(ctx);
+                    pill.setText(labels[i]);
+                    pill.setTextSize(11.5f);
+                    pill.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+                    pill.setTextColor(active ? 0xFFC084FC : 0xFF94A3B8);
+                    pill.setGravity(Gravity.CENTER);
+                    pill.setSingleLine(true);
+                    pill.setPadding(dp(d, 10), dp(d, 6), dp(d, 10), dp(d, 6));
+                    GradientDrawable pBg = new GradientDrawable();
+                    pBg.setColor(active ? 0xFF2B1B3D : 0xFF161923);
+                    pBg.setCornerRadius(dp(d, 9));
+                    pBg.setStroke(dp(d, 1), active ? 0xFFA855F7 : 0xFF2A3142);
+                    pill.setBackground(pBg);
+                    LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
+                            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                    if (i < labels.length - 1) plp.rightMargin = dp(d, 6);
+                    pill.setLayoutParams(plp);
+                    pill.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> nextPool = new java.util.ArrayList<>();
+                            if (targetScope == 0) {
+                                nextPool.addAll(unreadPool);
+                            } else if (targetScope == 1) {
+                                for (com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord r : all) {
+                                    if (com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.isInQueue(ctx, r.kfxPath)) {
+                                        nextPool.add(r);
+                                    }
+                                }
+                            } else {
+                                nextPool.addAll(all);
+                            }
+                            if (nextPool.isEmpty()) {
+                                String msg = (targetScope == 1) ? "Up Next queue is empty" : "No books in this pool";
+                                Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            scopeIdx[0] = targetScope;
+                            activePool.clear();
+                            activePool.addAll(nextPool);
+                            curIdx[0] = rng.nextInt(activePool.size());
+                            renderScopeRef[0].run();
+                            renderPickRef[0].run();
+                        }
+                    });
+                    scopeRow.addView(pill);
+                }
+            }
+        };
+
         renderPickRef[0] = new Runnable() {
             @Override
             public void run() {
                 cardHost.removeAllViews();
-                final com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec = pool.get(curIdx[0]);
+                if (activePool.isEmpty()) return;
+                if (curIdx[0] >= activePool.size()) curIdx[0] = 0;
+                final com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec = activePool.get(curIdx[0]);
                 Integer pv = (rec.kfxPath != null) ? progMap.get(rec.kfxPath) : null;
                 final int pct = pv != null ? pv : 0;
 
@@ -1594,6 +1677,10 @@ public final class FolioMoreView {
                 if (rec.publisher != null && !rec.publisher.trim().isEmpty()) {
                     if (metaLine.length() > 0) metaLine.append(" · ");
                     metaLine.append(rec.publisher.trim());
+                }
+                if (pct > 0) {
+                    if (metaLine.length() > 0) metaLine.append(" · ");
+                    metaLine.append(pct >= 100 ? "Finished" : (pct + "% read"));
                 }
                 if (metaLine.length() > 0) {
                     TextView bMeta = new TextView(ctx);
@@ -1646,45 +1733,77 @@ public final class FolioMoreView {
                     card.addView(descTv);
                 }
 
-                // Inline Action Row: 🎲 Pick Another + ⓘ Details
+                // Inline 3-Button Action Row: 🎲 Another · 📌 Queue/Queued · ⓘ Details
                 LinearLayout actRow = new LinearLayout(ctx);
                 actRow.setOrientation(LinearLayout.HORIZONTAL);
                 actRow.setPadding(0, dp(d, 12), 0, 0);
 
                 TextView rerollBtn = new TextView(ctx);
-                rerollBtn.setText("🎲 Pick Another");
+                rerollBtn.setText("🎲 Another");
                 rerollBtn.setTextColor(0xFFC084FC);
-                rerollBtn.setTextSize(12);
+                rerollBtn.setTextSize(11.5f);
                 rerollBtn.setTypeface(Typeface.DEFAULT_BOLD);
                 rerollBtn.setGravity(Gravity.CENTER);
-                rerollBtn.setPadding(dp(d, 12), dp(d, 8), dp(d, 12), dp(d, 8));
+                rerollBtn.setSingleLine(true);
+                rerollBtn.setPadding(dp(d, 8), dp(d, 8), dp(d, 8), dp(d, 8));
                 GradientDrawable rrBg = new GradientDrawable();
                 rrBg.setColor(0xFF2B1B3D);
                 rrBg.setCornerRadius(dp(d, 9));
                 rrBg.setStroke(dp(d, 1), 0xFF6B21A8);
                 rerollBtn.setBackground(rrBg);
                 LinearLayout.LayoutParams rrLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-                rrLp.rightMargin = dp(d, 8);
+                rrLp.rightMargin = dp(d, 6);
                 rerollBtn.setLayoutParams(rrLp);
                 rerollBtn.setOnClickListener(new View.OnClickListener() {
                     @Override public void onClick(View v) {
-                        if (pool.size() > 1) {
-                            int next = rng.nextInt(pool.size());
-                            if (next == curIdx[0]) next = (next + 1) % pool.size();
+                        if (activePool.size() > 1) {
+                            int next = rng.nextInt(activePool.size());
+                            if (next == curIdx[0]) next = (next + 1) % activePool.size();
                             curIdx[0] = next;
                             renderPickRef[0].run();
+                        } else {
+                            Toast.makeText(ctx, "Only 1 book in this pool", Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
                 actRow.addView(rerollBtn);
 
+                final boolean inQueue = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.isInQueue(ctx, rec.kfxPath);
+                TextView queueBtn = new TextView(ctx);
+                queueBtn.setText(inQueue ? "📌 Queued" : "📌 Queue");
+                queueBtn.setTextColor(inQueue ? 0xFFFDE68A : 0xFFCBD5E1);
+                queueBtn.setTextSize(11.5f);
+                queueBtn.setTypeface(Typeface.DEFAULT_BOLD);
+                queueBtn.setGravity(Gravity.CENTER);
+                queueBtn.setSingleLine(true);
+                queueBtn.setPadding(dp(d, 8), dp(d, 8), dp(d, 8), dp(d, 8));
+                GradientDrawable qBg = new GradientDrawable();
+                qBg.setColor(inQueue ? 0xFF332612 : 0xFF161923);
+                qBg.setCornerRadius(dp(d, 9));
+                qBg.setStroke(dp(d, 1), inQueue ? 0xFFD97706 : 0xFF334155);
+                queueBtn.setBackground(qBg);
+                LinearLayout.LayoutParams qLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                qLp.rightMargin = dp(d, 6);
+                queueBtn.setLayoutParams(qLp);
+                queueBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        boolean nextQ = !inQueue;
+                        com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.setInQueue(ctx, rec.kfxPath, nextQ);
+                        Toast.makeText(ctx, nextQ ? "Added to Up Next" : "Removed from Up Next", Toast.LENGTH_SHORT).show();
+                        renderScopeRef[0].run();
+                        renderPickRef[0].run();
+                    }
+                });
+                actRow.addView(queueBtn);
+
                 TextView detBtn = new TextView(ctx);
-                detBtn.setText("ⓘ Book Details");
+                detBtn.setText("ⓘ Details");
                 detBtn.setTextColor(ACCENT_TEAL);
-                detBtn.setTextSize(12);
+                detBtn.setTextSize(11.5f);
                 detBtn.setTypeface(Typeface.DEFAULT_BOLD);
                 detBtn.setGravity(Gravity.CENTER);
-                detBtn.setPadding(dp(d, 12), dp(d, 8), dp(d, 12), dp(d, 8));
+                detBtn.setSingleLine(true);
+                detBtn.setPadding(dp(d, 8), dp(d, 8), dp(d, 8), dp(d, 8));
                 GradientDrawable dtBg = new GradientDrawable();
                 dtBg.setColor(0xFF152638);
                 dtBg.setCornerRadius(dp(d, 9));
@@ -1704,13 +1823,15 @@ public final class FolioMoreView {
             }
         };
 
+        renderScopeRef[0].run();
         renderPickRef[0].run();
 
         pickDlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setView(root)
                 .setPositiveButton("Start Reading", new DialogInterface.OnClickListener() {
                     @Override public void onClick(DialogInterface dialog, int which) {
-                        com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec = pool.get(curIdx[0]);
+                        if (activePool.isEmpty()) return;
+                        com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord rec = activePool.get(curIdx[0]);
                         File f = new File(rec.kfxPath);
                         if (f.exists()) {
                             com.amazon.kindle.epub.ingest.ExternalEpubActivity.launchKfxReader(ctx, f);
@@ -3976,7 +4097,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v11.0 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v11.1 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
