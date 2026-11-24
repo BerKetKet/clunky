@@ -15,8 +15,8 @@ import android.widget.TextView;
 
 /**
  * Centralized Azath Editorial typography, checkbox/button highlight, and dialog theme helper.
- * Pairs Regular-weight Bookerly display headings (>= 17sp, inspired by editorial serif hierarchy)
- * with crisp Amazon Ember sans-serif UI controls (< 17sp) across a unified Obsidian-Ivory-Crimson palette.
+ * Loads EB Garamond (editorial serif display headings >= 17sp) and Inter (crisp UI sans < 17sp)
+ * from assets/azath_fonts/ first, with graceful fallback to Bookerly / Amazon Ember / system fonts.
  */
 public final class FolioTheme {
     public static final int BG_CANVAS = 0xFF0A0909;
@@ -34,10 +34,10 @@ public final class FolioTheme {
     public static final int ACCENT_SOFT_TEXT = 0xFFF5B8AE;
 
     private static boolean fontsLoaded = false;
-    private static Typeface bookerlyReg = null;
-    private static Typeface bookerlyBold = null;
-    private static Typeface emberReg = null;
-    private static Typeface emberBold = null;
+    private static Typeface serifReg = null;
+    private static Typeface serifBold = null;
+    private static Typeface sansReg = null;
+    private static Typeface sansBold = null;
 
     private FolioTheme() {}
 
@@ -46,6 +46,37 @@ public final class FolioTheme {
         fontsLoaded = true;
         try {
             AssetManager am = ctx.getAssets();
+            // Pass 1: Preferred Azath custom fonts (EB Garamond + Inter) in assets/azath_fonts/
+            try {
+                String[] azFiles = am.list("azath_fonts");
+                if (azFiles != null) {
+                    for (String fn : azFiles) {
+                        if (fn == null) continue;
+                        String low = fn.toLowerCase(java.util.Locale.US);
+                        if (!low.endsWith(".ttf") && !low.endsWith(".otf")) continue;
+                        String path = "azath_fonts/" + fn;
+                        try {
+                            if (low.contains("garamond")) {
+                                if ((low.contains("semibold") || low.contains("bold") || low.contains("medium"))
+                                        && !low.contains("italic")) {
+                                    if (serifBold == null) serifBold = Typeface.createFromAsset(am, path);
+                                } else if (!low.contains("italic") && !low.contains("bold")) {
+                                    if (serifReg == null) serifReg = Typeface.createFromAsset(am, path);
+                                }
+                            } else if (low.contains("inter")) {
+                                if ((low.contains("semibold") || low.contains("bold") || low.contains("medium"))
+                                        && !low.contains("italic")) {
+                                    if (sansBold == null) sansBold = Typeface.createFromAsset(am, path);
+                                } else if (!low.contains("italic") && !low.contains("bold") && !low.contains("light") && !low.contains("thin")) {
+                                    if (sansReg == null) sansReg = Typeface.createFromAsset(am, path);
+                                }
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+                }
+            } catch (Throwable ignored) {}
+
+            // Pass 2: Fallback to bundled Bookerly / Amazon Ember if any face wasn't found in azath_fonts
             String[] dirs = new String[] { "fonts", "font", "" };
             for (String dir : dirs) {
                 String[] files;
@@ -63,46 +94,46 @@ public final class FolioTheme {
                     try {
                         if (low.contains("bookerly") || low.contains("caecilia")) {
                             if (low.contains("bold") && !low.contains("italic")) {
-                                if (bookerlyBold == null) bookerlyBold = Typeface.createFromAsset(am, path);
+                                if (serifBold == null) serifBold = Typeface.createFromAsset(am, path);
                             } else if (!low.contains("italic") && !low.contains("bold")) {
-                                if (bookerlyReg == null) bookerlyReg = Typeface.createFromAsset(am, path);
+                                if (serifReg == null) serifReg = Typeface.createFromAsset(am, path);
                             }
                         } else if (low.contains("ember")) {
                             if ((low.contains("bold") || low.contains("_bd") || low.contains("medium") || low.contains("he"))
                                     && !low.contains("italic")) {
-                                if (emberBold == null) emberBold = Typeface.createFromAsset(am, path);
+                                if (sansBold == null) sansBold = Typeface.createFromAsset(am, path);
                             } else if (!low.contains("italic") && !low.contains("bold") && !low.contains("light")) {
-                                if (emberReg == null) emberReg = Typeface.createFromAsset(am, path);
+                                if (sansReg == null) sansReg = Typeface.createFromAsset(am, path);
                             }
                         }
                     } catch (Throwable ignored) {}
                 }
             }
         } catch (Throwable ignored) {}
-        if (bookerlyReg == null) bookerlyReg = Typeface.SERIF;
-        if (bookerlyBold == null) bookerlyBold = Typeface.create(bookerlyReg, Typeface.BOLD);
-        if (emberReg == null) emberReg = Typeface.SANS_SERIF;
-        if (emberBold == null) emberBold = Typeface.create(emberReg, Typeface.BOLD);
+        if (serifReg == null) serifReg = Typeface.SERIF;
+        if (serifBold == null) serifBold = Typeface.create(serifReg, Typeface.BOLD);
+        if (sansReg == null) sansReg = Typeface.SANS_SERIF;
+        if (sansBold == null) sansBold = Typeface.create(sansReg, Typeface.BOLD);
     }
 
     public static Typeface serif(Context ctx) {
         ensureFonts(ctx);
-        return bookerlyReg;
+        return serifReg;
     }
 
     public static Typeface serifBold(Context ctx) {
         ensureFonts(ctx);
-        return bookerlyBold;
+        return serifBold;
     }
 
     public static Typeface sans(Context ctx) {
         ensureFonts(ctx);
-        return emberReg;
+        return sansReg;
     }
 
     public static Typeface sansBold(Context ctx) {
         ensureFonts(ctx);
-        return emberBold;
+        return sansBold;
     }
 
     public static ColorStateList checkboxTint() {
@@ -135,17 +166,17 @@ public final class FolioTheme {
                 boolean isBold = (cur != null && cur.isBold());
                 float sp = tv.getTextSize() / scaledDensity;
                 if (sp >= 17.0f) {
-                    // Editorial serif display hierarchy: always Regular-weight Bookerly (never chunky bold)
-                    tv.setTypeface(bookerlyReg);
+                    // Editorial serif display hierarchy: airy Regular EB Garamond
+                    tv.setTypeface(serifReg);
                     if (sp >= 19.5f) {
                         try {
                             if (Math.abs(tv.getLetterSpacing()) < 0.005f) {
-                                tv.setLetterSpacing(-0.018f);
+                                tv.setLetterSpacing(-0.015f);
                             }
                         } catch (Throwable ignored) {}
                     }
                 } else {
-                    tv.setTypeface(isBold ? emberBold : emberReg);
+                    tv.setTypeface(isBold ? sansBold : sansReg);
                 }
             }
         }
@@ -182,17 +213,17 @@ public final class FolioTheme {
             Button pos = dlg.getButton(DialogInterface.BUTTON_POSITIVE);
             if (pos != null) {
                 pos.setTextColor(ACCENT_CRIMSON);
-                pos.setTypeface(emberBold);
+                pos.setTypeface(sansBold);
             }
             Button neg = dlg.getButton(DialogInterface.BUTTON_NEGATIVE);
             if (neg != null) {
                 neg.setTextColor(TEXT_MUTED);
-                neg.setTypeface(emberReg);
+                neg.setTypeface(sansReg);
             }
             Button neu = dlg.getButton(DialogInterface.BUTTON_NEUTRAL);
             if (neu != null) {
                 neu.setTextColor(TEXT_SECONDARY);
-                neu.setTypeface(emberReg);
+                neu.setTypeface(sansReg);
             }
         } catch (Throwable ignored) {}
     }

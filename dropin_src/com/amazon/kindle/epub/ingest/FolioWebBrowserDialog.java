@@ -642,6 +642,23 @@ public final class FolioWebBrowserDialog {
             }
 
             @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                String safeUrl = failingUrl != null ? failingUrl.replace("<", "&lt;").replace(">", "&gt;") : "";
+                String safeDesc = description != null ? description.replace("<", "&lt;").replace(">", "&gt;") : "No internet connection";
+                String html = "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
+                        + "<style>body{margin:0;padding:36px 24px;background:#0A0909;color:#F2EFE9;font-family:sans-serif;}"
+                        + ".card{background:#181515;border:1px solid #2A2423;border-radius:16px;padding:24px;}"
+                        + "h2{margin:0 0 8px;font-family:Georgia,serif;font-weight:400;font-size:22px;color:#F2EFE9;}"
+                        + "p{margin:0 0 12px;font-size:13px;line-height:1.5;color:#8E867E;word-break:break-word;}"
+                        + ".code{display:inline-block;padding:4px 10px;border-radius:999px;background:#2A1816;border:1px solid #5C2D26;color:#F5B8AE;font-size:11px;margin-bottom:16px;}"
+                        + "a.btn{display:inline-block;padding:10px 18px;border-radius:999px;background:#E05A47;color:#0A0909;text-decoration:none;font-weight:700;font-size:13px;}"
+                        + "</style></head><body><div class='card'><h2>Page unavailable offline</h2>"
+                        + "<p>" + safeUrl + "</p><div class='code'>" + safeDesc + "</div><br/>"
+                        + "<a class='btn' href='" + safeUrl + "'>Try Again</a></div></body></html>";
+                view.loadDataWithBaseURL(failingUrl, html, "text/html", "utf-8", failingUrl);
+            }
+
+            @Override
             public void onPageFinished(WebView view, String url) {
                 if (url != null) {
                     try {

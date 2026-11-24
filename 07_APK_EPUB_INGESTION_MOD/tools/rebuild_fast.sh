@@ -16,6 +16,8 @@ mkdir -p "${WORK_DIR}/base_dec/lib/arm64-v8a"
 cp "${MOD_ROOT}/lib/arm64-v8a/libkfxconv.so" "${WORK_DIR}/base_dec/lib/arm64-v8a/libkfxconv.so"
 mkdir -p "${WORK_DIR}/base_dec/assets/azath_icons"
 cp -a "${MOD_ROOT}/assets/azath_icons/"*.png "${WORK_DIR}/base_dec/assets/azath_icons/"
+mkdir -p "${WORK_DIR}/base_dec/assets/azath_fonts"
+cp -a "${MOD_ROOT}/assets/azath_fonts/"* "${WORK_DIR}/base_dec/assets/azath_fonts/"
 
 echo "[1b/5] Patching strings.xml & bottom nav Ember Crimson resources..."
 find "${WORK_DIR}/base_dec/res" -name "strings.xml" -exec sed -i \
@@ -88,11 +90,11 @@ else
     echo "Device not currently attached via adb; skipping install for now."
 fi
 
-echo "[5/5] Staging Azath v14.3 KFX release..."
-mkdir -p "${MOD_ROOT}/release/azath_v14.3_kfx"
-cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v14.3_kfx/base.apk"
+echo "[5/5] Staging Azath v14.4 KFX release..."
+mkdir -p "${MOD_ROOT}/release/azath_v14.4_kfx"
+cp -a "${WORK_DIR}/signed_splits/base.apk" "${MOD_ROOT}/release/azath_v14.4_kfx/base.apk"
 if [[ -f "${WORK_DIR}/signed_splits/base.apk.idsig" ]]; then
-    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v14.3_kfx/base.apk.idsig"
+    cp -a "${WORK_DIR}/signed_splits/base.apk.idsig" "${MOD_ROOT}/release/azath_v14.4_kfx/base.apk.idsig"
 fi
 
-echo "Fast rebuild, deploy, and Azath v14.3 KFX staging successful!"
+echo "Fast rebuild, deploy, and Azath v14.4 KFX staging successful!"

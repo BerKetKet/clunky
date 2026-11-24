@@ -1,6 +1,14 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 138 (`Azath v14.4 KFX`) Verified & Staged (2026-11-25)**:
+  - Bundled `EBGaramond-Regular.ttf` (`381K`), `EBGaramond-SemiBold.ttf` (`384K`), `Inter-Regular.otf` (`253K`), and `Inter-SemiBold.otf` (`265K`) in `07_APK_EPUB_INGESTION_MOD/assets/azath_fonts/` and `dropin_assets/azath_fonts/`.
+  - Integrated Round 138 `FolioTheme.java`, `OpenCatalogView.java`, `FolioMoreView.java`, and `FolioWebBrowserDialog.java` into `07_APK_EPUB_INGESTION_MOD/mod_src/real/` (preserving `makeMiniCoverView(ctx, d, rec.kfxPath, rec.title, 38, 54, 9)` and `"Azath Library Insights\n"` in `dropin_src/.../FolioMoreView.java`, plus Round 137's `FolioIcons.java`, `ic_authors.png`, `FolioMetadataCatalogDialog.java`).
+  - Built & deployed via `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh`: `classes9.dex` (`462736` bytes), `Lib/b.<clinit>` Ember Crimson `0xffe05a47L` patch applied, staged `07_APK_EPUB_INGESTION_MOD/release/azath_v14.4_kfx/base.apk` (`138528871` bytes, SHA256 `234deb91bf6ce4245203f451e58f551688e268eb89efa02c31e4bda0fe759663`).
+  - Hardware verified on **Samsung Galaxy M30** (`32001776e8e82623`): `com.azath.reader` updated `2026-11-25 00:43:31`, `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`), `NO_FATAL_EXCEPTIONS` in logcat, `verify_r138_azath_home.png` (`154151` bytes) & `verify_r138_azath_control_center.png` (`239020` bytes) captured and visually verified (`logs/azath_more_r138.xml` shows `v14.4 KFX`).
+  - Unverified at runtime in R138: Dark offline WebView `onReceivedError` in `FolioWebBrowserDialog.java` (compiled, not screenshotted in R138).
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Current State**: Cloned package `com.azath.reader` ("Azath v14.3 KFX") deployed and verified on Samsung Galaxy M30 alongside unmodified stock `com.amazon.kindle`. Round 137 complete:
   1. **Continue Reading Archival Monograms, Bespoke Catalog Authors Icon & Web Browser Verification (Task A)**:
      - Target Hardware: Physical Samsung Galaxy M30 (`32001776e8e82623`).

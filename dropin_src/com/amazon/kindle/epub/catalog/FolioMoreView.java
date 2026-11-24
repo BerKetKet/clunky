@@ -108,7 +108,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v14.3 KFX");
+        badgeTv.setText("v14.4 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(FolioTheme.ACCENT_SOFT_TEXT);
         badgeTv.setTypeface(FolioTheme.sansBold(ctx));
@@ -1645,7 +1645,7 @@ public final class FolioMoreView {
     }
 
     private static View makeMiniCoverView(Context ctx, float d, String kfxPath, int wDp, int hDp, int rightMarginDp) {
-        return makeMiniCoverView(ctx, d, kfxPath, kfxPath, wDp, hDp, rightMarginDp);
+        return makeMiniCoverView(ctx, d, kfxPath, null, wDp, hDp, rightMarginDp);
     }
 
     private static View makeMiniCoverView(Context ctx, float d, String kfxPath, String titleHint, int wDp, int hDp, int rightMarginDp) {
@@ -1667,8 +1667,7 @@ public final class FolioMoreView {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         } else {
             TextView phTv = new TextView(ctx);
-            String hint = (titleHint != null && !titleHint.trim().isEmpty()) ? titleHint : kfxPath;
-            phTv.setText(extractCoverInitial(hint));
+            phTv.setText(extractCoverInitial(titleHint != null && !titleHint.trim().isEmpty() ? titleHint : kfxPath));
             phTv.setTextColor(0xFF8E867E);
             phTv.setTextSize(wDp >= 44 ? 19 : 16);
             phTv.setTypeface(FolioTheme.serif(ctx));
@@ -5542,7 +5541,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Azath — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Azath v14.3 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Azath v14.4 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

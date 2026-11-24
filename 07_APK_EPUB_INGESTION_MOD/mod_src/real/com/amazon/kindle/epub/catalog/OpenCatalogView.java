@@ -53,13 +53,13 @@ public final class OpenCatalogView {
     private static final String PREFS_NAME = "folio_catalog_prefs";
     private static final String KEY_CUSTOM_OPDS = "custom_opds_url";
 
-    private static final int BG_DARK = 0xFF101216;
-    private static final int BG_SURFACE = 0xFF1B1F27;
-    private static final int BG_CARD = 0xFF232833;
-    private static final int ACCENT_AMBER = 0xFFE6A23C;
-    private static final int ACCENT_TEAL = 0xFF38BDF8;
-    private static final int TEXT_PRIMARY = 0xFFF3F4F6;
-    private static final int TEXT_MUTED = 0xFF9CA3AF;
+    private static final int BG_DARK = 0xFF0A0909;
+    private static final int BG_SURFACE = 0xFF181515;
+    private static final int BG_CARD = 0xFF211C1B;
+    private static final int ACCENT_AMBER = 0xFFE05A47;
+    private static final int ACCENT_TEAL = 0xFFF5B8AE;
+    private static final int TEXT_PRIMARY = 0xFFF2EFE9;
+    private static final int TEXT_MUTED = 0xFF8E867E;
 
     private static final ExecutorService IMG_POOL = Executors.newFixedThreadPool(4);
 
@@ -111,8 +111,7 @@ public final class OpenCatalogView {
                 String s1 = txt != null ? txt.toString() : "";
                 String s2 = hint != null ? hint.toString() : "";
                 if (s1.contains("Search Kindle") || s2.contains("Search Kindle")
-                        || s1.contains("Search Folio") || s2.contains("Search Folio")
-                        || s1.contains("Search Azath") || s2.contains("Search Azath")) {
+                        || s1.contains("Search Folio") || s2.contains("Search Folio") || s1.contains("Search Azath") || s2.contains("Search Azath")) {
                     View target = c;
                     if (c.getParent() instanceof View && c.getParent() != vg.getRootView()) {
                         target = (View) c.getParent();
@@ -168,29 +167,19 @@ public final class OpenCatalogView {
         TextView brand = new TextView(ctx);
         brand.setText("Azath");
         brand.setTextColor(TEXT_PRIMARY);
-        brand.setTextSize(26f);
-        brand.setTypeface(Typeface.SERIF, Typeface.BOLD);
+        brand.setTextSize(30f);
+        brand.setTypeface(FolioTheme.serif(ctx));
+        brand.setLetterSpacing(-0.02f);
         headerRow.addView(brand, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        TextView importPill = makePill(ctx, d, "Import", BG_SURFACE, 0xFF34D399);
-        importPill.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                com.amazon.kindle.epub.ingest.FolioFolderBrowserDialog.show(ctx);
-            }
-        });
-        headerRow.addView(importPill);
-
-        View gap0 = new View(ctx);
-        headerRow.addView(gap0, new LinearLayout.LayoutParams(dp(d, 6), 1));
 
         TextView opdsPill = makePill(ctx, d, sources.size() > 1 ? "OPDS" : "+ OPDS", BG_SURFACE, TEXT_PRIMARY);
         headerRow.addView(opdsPill);
 
         View gap = new View(ctx);
-        headerRow.addView(gap, new LinearLayout.LayoutParams(dp(d, 6), 1));
+        headerRow.addView(gap, new LinearLayout.LayoutParams(dp(d, 8), 1));
 
-        TextView backupPill = makePill(ctx, d, "Backup", BG_SURFACE, ACCENT_AMBER);
+        TextView backupPill = makePill(ctx, d, "Backup", FolioTheme.ACCENT_FILL, FolioTheme.ACCENT_SOFT_TEXT);
+        backupPill.setBackground(roundRect(FolioTheme.ACCENT_FILL, dp(d, 999), FolioTheme.ACCENT_BORDER, dp(d, 1)));
         headerRow.addView(backupPill);
         root.addView(headerRow);
 
@@ -198,7 +187,7 @@ public final class OpenCatalogView {
         LinearLayout searchBar = new LinearLayout(ctx);
         searchBar.setOrientation(LinearLayout.HORIZONTAL);
         searchBar.setGravity(Gravity.CENTER_VERTICAL);
-        searchBar.setBackground(roundRect(BG_SURFACE, dp(d, 24), 0xFF2D3340, dp(d, 1)));
+        searchBar.setBackground(roundRect(BG_SURFACE, dp(d, 24), 0xFF2A2423, dp(d, 1)));
         searchBar.setPadding(dp(d, 16), dp(d, 4), dp(d, 8), dp(d, 4));
         LinearLayout.LayoutParams sbLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -214,7 +203,7 @@ public final class OpenCatalogView {
         searchInput.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         searchBar.addView(searchInput, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        final TextView searchGo = makePill(ctx, d, "Search", ACCENT_AMBER, 0xFF101216);
+        final TextView searchGo = makePill(ctx, d, "Search", ACCENT_AMBER, 0xFF0A0909);
         searchBar.addView(searchGo);
         root.addView(searchBar, sbLp);
 
@@ -397,26 +386,9 @@ public final class OpenCatalogView {
                         @Override
                         public void run() {
                             libSection.setVisibility(View.VISIBLE);
+        FolioTheme.applyToTree(ctx, libSection);
                             libSection.removeAllViews();
-                            LinearLayout crHeader = new LinearLayout(ctx);
-                            crHeader.setOrientation(LinearLayout.HORIZONTAL);
-                            crHeader.setGravity(Gravity.CENTER_VERTICAL);
-                            TextView crTitle = makeSectionTitle(ctx, d, "Continue Reading");
-                            crHeader.addView(crTitle, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-                            TextView allMetaLink = new TextView(ctx);
-                            allMetaLink.setText("All Metadata ›");
-                            allMetaLink.setTextColor(ACCENT_TEAL);
-                            allMetaLink.setTextSize(13f);
-                            allMetaLink.setTypeface(Typeface.DEFAULT_BOLD);
-                            allMetaLink.setPadding(dp(d, 8), dp(d, 4), dp(d, 2), dp(d, 4));
-                            allMetaLink.setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.show(ctx);
-                                }
-                            });
-                            crHeader.addView(allMetaLink);
-                            libSection.addView(crHeader);
+                            libSection.addView(makeSectionTitle(ctx, d, "Continue Reading"));
                             HorizontalScrollView hs = new HorizontalScrollView(ctx);
                             hs.setHorizontalScrollBarEnabled(false);
                             LinearLayout row = new LinearLayout(ctx);
@@ -438,6 +410,7 @@ public final class OpenCatalogView {
                             @Override
                             public void run() {
                                 recSection.setVisibility(View.VISIBLE);
+        FolioTheme.applyToTree(ctx, recSection);
                                 recSection.removeAllViews();
                                 String shortSeed = seed.title.length() > 26 ? seed.title.substring(0, 26) + "..." : seed.title;
                                 recSection.addView(makeSectionTitle(ctx, d, "Because You Read " + shortSeed));
@@ -486,6 +459,7 @@ public final class OpenCatalogView {
             }
         }).start();
 
+        FolioTheme.applyToTree(ctx, mainScroll);
         return mainScroll;
     }
 
@@ -497,7 +471,7 @@ public final class OpenCatalogView {
         card.setLayoutParams(lp);
 
         FrameLayout coverFrame = new FrameLayout(ctx);
-        coverFrame.setBackground(roundRect(BG_CARD, dp(d, 8), 0xFF323946, dp(d, 1)));
+        coverFrame.setBackground(roundRect(BG_CARD, dp(d, 8), 0xFF2A2423, dp(d, 1)));
         coverFrame.setClipToOutline(true);
         LinearLayout.LayoutParams cfLp = new LinearLayout.LayoutParams(dp(d, 114), dp(d, 168));
         cfLp.bottomMargin = dp(d, 6);
@@ -597,7 +571,7 @@ public final class OpenCatalogView {
         card.setLayoutParams(lp);
 
         FrameLayout coverFrame = new FrameLayout(ctx);
-        coverFrame.setBackground(roundRect(BG_CARD, dp(d, 8), 0xFF323946, dp(d, 1)));
+        coverFrame.setBackground(roundRect(BG_CARD, dp(d, 8), 0xFF2A2423, dp(d, 1)));
         coverFrame.setClipToOutline(true);
         LinearLayout.LayoutParams cfLp = new LinearLayout.LayoutParams(dp(d, 114), dp(d, 168));
         cfLp.bottomMargin = dp(d, 6);
@@ -650,7 +624,7 @@ public final class OpenCatalogView {
         LinearLayout row = new LinearLayout(ctx);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setBackground(roundRect(BG_SURFACE, dp(d, 10), 0xFF282E3A, dp(d, 1)));
+        row.setBackground(roundRect(BG_SURFACE, dp(d, 10), 0xFF211C1B, dp(d, 1)));
         row.setPadding(dp(d, 10), dp(d, 10), dp(d, 12), dp(d, 10));
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -749,8 +723,9 @@ public final class OpenCatalogView {
         TextView tv = new TextView(ctx);
         tv.setText(text);
         tv.setTextColor(TEXT_PRIMARY);
-        tv.setTextSize(17.5f);
-        tv.setTypeface(Typeface.SERIF, Typeface.BOLD);
+        tv.setTextSize(20f);
+        tv.setTypeface(FolioTheme.serif(ctx));
+        tv.setLetterSpacing(-0.015f);
         tv.setPadding(0, dp(d, 6), 0, dp(d, 4));
         return tv;
     }
@@ -760,8 +735,8 @@ public final class OpenCatalogView {
         tv.setText(text);
         tv.setTextColor(textColor);
         tv.setTextSize(12.5f);
-        tv.setTypeface(null, Typeface.BOLD);
-        tv.setBackground(roundRect(bgColor, dp(d, 18), 0xFF2D3340, dp(d, 1)));
+        tv.setTypeface(FolioTheme.sansBold(ctx));
+        tv.setBackground(roundRect(bgColor, dp(d, 999), 0xFF2A2423, dp(d, 1)));
         tv.setPadding(dp(d, 14), dp(d, 7), dp(d, 14), dp(d, 7));
         return tv;
     }
@@ -824,7 +799,7 @@ public final class OpenCatalogView {
         layout.addView(customLabel);
         layout.addView(input);
 
-        new AlertDialog.Builder(ctx)
+        AlertDialog opdsDlg = new AlertDialog.Builder(ctx)
                 .setTitle("OPDS Catalog Feed")
                 .setView(layout)
                 .setPositiveButton("Save & Browse", new DialogInterface.OnClickListener() {
@@ -847,6 +822,7 @@ public final class OpenCatalogView {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, opdsDlg);
     }
 
     private static String formatMetaMessage(BookResult book, OpenLibraryClient.BookMeta meta, boolean isOpenLibRec) {
@@ -961,6 +937,7 @@ public final class OpenCatalogView {
                 .setNegativeButton("Close", null)
                 .create();
         dialog.show();
+        FolioTheme.applyToDialog(ctx, dialog);
 
         new Thread(new Runnable() {
             @Override
@@ -1014,9 +991,9 @@ public final class OpenCatalogView {
     }
 
     public static void showBackupRestoreDialog(final Context ctx) {
-        new AlertDialog.Builder(ctx)
-                .setTitle("Folio Library & Notes Backup")
-                .setMessage("Back up or restore your local Folio library metadata, reading progress, and highlights/notes (/sdcard/kindle/backups/).")
+        AlertDialog bakDlg = new AlertDialog.Builder(ctx)
+                .setTitle("Azath Library & Notes Backup")
+                .setMessage("Back up or restore your local Azath library metadata, reading progress, and highlights/notes (/sdcard/kindle/backups/).")
                 .setPositiveButton("Backup Now", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int which) {
@@ -1031,6 +1008,7 @@ public final class OpenCatalogView {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, bakDlg);
     }
 
     private static void restoreLatestDatabases(Context ctx) {
@@ -1062,7 +1040,7 @@ public final class OpenCatalogView {
             if (restoredMeta >= 0) {
                 msg += " & " + restoredMeta + " metadata record(s)";
             }
-            msg += ". Restart Folio to apply.";
+            msg += ". Restart Azath to apply.";
             Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show();
         } catch (Throwable t) {
             Toast.makeText(ctx, "Restore error: " + t.getMessage(), Toast.LENGTH_LONG).show();
@@ -1184,27 +1162,9 @@ public final class OpenCatalogView {
                         throw (lastErr != null) ? lastErr : new java.io.IOException("All download mirrors failed");
                     }
 
-                    File appLibDir = new File(ctx.getFilesDir(), "folio_library");
-                    if (!appLibDir.exists()) appLibDir.mkdirs();
-                    final File kfxFile = new File(appLibDir, safeName + "_" + book.id + ".kfx");
+                    final File kfxFile = new File(outDir, safeName + "_" + book.id + ".kfx");
                     boolean kfxOk = com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubFile, kfxFile);
                     if (kfxOk) {
-                        try {
-                            com.amazon.kindle.epub.ingest.EpubMetadataExtractor.BookMeta meta =
-                                    com.amazon.kindle.epub.ingest.EpubMetadataExtractor.extract(epubFile, epubFile.getName());
-                            if (book.title != null && !book.title.trim().isEmpty()) meta.title = book.title.trim();
-                            if (book.author != null && !book.author.trim().isEmpty()) meta.author = book.author.trim();
-                            com.amazon.kindle.epub.ingest.MetadataEnricher.enrichInPlace(meta);
-                            String bKey = com.amazon.kindle.epub.ingest.FolioMetadataDb.computeBookKey(meta.title, epubFile.length());
-                            File coverSidecar = new File(kfxFile.getAbsolutePath() + ".cover.jpg");
-                            com.amazon.kindle.epub.ingest.FolioMetadataDb mdb =
-                                    new com.amazon.kindle.epub.ingest.FolioMetadataDb(ctx);
-                            try {
-                                mdb.upsertBook(bKey, kfxFile, coverSidecar, epubFile.getName(), meta);
-                            } finally {
-                                mdb.close();
-                            }
-                        } catch (Throwable ignored) {}
                         registerDownloadedBook(ctx, book.title, book.author, kfxFile);
                     }
 
@@ -1214,7 +1174,7 @@ public final class OpenCatalogView {
                             try {
                                 android.os.StrictMode.class.getMethod("disableDeathOnFileUriExposure").invoke(null);
                             } catch (Throwable ignored) {}
-                            Toast.makeText(ctx, "Opening in Folio...", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(ctx, "Opening in Azath...", Toast.LENGTH_SHORT).show();
                             Intent openIntent = new Intent(Intent.ACTION_VIEW);
                             openIntent.setClassName(ctx.getPackageName(), "com.amazon.kindle.ThirdPartyUpgradePage");
                             File target = kfxFile.exists() ? kfxFile : epubFile;
@@ -1251,7 +1211,7 @@ public final class OpenCatalogView {
                 db.execSQL(
                     "INSERT OR REPLACE INTO KindleContent (" +
                     "ID, STATE, ARCHIVABLE, HAS_READ_ALONG, TYPE, KEPT, CONTENT_TYPE, TITLE, AUTHOR, HAS_XRAY, DICTIONARY_TYPE, TITLE_ORDER, AUTHOR_ORDER, AUTHOR_ORDER_REVERSED, READ_STATE, READ_STATE_ORIGIN, HAS_LOADED_COVER, IS_HIDDEN, IS_HIDDEN_BY_USER" +
-                    ") VALUES (?, 'LOCAL', 0, 0, 'BT_EBOOK_PDOC', 0, 'application/x-kfx-ebook', ?, ?, 0, 'NONE', -1, -1, -1, 'UNREAD', 'OTHER', 1, 0, 0)",
+                    ") VALUES (?, 'LOCAL', 0, 0, 'BT_EBOOK', 0, 'application/x-kfx-ebook', ?, ?, 0, 'NONE', -1, -1, -1, 'UNREAD', 'OTHER', 1, 0, 0)",
                     new Object[]{key, title, author}
                 );
                 db.execSQL(
