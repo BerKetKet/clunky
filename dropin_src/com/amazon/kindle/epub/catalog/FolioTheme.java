@@ -129,10 +129,8 @@ public final class FolioTheme {
             Typeface cur = tv.getTypeface();
             if (cur != Typeface.MONOSPACE) {
                 boolean isBold = (cur != null && cur.isBold());
-                boolean isSerif = (cur == Typeface.SERIF
-                        || (cur != null && cur.equals(Typeface.create(Typeface.SERIF, Typeface.BOLD)))
-                        || (tv.getTextSize() / scaledDensity) >= 17.0f);
-                if (isSerif) {
+                float sp = tv.getTextSize() / scaledDensity;
+                if (sp >= 17.0f) {
                     tv.setTypeface(isBold ? bookerlyBold : bookerlyReg);
                 } else {
                     tv.setTypeface(isBold ? emberBold : emberReg);
@@ -145,6 +143,16 @@ public final class FolioTheme {
                 applyRecursive(vg.getChildAt(i), scaledDensity);
             }
         }
+    }
+
+    public static void applyToDialog(Context ctx, AlertDialog dlg) {
+        if (ctx == null || dlg == null) return;
+        try {
+            if (dlg.getWindow() != null && dlg.getWindow().getDecorView() != null) {
+                applyToTree(ctx, dlg.getWindow().getDecorView());
+            }
+        } catch (Throwable ignored) {}
+        styleDialog(ctx, dlg);
     }
 
     public static void styleDialog(Context ctx, AlertDialog dlg) {

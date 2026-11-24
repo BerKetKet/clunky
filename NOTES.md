@@ -1,6 +1,29 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.6 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 126 complete:
+  1. **Strict Bookerly/Ember Hierarchy & Modal-Wide Theme Unification (Task A)**:
+     - Integrated `FolioTheme.java` routing Bookerly strictly to display titles (`>= 17sp`) and Amazon Ember sans to all eyebrows, pills, chips, buttons, and body text (`< 17sp`). Implemented `FolioTheme.applyToDialog` for recursive view-tree font styling and AlertDialog action button styling (`#4DA6FF` Positive, `#8E959C` Negative, `#C4CBD2` Neutral).
+     - Updated `FolioFolderBrowserDialog.java`: Replaced active pinned-folder `★` button border with Kindle blue-slate (`#162330` fill, `#2C5278` border).
+     - Updated `FolioMoreView.java` & `FolioMetadataCatalogDialog.java`: Applied `FolioTheme.applyToDialog` across Control Center and Catalog sub-modals, fixed post-show dialog styling hook, and bumped badge to `Folio v12.6 KFX (Enhanced Typesetting)`.
+     - Recompiled `classes9.dex` (450,364 bytes), rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, signed with `apksigner`.
+     - Streamed APK install to Galaxy M32 (`lastUpdateTime=2026-11-24 05:33:49`) with zero fatal crashes logged.
+     - Staged release APK at `07_APK_EPUB_INGESTION_MOD/release/folio_v12.6_kfx/base.apk` (132 MB).
+  2. **Visual Verification & Invariant Proofs (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r126_importer_ember_and_pin.png` (200,897 bytes) — Import EPUBs from Storage showing Bookerly heading, Amazon Ember sans on eyebrows/pills (`BATCH EPUB IMPORTER`, `Sort: A–Z`, `Hide Imported: OFF`), and active `★` pin button in Kindle blue-slate `#162330` / `#2C5278` (0 brown/amber pixels).
+       * `verify_r126_modal_bookerly_ember.png` (200,543 bytes) — 2026 Reading Goal modal showing unified Bookerly heading, Amazon Ember body typography, Kindle blue `#4DA6FF` styled positive button (`Save Goal` with 1,200 verified `#4DA6FF` pixels), and `#8E959C` styled negative button (`Cancel` with 641 verified pixels).
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Cloned Invariant: `com.amazon.kindle.epub` updated (`lastUpdateTime=2026-11-24 05:33:49`), zero crashes.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+  4. Packaged `antig_to_gemini_neon_clunky_report126.zip` and submitted to Gemini Neon tab `837018552`.
+
+## Verification Evidence (Round 126)
+1. `verify_r126_importer_ember_and_pin.png`: Import EPUBs modal with Bookerly/Ember hierarchy and blue-slate active pin button.
+2. `verify_r126_modal_bookerly_ember.png`: Reading Goal modal with Bookerly/Ember typography and Kindle blue styled footer buttons.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v12.6 KFX deployed (`lastUpdateTime=2026-11-24 05:33:49`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v12.5 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Milestone Round 125 complete:
   1. **Crimson Launcher Icon, Kindle Bookerly/Ember Typography & Zero-Neon Sweep (Task A)**:
      - Integrated `FolioTheme.java` into `mod_src/real/` (dynamic runtime loader for Kindle's bundled Bookerly and Amazon Ember fonts from `assets/` with Serif/Sans fallbacks; `applyToTree` recursive tree styling and `#4DA6FF` checkbox tinter; `styleDialog` for standardizing AlertDialog action buttons).

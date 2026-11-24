@@ -2117,7 +2117,7 @@ public final class FolioMetadataCatalogDialog {
         etDesc.setMaxLines(5);
         etDesc.setGravity(Gravity.TOP | Gravity.START);
 
-        new AlertDialog.Builder(ctx)
+        AlertDialog editDlg = new AlertDialog.Builder(ctx)
                 .setView(sv)
                 .setPositiveButton("Save", (d, w) -> {
                     String newTitle = etTitle.getText().toString().trim();
@@ -2150,6 +2150,7 @@ public final class FolioMetadataCatalogDialog {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, editDlg);
     }
 
     private static GradientDrawable pillBg(Context ctx, String fillHex, String strokeHex, int radiusDp) {
@@ -2618,6 +2619,7 @@ public final class FolioMetadataCatalogDialog {
                 .setView(wrap)
                 .setPositiveButton("Close", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, dlgRef[0]);
     }
 
     private static void showShelfPickerDialog(final Context ctx, final FolioMetadataDb.BookRecord rec,

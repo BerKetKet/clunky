@@ -1,8 +1,7 @@
 {
-  "round": 125,
-  "version": "Folio v12.5 KFX",
-  "milestone": true,
-  "codename": "New Crimson Launcher Icon, Kindle Bookerly/Ember Typography & Zero-Neon Highlight Sweep",
+  "round": 126,
+  "version": "Folio v12.6 KFX",
+  "codename": "Bookerly/Ember Strict Typography Hierarchy & Modal-Wide Theme Unification",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
@@ -21,16 +20,11 @@
     {
       "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java",
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioFolderBrowserDialog.java"
-    },
-    {
-      "src": "dropin_src/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java",
-      "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioWebBrowserDialog.java"
     }
   ],
-  "launcher_icon_assets_dir": "dropin_res/",
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.5_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v12.6_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r125_launcher_icon.png",
-    "verify_r125_kindle_fonts_and_highlights.png"
+    "verify_r126_importer_ember_and_pin.png",
+    "verify_r126_modal_bookerly_ember.png"
   ]
 }

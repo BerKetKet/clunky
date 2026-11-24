@@ -107,7 +107,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v12.5 KFX");
+        badgeTv.setText("v12.6 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(TEXT_MUTED);
         badgeTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
@@ -829,6 +829,7 @@ public final class FolioMoreView {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, goalDlgRef[0]);
     }
 
     private static TextView makeSectionLabel(Context ctx, float d, String text) {
@@ -1875,6 +1876,7 @@ public final class FolioMoreView {
                     }
                 })
                 .show();
+        FolioTheme.applyToDialog(ctx, dlgRef[0]);
     }
 
     private static void showTonightsPickDialog(final Context ctx, final Runnable onChanged) {
@@ -2243,6 +2245,7 @@ public final class FolioMoreView {
                 })
                 .setNegativeButton("Close", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, pickDlgRef[0]);
     }
 
     private static java.util.List<String> loadRecentSearches(Context ctx) {
@@ -2738,6 +2741,7 @@ public final class FolioMoreView {
                 })
                 .setPositiveButton("Close", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, gsDlgRef[0]);
     }
 
     private static void showNotesNotebookDialog(final Context ctx) {
@@ -3163,6 +3167,7 @@ public final class FolioMoreView {
                 .setView(root)
                 .setPositiveButton("Close", null);
         nbDlgRef[0] = b.show();
+        FolioTheme.applyToDialog(ctx, nbDlgRef[0]);
     }
 
     private static String buildNotesMarkdown(
@@ -3926,6 +3931,7 @@ public final class FolioMoreView {
                 })
                 .setPositiveButton("Close", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, storDlgRef[0]);
     }
 
     private static void showManageShelvesDialog(final Context ctx) {
@@ -4163,6 +4169,7 @@ public final class FolioMoreView {
                 })
                 .setPositiveButton("Close", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, mgrDlgRef[0]);
     }
 
     private static void showShelfBookPickerDialog(
@@ -5334,7 +5341,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v12.5 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v12.6 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

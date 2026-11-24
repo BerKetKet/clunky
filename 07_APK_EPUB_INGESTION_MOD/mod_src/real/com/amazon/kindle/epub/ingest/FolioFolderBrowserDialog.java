@@ -522,8 +522,8 @@ public final class FolioFolderBrowserDialog {
             boolean curIsPinned = !curDir.isEmpty() && pinned.contains(curDir);
             btnPinDir.setText(curIsPinned ? "★" : "☆");
             btnPinDir.setTextColor(Color.parseColor(curIsPinned ? "#4DA6FF" : "#8E959C"));
-            pinBg.setColor(Color.parseColor(curIsPinned ? "#2D2312" : "#1C1F22"));
-            pinBg.setStroke(dp(ctx, 1), Color.parseColor(curIsPinned ? "#B45309" : "#2C3035"));
+            pinBg.setColor(Color.parseColor(curIsPinned ? "#162330" : "#1C1F22"));
+            pinBg.setStroke(dp(ctx, 1), Color.parseColor(curIsPinned ? "#2C5278" : "#2C3035"));
 
             java.util.LinkedHashMap<String, Boolean> allDirs = new java.util.LinkedHashMap<>();
             for (String pd : pinned) allDirs.put(pd, Boolean.TRUE);
