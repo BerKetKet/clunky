@@ -1,6 +1,27 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v11.4 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 114 complete:
+  1. **Authors Directory Sort Pills & Progress Telemetry (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`.
+     - Built 3 interactive sort pills in `showAuthorsDirectoryDialog`: `Most Books`, `A–Z`, and `Most Read`.
+     - Added circular monogram avatars (`HM`, `AH`, `AR`, `NS`, `SO`, `GO`) color-coded teal for active/finished authors and amber for unread authors.
+     - Added live per-author reading and rating telemetry sub-lines (e.g. `✓ 1 finished`, `📖 2 reading`, `★ 5.0`).
+     - Bumped badge and About Folio string to `Folio v11.4 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Milestone Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r114_authors_directory.png` (182 KB) — Authors Directory sorted by `Most Read` showing active/finished/rated authors at top with circular monogram badges and live telemetry.
+       * `verify_r114_about_v114.png` (346 KB) — About Folio modal showing `Version: Folio v11.4 KFX (Enhanced Typesetting)`, `Up Next & Goal: 2 queued · 1/5 annual goal`, and live telemetry.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v11.4 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v11.4_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 114)
+1. `verify_r114_authors_directory.png`: Authors Directory modal sorted by `Most Read` with monogram badges and telemetry.
+2. `verify_r114_about_v114.png`: About Folio modal confirming `Version: Folio v11.4 KFX (Enhanced Typesetting)`.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v11.4 KFX deployed (`lastUpdateTime=2026-11-24 03:28:54`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v11.3 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 113 complete:
   1. **Smart Metadata Quick-Fix Toolbar (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioMetadataCatalogDialog.java` and `FolioMoreView.java`.

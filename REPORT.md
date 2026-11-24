@@ -1,40 +1,47 @@
-# Round 113 Deliverables Report — Folio v11.3 KFX (Smart Metadata Quick-Fix Toolbar)
+# Round 114 Deliverables Report — Folio v11.4 KFX (Authors Directory Sort Pills & Progress Telemetry)
 **Environment**: Samsung Galaxy M32 (`32001776e8e82623`), TrebleDroid Android 13 (arm64-v8a).  
 **Stock Kindle Invariant**: Package `com.amazon.kindle` (v8.160.1.0) verified **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).  
-**Folio Version**: `Folio v11.3 KFX (Enhanced Typesetting)` installed on device at `2026-11-24 03:20:02`.
+**Folio Version**: `Folio v11.4 KFX (Enhanced Typesetting)` installed on device at `2026-11-24 03:28:54`.
 
 ---
 
 ## 1. Task A: Source Integration & Release Staging
 1. **Drop-In Source Integration (`FolioMetadataCatalogDialog.java`, `FolioMoreView.java`)**:
    - `dropin_src/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java` -> `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/ingest/FolioMetadataCatalogDialog.java`:
-     - **Smart Metadata Quick-Fix Toolbar (`showEditMetadataDialog`)**: Added 3-pill toolbar beneath Title & Author input fields:
-       * **`⇄ Swap T/A`** (soft-violet `#C084FC` on `#2B1B3D` with rounded stroke): Instantly swaps Title & Author fields to fix inverted metadata (e.g., *Palahniuk, Chuck / Choke*).
-       * **`Aa Fix Author`** (sky-blue `#38BDF8` on `#082F49` with rounded stroke): Normalizes author format from `Last, First` to natural `First Last` (`Chuck Palahniuk`).
-       * **`Aa Title Case`** (warm amber `#F59E0B` on `#331E05` with rounded stroke): Smart-capitalizes lowercase or inconsistent titles with smart lowercase stop-word handling (`a`, `an`, `the`, `of`, `in`, `to`, `for`).
-     - **Immediate In-Memory Record Sync**: Saving updates in-memory `BookRecord` attributes alongside `books_metadata` SQLite and `kindle_library.db` sync.
+     - **Interactive Sort Switcher (`showAuthorsDirectoryDialog`)**: Added 3 sort pills above the search bar:
+       * **`Most Books`**: Default catalog volume ranking.
+       * **`A–Z`**: Alphabetical collation by author name.
+       * **`Most Read`**: Ranks authors by active reading engagement (finished books first, followed by in-progress reading, then highest average rating).
+     - **Circular Monogram Avatars (`authorMonogram(...)`)**: Formats 2-letter initials inside rounded badges (teal `#5EEAD4` on `#0E2A28` for active/finished authors; amber `#F59E0B` on `#2B1F0A` for unread).
+     - **Live Per-Author Reading & Rating Telemetry**: Renders live engagement sub-lines beneath each author title (e.g., `✓ 1 finished`, `📖 2 reading`, `★ 5.0`).
    - `dropin_src/com/amazon/kindle/epub/catalog/FolioMoreView.java` -> `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java`:
-     - **Version Bump**: Updated Control Center header badge and `About Folio` dialog string to `Folio v11.3 KFX (Enhanced Typesetting)`.
+     - **Version Bump**: Updated Control Center header badge and `About Folio` dialog string to `Folio v11.4 KFX (Enhanced Typesetting)`.
      - Invariants: `MetadataEnricher.java` and `OpenCatalogView.java` strictly preserved and untouched.
 
 2. **Compilation, Packaging & Deployment**:
-   - Recompiled `classes9.dex` (384,276 bytes) via `d8`.
+   - Recompiled `classes9.dex` (388,080 bytes) via `d8`.
    - Rebuilt APK with `apktool b`, aligned via `zipalign -f -p 4`, and signed with `apksigner`.
-   - Streamed APK install to physical Samsung Galaxy M32 (`lastUpdateTime=2026-11-24 03:20:02`).
-   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v11.3_kfx/base.apk` (132 MB).
+   - Streamed APK install to physical Samsung Galaxy M32 (`lastUpdateTime=2026-11-24 03:28:54`).
+   - Staged release APK: `07_APK_EPUB_INGESTION_MOD/release/folio_v11.4_kfx/base.apk` (132 MB).
 
 ---
 
 ## 2. Task B: Hardware Verification on Physical Galaxy M32
 Verified on physical Samsung Galaxy M32 hardware:
 
-1. **`verify_r113_edit_metadata_quickfix.png` (149,786 bytes)**:
-   - Captured **Edit Book Metadata** dialog for *Choke* opened from Book Details (`ⓘ`).
-   - Shows the 3 quick-fix toolbar pills: `⇄ Swap T/A`, `Aa Fix Author`, and `Aa Title Case`.
-   - Demonstrates 1-tap `⇄ Swap T/A` followed by `Aa Fix Author`: Title successfully updated to `Choke` and Author updated to `Chuck Palahniuk` prior to pressing Save.
-2. **`verify_r113_about_v113.png` (354,685 bytes)**:
+1. **`verify_r114_authors_directory.png` (186,067 bytes)**:
+   - Captured **👤 Authors Directory** modal sorted by **`Most Read`**.
+   - Shows active/finished/rated authors at the top:
+     * *Herman Melville* (`HM` monogram, `✓ 1 finished`)
+     * *Aldous Huxley* (`AH` monogram, `📖 2 reading`)
+     * *Aristotle* (`AR` monogram, `📖 1 reading`)
+     * *Natsume Soseki* (`NS` monogram, `📖 1 reading`)
+     * *Sophocles* (`SO` monogram, `📖 1 reading`)
+     * *George Orwell* (`GO` monogram, `★ 5.0`)
+   - Verifies all 3 sort pills (`Most Books`, `A–Z`, `Most Read`), circular monogram avatars, and per-author telemetry rendering.
+2. **`verify_r114_about_v114.png` (353,937 bytes)**:
    - About Folio dialog confirming:
-     * `Version: Folio v11.3 KFX (Enhanced Typesetting)`
+     * `Version: Folio v11.4 KFX (Enhanced Typesetting)`
      * `Hardware: TrebleDroid with GApps · Android 13 (arm64-v8a)`
      * `Up Next & Goal: 2 queued · 1/5 annual goal`
      * Pure-Rust Engine (`libkfxconv.so`) telemetry and live library stats.

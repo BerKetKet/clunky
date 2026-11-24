@@ -1,7 +1,7 @@
 {
-  "round": 113,
-  "version": "Folio v11.3 KFX",
-  "codename": "Smart Metadata Quick-Fix Toolbar",
+  "round": 114,
+  "version": "Folio v11.4 KFX",
+  "codename": "Authors Directory Sort Pills & Progress Telemetry",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
@@ -14,9 +14,9 @@
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.3_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.4_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r113_edit_metadata_quickfix.png",
-    "verify_r113_about_v113.png"
+    "verify_r114_authors_directory.png",
+    "verify_r114_about_v114.png"
   ]
 }

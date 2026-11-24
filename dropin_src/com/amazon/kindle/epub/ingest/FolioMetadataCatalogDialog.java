@@ -2379,25 +2379,51 @@ public final class FolioMetadataCatalogDialog {
         } catch (Throwable ignored) {}
     }
 
+    private static String authorMonogram(String name) {
+        if (name == null) return "?";
+        String[] parts = name.trim().split("\\s+");
+        if (parts.length == 0 || parts[0].isEmpty()) return "?";
+        if (parts.length == 1) return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase(Locale.US);
+        char a = parts[0].charAt(0);
+        char b = parts[parts.length - 1].charAt(0);
+        return ("" + Character.toUpperCase(a) + Character.toUpperCase(b));
+    }
+
     private static void showAuthorsDirectoryDialog(final Context ctx,
                                                    final List<FolioMetadataDb.BookRecord> allBooks,
                                                    final AuthorFilterCallback onPick) {
+        final Map<String, Integer> progMap = loadProgressMap(ctx);
         final Map<String, Integer> counts = new HashMap<>();
+        final Map<String, Integer> finishedMap = new HashMap<>();
+        final Map<String, Integer> readingMap = new HashMap<>();
+        final Map<String, Integer> ratedCntMap = new HashMap<>();
+        final Map<String, Integer> ratedSumMap = new HashMap<>();
         final Map<String, String> labels = new HashMap<>();
+
         for (FolioMetadataDb.BookRecord r : allBooks) {
             String disp = formatAuthorForDisplay(r.author);
             if (disp.isEmpty()) disp = "Unknown Author";
             String key = disp.toLowerCase(Locale.ROOT);
             counts.put(key, (counts.containsKey(key) ? counts.get(key) : 0) + 1);
             if (!labels.containsKey(key)) labels.put(key, disp);
+
+            Integer pv = (r.kfxPath != null) ? progMap.get(r.kfxPath) : null;
+            int pct = pv != null ? pv : 0;
+            if (pct >= 100) {
+                finishedMap.put(key, (finishedMap.containsKey(key) ? finishedMap.get(key) : 0) + 1);
+            } else if (pct > 0) {
+                readingMap.put(key, (readingMap.containsKey(key) ? readingMap.get(key) : 0) + 1);
+            }
+            int stars = getRating(ctx, r.kfxPath);
+            if (stars > 0) {
+                ratedCntMap.put(key, (ratedCntMap.containsKey(key) ? ratedCntMap.get(key) : 0) + 1);
+                ratedSumMap.put(key, (ratedSumMap.containsKey(key) ? ratedSumMap.get(key) : 0) + stars);
+            }
         }
-        List<String> keys = new ArrayList<>(counts.keySet());
-        Collections.sort(keys, (a, b) -> {
-            int ca = counts.get(a);
-            int cb = counts.get(b);
-            if (ca != cb) return Integer.compare(cb, ca);
-            return a.compareTo(b);
-        });
+
+        final List<String> keys = new ArrayList<>(counts.keySet());
+        // Sort mode: 0 = Most Books, 1 = A-Z, 2 = Most Read
+        final int[] sortMode = new int[] { 0 };
 
         LinearLayout wrap = new LinearLayout(ctx);
         wrap.setOrientation(LinearLayout.VERTICAL);
@@ -2405,12 +2431,20 @@ public final class FolioMetadataCatalogDialog {
         wrap.setPadding(dp(ctx, 18), dp(ctx, 16), dp(ctx, 18), dp(ctx, 10));
 
         final TextView hdr = new TextView(ctx);
-        hdr.setText("Authors Directory (" + keys.size() + ")");
+        hdr.setText("👤 Authors Directory (" + keys.size() + ")");
         hdr.setTextColor(Color.WHITE);
         hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         hdr.setTypeface(Typeface.DEFAULT_BOLD);
         hdr.setPadding(0, 0, 0, dp(ctx, 10));
         wrap.addView(hdr);
+
+        final LinearLayout sortRow = new LinearLayout(ctx);
+        sortRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams srLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        srLp.setMargins(0, 0, 0, dp(ctx, 10));
+        sortRow.setLayoutParams(srLp);
+        wrap.addView(sortRow);
 
         final EditText authSearch = new EditText(ctx);
         authSearch.setHint("Search authors...");
@@ -2440,7 +2474,55 @@ public final class FolioMetadataCatalogDialog {
 
         final AlertDialog[] dlgRef = new AlertDialog[1];
         final String[] authQuery = new String[] { "" };
-        final Runnable renderAuthors = () -> {
+        final Runnable[] renderAuthorsRef = new Runnable[1];
+        final Runnable[] renderSortRef = new Runnable[1];
+
+        renderSortRef[0] = () -> {
+            sortRow.removeAllViews();
+            String[] sLabels = { "Most Books", "A–Z", "Most Read" };
+            for (int i = 0; i < sLabels.length; i++) {
+                final int target = i;
+                boolean active = (sortMode[0] == i);
+                TextView pill = new TextView(ctx);
+                pill.setText(sLabels[i]);
+                pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+                pill.setTypeface(active ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+                pill.setTextColor(Color.parseColor(active ? "#FBBF24" : "#94A3B8"));
+                pill.setGravity(Gravity.CENTER);
+                pill.setSingleLine(true);
+                pill.setPadding(dp(ctx, 10), dp(ctx, 6), dp(ctx, 10), dp(ctx, 6));
+                pill.setBackground(pillBg(ctx, active ? "#2A2011" : "#161923", active ? "#D97706" : "#2A3142", 9));
+                LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                if (i < sLabels.length - 1) plp.rightMargin = dp(ctx, 6);
+                pill.setLayoutParams(plp);
+                pill.setOnClickListener(v -> {
+                    if (sortMode[0] != target) {
+                        sortMode[0] = target;
+                        renderSortRef[0].run();
+                        renderAuthorsRef[0].run();
+                    }
+                });
+                sortRow.addView(pill);
+            }
+        };
+
+        renderAuthorsRef[0] = () -> {
+            Collections.sort(keys, (a, b) -> {
+                if (sortMode[0] == 1) {
+                    return a.compareTo(b);
+                } else if (sortMode[0] == 2) {
+                    int fa = (finishedMap.containsKey(a) ? finishedMap.get(a) : 0) * 10
+                            + (readingMap.containsKey(a) ? readingMap.get(a) : 0) * 3;
+                    int fb = (finishedMap.containsKey(b) ? finishedMap.get(b) : 0) * 10
+                            + (readingMap.containsKey(b) ? readingMap.get(b) : 0) * 3;
+                    if (fa != fb) return Integer.compare(fb, fa);
+                }
+                int ca = counts.get(a);
+                int cb = counts.get(b);
+                if (ca != cb) return Integer.compare(cb, ca);
+                return a.compareTo(b);
+            });
+
             list.removeAllViews();
             String q = authQuery[0].trim().toLowerCase(Locale.ROOT);
             int shown = 0;
@@ -2449,36 +2531,82 @@ public final class FolioMetadataCatalogDialog {
                 if (!q.isEmpty() && !k.contains(q)) continue;
                 shown++;
                 int n = counts.get(k);
+                int fin = finishedMap.containsKey(k) ? finishedMap.get(k) : 0;
+                int rdg = readingMap.containsKey(k) ? readingMap.get(k) : 0;
+                int rCnt = ratedCntMap.containsKey(k) ? ratedCntMap.get(k) : 0;
+                int rSum = ratedSumMap.containsKey(k) ? ratedSumMap.get(k) : 0;
+
                 LinearLayout row = new LinearLayout(ctx);
                 row.setOrientation(LinearLayout.HORIZONTAL);
                 row.setGravity(Gravity.CENTER_VERTICAL);
-                row.setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10));
+                row.setPadding(dp(ctx, 11), dp(ctx, 9), dp(ctx, 12), dp(ctx, 9));
                 GradientDrawable rBg = new GradientDrawable();
                 rBg.setColor(Color.parseColor("#1A1F2E"));
                 rBg.setCornerRadius(dp(ctx, 10));
-                rBg.setStroke(dp(ctx, 1), Color.parseColor("#2A3142"));
+                rBg.setStroke(dp(ctx, 1), Color.parseColor((fin > 0 || rdg > 0) ? "#2F455C" : "#2A3142"));
                 row.setBackground(rBg);
                 LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                 rLp.setMargins(0, 0, 0, dp(ctx, 8));
                 row.setLayoutParams(rLp);
 
+                TextView avTv = new TextView(ctx);
+                avTv.setText(authorMonogram(name));
+                avTv.setTextColor(Color.parseColor((fin > 0 || rdg > 0) ? "#5EEAD4" : "#FBBF24"));
+                avTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+                avTv.setTypeface(Typeface.DEFAULT_BOLD);
+                avTv.setGravity(Gravity.CENTER);
+                GradientDrawable avBg = new GradientDrawable();
+                avBg.setShape(GradientDrawable.OVAL);
+                avBg.setColor(Color.parseColor((fin > 0 || rdg > 0) ? "#132A2E" : "#282115"));
+                avBg.setStroke(dp(ctx, 1), Color.parseColor((fin > 0 || rdg > 0) ? "#1F5B63" : "#4A3A1E"));
+                avTv.setBackground(avBg);
+                LinearLayout.LayoutParams avLp = new LinearLayout.LayoutParams(dp(ctx, 32), dp(ctx, 32));
+                avLp.rightMargin = dp(ctx, 10);
+                avTv.setLayoutParams(avLp);
+                row.addView(avTv);
+
+                LinearLayout txtCol = new LinearLayout(ctx);
+                txtCol.setOrientation(LinearLayout.VERTICAL);
+                txtCol.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
                 TextView nameTv = new TextView(ctx);
                 nameTv.setText(name);
                 nameTv.setTextColor(Color.WHITE);
-                nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
                 nameTv.setTypeface(Typeface.DEFAULT_BOLD);
                 nameTv.setMaxLines(1);
                 nameTv.setEllipsize(TextUtils.TruncateAt.END);
-                nameTv.setPadding(0, 0, dp(ctx, 10), 0);
-                nameTv.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-                row.addView(nameTv);
+                txtCol.addView(nameTv);
+
+                StringBuilder sub = new StringBuilder();
+                if (fin > 0) sub.append("✓ ").append(fin).append(" finished");
+                if (rdg > 0) {
+                    if (sub.length() > 0) sub.append(" · ");
+                    sub.append("📖 ").append(rdg).append(" reading");
+                }
+                if (rCnt > 0) {
+                    if (sub.length() > 0) sub.append(" · ");
+                    sub.append(String.format(Locale.US, "★ %.1f", (double) rSum / (double) rCnt));
+                }
+                if (sub.length() == 0) {
+                    sub.append(n == 1 ? "Unread" : (n + " unread"));
+                }
+                TextView subTv = new TextView(ctx);
+                subTv.setText(sub.toString());
+                subTv.setTextColor(Color.parseColor((fin > 0 || rdg > 0) ? "#5EEAD4" : "#64748B"));
+                subTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                subTv.setSingleLine(true);
+                subTv.setEllipsize(TextUtils.TruncateAt.END);
+                txtCol.addView(subTv);
+                row.addView(txtCol);
 
                 TextView cntTv = new TextView(ctx);
                 cntTv.setText(n + (n == 1 ? " book ›" : " books ›"));
                 cntTv.setTextColor(Color.parseColor("#F59E0B"));
                 cntTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                 cntTv.setTypeface(Typeface.DEFAULT_BOLD);
+                cntTv.setPadding(dp(ctx, 8), 0, 0, 0);
                 row.addView(cntTv);
 
                 row.setOnClickListener(v -> {
@@ -2488,16 +2616,17 @@ public final class FolioMetadataCatalogDialog {
                 list.addView(row);
             }
             hdr.setText(q.isEmpty()
-                    ? "Authors Directory (" + keys.size() + ")"
-                    : "Authors Directory (" + shown + " of " + keys.size() + ")");
+                    ? "👤 Authors Directory (" + keys.size() + ")"
+                    : "👤 Authors Directory (" + shown + " of " + keys.size() + ")");
         };
-        renderAuthors.run();
+        renderSortRef[0].run();
+        renderAuthorsRef[0].run();
 
         authSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 authQuery[0] = s != null ? s.toString() : "";
-                renderAuthors.run();
+                renderAuthorsRef[0].run();
             }
             @Override public void afterTextChanged(Editable s) {}
         });
