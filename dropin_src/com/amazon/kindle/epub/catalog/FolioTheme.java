@@ -73,6 +73,25 @@ public final class FolioTheme {
         }
     }
 
+    private static final java.util.concurrent.CopyOnWriteArrayList<java.lang.ref.WeakReference<Runnable>> THEME_LISTENERS =
+            new java.util.concurrent.CopyOnWriteArrayList<java.lang.ref.WeakReference<Runnable>>();
+
+    public static void registerThemeListener(Runnable r) {
+        if (r == null) return;
+        THEME_LISTENERS.add(new java.lang.ref.WeakReference<Runnable>(r));
+    }
+
+    public static void notifyThemeChanged() {
+        for (java.lang.ref.WeakReference<Runnable> ref : THEME_LISTENERS) {
+            Runnable r = ref.get();
+            if (r == null) {
+                THEME_LISTENERS.remove(ref);
+            } else {
+                try { r.run(); } catch (Throwable ignored) {}
+            }
+        }
+    }
+
     public static void setThemeMode(Context ctx, String mode) {
         if (ctx == null || mode == null) return;
         try {

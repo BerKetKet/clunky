@@ -1,6 +1,12 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 149 (`Azath v16.3 KFX`) Stress-Tested, Verified & Staged (2026-11-25)**:
+  - Integrated Round 149 `FolioTheme.java` (`THEME_LISTENERS` weak-referenced listener registry + `notifyThemeChanged()`), `FolioMoreView.java` (`v16.3 KFX`, persistent `FrameLayout` in-place rebuilder replacing `Activity.recreate()`), and `OpenCatalogView.java` (persistent `FrameLayout` in-place rebuilder). Updated `rebuild_fast.sh` to stage `azath_v16.3_kfx`.
+  - Built `classes9.dex` (`473,324` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v16.3_kfx/base.apk` (`138,831,975` B, SHA256 `a09e804f949b6462830b77af4309d44d4a817f0479f2d20faf3a970c12c88cec`).
+  - Hardware stress-tested on **Samsung Galaxy M30** (`32001776e8e82623`): `com.azath.reader` updated `2026-11-25 02:31:10`, stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`). Executed 4 consecutive uninterrupted toggles (`Granite -> Limestone -> Granite -> Limestone -> Granite`) with `More <-> Home` tab switches; verified identical PID (`PID_START=17643`, `PID_END=17643`), `ZERO_CRASHES_AND_NO_SIGSYS` in `AndroidRuntime:E`/`FATAL:E`/`DEBUG:*`, and visually verified `verify_r149_azath_hotswap_granite.png` (`313,720` B).
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 148 (`Azath v16.2 KFX`) Verified, Staged & Audited (2026-11-25)**:
   - Integrated Round 148 `FolioIcons.java` (`#1A1B1E` PorterDuff.Mode.SRC_IN tint in Limestone Light Mode + `AUTHORS=28`), `FolioMoreView.java` (`v16.2 KFX`, all inner cards & headers dynamicized via `FolioTheme`, `Activity.recreate()` on theme pill toggle), and `OpenCatalogView.java` (Limestone `#E7E1D5` genre chips + `#1A1B1E` carousel book titles & archival fallbacks). Updated `rebuild_fast.sh` to stage `azath_v16.2_kfx`.
   - Built `classes9.dex` (`471,540` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v16.2_kfx/base.apk` (`138,827,879` B, SHA256 `263f6a9153f3eb7c1c9cc7d5e00f980cc6af92b760e8fea029c202ef2aa9c8fc`).

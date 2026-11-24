@@ -66,14 +66,19 @@ public final class OpenCatalogView {
     public static View wrap(View originalView) {
         try {
             if (originalView == null) return null;
-            final View v = build(originalView.getContext());
+            final Context ctx = originalView.getContext();
+            final FrameLayout host = new FrameLayout(ctx);
+            host.setLayoutParams(new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            host.addView(build(ctx), new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             final Runnable hideTask = new Runnable() {
                 @Override
                 public void run() {
-                    hideRedundantKindleSearchBar(v);
+                    hideRedundantKindleSearchBar(host);
                 }
             };
-            v.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+            host.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
                 @Override
                 public void onViewAttachedToWindow(View view) {
                     view.post(hideTask);
@@ -83,11 +88,28 @@ public final class OpenCatalogView {
                 @Override
                 public void onViewDetachedFromWindow(View view) {}
             });
-            v.post(hideTask);
-            v.postDelayed(hideTask, 400);
-            return v;
+            host.post(hideTask);
+            host.postDelayed(hideTask, 400);
+
+            final Runnable rebuilder = new Runnable() {
+                @Override public void run() {
+                    host.post(new Runnable() {
+                        @Override public void run() {
+                            try {
+                                host.removeAllViews();
+                                host.addView(build(ctx), new FrameLayout.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                                host.post(hideTask);
+                            } catch (Throwable ignored) {}
+                        }
+                    });
+                }
+            };
+            host.setTag(rebuilder); // keep strong ref tied to host lifecycle
+            FolioTheme.registerThemeListener(rebuilder);
+            return host;
         } catch (Throwable t) {
-            android.util.Log.e("OpenCatalogView", "Failed to build Folio Home", t);
+            android.util.Log.e("OpenCatalogView", "Failed to build Azath Home", t);
             return originalView;
         }
     }

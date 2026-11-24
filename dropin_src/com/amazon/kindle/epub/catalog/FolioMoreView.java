@@ -49,9 +49,30 @@ public final class FolioMoreView {
     public static View wrap(View originalView) {
         try {
             if (originalView == null) return null;
-            return build(originalView.getContext());
+            final Context ctx = originalView.getContext();
+            final FrameLayout host = new FrameLayout(ctx);
+            host.setLayoutParams(new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            host.addView(build(ctx), new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            final Runnable rebuilder = new Runnable() {
+                @Override public void run() {
+                    host.post(new Runnable() {
+                        @Override public void run() {
+                            try {
+                                host.removeAllViews();
+                                host.addView(build(ctx), new FrameLayout.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                            } catch (Throwable ignored) {}
+                        }
+                    });
+                }
+            };
+            host.setTag(rebuilder); // keep strong ref tied to host lifecycle
+            FolioTheme.registerThemeListener(rebuilder);
+            return host;
         } catch (Throwable t) {
-            android.util.Log.e("FolioMoreView", "Failed to build Folio Control Center", t);
+            android.util.Log.e("FolioMoreView", "Failed to build Azath Control Center", t);
             return originalView;
         }
     }
@@ -118,7 +139,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v16.2 KFX");
+        badgeTv.setText("v16.3 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(dynAccentSoft);
         badgeTv.setTypeface(FolioTheme.sansBold(ctx));
@@ -162,11 +183,7 @@ public final class FolioMoreView {
                 boolean nextLight = !FolioTheme.isLimestoneLight(ctx);
                 FolioTheme.setThemeMode(ctx, nextLight ? "limestone" : "granite");
                 themeTogglePill.setText(nextLight ? "Limestone" : "Granite");
-                if (ctx instanceof android.app.Activity) {
-                    ((android.app.Activity) ctx).recreate();
-                } else {
-                    Toast.makeText(ctx, "Theme set to " + (nextLight ? "Limestone (Light)" : "Granite (Dark)"), Toast.LENGTH_SHORT).show();
-                }
+                FolioTheme.notifyThemeChanged();
             }
         });
         subRow.addView(themeTogglePill);
@@ -5582,7 +5599,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Azath — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Azath v16.2 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Azath v16.3 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
