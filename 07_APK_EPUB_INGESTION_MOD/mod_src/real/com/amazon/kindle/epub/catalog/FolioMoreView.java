@@ -123,7 +123,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("Folio v11.7 KFX");
+        badgeTv.setText("Folio v11.8 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(ACCENT_AMBER);
         badgeTv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3373,6 +3373,269 @@ public final class FolioMoreView {
         return String.format(java.util.Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0));
     }
 
+    private static void showSavedBackupsDialog(final Context ctx, final AlertDialog parentStorDlg) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        final File backupDir = new File("/sdcard/kindle/backups");
+
+        LinearLayout root = new LinearLayout(ctx);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(0xFF11131A);
+        root.setPadding(dp(d, 18), dp(d, 16), dp(d, 18), dp(d, 10));
+
+        LinearLayout hdrRow = new LinearLayout(ctx);
+        hdrRow.setOrientation(LinearLayout.HORIZONTAL);
+        hdrRow.setGravity(Gravity.CENTER_VERTICAL);
+        hdrRow.setPadding(0, 0, 0, dp(d, 4));
+
+        final TextView titleTv = new TextView(ctx);
+        titleTv.setText("📦 Saved Backups & Exports");
+        titleTv.setTextColor(TEXT_PRIMARY);
+        titleTv.setTextSize(17);
+        titleTv.setTypeface(Typeface.DEFAULT_BOLD);
+        titleTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        hdrRow.addView(titleTv);
+
+        final TextView countTag = new TextView(ctx);
+        countTag.setTextColor(0xFF34D399);
+        countTag.setTextSize(11);
+        countTag.setTypeface(Typeface.DEFAULT_BOLD);
+        countTag.setPadding(dp(d, 9), dp(d, 4), dp(d, 9), dp(d, 4));
+        GradientDrawable ctBg = new GradientDrawable();
+        ctBg.setColor(0xFF0F2A22);
+        ctBg.setCornerRadius(dp(d, 10));
+        ctBg.setStroke(dp(d, 1), 0xFF1E6B52);
+        countTag.setBackground(ctBg);
+        hdrRow.addView(countTag);
+        root.addView(hdrRow);
+
+        TextView pathSub = new TextView(ctx);
+        pathSub.setText("/sdcard/kindle/backups");
+        pathSub.setTextColor(TEXT_MUTED);
+        pathSub.setTextSize(11.5f);
+        pathSub.setTypeface(Typeface.MONOSPACE);
+        pathSub.setPadding(0, 0, 0, dp(d, 12));
+        root.addView(pathSub);
+
+        ScrollView sv = new ScrollView(ctx);
+        sv.setVerticalScrollBarEnabled(false);
+        sv.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 340)));
+        final LinearLayout listHost = new LinearLayout(ctx);
+        listHost.setOrientation(LinearLayout.VERTICAL);
+        sv.addView(listHost);
+        root.addView(sv);
+
+        final java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US);
+        final Runnable[] renderRef = new Runnable[1];
+        renderRef[0] = new Runnable() {
+            @Override
+            public void run() {
+                listHost.removeAllViews();
+                java.util.List<File> files = new java.util.ArrayList<>();
+                if (backupDir.exists() && backupDir.isDirectory()) {
+                    File[] listed = backupDir.listFiles();
+                    if (listed != null) {
+                        for (File f : listed) {
+                            if (f.isFile()) files.add(f);
+                        }
+                    }
+                }
+                java.util.Collections.sort(files, new java.util.Comparator<File>() {
+                    @Override public int compare(File a, File b) {
+                        return Long.compare(b.lastModified(), a.lastModified());
+                    }
+                });
+                countTag.setText(files.size() + (files.size() == 1 ? " file" : " files"));
+
+                if (files.isEmpty()) {
+                    TextView emp = new TextView(ctx);
+                    emp.setText("No saved backups or exports yet. Use Backup/Restore, Reading Log, or Reading Notes to export files.");
+                    emp.setTextColor(0xFF94A3B8);
+                    emp.setTextSize(12.5f);
+                    emp.setPadding(dp(d, 14), dp(d, 16), dp(d, 14), dp(d, 16));
+                    GradientDrawable eBg = new GradientDrawable();
+                    eBg.setColor(BG_CARD);
+                    eBg.setCornerRadius(dp(d, 10));
+                    eBg.setStroke(dp(d, 1), 0xFF2A3140);
+                    emp.setBackground(eBg);
+                    listHost.addView(emp);
+                    return;
+                }
+
+                for (final File f : files) {
+                    String fn = f.getName();
+                    String ext = "FILE";
+                    int dot = fn.lastIndexOf('.');
+                    if (dot >= 0 && dot + 1 < fn.length()) {
+                        ext = fn.substring(dot + 1).toUpperCase(java.util.Locale.US);
+                    }
+                    int extCol = 0xFF94A3B8;
+                    int extFill = 0xFF1E2433;
+                    if ("HTML".equals(ext)) { extCol = 0xFF38BDF8; extFill = 0xFF152638; }
+                    else if ("MD".equals(ext)) { extCol = 0xFFC084FC; extFill = 0xFF2B1B3D; }
+                    else if ("JSON".equals(ext)) { extCol = 0xFFFBBF24; extFill = 0xFF2A2011; }
+                    else if ("CSV".equals(ext)) { extCol = 0xFF34D399; extFill = 0xFF0F2A22; }
+
+                    LinearLayout card = new LinearLayout(ctx);
+                    card.setOrientation(LinearLayout.HORIZONTAL);
+                    card.setGravity(Gravity.CENTER_VERTICAL);
+                    card.setPadding(dp(d, 10), dp(d, 10), dp(d, 10), dp(d, 10));
+                    GradientDrawable cBg = new GradientDrawable();
+                    cBg.setColor(BG_CARD);
+                    cBg.setCornerRadius(dp(d, 10));
+                    cBg.setStroke(dp(d, 1), 0xFF2A3140);
+                    card.setBackground(cBg);
+                    LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    cLp.bottomMargin = dp(d, 8);
+                    card.setLayoutParams(cLp);
+
+                    TextView badge = new TextView(ctx);
+                    badge.setText(ext);
+                    badge.setTextColor(extCol);
+                    badge.setTextSize(10);
+                    badge.setTypeface(Typeface.DEFAULT_BOLD);
+                    badge.setGravity(Gravity.CENTER);
+                    badge.setPadding(dp(d, 7), dp(d, 5), dp(d, 7), dp(d, 5));
+                    GradientDrawable bBg = new GradientDrawable();
+                    bBg.setColor(extFill);
+                    bBg.setCornerRadius(dp(d, 7));
+                    badge.setBackground(bBg);
+                    LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(
+                            dp(d, 44), ViewGroup.LayoutParams.WRAP_CONTENT);
+                    bLp.rightMargin = dp(d, 10);
+                    badge.setLayoutParams(bLp);
+                    card.addView(badge);
+
+                    LinearLayout mc = new LinearLayout(ctx);
+                    mc.setOrientation(LinearLayout.VERTICAL);
+                    mc.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+                    TextView nameTv = new TextView(ctx);
+                    nameTv.setText(fn);
+                    nameTv.setTextColor(TEXT_PRIMARY);
+                    nameTv.setTextSize(12.5f);
+                    nameTv.setTypeface(Typeface.DEFAULT_BOLD);
+                    nameTv.setSingleLine(true);
+                    nameTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                    mc.addView(nameTv);
+
+                    TextView metaTv = new TextView(ctx);
+                    metaTv.setText(formatBytesShort(f.length()) + " · " + sdf.format(new java.util.Date(f.lastModified())));
+                    metaTv.setTextColor(0xFF94A3B8);
+                    metaTv.setTextSize(10.5f);
+                    mc.addView(metaTv);
+                    card.addView(mc);
+
+                    TextView viewBtn = new TextView(ctx);
+                    viewBtn.setText("👁");
+                    viewBtn.setTextColor(ACCENT_TEAL);
+                    viewBtn.setTextSize(13);
+                    viewBtn.setPadding(dp(d, 8), dp(d, 5), dp(d, 8), dp(d, 5));
+                    GradientDrawable vBg = new GradientDrawable();
+                    vBg.setColor(0xFF152638);
+                    vBg.setCornerRadius(dp(d, 7));
+                    vBg.setStroke(dp(d, 1), 0xFF1E4E75);
+                    viewBtn.setBackground(vBg);
+                    LinearLayout.LayoutParams vLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    vLp.leftMargin = dp(d, 6);
+                    viewBtn.setLayoutParams(vLp);
+                    viewBtn.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            showBackupFilePreviewDialog(ctx, f);
+                        }
+                    });
+                    card.addView(viewBtn);
+
+                    TextView delBtn = new TextView(ctx);
+                    delBtn.setText("✕");
+                    delBtn.setTextColor(0xFFF87171);
+                    delBtn.setTextSize(12);
+                    delBtn.setTypeface(Typeface.DEFAULT_BOLD);
+                    delBtn.setPadding(dp(d, 8), dp(d, 5), dp(d, 8), dp(d, 5));
+                    GradientDrawable dBg = new GradientDrawable();
+                    dBg.setColor(0xFF2A181C);
+                    dBg.setCornerRadius(dp(d, 7));
+                    dBg.setStroke(dp(d, 1), 0xFF5C262E);
+                    delBtn.setBackground(dBg);
+                    LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    dLp.leftMargin = dp(d, 5);
+                    delBtn.setLayoutParams(dLp);
+                    delBtn.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            if (f.delete()) {
+                                Toast.makeText(ctx, "Deleted " + f.getName(), Toast.LENGTH_SHORT).show();
+                                renderRef[0].run();
+                            }
+                        }
+                    });
+                    card.addView(delBtn);
+
+                    listHost.addView(card);
+                }
+            }
+        };
+        renderRef[0].run();
+
+        new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setView(root)
+                .setPositiveButton("Close", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        if (parentStorDlg != null) {
+                            parentStorDlg.dismiss();
+                            showStorageDuplicatesDialog(ctx);
+                        }
+                    }
+                })
+                .show();
+    }
+
+    private static void showBackupFilePreviewDialog(final Context ctx, final File file) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        StringBuilder sb = new StringBuilder();
+        try {
+            java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(new java.io.FileInputStream(file), "UTF-8"));
+            char[] buf = new char[4096];
+            int r = br.read(buf);
+            if (r > 0) sb.append(buf, 0, r);
+            if (br.read() != -1) sb.append("\n\n... (truncated preview)");
+            br.close();
+        } catch (Throwable t) {
+            sb.append("Unable to preview file: ").append(t.getMessage());
+        }
+        final String previewText = sb.toString();
+
+        ScrollView sv = new ScrollView(ctx);
+        sv.setBackgroundColor(0xFF0D1017);
+        sv.setPadding(dp(d, 14), dp(d, 12), dp(d, 14), dp(d, 12));
+        TextView tv = new TextView(ctx);
+        tv.setText(previewText);
+        tv.setTextColor(0xFFCBD5E1);
+        tv.setTextSize(11.5f);
+        tv.setTypeface(Typeface.MONOSPACE);
+        tv.setTextIsSelectable(true);
+        sv.addView(tv);
+
+        new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(file.getName() + " (" + formatBytesShort(file.length()) + ")")
+                .setView(sv)
+                .setPositiveButton("Close", null)
+                .setNeutralButton("Copy", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                                ctx.getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (cm != null) {
+                            cm.setPrimaryClip(android.content.ClipData.newPlainText(file.getName(), previewText));
+                            Toast.makeText(ctx, "Copied preview to clipboard", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                })
+                .show();
+    }
+
     private static void showStorageDuplicatesDialog(final Context ctx) {
         final float d = ctx.getResources().getDisplayMetrics().density;
         long appLibBytes = dirSizeBytes(new File(ctx.getFilesDir(), "folio_library"))
@@ -3488,8 +3751,12 @@ public final class FolioMoreView {
 
         tileRow.addView(makeHealthBadge(ctx, d, "App Library", formatBytesShort(appLibBytes),
                 0xFF38BDF8, 0xFF152638, true, null));
-        tileRow.addView(makeHealthBadge(ctx, d, "Backups", formatBytesShort(backupBytes),
-                0xFF34D399, 0xFF122B24, true, null));
+        tileRow.addView(makeHealthBadge(ctx, d, "Backups ›", formatBytesShort(backupBytes),
+                0xFF34D399, 0xFF122B24, true, new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        showSavedBackupsDialog(ctx, storDlgRef[0]);
+                    }
+                }));
         tileRow.addView(makeHealthBadge(ctx, d, "Temp Cache", formatBytesShort(tempCacheBytes),
                 0xFFFBBF24, 0xFF2E2414, false, null));
         content.addView(tileRow);
@@ -5071,7 +5338,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Folio — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Folio v11.7 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Folio v11.8 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

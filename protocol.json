@@ -1,7 +1,7 @@
 {
-  "round": 117,
-  "version": "Folio v11.7 KFX",
-  "codename": "Reading Goal Pace Telemetry & Share Challenge",
+  "round": 118,
+  "version": "Folio v11.8 KFX",
+  "codename": "Saved Backups & Exports File Browser",
   "target_package": "com.amazon.kindle.epub",
   "stock_package_untouched": "com.amazon.kindle",
   "dropin_files": [
@@ -10,9 +10,9 @@
       "dest": "07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/FolioMoreView.java"
     }
   ],
-  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.7_kfx/base.apk",
+  "release_stage_dir": "07_APK_EPUB_INGESTION_MOD/release/folio_v11.8_kfx/base.apk",
   "verification_screenshots": [
-    "verify_r117_reading_goal_pace.png",
-    "verify_r117_about_v117.png"
+    "verify_r118_saved_backups_browser.png",
+    "verify_r118_about_v118.png"
   ]
 }

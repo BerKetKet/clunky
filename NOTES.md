@@ -1,6 +1,26 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v11.8 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 118 complete:
+  1. **Saved Backups & Exports File Browser (Task A & B)**:
+     - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java`.
+     - Built interactive emerald `Backups ›` tile in `💾 Storage & Duplicates` and full file browser (`showSavedBackupsDialog`) for `/sdcard/kindle/backups/`.
+     - Displays color-coded extension badges (`HTML` sky-blue, `MD` violet, `JSON` amber, `CSV` emerald, `DB` slate), sizes, timestamps, inline monospace preview (`showBackupFilePreviewDialog` with `📋 Copy`), and `✕` delete actions.
+     - Bumped badge and About Folio string to `Folio v11.8 KFX (Enhanced Typesetting)`.
+  2. **Visual Verification & Release Staging (Task B)**:
+     - Captured hardware proof screenshots on Galaxy M32:
+       * `verify_r118_saved_backups_browser.png` (216 KB) — `📦 Saved Backups & Exports` modal listing 11 files with badges, sizes, timestamps, and `👁` / `✕` buttons.
+       * `verify_r118_about_v118.png` (347 KB) — About Folio modal showing `Version: Folio v11.8 KFX (Enhanced Typesetting)` and live library stats.
+     - Safety Invariant: Stock `com.amazon.kindle` (v8.160.1.0) remains 100% UNTOUCHED (`lastUpdateTime=2026-11-19 21:59:23`).
+     - Staged signed Folio v11.8 KFX release APK (132 MB) at `07_APK_EPUB_INGESTION_MOD/release/folio_v11.8_kfx/base.apk`.
+  3. **Cover Architecture Directive**: Formally recorded and relayed to manager AI:
+     "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
+
+## Verification Evidence (Round 118)
+1. `verify_r118_saved_backups_browser.png`: Saved Backups & Exports modal with 11 files, badges, and preview/delete controls.
+2. `verify_r118_about_v118.png`: About Folio modal confirming `Version: Folio v11.8 KFX (Enhanced Typesetting)`.
+3. `dumpsys package com.amazon.kindle`: Stock app bit-for-bit intact (`lastUpdateTime=2026-11-19 21:59:23`).
+4. `dumpsys package com.amazon.kindle.epub`: Folio v11.8 KFX deployed (`lastUpdateTime=2026-11-24 04:01:29`).
 - **Current State**: Cloned package `com.amazon.kindle.epub` ("Folio v11.7 KFX") deployed and fully verified on Samsung Galaxy M32 alongside unmodified stock `com.amazon.kindle`. Round 117 complete:
   1. **Reading Goal Pace Telemetry & Share Challenge (Task A & B)**:
      - Integrated Gemini's pre-authored drop-in updates into `FolioMoreView.java`.
