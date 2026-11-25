@@ -694,14 +694,7 @@ public final class FolioFolderBrowserDialog {
                                 .setMessage("Converted " + finalOk + " of " + batch.size() + " EPUB" + (batch.size() == 1 ? "" : "s")
                                         + " into /sdcard/kindle/. Refresh now so your Library displays the new book" + (finalOk == 1 ? "" : "s") + " immediately.")
                                 .setPositiveButton("Refresh Library Now", (d2, w2) -> {
-                                    try {
-                                        android.content.Intent li = ctx.getPackageManager().getLaunchIntentForPackage(ctx.getPackageName());
-                                        if (li != null) {
-                                            li.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                            ctx.startActivity(li);
-                                            android.os.Process.killProcess(android.os.Process.myPid());
-                                        }
-                                    } catch (Throwable ignored) {}
+                                    AzathLibrarySync.restartToRefreshLibrary(ctx);
                                 })
                                 .setNegativeButton("Keep Browsing", null)
                                 .show();

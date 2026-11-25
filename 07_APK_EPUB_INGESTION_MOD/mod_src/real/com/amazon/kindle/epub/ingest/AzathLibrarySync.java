@@ -250,14 +250,18 @@ public final class AzathLibrarySync {
         try { f.delete(); } catch (Throwable ignored) {}
     }
 
-    public static void restartToRefreshLibrary(Context ctx) {
+    public static void restartToRefreshLibrary(final Context ctx) {
         if (ctx == null) return;
         try {
             Intent li = ctx.getPackageManager().getLaunchIntentForPackage(ctx.getPackageName());
-            if (li != null) {
-                li.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                ctx.startActivity(li);
-                android.os.Process.killProcess(android.os.Process.myPid());
+            if (li != null && li.getComponent() != null) {
+                Intent restart = Intent.makeRestartActivityTask(li.getComponent());
+                ctx.startActivity(restart);
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                    @Override public void run() {
+                        android.os.Process.killProcess(android.os.Process.myPid());
+                    }
+                }, 220);
             }
         } catch (Throwable ignored) {}
     }

@@ -1,6 +1,12 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 163 (`Azath v18.2 KFX`) Built, Deployed & Honest Failure Reported (2026-11-25)**:
+  - Copied Round 163 `FolioMoreView.java` (`v18.2 KFX`), `AzathLibrarySync.java`, `FolioFolderBrowserDialog.java`, and `FolioMetadataDb.java` verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/` and updated `rebuild_fast.sh` to stage `azath_v18.2_kfx`.
+  - Built `classes9.dex` (`498,356` B), installed `com.azath.reader` (`lastUpdateTime=2026-11-25 19:00:10`), and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.2_kfx/base.apk` (`138,856,551` B, SHA256 `616357fcbd75cf257e4331b557a004801be8c7b54365be3ca24691652ccd9658`).
+  - Honest Task B Failure: Imported `Aldous Huxley - Island.epub` (`Ingested OK: /sdcard/kindle/Island_FOLIO_8CE251A8A07B.kfx (1223991 B)`) and tapped `Refresh Library Now`. Instead of relaunching `com.azath.reader` into foreground, `Thread-22` hit `Fatal signal 31 (SIGSYS), code 1 (SYS_SECCOMP)` in `libKindleAndroidNativeBundlerJNI.so` (`Cause: seccomp prevented call to disallowed arm64 system call -241514045`), dropping `mCurrentFocus` to `com.android.launcher3.uioverrides.QuickstepLauncher` (`verify_r163_refresh_foreground.png`). Stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`).
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 162 (`Azath v18.1 KFX`) Verified, Staged & Audited (2026-11-25)**:
   - Integrated Round 162 `AzathLibrarySync.java`, `FolioMetadataDb.java` (with 1-symbol fix `TABLE` -> `"books_metadata"` at line 408), `FolioFolderBrowserDialog.java`, `OpenCatalogView.java`, and `FolioMoreView.java` (`v18.1 KFX`).
   - Built `classes9.dex` (`498,016` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.1_kfx/base.apk` (`138,856,551` B, SHA256 `a7023ce857181d4536c0017a6b1d4fe30830e575113c8f6240121d6edf9b57a8`).
