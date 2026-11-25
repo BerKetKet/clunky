@@ -165,11 +165,27 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         Set<String> seen = new LinkedHashSet<>();
         for (String part : csv.split(",")) {
             String g = part.trim();
-            if (!g.isEmpty() && seen.add(g.toLowerCase(Locale.ROOT))) {
+            if (!g.isEmpty() && !EpubMetadataExtractor.isNoiseTag(g)
+                    && seen.add(g.toLowerCase(Locale.ROOT))) {
                 arr.put(g);
             }
         }
         return arr.length() > 0 ? arr.toString() : "";
+    }
+
+    public static String dedupeGenresCsv(String csv) {
+        if (csv == null || csv.trim().isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        Set<String> seen = new LinkedHashSet<>();
+        for (String part : csv.split(",")) {
+            String g = part.trim();
+            if (!g.isEmpty() && !EpubMetadataExtractor.isNoiseTag(g)
+                    && seen.add(g.toLowerCase(Locale.ROOT))) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(g);
+            }
+        }
+        return sb.toString();
     }
 
     public void upsertBook(String bookKey, File kfxFile, File coverFile,
@@ -206,7 +222,7 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
 
             String incomingCover = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "";
             String coverPath = nonBlankOrPrior(incomingCover, prior != null ? prior.coverPath : "");
-            String genres = nonBlankOrPrior(meta.genresCsv(), prior != null ? prior.genres : "");
+            String genres = dedupeGenresCsv(nonBlankOrPrior(meta.genresCsv(), prior != null ? prior.genres : ""));
             String genresJson = nonBlankOrPrior(genresCsvToJson(genres), prior != null ? prior.genresJson : "");
             String publisher = nonBlankOrPrior(meta.publisher, prior != null ? prior.publisher : "");
             String pubDate = nonBlankOrPrior(meta.pubDate, prior != null ? prior.pubDate : "");

@@ -192,10 +192,13 @@ public final class EpubMetadataExtractor {
                             if ("title".equals(name) && isBlank(meta.title)) {
                                 meta.title = val;
                             } else if ("creator".equals(name)) {
-                                if (isBlank(meta.author)) {
-                                    meta.author = val;
-                                } else if (!meta.author.contains(val)) {
-                                    meta.author = meta.author + "; " + val;
+                                String normAuthor = normalizeAuthor(val);
+                                if (!isBlank(normAuthor)) {
+                                    if (isBlank(meta.author)) {
+                                        meta.author = normAuthor;
+                                    } else if (!meta.author.toLowerCase(Locale.ROOT).contains(normAuthor.toLowerCase(Locale.ROOT))) {
+                                        meta.author = meta.author + "; " + normAuthor;
+                                    }
                                 }
                             } else if ("publisher".equals(name) && isBlank(meta.publisher)) {
                                 meta.publisher = val;
@@ -228,7 +231,12 @@ public final class EpubMetadataExtractor {
         } finally {
             try { is.close(); } catch (Throwable ignored) {}
         }
-        meta.genres.addAll(genreSet);
+        Set<String> seenLower = new LinkedHashSet<>();
+        for (String g : genreSet) {
+            if (seenLower.add(g.toLowerCase(Locale.ROOT))) {
+                meta.genres.add(g);
+            }
+        }
     }
 
     private static String localName(String qName) {
@@ -348,15 +356,81 @@ public final class EpubMetadataExtractor {
         return name.isEmpty() ? "Untitled" : name;
     }
 
+    private static boolean isAuthorSuffix(String part) {
+        if (part == null) return false;
+        String k = part.trim().replace(".", "").toLowerCase(Locale.ROOT);
+        return "jr".equals(k) || "sr".equals(k) || "ii".equals(k)
+                || "iii".equals(k) || "iv".equals(k) || "phd".equals(k) || "md".equals(k);
+    }
+
+    /**
+     * Pure, Android-free author normalizer: converts "Last, First" -> "First Last"
+     * without mangling suffixes (Jr., Sr., III) or multi-author strings.
+     */
+    public static String normalizeAuthor(String raw) {
+        if (raw == null) return "";
+        String trimmed = cleanSpace(raw);
+        if (trimmed.isEmpty()) return "";
+        if (trimmed.contains(";")) {
+            String[] parts = trimmed.split(";");
+            StringBuilder sb = new StringBuilder();
+            for (String p : parts) {
+                String norm = normalizeSingleAuthor(p);
+                if (!norm.isEmpty()) {
+                    if (sb.length() > 0) sb.append("; ");
+                    sb.append(norm);
+                }
+            }
+            return sb.toString();
+        }
+        return normalizeSingleAuthor(trimmed);
+    }
+
+    private static String normalizeSingleAuthor(String raw) {
+        if (raw == null) return "";
+        String s = cleanSpace(raw);
+        if (s.isEmpty()) return "";
+        if (s.contains(" & ") || s.toLowerCase(Locale.ROOT).contains(" and ")) {
+            return s;
+        }
+        String[] commaParts = s.split(",");
+        if (commaParts.length == 2) {
+            String left = commaParts[0].trim();
+            String right = commaParts[1].trim();
+            if (!left.isEmpty() && !right.isEmpty() && !isAuthorSuffix(right)) {
+                return right + " " + left;
+            }
+            return s;
+        }
+        if (commaParts.length == 3 && isAuthorSuffix(commaParts[2])) {
+            String last = commaParts[0].trim();
+            String first = commaParts[1].trim();
+            String suffix = commaParts[2].trim();
+            if (!last.isEmpty() && !first.isEmpty()) {
+                return first + " " + last + " " + suffix;
+            }
+        }
+        return s;
+    }
+
     public static String normalizePubDate(String raw) {
         if (raw == null) return "";
         String s = raw.trim();
+        if (s.isEmpty()) return "";
         // Trim ISO timestamps like "2000-07-15 00:00:00+01:00" or "2014-06-06T00:00:00Z"
         int tIdx = s.indexOf('T');
         if (tIdx >= 4) s = s.substring(0, tIdx);
         int spIdx = s.indexOf(' ');
         if (spIdx >= 4) s = s.substring(0, spIdx);
-        return s.trim();
+        s = s.trim();
+        if (s.length() >= 10 && s.charAt(4) == '-' && s.charAt(7) == '-') {
+            return s.substring(0, 10);
+        }
+        if (s.length() >= 4 && Character.isDigit(s.charAt(0)) && Character.isDigit(s.charAt(1))
+                && Character.isDigit(s.charAt(2)) && Character.isDigit(s.charAt(3))) {
+            return s.length() == 4 ? s : s;
+        }
+        return s;
     }
 
     public static boolean isNoiseTag(String tag) {
