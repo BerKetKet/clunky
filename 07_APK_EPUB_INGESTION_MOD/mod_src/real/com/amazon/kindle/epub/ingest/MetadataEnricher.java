@@ -1,14 +1,15 @@
 package com.amazon.kindle.epub.ingest;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -32,8 +33,31 @@ import java.util.concurrent.ThreadFactory;
 public final class MetadataEnricher {
 
     private static final String TAG = "MetadataEnricher";
-    private static final int CONNECT_TIMEOUT_MS = 15000;
-    private static final int READ_TIMEOUT_MS = 15000;
+    private static final String PREFS_UI = "folio_ui_prefs";
+    private static final String KEY_ONLINE_ENRICHMENT = "online_enrichment_enabled";
+    private static final String USER_AGENT = "AzathReader/18.5 (Android; https://github.com/BerKetKet/clunky)";
+    private static final int CONNECT_TIMEOUT_MS = 8000;
+    private static final int READ_TIMEOUT_MS = 10000;
+    private static final int MAX_JSON_BYTES = 256 * 1024;
+    public static final int MAX_COVER_BYTES = 2 * 1024 * 1024;
+
+    public static boolean isOnlineEnrichmentEnabled(Context ctx) {
+        if (ctx == null) return true;
+        try {
+            SharedPreferences sp = ctx.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE);
+            return sp.getBoolean(KEY_ONLINE_ENRICHMENT, true);
+        } catch (Throwable ignored) {
+            return true;
+        }
+    }
+
+    public static void setOnlineEnrichmentEnabled(Context ctx, boolean enabled) {
+        if (ctx == null) return;
+        try {
+            ctx.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
+                    .edit().putBoolean(KEY_ONLINE_ENRICHMENT, enabled).apply();
+        } catch (Throwable ignored) {}
+    }
 
     private static final Set<String> IN_FLIGHT_KEYS = ConcurrentHashMap.newKeySet();
     private static final ExecutorService ENRICH_EXECUTOR = Executors.newFixedThreadPool(2, new ThreadFactory() {
@@ -62,6 +86,10 @@ public final class MetadataEnricher {
             final String contentHash,
             final long sourceSize) {
         if (ctx == null || bookKey == null || bookKey.isEmpty() || kfxFile == null || meta == null) {
+            return;
+        }
+        if (!isOnlineEnrichmentEnabled(ctx)) {
+            Log.i(TAG, "Online enrichment disabled by user preference; skipping network lookup for " + bookKey);
             return;
         }
         if (!IN_FLIGHT_KEYS.add(bookKey)) {
@@ -136,6 +164,7 @@ public final class MetadataEnricher {
 
     private static JSONObject queryFirstDoc(String queryParams) {
         HttpURLConnection conn = null;
+        InputStream in = null;
         try {
             String urlStr = "https://openlibrary.org/search.json?" + queryParams
                     + "&fields=key,title,author_name,first_publish_year,subject,publisher,isbn&limit=1";
@@ -144,25 +173,36 @@ public final class MetadataEnricher {
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
             conn.setReadTimeout(READ_TIMEOUT_MS);
-            conn.setRequestProperty("User-Agent", "FolioReader/3.9 (Android; Local-First EPUB)");
+            conn.setRequestProperty("User-Agent", USER_AGENT);
             conn.setRequestProperty("Accept", "application/json");
 
             if (conn.getResponseCode() != 200) return null;
 
-            StringBuilder body = new StringBuilder();
-            BufferedReader br = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
-            String line;
-            while ((line = br.readLine()) != null) body.append(line);
-            br.close();
+            in = conn.getInputStream();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int total = 0;
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                total += n;
+                if (total > MAX_JSON_BYTES) {
+                    Log.w(TAG, "Aborting Open Library JSON response exceeding " + MAX_JSON_BYTES + " bytes");
+                    return null;
+                }
+                baos.write(buf, 0, n);
+            }
 
-            JSONObject root = new JSONObject(body.toString());
+            JSONObject root = new JSONObject(new String(baos.toByteArray(), StandardCharsets.UTF_8));
             JSONArray docs = root.optJSONArray("docs");
             if (docs == null || docs.length() == 0) return null;
             return docs.getJSONObject(0);
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
+            Log.d(TAG, "Open Library query failed: " + t.getMessage());
             return null;
         } finally {
+            if (in != null) {
+                try { in.close(); } catch (Throwable ignored) {}
+            }
             if (conn != null) {
                 try { conn.disconnect(); } catch (Throwable ignored) {}
             }

@@ -426,6 +426,16 @@ public final class FolioMoreView {
                         com.amazon.kindle.epub.ingest.FolioWebBrowserDialog.showUrlSettingsDialog(ctx, refreshStats);
                     }
                 }));
+        final boolean enrichOn = com.amazon.kindle.epub.ingest.MetadataEnricher.isOnlineEnrichmentEnabled(ctx);
+        sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.SETTINGS, "Online Metadata Enrichment",
+                enrichOn ? "ON — Fetch genres & dates from Open Library" : "OFF — Strictly offline metadata only",
+                true, new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        boolean next = !com.amazon.kindle.epub.ingest.MetadataEnricher.isOnlineEnrichmentEnabled(ctx);
+                        com.amazon.kindle.epub.ingest.MetadataEnricher.setOnlineEnrichmentEnabled(ctx, next);
+                        refreshStats.run();
+                    }
+                }));
         sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.SETTINGS, "Reader & App Settings",
                 "Reading preferences, dark mode & dictionary", true, new View.OnClickListener() {
                     @Override public void onClick(View v) { openSettings(ctx); }
