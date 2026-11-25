@@ -60,7 +60,15 @@ public final class EpubMetadataExtractor {
                         opfEntry = findEntryIgnoreCase(zip, opfPath);
                     }
                     if (opfEntry != null) {
-                        parseOpf(zip.getInputStream(opfEntry), meta);
+                        InputStream opfIs = null;
+                        try {
+                            opfIs = zip.getInputStream(opfEntry);
+                            parseOpf(opfIs, meta);
+                        } finally {
+                            if (opfIs != null) {
+                                try { opfIs.close(); } catch (Throwable ignored) {}
+                            }
+                        }
                     }
                 }
             } catch (Throwable ignored) {
@@ -85,6 +93,9 @@ public final class EpubMetadataExtractor {
 
     private static String findOpfPath(ZipFile zip) {
         ZipEntry container = zip.getEntry("META-INF/container.xml");
+        if (container == null) {
+            container = findEntryIgnoreCase(zip, "META-INF/container.xml");
+        }
         if (container != null) {
             InputStream is = null;
             try {
@@ -99,6 +110,14 @@ public final class EpubMetadataExtractor {
                         String name = localName(parser.getName());
                         if ("rootfile".equalsIgnoreCase(name)) {
                             String fullPath = parser.getAttributeValue(null, "full-path");
+                            if (isBlank(fullPath)) {
+                                for (int i = 0; i < parser.getAttributeCount(); i++) {
+                                    if ("full-path".equalsIgnoreCase(localName(parser.getAttributeName(i)))) {
+                                        fullPath = parser.getAttributeValue(i);
+                                        break;
+                                    }
+                                }
+                            }
                             if (!isBlank(fullPath)) {
                                 return fullPath.trim();
                             }
@@ -168,7 +187,7 @@ public final class EpubMetadataExtractor {
                         break;
                     }
                     if (inMetadata && name.equals(currentTag)) {
-                        String val = cleanSpace(textBuf.toString());
+                        String val = cleanSpace(decodeXmlEntities(textBuf.toString()));
                         if (!isBlank(val)) {
                             if ("title".equals(name) && isBlank(meta.title)) {
                                 meta.title = val;
@@ -234,9 +253,51 @@ public final class EpubMetadataExtractor {
         return "";
     }
 
+    public static String decodeXmlEntities(String s) {
+        if (s == null || s.indexOf('&') < 0) return s == null ? "" : s;
+        StringBuilder sb = new StringBuilder(s.length());
+        int i = 0;
+        while (i < s.length()) {
+            char c = s.charAt(i);
+            if (c == '&') {
+                int semi = s.indexOf(';', i + 1);
+                if (semi > i + 1 && semi - i <= 10) {
+                    String ent = s.substring(i + 1, semi);
+                    if ("amp".equals(ent)) { sb.append('&'); i = semi + 1; continue; }
+                    if ("lt".equals(ent)) { sb.append('<'); i = semi + 1; continue; }
+                    if ("gt".equals(ent)) { sb.append('>'); i = semi + 1; continue; }
+                    if ("quot".equals(ent)) { sb.append('"'); i = semi + 1; continue; }
+                    if ("apos".equals(ent)) { sb.append('\''); i = semi + 1; continue; }
+                    if (ent.startsWith("#x") || ent.startsWith("#X")) {
+                        try {
+                            int cp = Integer.parseInt(ent.substring(2), 16);
+                            if (cp > 0 && cp <= 0x10FFFF) {
+                                sb.append(Character.toChars(cp));
+                                i = semi + 1;
+                                continue;
+                            }
+                        } catch (Throwable ignored) {}
+                    } else if (ent.startsWith("#")) {
+                        try {
+                            int cp = Integer.parseInt(ent.substring(1), 10);
+                            if (cp > 0 && cp <= 0x10FFFF) {
+                                sb.append(Character.toChars(cp));
+                                i = semi + 1;
+                                continue;
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+                }
+            }
+            sb.append(c);
+            i++;
+        }
+        return sb.toString();
+    }
+
     private static String stripHtml(String s) {
         if (s == null) return "";
-        String plain = s.replaceAll("<[^>]+>", " ");
+        String plain = decodeXmlEntities(s).replaceAll("<[^>]+>", " ");
         return cleanSpace(plain);
     }
 
