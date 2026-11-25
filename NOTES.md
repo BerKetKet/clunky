@@ -1,6 +1,12 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 164 (`Azath v18.3 KFX`) Verified, Staged & Pushed (2026-11-25)**:
+  - Copied Round 164 `FolioMoreView.java` (`v18.3 KFX`), `AzathLibrarySync.java` (zero-`SIGSYS` `openImportedBookLive`), and `FolioFolderBrowserDialog.java` (`OPEN BOOK` + `DONE`) verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/` and updated `rebuild_fast.sh` to stage `azath_v18.3_kfx`.
+  - Built `classes9.dex` (`497,484` B), installed `com.azath.reader` (`lastUpdateTime=2026-11-25 19:09:01`), and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.3_kfx/base.apk` (`138,856,551` B, SHA256 `0ea7caf2f4654f5bda694fc623a3fe70a7323581eadb1976a68774338755fd08`).
+  - Task B (`OPEN BOOK` Live Indexing) **PASS**: Imported `Blindsight (Peter Watts)` (`Ingested OK: /sdcard/kindle/Blindsight_FOLIO_DB72217519E6.kfx (1163154 B)`, `reconcileLibrary complete: activeKfx=29 changes=0`), tapped `OPEN BOOK` -> launched `StandAloneBookReaderActivity` -> pressed Back to `MainActivity` -> `Library` showed `Most recent book. Blindsight, Peter Watts` live on the same `PID=5199` (`verify_r164_open_and_library_live.png`) with **ZERO `SIGSYS`** and **ZERO `FATAL EXCEPTION`**. Stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`).
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 163 (`Azath v18.2 KFX`) Built, Deployed & Honest Failure Reported (2026-11-25)**:
   - Copied Round 163 `FolioMoreView.java` (`v18.2 KFX`), `AzathLibrarySync.java`, `FolioFolderBrowserDialog.java`, and `FolioMetadataDb.java` verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/` and updated `rebuild_fast.sh` to stage `azath_v18.2_kfx`.
   - Built `classes9.dex` (`498,356` B), installed `com.azath.reader` (`lastUpdateTime=2026-11-25 19:00:10`), and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.2_kfx/base.apk` (`138,856,551` B, SHA256 `616357fcbd75cf257e4331b557a004801be8c7b54365be3ca24691652ccd9658`).

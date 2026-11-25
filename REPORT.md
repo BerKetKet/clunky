@@ -1,41 +1,30 @@
-# Round 163 Report — Azath v18.2 KFX (`com.azath.reader`)
+# Round 164 Report — Azath v18.3 KFX (`com.azath.reader`)
 
 ## 1. Target Hardware & Safety Invariants
 - **Device**: Physical Samsung Galaxy M30 (`32001776e8e82623`), TrebleDroid Android 13 GSI (`arm64-v8a`).
-- **Active Package**: `com.azath.reader` (`versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-25 19:00:10`).
+- **Active Package**: `com.azath.reader` (`versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-25 19:09:01`).
 - **Stock Kindle Safety**: `com.amazon.kindle` (`versionName=8.160.1.0(2.0.124621.0)`) verified **100% UNTOUCHED** (`lastUpdateTime=2026-11-19 21:59:23`).
 - **Play Store Folio (`ct.reader`)**: Zero launches, zero inspections, zero references.
 
 ---
 
-## 2. Task A — Build, Deploy & Stage (`Azath v18.2 KFX`)
-- Copied Round 163 drop-ins (`FolioMoreView.java`, `AzathLibrarySync.java`, `FolioFolderBrowserDialog.java`, `FolioMetadataDb.java`) verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/`.
-- Updated `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` to stage `azath_v18.2_kfx`.
-- Built `classes9.dex` (`498,356` bytes), signed, installed on Galaxy M30, and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.2_kfx/base.apk` (`138,856,551` bytes, SHA256 `616357fcbd75cf257e4331b557a004801be8c7b54365be3ca24691652ccd9658`).
+## 2. Task A — Verbatim Drop-In Build, Deploy, Stage & GitHub Push (`Azath v18.3 KFX`)
+- Copied Round 164 `FolioMoreView.java` (`v18.3 KFX`), `AzathLibrarySync.java` (`openImportedBookLive`, zero `makeRestartActivityTask` / zero `Process.killProcess`), and `FolioFolderBrowserDialog.java` (`OPEN BOOK` / `DONE` dialog) verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/`.
+- Updated `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` to stage `azath_v18.3_kfx`.
+- Built `classes9.dex` (`497,484` bytes), installed `com.azath.reader` on Galaxy M30, and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.3_kfx/base.apk` (`138,856,551` bytes, SHA256 `0ea7caf2f4654f5bda694fc623a3fe70a7323581eadb1976a68774338755fd08`).
 
 ---
 
-## 3. Task B — `REFRESH LIBRARY NOW` Foreground Relaunch Test (HONEST FAILURE)
-Per STOP-AND-REPORT, no local workaround was attempted; exact hardware evidence is reported below:
-- **Repro Flow**: Imported `Aldous Huxley - Island.epub` via `Control Center -> Import EPUBs from Storage` -> tapped `Refresh Library Now` in `FolioFolderBrowserDialog` (`refresh_prompt.xml`) -> waited 6s without manual `adb` launch.
-- **Observed Result**: **FAIL** — `com.azath.reader` did **not** relaunch into the foreground. Instead, it crashed with `SIGSYS` and dropped to the Android Launcher (`verify_r163_refresh_foreground.png`):
-  - `mCurrentFocus=Window{4272dc u0 com.android.launcher3/com.android.launcher3.uioverrides.QuickstepLauncher}`
-- **Exact `logcat` / Tombstone Evidence**:
-```text
-11-25 19:01:29.680  1335  2100 I AzathLibrarySync: Ingested OK: /sdcard/kindle/Island_FOLIO_8CE251A8A07B.kfx (1223991 B)
-11-25 19:01:29.727  1335  2100 I AzathLibrarySync: reconcileLibrary complete: activeKfx=28 changes=0
-11-25 19:01:37.698  1335  1516 F libc    : Fatal signal 31 (SIGSYS), code 1 (SYS_SECCOMP) in tid 1516 (Thread-22), pid 1335 (om.azath.reader)
-11-25 19:01:38.540  2330  2330 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
-11-25 19:01:38.540  2330  2330 F DEBUG   : Process uptime: 40s
-11-25 19:01:38.540  2330  2330 F DEBUG   : Cmdline: com.azath.reader
-11-25 19:01:38.540  2330  2330 F DEBUG   : pid: 1335, tid: 1516, name: Thread-22  >>> com.azath.reader <<<
-11-25 19:01:38.540  2330  2330 F DEBUG   : signal 31 (SIGSYS), code 1 (SYS_SECCOMP), fault addr --------
-11-25 19:01:38.540  2330  2330 F DEBUG   : Cause: seccomp prevented call to disallowed arm64 system call -241514045
-11-25 19:01:38.540  2330  2330 F DEBUG   : backtrace:
-11-25 19:01:38.540  2330  2330 F DEBUG   :       #00 pc 000000000386a098  /data/app/~~Hr1XTa_qj3eJO2e7-T0Kqw==/com.azath.reader-IGhr4vRs1QhWrGwXp2x0RQ==/lib/arm64/libKindleAndroidNativeBundlerJNI.so (BuildId: ba7121ff131750b4cacf2bdfcfc1562a0efb8a20)
-11-25 19:01:38.540  2330  2330 F DEBUG   :       #01 pc 1400037a72a6a42c  <unknown>
-```
-- **Screenshot Included**: `verify_r163_refresh_foreground.png` (and `/tmp/r163/{import_list.xml,refresh_prompt.xml}` captured during the run).
+## 3. Task B — Zero-`SIGSYS` Post-Import `Open Book` -> Live Library Indexing (PASS)
+- **Import**: Imported `Blindsight (Peter Watts) (z-library.sk, 1lib.sk, z-lib.sk).epub` (`468 KB`) via `Control Center -> Import EPUBs from Storage -> /sdcard/Books`.
+  - `logcat`: `11-25 19:12:18.674 5199 6779 I AzathLibrarySync: Ingested OK: /sdcard/kindle/Blindsight_FOLIO_DB72217519E6.kfx (1163154 B)`
+  - `logcat`: `11-25 19:12:18.739 5199 6779 I AzathLibrarySync: reconcileLibrary complete: activeKfx=29 changes=0`
+- **Completion Dialog**: Displayed `Imported to Azath Library` with `OPEN BOOK` and `DONE`.
+- **Tap `OPEN BOOK`**:
+  - Opened straight into `com.azath.reader/com.amazon.kcp.reader.StandAloneBookReaderActivity` (`mCurrentFocus=Window{4c5b59a u0 com.azath.reader/com.amazon.kcp.reader.StandAloneBookReaderActivity}`).
+- **Press Back & Switch to Library**:
+  - Returned cleanly to `MainActivity`, kept the exact same process (`PID=5199`), and `Blindsight, Peter Watts` appeared **LIVE** as `Most recent book` in the bottom-left floating cover slot (`verify_r164_open_and_library_live.png`).
+- **Crash Audit**: **ZERO `SIGSYS`**, **ZERO `FATAL EXCEPTION`**.
 
 ---
 

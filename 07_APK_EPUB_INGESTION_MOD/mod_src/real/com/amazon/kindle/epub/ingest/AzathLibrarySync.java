@@ -250,32 +250,14 @@ public final class AzathLibrarySync {
         try { f.delete(); } catch (Throwable ignored) {}
     }
 
-    public static void restartToRefreshLibrary(final Context ctx) {
-        if (ctx == null) return;
+    /**
+     * Opens a newly imported .kfx book directly via ThirdPartyUpgradePage -> StandAloneBookReaderActivity.
+     * This natively indexes the book into Kindle's live in-memory Library without MainActivity restart or SIGSYS.
+     */
+    public static void openImportedBookLive(final Context ctx, final File kfxFile) {
+        if (ctx == null || kfxFile == null || !kfxFile.exists()) return;
         try {
-            Intent li = ctx.getPackageManager().getLaunchIntentForPackage(ctx.getPackageName());
-            if (li != null && li.getComponent() != null) {
-                Intent restart = Intent.makeRestartActivityTask(li.getComponent());
-                ctx.startActivity(restart);
-                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
-                    @Override public void run() {
-                        android.os.Process.killProcess(android.os.Process.myPid());
-                    }
-                }, 220);
-            }
-        } catch (Throwable ignored) {}
-    }
-
-    public static void promptLibraryRefresh(final Context ctx, String title, String message) {
-        if (ctx == null) return;
-        try {
-            AlertDialog dlg = new AlertDialog.Builder(ctx)
-                    .setTitle(title)
-                    .setMessage(message)
-                    .setPositiveButton("Refresh Library Now", (d, w) -> restartToRefreshLibrary(ctx))
-                    .setNegativeButton("Keep Browsing", null)
-                    .show();
-            FolioTheme.applyToDialog(ctx, dlg);
+            ExternalEpubActivity.launchKfxReader(ctx, kfxFile);
         } catch (Throwable ignored) {}
     }
 }

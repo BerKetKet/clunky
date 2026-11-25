@@ -658,6 +658,7 @@ public final class FolioFolderBrowserDialog {
 
             new Thread(() -> {
                 int okCount = 0;
+                File lastImportedKfx = null;
                 File sdKindle = new File("/sdcard/kindle");
                 if (!sdKindle.exists()) sdKindle.mkdirs();
                 File targetDir = (sdKindle.exists() && sdKindle.canWrite())
@@ -675,6 +676,7 @@ public final class FolioFolderBrowserDialog {
                             continue;
                         }
                         importedSourceNames.add(epub.getName().toLowerCase(Locale.ROOT));
+                        if (ir.kfxFile != null && ir.kfxFile.exists()) lastImportedKfx = ir.kfxFile;
                         okCount++;
                     } catch (Throwable t) {
                         Log.e(TAG, "Batch import error for " + epub.getName(), t);
@@ -683,21 +685,25 @@ public final class FolioFolderBrowserDialog {
 
                 try { AzathLibrarySync.reconcileLibrary(ctx); } catch (Throwable ignored) {}
                 final int finalOk = okCount;
+                final File finalLastKfx = lastImportedKfx;
                 mainHandler.post(() -> {
                     btnImport.setEnabled(true);
                     selectedFiles.clear();
                     updateImportLabel.run();
                     renderList.run();
                     if (finalOk > 0) {
-                        AlertDialog doneDlg = new AlertDialog.Builder(ctx)
+                        AlertDialog.Builder b = new AlertDialog.Builder(ctx)
                                 .setTitle("Imported to Azath Library")
                                 .setMessage("Converted " + finalOk + " of " + batch.size() + " EPUB" + (batch.size() == 1 ? "" : "s")
-                                        + " into /sdcard/kindle/. Refresh now so your Library displays the new book" + (finalOk == 1 ? "" : "s") + " immediately.")
-                                .setPositiveButton("Refresh Library Now", (d2, w2) -> {
-                                    AzathLibrarySync.restartToRefreshLibrary(ctx);
-                                })
-                                .setNegativeButton("Keep Browsing", null)
-                                .show();
+                                        + " into /sdcard/kindle/. Open now to read and index it immediately in your Library.")
+                                .setNegativeButton("Done", null);
+                        if (finalLastKfx != null && finalLastKfx.exists()) {
+                            b.setPositiveButton(finalOk == 1 ? "Open Book" : "Open Latest Book", (d2, w2) -> {
+                                try { dialog.dismiss(); } catch (Throwable ignored) {}
+                                AzathLibrarySync.openImportedBookLive(ctx, finalLastKfx);
+                            });
+                        }
+                        AlertDialog doneDlg = b.show();
                         FolioTheme.applyToDialog(ctx, doneDlg);
                     } else {
                         Toast.makeText(ctx,
