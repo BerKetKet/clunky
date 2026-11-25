@@ -33,7 +33,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Dark-themed multi-select EPUB folder importer with:
@@ -56,7 +59,13 @@ public final class FolioFolderBrowserDialog {
 
     public static void show(final Context ctx) {
         final Handler mainHandler = new Handler(Looper.getMainLooper());
-        final Set<String> importedSourceNames = loadImportedSources(ctx);
+        final ExecutorService scanExecutor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "azath-folder-scan");
+            t.setDaemon(true);
+            return t;
+        });
+        final AtomicInteger scanGeneration = new AtomicInteger(0);
+        final Set<String> importedSourceNames = new HashSet<>();
         final List<File> allEpubsInDir = new ArrayList<>();
         final List<File> selectedFiles = new ArrayList<>();
         final boolean[] hideImported = new boolean[] { false };
@@ -501,39 +510,67 @@ public final class FolioFolderBrowserDialog {
         renderListRef[0] = renderList;
 
         final Runnable loadDir = () -> {
+            final int gen = scanGeneration.incrementAndGet();
             displayLimit[0] = 60;
             selectedFiles.clear();
             allEpubsInDir.clear();
             subDirsInDir.clear();
             updateImportLabel.run();
 
-            String dirPath = etPath.getText().toString().trim();
-            File dir = new File(dirPath);
-            if (!dir.exists() || !dir.isDirectory()) {
-                listContainer.removeAllViews();
-                statusTv.setText("Folder not found: " + dirPath);
-                return;
-            }
-            File[] children = dir.listFiles();
-            if (children == null) {
-                listContainer.removeAllViews();
-                statusTv.setText("Cannot read folder: " + dirPath);
-                return;
-            }
-            try {
-                ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
-                        .edit().putString("last_import_dir", dirPath).apply();
-            } catch (Throwable ignored) {}
-            for (File f : children) {
-                if (f.isDirectory() && !f.getName().startsWith(".")) {
-                    subDirsInDir.add(f);
-                } else if (f.isFile() && f.getName().toLowerCase(Locale.ROOT).endsWith(".epub")) {
-                    allEpubsInDir.add(f);
+            final String dirPath = etPath.getText().toString().trim();
+            listContainer.removeAllViews();
+            statusTv.setText("Scanning " + dirPath + "...");
+
+            scanExecutor.execute(() -> {
+                if (gen != scanGeneration.get()) return;
+                final Set<String> freshImported = loadImportedSources(ctx);
+                final File dir = new File(dirPath);
+                if (!dir.exists() || !dir.isDirectory()) {
+                    mainHandler.post(() -> {
+                        if (gen != scanGeneration.get()) return;
+                        listContainer.removeAllViews();
+                        statusTv.setText("Folder not found: " + dirPath);
+                    });
+                    return;
                 }
-            }
-            subDirsInDir.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
-            allEpubsInDir.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
-            renderList.run();
+                File[] children = dir.listFiles();
+                if (children == null) {
+                    mainHandler.post(() -> {
+                        if (gen != scanGeneration.get()) return;
+                        listContainer.removeAllViews();
+                        statusTv.setText("Cannot read folder: " + dirPath);
+                    });
+                    return;
+                }
+                try {
+                    ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                            .edit().putString("last_import_dir", dirPath).apply();
+                } catch (Throwable ignored) {}
+
+                final List<File> foundDirs = new ArrayList<>();
+                final List<File> foundEpubs = new ArrayList<>();
+                for (File f : children) {
+                    if (gen != scanGeneration.get()) return;
+                    if (f.isDirectory() && !f.getName().startsWith(".")) {
+                        foundDirs.add(f);
+                    } else if (f.isFile() && f.getName().toLowerCase(Locale.ROOT).endsWith(".epub")) {
+                        foundEpubs.add(f);
+                    }
+                }
+                foundDirs.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
+                foundEpubs.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
+
+                mainHandler.post(() -> {
+                    if (gen != scanGeneration.get()) return;
+                    importedSourceNames.clear();
+                    importedSourceNames.addAll(freshImported);
+                    subDirsInDir.clear();
+                    subDirsInDir.addAll(foundDirs);
+                    allEpubsInDir.clear();
+                    allEpubsInDir.addAll(foundEpubs);
+                    renderList.run();
+                });
+            });
         };
         loadDirRef[0] = loadDir;
 
