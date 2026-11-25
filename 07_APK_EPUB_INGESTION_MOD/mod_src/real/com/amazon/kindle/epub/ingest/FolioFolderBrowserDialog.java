@@ -598,7 +598,9 @@ public final class FolioFolderBrowserDialog {
                 String shortLbl = qd.replace("/sdcard/", "");
                 if (shortLbl.isEmpty()) shortLbl = qd;
                 chip.setText((isPin ? "★ " : "") + shortLbl);
-                chip.setTextColor(Color.parseColor(isCur ? "#15171A" : (isPin ? "#D4C9B8" : "#BDB8AE")));
+                chip.setTextColor(isCur
+                        ? FolioTheme.bgModal(ctx)
+                        : (isPin ? FolioTheme.accent(ctx) : FolioTheme.textSecondary(ctx)));
                 chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
                 chip.setTypeface(isCur || isPin ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                 chip.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
