@@ -112,8 +112,6 @@ public final class AzathLibrarySync {
                 return new IngestResult(false, bookKey, outKfx, outCover, meta, "KFX conversion failed");
             }
 
-            try { MetadataEnricher.enrichInPlace(meta); } catch (Throwable ignored) {}
-
             long sourceSize = epubFile.length();
             FolioMetadataDb db = new FolioMetadataDb(ctx);
             try {
@@ -157,6 +155,8 @@ public final class AzathLibrarySync {
             } catch (Throwable t) {
                 Log.w(TAG, "ingestKfxLive exception: " + t.getClass().getName() + ": " + t.getMessage(), t);
             }
+
+            MetadataEnricher.enqueueAsync(ctx, bookKey, outKfx, outCover, dispName, meta, contentHash, sourceSize);
 
             Log.i(TAG, "Ingested OK: " + outKfx.getAbsolutePath() + " (" + outKfx.length() + " B, liveIndexed=" + liveIndexed + ")");
             return new IngestResult(true, bookKey, outKfx, outCover, meta, null, registered, liveIndexed);

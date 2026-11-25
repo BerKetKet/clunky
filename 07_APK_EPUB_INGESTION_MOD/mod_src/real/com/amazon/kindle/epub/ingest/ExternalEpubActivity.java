@@ -268,10 +268,10 @@ public class ExternalEpubActivity extends Activity {
 
                 boolean registeredOk = true;
                 if (addToLibrary) {
-                    MetadataEnricher.enrichInPlace(meta);
+                    long sourceSize = stagedEpub.length();
                     FolioMetadataDb metaDb = new FolioMetadataDb(this);
                     try {
-                        metaDb.upsertBook(bookKey, outKfx, outCover, displayName, meta, contentHash, stagedEpub.length());
+                        metaDb.upsertBook(bookKey, outKfx, outCover, displayName, meta, contentHash, sourceSize);
                     } finally {
                         metaDb.close();
                     }
@@ -284,6 +284,7 @@ public class ExternalEpubActivity extends Activity {
                     }
                     com.amazon.kindle.epub.catalog.FolioTheme.triggerLibraryRescan(this, outKfx);
                     try { android.media.MediaScannerConnection.scanFile(this, new String[]{ outKfx.getAbsolutePath() }, null, null); } catch (Throwable ignored) {}
+                    MetadataEnricher.enqueueAsync(this, bookKey, outKfx, outCover, displayName, meta, contentHash, sourceSize);
                 }
 
                 stagedEpub.delete();

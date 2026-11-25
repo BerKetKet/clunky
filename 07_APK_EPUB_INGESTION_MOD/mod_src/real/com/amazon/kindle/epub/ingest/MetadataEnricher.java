@@ -1,14 +1,23 @@
 package com.amazon.kindle.epub.ingest;
 
+import android.content.Context;
+import android.util.Log;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * Lightweight, non-blocking metadata enricher using Open Library Search API.
@@ -19,10 +28,60 @@ import java.nio.charset.StandardCharsets;
  */
 public final class MetadataEnricher {
 
+    private static final String TAG = "MetadataEnricher";
     private static final int CONNECT_TIMEOUT_MS = 15000;
     private static final int READ_TIMEOUT_MS = 15000;
 
+    private static final Set<String> IN_FLIGHT_KEYS = ConcurrentHashMap.newKeySet();
+    private static final ExecutorService ENRICH_EXECUTOR = Executors.newFixedThreadPool(2, new ThreadFactory() {
+        private int count = 0;
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "azath-enrich-" + (++count));
+            t.setDaemon(true);
+            return t;
+        }
+    });
+
     private MetadataEnricher() {}
+
+    /**
+     * Enqueues asynchronous Open Library enrichment onto a bounded daemon executor,
+     * deduplicated per bookKey, persisting updates non-destructively via FolioMetadataDb.upsertBook.
+     */
+    public static void enqueueAsync(
+            final Context ctx,
+            final String bookKey,
+            final File kfxFile,
+            final File coverFile,
+            final String sourceName,
+            final EpubMetadataExtractor.BookMeta meta,
+            final String contentHash,
+            final long sourceSize) {
+        if (ctx == null || bookKey == null || bookKey.isEmpty() || kfxFile == null || meta == null) {
+            return;
+        }
+        if (!IN_FLIGHT_KEYS.add(bookKey)) {
+            Log.d(TAG, "Enrichment already queued for book_key=" + bookKey);
+            return;
+        }
+        final Context appCtx = ctx.getApplicationContext();
+        ENRICH_EXECUTOR.execute(() -> {
+            try {
+                enrichInPlace(meta);
+                FolioMetadataDb db = new FolioMetadataDb(appCtx);
+                try {
+                    db.upsertBook(bookKey, kfxFile, coverFile, sourceName, meta, contentHash, sourceSize);
+                } finally {
+                    db.close();
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "Async enrichment failed for " + bookKey + ": " + t.getMessage());
+            } finally {
+                IN_FLIGHT_KEYS.remove(bookKey);
+            }
+        });
+    }
 
     public static void enrichInPlace(EpubMetadataExtractor.BookMeta meta) {
         if (meta == null) return;
