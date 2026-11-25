@@ -7,6 +7,8 @@ import android.media.MediaScannerConnection;
 import android.util.Log;
 import com.amazon.kindle.epub.catalog.FolioTheme;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -136,10 +138,155 @@ public final class AzathLibrarySync {
         }, "azath-launch-reconcile").start();
     }
 
+    public static final class BookEntry {
+        public final String bookKey;
+        public final String kfxPath;
+        public final boolean existsOnDisk;
+
+        public BookEntry(String bookKey, String kfxPath, boolean existsOnDisk) {
+            this.bookKey = bookKey;
+            this.kfxPath = kfxPath;
+            this.existsOnDisk = existsOnDisk;
+        }
+    }
+
+    public static final class ScanResult {
+        public final boolean sdKindleHealthy;
+        public final boolean privateDirHealthy;
+        public final Set<String> activePaths;
+        public final Set<String> activeNamesLower;
+
+        public ScanResult(boolean sdKindleHealthy, boolean privateDirHealthy,
+                          Set<String> activePaths, Set<String> activeNamesLower) {
+            this.sdKindleHealthy = sdKindleHealthy;
+            this.privateDirHealthy = privateDirHealthy;
+            this.activePaths = activePaths != null ? activePaths : Collections.<String>emptySet();
+            this.activeNamesLower = activeNamesLower != null ? activeNamesLower : Collections.<String>emptySet();
+        }
+    }
+
+    public static final class ReconcilePlan {
+        public final boolean skipDestructive;
+        public final boolean circuitBreakerTripped;
+        public final String warningReason;
+        public final List<String> dbKeysToDelete;
+        public final List<String> backfillPaths;
+        public final List<String> cacheNamesToPrune;
+
+        public ReconcilePlan(boolean skipDestructive, boolean circuitBreakerTripped,
+                             String warningReason, List<String> dbKeysToDelete,
+                             List<String> backfillPaths, List<String> cacheNamesToPrune) {
+            this.skipDestructive = skipDestructive;
+            this.circuitBreakerTripped = circuitBreakerTripped;
+            this.warningReason = warningReason;
+            this.dbKeysToDelete = dbKeysToDelete;
+            this.backfillPaths = backfillPaths;
+            this.cacheNamesToPrune = cacheNamesToPrune;
+        }
+    }
+
+    /**
+     * Exact base-name boundary matcher for files/epub_cache/ entries.
+     * Cache entries observed on device are <base>.epub.kfx, <base>.epub.kfx.cover.jpg,
+     * <base>.epub.sdr (as well as <base>.kfx, <base>.kfx.cover.jpg, <base>.sdr, <base>.prc, <base>.azw3).
+     * Never uses loose startsWith() so "book1" cannot falsely match "book10".
+     */
+    public static boolean isCacheEntryReferenced(String cacheFileNameLower, Set<String> activeNamesLower) {
+        if (cacheFileNameLower == null || cacheFileNameLower.isEmpty() || activeNamesLower == null) {
+            return false;
+        }
+        for (String an : activeNamesLower) {
+            if (an == null || !an.endsWith(".kfx")) continue;
+            String base = an.substring(0, an.length() - 4);
+            if (base.isEmpty()) continue;
+            if (cacheFileNameLower.equals(base + ".kfx")
+                    || cacheFileNameLower.equals(base + ".kfx.cover.jpg")
+                    || cacheFileNameLower.equals(base + ".sdr")
+                    || cacheFileNameLower.equals(base + ".epub.kfx")
+                    || cacheFileNameLower.equals(base + ".epub.kfx.cover.jpg")
+                    || cacheFileNameLower.equals(base + ".epub.sdr")
+                    || cacheFileNameLower.equals(base + ".prc")
+                    || cacheFileNameLower.equals(base + ".azw3")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Pure, Android-free reconcile planner for JVM unit testing and runtime execution.
+     */
+    public static ReconcilePlan planReconcile(
+            ScanResult scan,
+            List<BookEntry> existingRecords,
+            List<String> cacheEntryNames) {
+        List<BookEntry> recs = existingRecords != null ? existingRecords : Collections.<BookEntry>emptyList();
+        boolean sdKindleInUse = false;
+        for (BookEntry r : recs) {
+            if (r.kfxPath != null && r.kfxPath.startsWith("/sdcard/kindle")) {
+                sdKindleInUse = true;
+                break;
+            }
+        }
+
+        if (sdKindleInUse && !scan.sdKindleHealthy) {
+            return new ReconcilePlan(
+                    true,
+                    false,
+                    "Skipping destructive reconcile: /sdcard/kindle scan unhealthy while DB rows reference /sdcard/kindle",
+                    Collections.<String>emptyList(),
+                    Collections.<String>emptyList(),
+                    Collections.<String>emptyList());
+        }
+
+        List<String> candidateDeletes = new ArrayList<>();
+        Set<String> indexedPaths = new HashSet<>();
+        for (BookEntry r : recs) {
+            if (r.kfxPath == null || r.kfxPath.isEmpty()) continue;
+            if (!r.existsOnDisk) {
+                if (r.bookKey != null && !r.bookKey.isEmpty()) {
+                    candidateDeletes.add(r.bookKey);
+                }
+            } else {
+                indexedPaths.add(r.kfxPath);
+            }
+        }
+
+        int totalRows = recs.size();
+        boolean circuitTripped = candidateDeletes.size() > 10
+                || (totalRows > 0 && candidateDeletes.size() * 2 > totalRows);
+        String warn = null;
+        if (circuitTripped) {
+            warn = "Circuit breaker tripped: would delete " + candidateDeletes.size()
+                    + " of " + totalRows + " DB rows; aborting all deletes";
+            candidateDeletes = Collections.<String>emptyList();
+        }
+
+        List<String> backfill = new ArrayList<>();
+        for (String path : scan.activePaths) {
+            if (!indexedPaths.contains(path)) {
+                backfill.add(path);
+            }
+        }
+
+        List<String> cachePrune = new ArrayList<>();
+        boolean allScansHealthy = scan.sdKindleHealthy && scan.privateDirHealthy;
+        if (!circuitTripped && allScansHealthy && !scan.activeNamesLower.isEmpty() && cacheEntryNames != null) {
+            for (String cn : cacheEntryNames) {
+                if (cn == null) continue;
+                if (!isCacheEntryReferenced(cn.toLowerCase(Locale.US), scan.activeNamesLower)) {
+                    cachePrune.add(cn);
+                }
+            }
+        }
+
+        return new ReconcilePlan(false, circuitTripped, warn, candidateDeletes, backfill, cachePrune);
+    }
+
     /**
      * Authoritative library accounting pass:
      *  1. Cleans legacy duplicate synthetic AMZNID0/CR!...KFX/0/ rows in kindle_library.db.
-     *  2. Removes dead FolioMetadataDb rows whose .kfx file was deleted from disk.
+     *  2. Removes dead FolioMetadataDb rows whose .kfx file was deleted from disk (guarded by scan health + circuit breaker).
      *  3. Indexes any /sdcard/kindle/*.kfx files missing from FolioMetadataDb.
      *  4. Prunes ONLY orphan files in files/epub_cache/ that do not belong to any active Library book.
      */
@@ -151,15 +298,16 @@ public final class AzathLibrarySync {
 
             Set<String> activeNames = new HashSet<>();
             Set<String> activePaths = new HashSet<>();
-            File[] scanDirs = new File[] {
-                    new File("/sdcard/kindle"),
-                    new File(ctx.getFilesDir(), "folio_library")
-            };
-            for (File dir : scanDirs) {
-                if (dir == null || !dir.isDirectory()) continue;
-                File[] files = dir.listFiles();
-                if (files == null) continue;
-                for (File f : files) {
+            File sdDir = new File("/sdcard/kindle");
+            File privDir = new File(ctx.getFilesDir(), "folio_library");
+
+            File[] sdFiles = (sdDir.isDirectory() && sdDir.canRead()) ? sdDir.listFiles() : null;
+            boolean sdHealthy = sdDir.isDirectory() && sdDir.canRead() && sdFiles != null;
+            if (!sdHealthy) {
+                Log.w(TAG, "Scan unhealthy for /sdcard/kindle (exists=" + sdDir.exists()
+                        + " isDir=" + sdDir.isDirectory() + " canRead=" + sdDir.canRead() + ")");
+            } else {
+                for (File f : sdFiles) {
                     if (f.isFile() && f.getName().toLowerCase(Locale.US).endsWith(".kfx") && f.length() >= 128) {
                         activePaths.add(f.getAbsolutePath());
                         activeNames.add(f.getName().toLowerCase(Locale.US));
@@ -167,27 +315,61 @@ public final class AzathLibrarySync {
                 }
             }
 
+            File[] privFiles = (privDir.isDirectory() && privDir.canRead()) ? privDir.listFiles() : null;
+            boolean privHealthy = privDir.isDirectory() && privDir.canRead() && privFiles != null;
+            if (privHealthy) {
+                for (File f : privFiles) {
+                    if (f.isFile() && f.getName().toLowerCase(Locale.US).endsWith(".kfx") && f.length() >= 128) {
+                        activePaths.add(f.getAbsolutePath());
+                        activeNames.add(f.getName().toLowerCase(Locale.US));
+                    }
+                }
+            }
+
+            ScanResult scan = new ScanResult(sdHealthy, privHealthy, activePaths, activeNames);
+
+            File epubCache = new File(ctx.getFilesDir(), "epub_cache");
+            List<String> cacheNames = new ArrayList<>();
+            if (epubCache.isDirectory()) {
+                File[] cached = epubCache.listFiles();
+                if (cached != null) {
+                    for (File cf : cached) cacheNames.add(cf.getName());
+                }
+            }
+
             // Reconcile FolioMetadataDb against disk ground truth
             FolioMetadataDb db = new FolioMetadataDb(ctx);
+            ReconcilePlan plan;
             try {
                 List<FolioMetadataDb.BookRecord> recs = db.getAllBooks();
-                Set<String> indexedPaths = new HashSet<>();
+                List<BookEntry> entries = new ArrayList<>(recs.size());
                 for (FolioMetadataDb.BookRecord r : recs) {
-                    if (r.kfxPath == null || r.kfxPath.isEmpty()) continue;
-                    File f = ExternalEpubActivity.resolveExistingKfxFile(ctx, new File(r.kfxPath));
-                    if (f == null || !f.exists() || f.length() < 128) {
+                    File resolved = (r.kfxPath != null && !r.kfxPath.isEmpty())
+                            ? ExternalEpubActivity.resolveExistingKfxFile(ctx, new File(r.kfxPath))
+                            : null;
+                    boolean onDisk = resolved != null && resolved.exists() && resolved.length() >= 128;
+                    entries.add(new BookEntry(r.bookKey, onDisk ? resolved.getAbsolutePath() : r.kfxPath, onDisk));
+                }
+
+                plan = planReconcile(scan, entries, cacheNames);
+                if (plan.warningReason != null) {
+                    Log.w(TAG, plan.warningReason);
+                }
+
+                if (!plan.skipDestructive && !plan.circuitBreakerTripped) {
+                    for (String delKey : plan.dbKeysToDelete) {
                         try {
-                            db.deleteBook(r.bookKey);
+                            db.deleteBook(delKey);
+                            Log.i(TAG, "Deleted stale DB row book_key=" + delKey + " reason=kfx_missing_on_disk");
                             changes++;
-                        } catch (Throwable ignored) {}
-                    } else {
-                        indexedPaths.add(f.getAbsolutePath());
+                        } catch (Throwable t) {
+                            Log.w(TAG, "Failed deleting DB row " + delKey, t);
+                        }
                     }
                 }
 
                 // Backfill any on-disk /sdcard/kindle/*.kfx missing from FolioMetadataDb
-                for (String path : activePaths) {
-                    if (indexedPaths.contains(path)) continue;
+                for (String path : plan.backfillPaths) {
                     File kfx = new File(path);
                     String baseTitle = kfx.getName();
                     if (baseTitle.toLowerCase(Locale.US).endsWith(".kfx")) {
@@ -210,24 +392,14 @@ public final class AzathLibrarySync {
                 db.close();
             }
 
-            // Prune ONLY unreferenced orphan files in files/epub_cache/ (preserving any file matching an active book)
-            File epubCache = new File(ctx.getFilesDir(), "epub_cache");
-            if (epubCache.isDirectory()) {
-                File[] cached = epubCache.listFiles();
-                if (cached != null) {
-                    for (File cf : cached) {
-                        String cn = cf.getName().toLowerCase(Locale.US);
-                        boolean referenced = false;
-                        for (String an : activeNames) {
-                            if (cn.startsWith(an.replace(".kfx", ""))) {
-                                referenced = true;
-                                break;
-                            }
-                        }
-                        if (!referenced) {
-                            deleteRecursive(cf);
-                            changes++;
-                        }
+            // Prune ONLY unreferenced orphan files in files/epub_cache/ when scan is healthy & activeNames non-empty
+            if (!plan.skipDestructive && !plan.circuitBreakerTripped && !plan.cacheNamesToPrune.isEmpty()) {
+                for (String cn : plan.cacheNamesToPrune) {
+                    File cf = new File(epubCache, cn);
+                    if (cf.exists()) {
+                        deleteRecursive(cf);
+                        Log.i(TAG, "Pruned orphan epub_cache entry: " + cf.getAbsolutePath() + " reason=unreferenced_by_active_kfx");
+                        changes++;
                     }
                 }
             }
