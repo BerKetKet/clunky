@@ -1,6 +1,12 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 161 (`Azath v18.0 KFX`) Verified, Staged & Audited (2026-11-25)**:
+  - Copied Round 161 `dp/g.java` (removed `.epub` from background sideload enumerator + `shouldBlockAutoEpubCrawl`) and `FolioMoreView.java` (`v18.0 KFX`) verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/` and updated `rebuild_fast.sh` to stage `azath_v18.0_kfx`.
+  - Built `classes9.dex` (`493,524` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.0_kfx/base.apk` (`138,852,455` B, SHA256 `80ba7bda7ec795c2547fc05bbdf875d3bfe40cb127a3e7cbdd0af62049cc5ee4`).
+  - Purged `/data/user/0/com.azath.reader/files/epub_cache/*`, launched `Azath v18.0 KFX` on **Samsung Galaxy M30** (`32001776e8e82623`), opened `Library` + `Control Center` (`v18.0 KFX`), and waited 15s: total `/data/user/0/com.azath.reader` dropped from **2.9 GB** to **30 MB** (`epub_cache` **4.0K**, 0 files), `/sdcard/kindle/` Library books intact, zero crashes / zero `SIGSYS`, and stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`).
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 160 Read-Only Storage Diagnostic (`com.azath.reader`) Completed (2026-11-25)**:
   - Executed read-only storage audit on **Samsung Galaxy M30** (`32001776e8e82623`): found `/data/user/0/com.azath.reader/files/epub_cache` is **2.9 GB** (pre-converted `.epub.kfx` + `.cover.jpg` + `.sdr` files from `2026-11-25 07:51–08:01`), while `/data/app/...` is `259M`, `/sdcard/Android/data/com.azath.reader` is `33M`, `folio_library` is `4.3M`, and `/sdcard/kindle` is `202,894 KB`. Stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`).
 - **Round 159 (`Azath v17.9 KFX`) Verified, Staged & Audited (2026-11-25)**:

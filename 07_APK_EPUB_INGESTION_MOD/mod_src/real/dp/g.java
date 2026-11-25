@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import ji.j;
 
@@ -21,7 +22,6 @@ public class g extends b {
     private static volatile String sLastUserId = null;
 
     static {
-        c.add(".epub");
         c.add(".azw1");
     }
 
@@ -34,7 +34,6 @@ public class g extends b {
         if (extensions != null) {
             c.addAll(extensions);
         }
-        c.add(".epub");
         c.add(".azw1");
     }
 
@@ -42,9 +41,22 @@ public class g extends b {
         return Collections.unmodifiableCollection(c);
     }
 
+    private static boolean shouldBlockAutoEpubCrawl(File file) {
+        if (file == null) return false;
+        String name = file.getName().toLowerCase(Locale.US);
+        if (!name.endsWith(".epub")) return false;
+        String path = file.getAbsolutePath().toLowerCase(Locale.US);
+        // Never auto-crawl and auto-transcode unimported EPUB folders (e.g., /sdcard/en/0/, /sdcard/Download/)
+        // Users explicitly import EPUBs via Batch Importer, Web Browser, or Open With Azath into /sdcard/kindle/.
+        return !path.startsWith("/sdcard/kindle/") && !path.startsWith("/storage/emulated/0/kindle/");
+    }
+
     @Override
     public a a(String userId, File file) {
         if (userId != null && !userId.isEmpty()) sLastUserId = userId;
+        if (shouldBlockAutoEpubCrawl(file)) {
+            return null;
+        }
         File kindleFile = EpubTranscoder.ensureKindleFile(file);
         a meta = super.a(userId, kindleFile);
         EpubTranscoder.registerInLibrary(userId, file, meta);
@@ -58,16 +70,15 @@ public class g extends b {
     @Override
     public a e(String userId, File file, ContentState state, xt.a bookId) {
         if (userId != null && !userId.isEmpty()) sLastUserId = userId;
+        if (shouldBlockAutoEpubCrawl(file)) {
+            return null;
+        }
         File kindleFile = EpubTranscoder.ensureKindleFile(file);
         a meta = super.e(userId, kindleFile, state, bookId);
         EpubTranscoder.registerInLibrary(userId, file, meta);
         return meta;
     }
 
-    /**
-     * Immediately injects a newly converted .kfx file into Kindle's live in-memory ILibraryService
-     * so the Library tab displays the book immediately without requiring an app relaunch.
-     */
     public static boolean ingestKfxLive(File kfxFile) {
         if (kfxFile == null || !kfxFile.exists()) return false;
         try {
@@ -88,10 +99,8 @@ public class g extends b {
                     lib.W(uid, single, false);
                 }
             }
-            android.util.Log.i("AzathLiveIngest", "Live-registered KFX in ILibraryService: " + kfxFile.getName());
             return true;
-        } catch (Throwable t) {
-            android.util.Log.w("AzathLiveIngest", "ingestKfxLive error: " + t.getMessage());
+        } catch (Throwable ignored) {
             return false;
         }
     }
