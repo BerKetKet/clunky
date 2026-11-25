@@ -1,6 +1,13 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 165 QC Remediation (`Azath v18.6 KFX`, branch `round-165-qc-fixes`) Verified & Pushed (2026-11-26)**:
+  - Completed Tasks `E1`–`E6` (`574707a`, `fc357a7`, `62657af`, `531340c`, `9140cfa`, `267164a`), `F1`–`F6` (`1a03839`, `8f48a76`, `92bd2cb`, `3f54edb`, `dc40c8b`, `bc232b9`), and `G-P0P1` (`ba42c77`, `QC_FINDINGS_ROUND_165.md`) on branch `round-165-qc-fixes`.
+  - Pure-JVM unit tests (`./scripts/run_unit_tests.sh`): `AzathUnitTests: passed=38 failed=0 total=38`.
+  - Built `classes9.dex` (`532,984` B), deployed `com.azath.reader` (`lastUpdateTime=2026-11-26 02:21:52`), and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.6_kfx/base.apk` (SHA256 `beb6b8cf25a60c0b6db98bfd9c35c71b97e70664db98f3f5df3d3d725da7dd2c`).
+  - M30 smoke verified: `PID_START=22144 == PID_END=22144`, `reconcileLibrary complete: activeKfx=30 changes=27`, `StandAloneBookReaderActivity` open & Back, `['v18.6 KFX', 'Granite']` <-> Limestone hot-swap, `folio_metadata_backup.json` (`19,569` B, zero `.tmp`), `ZERO_CRASHES_ZERO_WARNINGS`, stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`).
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 164 QC Remediation (`Azath v18.5 KFX`, branch `round-164-qc-fixes`) Verified & Pushed (2026-11-26)**:
   - Completed `R163-Closeout` (`6037f2a`, `f086d62`) and Tasks `C1`–`C4`, `D1`–`D5` (`54dac5b`, `5d23910`, `fcc00fe`, `2699c1a`, `bcaaefc`, `99e512b`, `912bb23`, `d336031`, `71c095f`) on branch `round-164-qc-fixes`.
   - Built `classes9.dex` (`529,188` B), deployed `com.azath.reader` (`lastUpdateTime=2026-11-26 01:57:18`), and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.5_kfx/base.apk` (SHA256 `a410b2f543f05c579a0ba130be4e5b45a42e2649f22f02f2a1c63778104333ee`).

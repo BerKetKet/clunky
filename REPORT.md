@@ -1,53 +1,56 @@
-# Round 164 QC Remediation Report — Azath v18.5 KFX (`round-164-qc-fixes`)
+# Round 165 QC Remediation Report — Azath v18.6 KFX (`round-165-qc-fixes`)
 
 ## 1. Target Hardware & Safety Invariants
 - **Device**: Physical Samsung Galaxy M30 (`32001776e8e82623`), TrebleDroid Android 13 GSI (`arm64-v8a`).
-- **Branch**: `round-164-qc-fixes` (branched from `round-163-qc-fixes`, pushed to `origin/round-164-qc-fixes`).
-- **Active Package**: `com.azath.reader` (`versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-26 01:57:18`).
-- **Staged Release**: `07_APK_EPUB_INGESTION_MOD/release/azath_v18.5_kfx/base.apk` (SHA256 `a410b2f543f05c579a0ba130be4e5b45a42e2649f22f02f2a1c63778104333ee`).
+- **Branch**: `round-165-qc-fixes` (branched from `round-164-qc-fixes`, pushed to `origin/round-165-qc-fixes`).
+- **Active Package**: `com.azath.reader` (`versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-26 02:21:52`).
+- **Staged Release**: `07_APK_EPUB_INGESTION_MOD/release/azath_v18.6_kfx/base.apk` (SHA256 `beb6b8cf25a60c0b6db98bfd9c35c71b97e70664db98f3f5df3d3d725da7dd2c`).
 - **Stock Kindle Safety**: `com.amazon.kindle` (`versionName=8.160.1.0(2.0.124621.0)`) verified **100% UNTOUCHED** (`lastUpdateTime=2026-11-19 21:59:23`).
-- **Crash & Constraint Audit (`logcat -d -b crash,main`)**: Zero `FATAL EXCEPTION`, zero `SIGSYS`, zero `SQLiteConstraintException`, zero `BadTokenException`, zero `no such column` warnings.
+- **Crash & Constraint Audit (`logcat -d -b crash,main`)**: Zero `FATAL EXCEPTION`, zero `SIGSYS`, zero `SQLiteConstraintException`, zero `no such column` warnings (`ZERO_CRASHES_ZERO_WARNINGS`).
 - **Play Store Folio (`ct.reader`)**: Zero launches, zero inspections, zero references.
 
 ---
 
-## 2. Per-Task Status Table (Branch `round-164-qc-fixes`)
+## 2. Per-Task Status Table (Branch `round-165-qc-fixes`)
 | Task | Status | Commit | Summary |
 | :--- | :--- | :--- | :--- |
-| **R163-Closeout** | **DONE** | `6037f2a`, `f086d62` | Fixed `cleanupLegacyDuplicateRows` to query `LocalContent.FILE_PATH` (not `KindleContent`), scoped chunked `IN (...)` deletes on `KindleContent`/`LocalContent`/`UserContent`; required `sdKindle.isDirectory() && sdKindle.canWrite()` in `ExternalEpubActivity`. |
-| **C1** | **DONE** | `54dac5b` | Deferred Open Library enrichment onto a bounded 2-thread daemon `ExecutorService` (`MetadataEnricher.enqueueAsync`) deduplicated per `book_key`, persisting updates non-destructively via `FolioMetadataDb.upsertBook`. |
-| **C2** | **DONE** | `5d23910` | Added pure Android-free `MetadataEnricher.isAcceptableMatch(...)` (normalized ISBN or title Jaccard `>= 0.75` + author overlap) and preserved non-empty OPF metadata fields. |
-| **C3** | **DONE** | `fcc00fe` | Enforced `connectTimeout=8000`, `readTimeout=10000`, `256 KB` JSON response cap, `AzathReader/18.5 (Android; https://github.com/BerKetKet/clunky)` `User-Agent`, and `"online_enrichment_enabled"` toggle in `FolioMoreView`. |
-| **C4** | **DONE** | `2699c1a` | Added `AtomicBoolean cancelled` + `Cancel Import` button in `FolioFolderBrowserDialog` checking cleanly between books with honest `Imported X of Y (cancelled)` status. |
-| **D1** | **DONE** | `bcaaefc` | Moved `listFiles()`, stat/sort, and `FolioMetadataDb` imported-source queries off UI thread onto single-thread `scanExecutor` with `AtomicInteger scanGeneration` cancellation. |
-| **D2** | **DONE** | `99e512b` | Added `FolioTheme.isContextDead(ctx)`, guarded `mainHandler.post` callbacks in `FolioFolderBrowserDialog` & `ExternalEpubActivity`, and shut down `scanExecutor` in `OnDismissListener`. |
-| **D3** | **DONE** | `912bb23` | Replaced filename-only `Already Imported` check with `ImportedIndex` matching `(lowercaseFilename, sourceSize)` when `source_size > 0` (legacy fallback for `<= 0`). |
-| **D4** | **DONE** | `d336031` | Replaced hardcoded hex color literals in `FolioFolderBrowserDialog` and `ExternalEpubActivity` with `FolioTheme` dynamic getters. |
-| **D5** | **DONE** | `71c095f` | Added `content://`/`file://` scheme & `..` traversal checks, `250 MB` size cap, `cache/epub_staging/` cleanup (`finally` + `>1h` sweep in `reconcileLibrary`), `120s` `libkfxconv.so` timeout, and `Azath v18.5 KFX` version bump. |
+| **E1** | **DONE** | `574707a` | Added `decodeXmlEntities` (`&amp;`, `&apos;`, `&quot;`, `&lt;`, `&gt;`, `&#...;`, `&#x...;`), case-insensitive `META-INF/container.xml` fallback, namespace-agnostic attribute scan, and `finally` `InputStream` close in `EpubMetadataExtractor.java`. |
+| **E2** | **DONE** | `fc357a7` | Added pure `EpubMetadataExtractor.normalizeIsbn(String)` with ISBN-13 (`978`/`979`) & ISBN-10 (`X`) checksum validation, UUID/Calibre/URL rejection, and ISBN-13 preference over ISBN-10. |
+| **E3** | **DONE** | `62657af` | Added pure `EpubMetadataExtractor.normalizeAuthor(String)` (handles `Last, First`, `Jr.`/`Sr.`/`III`, `;` multi-author), ISO `normalizePubDate`, and case-insensitive genre deduplication before `genres_json`/CSV writes. |
+| **E4** | **DONE** | `531340c` | Added pure `AzathLibrarySync.sanitizeFilenameBase(title, bookKey)` stripping separators/NUL/hostile chars, capping length `<= 80`, and falling back to `Book_<bookKey>`. |
+| **E5** | **DONE** | `9140cfa` | Made `FolioTheme` font caches `volatile`, used `applicationContext` for static `AssetManager` reads in `FolioTheme` & `FolioIcons`, and closed icon `InputStream` in `finally`. |
+| **E6** | **DONE** | `267164a` | Switched `FolioMetadataBackup` JSON/Markdown/CSV/HTML exports to atomic `.tmp -> renameTo`, fixed RFC-4180 CSV escaping, and validated `books` array & entries before restore. |
+| **F1** | **DONE** | `1a03839` | Removed 13 strictly redundant files in `dropin_src/` (`git rm -r dropin_src`); preserved `dropin_rust/`, `dropin_res/`, and `dropin_assets/` per Escalation Guard. |
+| **F2** | **DONE** | `8f48a76` | Rewrote root `README.md` for Azath (`com.azath.reader`), Dual Stone Edition, `mod_src/real/`, `rebuild_fast.sh`, `scripts/run_unit_tests.sh`, and hardware safety invariants. |
+| **F3** | **DONE** | `92bd2cb` | Audited `kfx_converter` (`160000 commit 61f664c4207ba2eef9d58037f5f4c92dba52230e`, no `.gitmodules`) and documented its dangling gitlink state in `README.md`. |
+| **F4** | **DONE** | `3f54edb` | Untracked `07_APK_EPUB_INGESTION_MOD/dex/classes4.dex` (`git rm --cached`) without history rewrite and added it to `.gitignore`. |
+| **F5** | **DONE** | `dc40c8b` | Moved 158 tracked/untracked root `verify_*.png` & `ref_*.png` screenshots into `screenshots/`. |
+| **F6** | **DONE** | `bc232b9` | Added `07_APK_EPUB_INGESTION_MOD/tests/AzathUnitTests.java` and `scripts/run_unit_tests.sh` covering `planReconcile`, `isCacheEntryReferenced`, `isAcceptableMatch` (R164 T8 closure), `normalizeIsbn`, `normalizeAuthor`, `normalizePubDate`, and `sanitizeFilenameBase`. |
+| **G** | **DONE** | `ba42c77` | Audited all 7 unreviewed files in `QC_FINDINGS_ROUND_165.md`, fixed P0 (`FolioWebBrowserDialog` inline ingest bypassing `AzathLibrarySync.ingestEpub`) & P1 (unclosed `in`/`fos`/`conn` + `250 MB` cap), and bumped `Azath v18.6 KFX`. |
 
 ---
 
-## 3. Device Test Table (`Samsung Galaxy M30 — 32001776e8e82623`)
-| Test | Result | Evidence |
+## 3. JVM Unit Test & M30 Smoke Test Table
+| Check | Result | Evidence |
 | :--- | :--- | :--- |
-| **T6** (Locked `kindle_library.db` & Backup) | **PASS** | With `/sdcard/kindle` replaced by a regular file (`isDirectory() == false`) and `BEGIN EXCLUSIVE` held on `kindle_library.db`: `FolioMetadataDb: Backed up kindle_library.db -> /data/user/0/com.azath.reader/files/db_backups/kindle_library_1795647531359.db` (`180,224` B) and `FolioMetadataDb: kindle_library.db locked/busy (attempt 1/3), retrying in 200ms: database is locked (code 5 SQLITE_BUSY)`. Restored `/sdcard/kindle` cleanly. |
-| **T7** (Deferred Enrichment & Online Toggle) | **PASS** | With `Online Metadata Enrichment` toggled OFF: imported `ZzzNonexistentBookR164` instantly and `logcat` logged `MetadataEnricher: Online enrichment disabled by user preference; skipping network lookup for FOLIO_1ECC3C998994`. |
-| **T8** (Match Validation) | **PARTIAL** | Imported `t8_mismatch.epub` (`The Great Gatsby`, `Completely Wrong Author XYZ`, `publisher="OPF Keep Press"`): OPF metadata (`OPF Keep Press`) was preserved untouched in `books_metadata`, though `Rejected mismatched Open Library candidate` was not observed in `logcat` because the `search.json?title=...&author=...` query with a bogus author returns 0 docs from Open Library directly. Pure `isAcceptableMatch(...)` compiled for Round 165 Task F6 JVM tests. |
-| **T9** (Cancelable Batch Import) | **PASS** | Selected 3 EPUBs (`t9_1`, `t9_2`, `t9_3`), tapped `Import Selected` -> `Cancel Import`: dialog displayed `Imported 2 of 3 (cancelled)` (`Converted 2 of 3 EPUBs (cancelled)`), `T9 Batch Book 1` & `T9 Batch Book 2` intact in `/sdcard/kindle/` & `folio_metadata.db`, `T9 Batch Book 3` skipped, zero `.part` files, zero crashes. |
-| **T10** (Off-UI-Thread Scan & Lifecycle Safety) | **PASS** | Opened `FolioFolderBrowserDialog` on `/sdcard/en/0` (700+ EPUBs) and dismissed mid-scan with Back: `T10_ZERO_CRASHES` (zero `BadTokenException`, zero `IllegalArgumentException`, zero `FATAL EXCEPTION`). |
-| **T11** (`(filename, size)` & Dual-Stone Theme) | **PASS** | Placed `same_name_test.epub` in `t11_a` (`1187` B) and `t11_b` (`1987` B); imported `t11_a`: `t11_a` showed `1 KB · Already Imported` while `t11_b` showed `1 KB` (not flagged). Visually verified both **Granite** ([verify_r164_qc_folder_granite.png](file:///home/bgg/projects/clunky/verify_r164_qc_folder_granite.png)) and **Limestone** ([verify_r164_qc_folder_limestone.png](file:///home/bgg/projects/clunky/verify_r164_qc_folder_limestone.png)), restored Granite. |
-| **T12** (`ExternalEpubActivity` Hardening & Clean `A2` Launch Log) | **PASS** | 1) Launched `http://example.com/bad.epub` and `file:///sdcard/Download/does_not_exist_r164.epub`: rejected cleanly with toast + zero crash. 2) `t7_test` `content://`/`file://` staging file deleted immediately in `finally`. 3) Fresh launch audit: `ZERO_CRASHES_ZERO_WARNINGS` (zero `no such column: FILE_PATH` warnings, `reconcileLibrary complete: activeKfx=30 changes=0`). |
+| **`./scripts/run_unit_tests.sh`** | **PASS** | `AzathUnitTests: passed=38 failed=0 total=38` (pure JVM `javac -source 8 -target 8` + `java`, zero network dependencies). |
+| **M30 Launch & Reconcile** | **PASS** | `PID_START=22144`, `reconcileLibrary complete: activeKfx=30 changes=27`, zero `no such column` warnings. |
+| **M30 Reader Open & Return** | **PASS** | `Blindsight_FOLIO_DB72217519E6.kfx` opened into `StandAloneBookReaderActivity` (`mCurrentFocus=Window{ecf321 ...}`) and returned cleanly via Back. |
+| **M30 Control Center & Hot-Swap** | **PASS** | UI dump showed `['v18.6 KFX', 'Granite']`; Granite <-> Limestone hot-swap kept `PID_END=22144` (`== PID_START`) with zero `SIGSYS`. |
+| **M30 Atomic Backup & Crash Audit** | **PASS** | `/sdcard/kindle/backups/folio_metadata_backup.json` (`19,569` B), zero `.tmp` files, `ZERO_CRASHES_ZERO_WARNINGS`, stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`). |
 
 ---
 
 ## 4. Known Issues / Not Verified
-1. **T8 live mismatch rejection log**: Because Open Library's `search.json` returns 0 docs when a bogus author is included in the query string, `Rejected mismatched Open Library candidate` was not triggered live on-device; `isAcceptableMatch(...)` will be directly unit-tested in Round 165 Task F6.
-2. **D5 250 MB cap & 120s native timeout**: Implemented and compiled cleanly; not exercised with a 251 MB EPUB or a 120s hung binary on M30.
+- **P2/P3 recommendations** in `QC_FINDINGS_ROUND_165.md` (`FolioWebBrowserDialog` WebView `setAllowFileAccess(false)`, `CoverOverlayView` `inSampleSize` cap, `FolioMoreView.readQuickStats` off-UI-thread, `OpenCatalogView` `250 MB` download cap) were intentionally left unedited per Round 165 scope (`Fix ONLY clear P0/P1 findings`).
 
 ---
 
-## 5. Open Questions for Project Lead
-- Ready to proceed to **Round 165** (`dropin_src` sync, JVM unit tests for `planReconcile` & `isAcceptableMatch`, or Cover Architecture refactor) — please deliver Round 165 instructions in a `.zip` archive.
+## 5. Open Questions & Escalations for Project Lead
+1. **`classes4.dex` Git History Purge**: `07_APK_EPUB_INGESTION_MOD/dex/classes4.dex` is untracked (`F4`), but remains in prior git history. Approve a history rewrite (`git filter-repo` + force-push) or leave prior history intact?
+2. **Non-Redundant `dropin_*` Directories**: `dropin_rust/`, `dropin_res/`, and `dropin_assets/` remain at the repo root (not duplicated under `mod_src/real/`). Should they be archived, moved into `07_APK_EPUB_INGESTION_MOD/`, or deleted?
+3. **`kfx_converter` Dangling Gitlink**: `git ls-tree HEAD kfx_converter` points to commit `61f664c4207ba2eef9d58037f5f4c92dba52230e` with no `.gitmodules` or remote URL. Should this gitlink be removed or pointed to a specific repository URL?
+4. **P2/P3 Audit Follow-Ups**: Approve scheduling the P2/P3 items in `QC_FINDINGS_ROUND_165.md` for a future polish round?
 
 ---
 
