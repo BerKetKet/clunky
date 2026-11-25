@@ -99,23 +99,38 @@ public final class AzathLibrarySync {
                 return new IngestResult(false, bookKey, outKfx, outCover, meta, "KFX conversion failed");
             }
 
-            if (deleteSourceEpubAfter) {
-                try { epubFile.delete(); } catch (Throwable ignored) {}
-            }
-
             try { MetadataEnricher.enrichInPlace(meta); } catch (Throwable ignored) {}
 
             FolioMetadataDb db = new FolioMetadataDb(ctx);
             try {
                 db.upsertBook(bookKey, outKfx, outCover, dispName, meta);
+            } catch (Throwable dbErr) {
+                Log.e(TAG, "FolioMetadataDb upsert failed; keeping source EPUB", dbErr);
+                return new IngestResult(false, bookKey, outKfx, outCover, meta,
+                        "Metadata DB upsert failed: " + dbErr.getMessage());
             } finally {
                 db.close();
             }
 
             if (!outKfx.getAbsolutePath().startsWith("/sdcard/kindle")) {
-                FolioMetadataDb.registerInKindleLibraryDb(ctx, bookKey, outKfx, outCover, meta);
+                boolean regOk = FolioMetadataDb.registerInKindleLibraryDb(ctx, bookKey, outKfx, outCover, meta);
+                if (!regOk) {
+                    Log.e(TAG, "kindle_library.db registration failed on private-dir path; keeping source EPUB");
+                    return new IngestResult(false, bookKey, outKfx, outCover, meta,
+                            "kindle_library.db registration failed");
+                }
             } else {
                 FolioMetadataDb.cleanupLegacyDuplicateRows(ctx);
+            }
+
+            if (deleteSourceEpubAfter) {
+                try {
+                    if (!epubFile.delete()) {
+                        Log.w(TAG, "Failed to delete source EPUB after durable ingest: " + epubFile.getAbsolutePath());
+                    }
+                } catch (Throwable delErr) {
+                    Log.w(TAG, "Exception deleting source EPUB after durable ingest", delErr);
+                }
             }
 
             try {
