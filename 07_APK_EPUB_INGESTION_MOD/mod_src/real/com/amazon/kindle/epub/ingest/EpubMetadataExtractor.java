@@ -209,10 +209,12 @@ public final class EpubMetadataExtractor {
                                 }
                             } else if ("description".equals(name) && isBlank(meta.description)) {
                                 meta.description = stripHtml(val);
-                            } else if ("identifier".equals(name) && isBlank(meta.isbn)) {
-                                String digits = extractIsbn(val);
-                                if (!isBlank(digits)) {
-                                    meta.isbn = digits;
+                            } else if ("identifier".equals(name)) {
+                                String isbn = normalizeIsbn(val);
+                                if (!isBlank(isbn)) {
+                                    if (isbn.length() == 13 || isBlank(meta.isbn)) {
+                                        meta.isbn = isbn;
+                                    }
                                 }
                             }
                         }
@@ -235,20 +237,48 @@ public final class EpubMetadataExtractor {
         return idx >= 0 ? qName.substring(idx + 1) : qName;
     }
 
-    private static String extractIsbn(String raw) {
+    /**
+     * Pure, Android-free ISBN normalizer & checksum validator (ISBN-13 978/979 and ISBN-10).
+     * Rejects UUIDs, Calibre IDs, URLs, and invalid checksums.
+     */
+    public static String normalizeIsbn(String raw) {
         if (raw == null) return "";
-        String cleaned = raw.replace("urn:isbn:", "").replace("ISBN:", "").replace("isbn:", "")
-                .replace("-", "").replace(" ", "").trim();
-        if (cleaned.length() == 10 || cleaned.length() == 13) {
-            boolean ok = true;
-            for (int i = 0; i < cleaned.length(); i++) {
-                char c = cleaned.charAt(i);
-                if (!Character.isDigit(c) && !(i == 9 && (c == 'X' || c == 'x'))) {
-                    ok = false;
-                    break;
-                }
+        String s = raw.trim();
+        String lower = s.toLowerCase(Locale.ROOT);
+        if (lower.contains("http://") || lower.contains("https://")
+                || lower.contains("uuid") || lower.contains("calibre")) {
+            return "";
+        }
+        s = s.replaceAll("(?i)^urn:isbn:", "")
+                .replaceAll("(?i)^isbn[:\\s-]*", "")
+                .replaceAll("[\\s-]+", "")
+                .toUpperCase(Locale.ROOT);
+        if (s.length() == 13) {
+            if (!s.startsWith("978") && !s.startsWith("979")) return "";
+            int sum = 0;
+            for (int i = 0; i < 13; i++) {
+                char c = s.charAt(i);
+                if (c < '0' || c > '9') return "";
+                int d = c - '0';
+                sum += (i % 2 == 0) ? d : (d * 3);
             }
-            if (ok) return cleaned;
+            return (sum % 10 == 0) ? s : "";
+        }
+        if (s.length() == 10) {
+            int sum = 0;
+            for (int i = 0; i < 10; i++) {
+                char c = s.charAt(i);
+                int val;
+                if (i == 9 && c == 'X') {
+                    val = 10;
+                } else if (c >= '0' && c <= '9') {
+                    val = c - '0';
+                } else {
+                    return "";
+                }
+                sum += (10 - i) * val;
+            }
+            return (sum % 11 == 0) ? s : "";
         }
         return "";
     }
