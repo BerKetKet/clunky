@@ -1,6 +1,13 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 159 (`Azath v17.9 KFX`) Verified, Staged & Audited (2026-11-25)**:
+  - Copied Round 159 `FolioMetadataDb.java` (`cleanupLegacyDuplicateRows`), `FolioFolderBrowserDialog.java` (1-tap `Refresh Library Now` prompt after import), and `FolioMoreView.java` (`v17.9 KFX`) verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/` and updated `rebuild_fast.sh` to stage `azath_v17.9_kfx`.
+  - Built `classes9.dex` (`493,504` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.9_kfx/base.apk` (`138,852,455` B, SHA256 `767b35469ae502321a3c54b0f4e9bb14f810583fb1e8385a38ecccc10b626410`).
+  - Hardware verified on **Samsung Galaxy M30** (`32001776e8e82623`): `com.azath.reader` updated `2026-11-25 14:54:05`, stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`), zero `FATAL EXCEPTION` and zero `SIGSYS`.
+  - Visually verified `verify_r159_library_deduped_limestone.png`: `The 50th Law`, `Eyeless In Gaza`, `Island`, `Crome Yellow`, `Herodotus`, and `Brave New World` all appear cleanly **ONCE** (zero duplicates!) in spotless Limestone Light Mode. Also converted `Aldous Huxley - Moksha.epub` to `/sdcard/kindle/Moksha_FOLIO_72C0BAE5934F.kfx` (`1,140,502` B).
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 158 (`Azath v17.8 KFX`) Verified, Staged & Audited (2026-11-25)**:
   - Merged Round 158 `FolioMoreView.java` (`v17.8 KFX`), `FolioFolderBrowserDialog.java`, `ExternalEpubActivity.java`, `FolioWebBrowserDialog.java`, and `FolioTheme.java` (`SearchBandMaskView`, `triggerLibraryRescan`, `sFloatingCoverActive`) while preserving Round 154 smali hooks.
   - Built `classes9.dex` (`491,916` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.8_kfx/base.apk` (`138,848,359` B, SHA256 `d5c46b0d136917699fbf4d2115a2a93e69d04dd07da929446d5e18afd5df9f73`).

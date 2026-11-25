@@ -1,22 +1,26 @@
-# Round 158 Report — Azath v17.8 KFX (`SearchBandMaskView`, Full-Width `StoneBottomBarView` & `triggerLibraryRescan`)
+# Round 159 Report — Azath v17.9 KFX (Duplicate Row Cleanup, 1-Tap `Refresh Library Now` & Spotless Limestone Library)
 
 ## 1. Target Hardware & Policy Compliance
 - **Hardware**: Physical **Samsung Galaxy M30** (`32001776e8e82623`), running TrebleDroid Android 13 GSI (`arm64-v8a`).
-- **Active Package**: `com.azath.reader` (`Azath v17.8 KFX`, `versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-25 14:10:14`).
+- **Active Package**: `com.azath.reader` (`Azath v17.9 KFX`, `versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-25 14:54:05`).
 - **Safety Invariant Verified**: Stock `com.amazon.kindle` (`versionName=8.160.1.0(2.0.124621.0)`) remains **100% UNTOUCHED and READ-ONLY** (`lastUpdateTime=2026-11-19 21:59:23`).
 - **Strict Policy Respected**: Zero Play Store Folio (`ct.reader`) launches, inspections, or references.
 
-## 2. Task A: Build, Deploy & Stage (`Azath v17.8 KFX`)
-- Copied Round 158 `FolioMoreView.java`, `FolioFolderBrowserDialog.java`, `ExternalEpubActivity.java`, `FolioWebBrowserDialog.java` verbatim, and merged `SearchBandMaskView`, `triggerLibraryRescan`, and `sFloatingCoverActive` into `FolioTheme.java` while keeping Round 154 `onTabIdSelected`, `composeSurfaceLong`, `composeOnSurfaceLong`, `wrapLegacySearchBar`, and `wrapLibraryScreenlet` hooks intact.
-- Built `classes9.dex` (`491,916` bytes) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.8_kfx/base.apk` (`138,848,359` bytes, SHA256 `d5c46b0d136917699fbf4d2115a2a93e69d04dd07da929446d5e18afd5df9f73`).
+## 2. Task A: Verbatim Drop-In Build, Deploy, Stage & GitHub Push (`Azath v17.9 KFX`)
+- Copied Round 159 `FolioMetadataDb.java`, `FolioFolderBrowserDialog.java`, and `FolioMoreView.java` verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/`.
+- Updated `07_APK_EPUB_INGESTION_MOD/tools/rebuild_fast.sh` to stage `azath_v17.9_kfx`.
+- Built `classes9.dex` (`493,504` bytes) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.9_kfx/base.apk` (`138,852,455` bytes, SHA256 `767b35469ae502321a3c54b0f4e9bb14f810583fb1e8385a38ecccc10b626410`).
 
-## 3. Task B: Hardware Verification (`verify_r158_library_limestone_clean.png`)
-- **Limestone Library Search Outer Band — FIXED**: `verify_r158_library_limestone_clean.png` shows warm `#EFEAE0` Limestone seamlessly surrounding the `"Search Azath"` pill with a `#CBC3B3` hairline — the `#101112` dark outer band is **100% GONE**.
-- **Limestone Bottom Bar Cutout — FIXED**: When `sFloatingCoverActive == false`, `StoneBottomBarView` renders a full-width `#EFEAE0` bottom bar with centered `Home`, `Library` (active), and `More` — zero dark cutout leak.
-- **EPUB Import (`Aldous Huxley - Eyeless In Gaza.epub`)**:
-  - `11-25 14:15:25.986  5958  6734 I EpubTranscoder: Successfully converted Aldous Huxley - Eyeless In Gaza.epub to KFX on-device in 31346ms (1298643 bytes)`
-  - Created in `/sdcard/kindle/`: `Eyeless_In_Gaza_FOLIO_83848DCC3B03.kfx` (`1,298,643` B), `.kfx.cover.jpg` (`29,736` B), `.sdr/`.
-  - **Honest Live-Rescan Finding**: `AzathLiveIngest` did not appear in `logcat`, and `Eyeless In Gaza` did not appear in `Library` without relaunching yet (note `Utils.getFactory().getLibraryService()` may not expose a zero-arg `scan`/`sideload`/`refresh`/`sync` method on this obfuscated `ILibraryService` build).
+## 3. Task B: Hardware Verification (`verify_r159_library_deduped_limestone.png`)
+- **Zero Duplicate Library Rows**: Opened Control Center (`v17.9 KFX`) triggering `FolioMetadataDb.cleanupLegacyDuplicateRows`, relaunched once, and verified `verify_r159_library_deduped_limestone.png` + `/tmp/r159/library_deduped.xml`:
+  - `The 50th Law`
+  - `Eyeless In Gaza`
+  - `Island`
+  - `Crome Yellow`
+  - `Complete Works of Herodotus (Illustrated) (Delphi Ancient Classics)`
+  - `Brave New World`
+  All appear **ONCE** (zero duplicates!) in spotless **Limestone Light Mode** (`#EFEAE0` header, `#EFEAE0` Search outer band, `#EFEAE0` full-width bottom bar).
+- **Additional EPUB Import (`Aldous Huxley - Moksha.epub`)**: Converted cleanly into `/sdcard/kindle/Moksha_FOLIO_72C0BAE5934F.kfx` (`1,140,502` B) + `.kfx.cover.jpg` (`80,039` B).
 - **Crash Audit**: Zero `FATAL EXCEPTION` and zero `SIGSYS` in `logcat`.
 
 ## 4. Project Lead Architectural Directive (Mandatory Reiteration)

@@ -398,6 +398,35 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         if (actual != null) cv.put(actual, val);
     }
 
+    /**
+     * Removes legacy synthetic AMZNID0/CR!...KFX/0/ rows written prior to Round 158
+     * so books in /sdcard/kindle/ appear exactly once (indexed by Kindle's native scanner).
+     */
+    public static int cleanupLegacyDuplicateRows(Context ctx) {
+        if (ctx == null) return 0;
+        File dbFile = ctx.getDatabasePath("kindle_library.db");
+        if (dbFile == null || !dbFile.exists()) return 0;
+        SQLiteDatabase db = null;
+        int removed = 0;
+        try {
+            db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+            db.beginTransaction();
+            try { removed += db.delete("KindleContent", "ID LIKE 'AMZNID0/CR!%KFX/0/' AND FILE_PATH LIKE '/sdcard/kindle/%'", null); } catch (Throwable ignored) {}
+            try { removed += db.delete("LocalContent", "KEY LIKE 'AMZNID0/CR!%KFX/0/' AND FILE_PATH LIKE '/sdcard/kindle/%'", null); } catch (Throwable ignored) {}
+            try { db.delete("UserContent", "KEY LIKE 'AMZNID0/CR!%KFX/0/'", null); } catch (Throwable ignored) {}
+            db.setTransactionSuccessful();
+        } catch (Throwable ignored) {
+        } finally {
+            if (db != null) {
+                try {
+                    if (db.inTransaction()) db.endTransaction();
+                    db.close();
+                } catch (Throwable ignored) {}
+            }
+        }
+        return removed;
+    }
+
     public static String computeBookKey(String title, long sizeBytes) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
