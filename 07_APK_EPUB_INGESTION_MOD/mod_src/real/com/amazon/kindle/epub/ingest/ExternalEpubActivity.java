@@ -254,7 +254,7 @@ public class ExternalEpubActivity extends Activity {
                 File sdKindle = new File("/sdcard/kindle");
                 if (addToLibrary && !sdKindle.exists()) sdKindle.mkdirs();
                 File targetDir = addToLibrary
-                        ? ((sdKindle.exists() && sdKindle.canWrite()) ? sdKindle : new File(getFilesDir(), "folio_library"))
+                        ? ((sdKindle.isDirectory() && sdKindle.canWrite()) ? sdKindle : new File(getFilesDir(), "folio_library"))
                         : new File(getCacheDir(), "folio_once");
                 if (!targetDir.exists()) targetDir.mkdirs();
 

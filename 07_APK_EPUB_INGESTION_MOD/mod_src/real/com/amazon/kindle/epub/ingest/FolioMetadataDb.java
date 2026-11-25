@@ -672,7 +672,7 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
             db.beginTransaction();
 
-            Set<String> keysToDelete = new LinkedHashSet<>();
+            List<String> keysList = new ArrayList<>();
             Cursor kcCur = null;
             try {
                 kcCur = db.rawQuery(
@@ -680,7 +680,7 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                         null);
                 while (kcCur.moveToNext()) {
                     String id = kcCur.getString(0);
-                    if (id != null && !id.isEmpty()) keysToDelete.add(id);
+                    if (id != null && !id.isEmpty()) keysList.add(id);
                 }
             } catch (Throwable t) {
                 Log.w(TAG, "cleanupLegacyDuplicateRows KindleContent query failed", t);
@@ -688,39 +688,34 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                 if (kcCur != null) kcCur.close();
             }
 
-            Cursor lcCur = null;
-            try {
-                lcCur = db.rawQuery(
-                        "SELECT KEY FROM LocalContent WHERE KEY LIKE 'AMZNID0/CR!%KFX/0/' AND FILE_PATH LIKE '/sdcard/kindle/%'",
-                        null);
-                while (lcCur.moveToNext()) {
-                    String k = lcCur.getString(0);
-                    if (k != null && !k.isEmpty()) keysToDelete.add(k);
-                }
-            } catch (Throwable t) {
-                Log.w(TAG, "cleanupLegacyDuplicateRows LocalContent query failed", t);
-            } finally {
-                if (lcCur != null) lcCur.close();
-            }
-
-            if (!keysToDelete.isEmpty()) {
+            if (!keysList.isEmpty()) {
                 try {
                     removed += db.delete("KindleContent",
                             "ID LIKE 'AMZNID0/CR!%KFX/0/' AND FILE_PATH LIKE '/sdcard/kindle/%'", null);
                 } catch (Throwable t) {
                     Log.w(TAG, "cleanupLegacyDuplicateRows KindleContent delete failed", t);
                 }
-                try {
-                    removed += db.delete("LocalContent",
-                            "KEY LIKE 'AMZNID0/CR!%KFX/0/' AND FILE_PATH LIKE '/sdcard/kindle/%'", null);
-                } catch (Throwable t) {
-                    Log.w(TAG, "cleanupLegacyDuplicateRows LocalContent delete failed", t);
-                }
-                for (String key : keysToDelete) {
+                final int chunkSize = 450;
+                for (int start = 0; start < keysList.size(); start += chunkSize) {
+                    int end = Math.min(start + chunkSize, keysList.size());
+                    List<String> sub = keysList.subList(start, end);
+                    StringBuilder placeholders = new StringBuilder();
+                    for (int i = 0; i < sub.size(); i++) {
+                        if (i > 0) placeholders.append(',');
+                        placeholders.append('?');
+                    }
+                    String[] args = sub.toArray(new String[0]);
                     try {
-                        removed += db.delete("UserContent", "KEY = ?", new String[]{ key });
+                        removed += db.delete("LocalContent",
+                                "KEY IN (" + placeholders + ")", args);
                     } catch (Throwable t) {
-                        Log.w(TAG, "cleanupLegacyDuplicateRows UserContent delete failed for key=" + key, t);
+                        Log.w(TAG, "cleanupLegacyDuplicateRows LocalContent delete failed", t);
+                    }
+                    try {
+                        removed += db.delete("UserContent",
+                                "KEY IN (" + placeholders + ")", args);
+                    } catch (Throwable t) {
+                        Log.w(TAG, "cleanupLegacyDuplicateRows UserContent delete failed", t);
                     }
                 }
             }
