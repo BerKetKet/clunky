@@ -76,13 +76,26 @@ public final class AzathLibrarySync {
         return priv;
     }
 
-    private static String sanitizeFilename(String raw) {
-        if (raw == null || raw.trim().isEmpty()) return "Azath_Book";
-        String s = raw.trim().replaceAll("[^A-Za-z0-9._-]+", "_");
-        s = s.replaceAll("^_+|_+$", "");
-        if (s.isEmpty()) s = "Azath_Book";
-        if (s.length() > 48) s = s.substring(0, 48);
-        return s;
+    /**
+     * Pure, Android-free KFX filename base sanitizer.
+     * Strips path separators, NUL/control chars, and filesystem-hostile chars (:*?"<>|),
+     * collapses whitespace/underscores, caps total length <= 80 chars, and falls back to
+     * "Book" + "_" + bookKey when title is empty or non-ASCII-only.
+     */
+    public static String sanitizeFilenameBase(String title, String bookKey) {
+        String s = title == null ? "" : title.trim();
+        // Strip NUL/control chars, path separators, and filesystem-hostile chars
+        s = s.replaceAll("[\\u0000-\\u001F\\u007F/\\\\:*?\"<>|]+", "_");
+        s = s.replaceAll("[^A-Za-z0-9._-]+", "_");
+        s = s.replaceAll("_+", "_").replaceAll("^[._]+|[._]+$", "");
+        if (s.isEmpty()) s = "Book";
+        String key = (bookKey != null) ? bookKey.replaceAll("[^A-Za-z0-9_-]+", "") : "";
+        int maxTitleLen = key.isEmpty() ? 80 : Math.max(12, 80 - 1 - key.length());
+        if (s.length() > maxTitleLen) {
+            s = s.substring(0, maxTitleLen).replaceAll("[._]+$", "");
+            if (s.isEmpty()) s = "Book";
+        }
+        return key.isEmpty() ? s : (s + "_" + key);
     }
 
     /**
@@ -103,7 +116,7 @@ public final class AzathLibrarySync {
                     ? FolioMetadataDb.computeBookKeyFromHash(contentHash)
                     : FolioMetadataDb.computeBookKey(meta.title, epubFile.length());
             File targetDir = getCanonicalLibraryDir(ctx);
-            String safeBase = sanitizeFilename(meta.title) + "_" + bookKey;
+            String safeBase = sanitizeFilenameBase(meta.title, bookKey);
             File outKfx = new File(targetDir, safeBase + ".kfx");
             File outCover = new File(outKfx.getAbsolutePath() + ".cover.jpg");
 

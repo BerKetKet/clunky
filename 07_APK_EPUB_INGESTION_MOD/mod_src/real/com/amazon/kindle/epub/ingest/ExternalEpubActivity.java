@@ -274,7 +274,7 @@ public class ExternalEpubActivity extends Activity {
 
         new Thread(() -> {
             try {
-                final String safeBase = sanitizeFilename(meta.title) + "_" + bookKey;
+                final String safeBase = AzathLibrarySync.sanitizeFilenameBase(meta.title, bookKey);
 
                 File sdKindle = new File("/sdcard/kindle");
                 if (addToLibrary && !sdKindle.exists()) sdKindle.mkdirs();
