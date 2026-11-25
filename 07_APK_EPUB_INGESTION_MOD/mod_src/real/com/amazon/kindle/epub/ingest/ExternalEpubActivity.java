@@ -289,49 +289,95 @@ public class ExternalEpubActivity extends Activity {
     }
 
     public static boolean convertEpubToKfx(Context ctx, File epubIn, File kfxOut) {
+        if (kfxOut == null) return false;
+        File parent = kfxOut.getParentFile();
+        if (parent != null && !parent.exists()) parent.mkdirs();
+        File partOut = new File(parent, kfxOut.getName() + ".part");
+        File partCover = new File(partOut.getAbsolutePath() + ".cover.jpg");
+        File finalCover = new File(kfxOut.getAbsolutePath() + ".cover.jpg");
+        if (partOut.exists()) partOut.delete();
+        if (partCover.exists()) partCover.delete();
+
+        boolean ok = false;
         try {
-            if (com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubIn, kfxOut)) {
+            try {
+                if (com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubIn, partOut)) {
+                    ok = isValidKfxPart(partOut);
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "EpubTranscoder direct call failed: " + t.getMessage());
+            }
+
+            if (!ok) {
+                if (partOut.exists()) partOut.delete();
+                File bin = new File(ctx.getApplicationInfo().nativeLibraryDir, "libkfxconv.so");
+                if (!bin.exists()) {
+                    bin = new File("/data/local/tmp/kfx-conv");
+                }
+                if (!bin.exists()) {
+                    Log.e(TAG, "libkfxconv.so missing at " + bin.getAbsolutePath());
+                    return false;
+                }
+                String[][] argVariants = new String[][] {
+                    { bin.getAbsolutePath(), epubIn.getAbsolutePath(), "-o", partOut.getAbsolutePath() },
+                    { bin.getAbsolutePath(), epubIn.getAbsolutePath(), partOut.getAbsolutePath() }
+                };
+                for (String[] cmd : argVariants) {
+                    try {
+                        if (partOut.exists()) partOut.delete();
+                        ProcessBuilder pb = new ProcessBuilder(cmd);
+                        pb.redirectErrorStream(true);
+                        Process proc = pb.start();
+                        BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+                        StringBuilder outLog = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            outLog.append(line).append('\n');
+                        }
+                        int code = proc.waitFor();
+                        Log.i(TAG, "libkfxconv exit=" + code + " partOut=" + partOut.length() + "B");
+                        if (code == 0 && isValidKfxPart(partOut)) {
+                            ok = true;
+                            break;
+                        }
+                        Log.w(TAG, "libkfxconv output: " + outLog);
+                    } catch (Throwable t) {
+                        Log.e(TAG, "libkfxconv exec error", t);
+                    }
+                }
+            }
+
+            if (ok) {
+                if (kfxOut.exists()) kfxOut.delete();
+                if (!partOut.renameTo(kfxOut)) {
+                    Log.e(TAG, "Atomic rename failed: " + partOut.getAbsolutePath() + " -> " + kfxOut.getAbsolutePath());
+                    return false;
+                }
+                if (partCover.exists() && partCover.length() > 0) {
+                    if (finalCover.exists()) finalCover.delete();
+                    partCover.renameTo(finalCover);
+                }
                 return true;
             }
-        } catch (Throwable t) {
-            Log.w(TAG, "EpubTranscoder direct call failed: " + t.getMessage());
-        }
-
-        File bin = new File(ctx.getApplicationInfo().nativeLibraryDir, "libkfxconv.so");
-        if (!bin.exists()) {
-            bin = new File("/data/local/tmp/kfx-conv");
-        }
-        if (!bin.exists()) {
-            Log.e(TAG, "libkfxconv.so missing at " + bin.getAbsolutePath());
             return false;
-        }
-        String[][] argVariants = new String[][] {
-            { bin.getAbsolutePath(), epubIn.getAbsolutePath(), "-o", kfxOut.getAbsolutePath() },
-            { bin.getAbsolutePath(), epubIn.getAbsolutePath(), kfxOut.getAbsolutePath() }
-        };
-        for (String[] cmd : argVariants) {
-            try {
-                if (kfxOut.exists()) kfxOut.delete();
-                ProcessBuilder pb = new ProcessBuilder(cmd);
-                pb.redirectErrorStream(true);
-                Process proc = pb.start();
-                BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-                StringBuilder outLog = new StringBuilder();
-                String line;
-                while ((line = br.readLine()) != null) {
-                    outLog.append(line).append('\n');
-                }
-                int code = proc.waitFor();
-                Log.i(TAG, "libkfxconv exit=" + code + " out=" + kfxOut.length() + "B");
-                if (code == 0 && kfxOut.exists() && kfxOut.length() > 128) {
-                    return true;
-                }
-                Log.w(TAG, "libkfxconv output: " + outLog);
-            } catch (Throwable t) {
-                Log.e(TAG, "libkfxconv exec error", t);
+        } finally {
+            if (!ok) {
+                if (partOut.exists()) partOut.delete();
+                if (partCover.exists()) partCover.delete();
             }
         }
-        return false;
+    }
+
+    private static boolean isValidKfxPart(File f) {
+        if (f == null || !f.exists() || f.length() < 128) return false;
+        try (FileInputStream fis = new FileInputStream(f)) {
+            byte[] hdr = new byte[4];
+            int n = fis.read(hdr);
+            if (n < 4) return false;
+            return (hdr[0] | hdr[1] | hdr[2] | hdr[3]) != 0;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     public static File resolveExistingKfxFile(Context ctx, File rawFile) {

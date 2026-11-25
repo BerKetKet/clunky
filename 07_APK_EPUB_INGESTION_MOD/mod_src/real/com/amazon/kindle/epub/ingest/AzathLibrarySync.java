@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Unified Library Accounting & Ingestion Engine for Azath.
@@ -27,6 +28,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class AzathLibrarySync {
     private static final String TAG = "AzathLibrarySync";
     private static final AtomicBoolean sLaunchReconciled = new AtomicBoolean(false);
+    private static final ReentrantLock SYNC_LOCK = new ReentrantLock();
+    private static final long RECENT_KFX_WINDOW_MS = 30_000L;
+    private static final long STALE_PART_AGE_MS = 3_600_000L;
 
     public static final class IngestResult {
         public final boolean ok;
@@ -79,6 +83,7 @@ public final class AzathLibrarySync {
         if (ctx == null || epubFile == null || !epubFile.exists() || epubFile.length() < 128) {
             return new IngestResult(false, "", null, null, null, "Source EPUB missing or empty");
         }
+        SYNC_LOCK.lock();
         try {
             String dispName = (sourceLabel != null && !sourceLabel.trim().isEmpty())
                     ? sourceLabel.trim() : epubFile.getName();
@@ -123,6 +128,8 @@ public final class AzathLibrarySync {
         } catch (Throwable t) {
             Log.e(TAG, "ingestEpub failed for " + epubFile.getName(), t);
             return new IngestResult(false, "", null, null, null, t.getMessage());
+        } finally {
+            SYNC_LOCK.unlock();
         }
     }
 
@@ -293,7 +300,9 @@ public final class AzathLibrarySync {
     public static int reconcileLibrary(Context ctx) {
         if (ctx == null) return 0;
         int changes = 0;
+        SYNC_LOCK.lock();
         try {
+            long now = System.currentTimeMillis();
             changes += FolioMetadataDb.cleanupLegacyDuplicateRows(ctx);
 
             Set<String> activeNames = new HashSet<>();
@@ -308,9 +317,22 @@ public final class AzathLibrarySync {
                         + " isDir=" + sdDir.isDirectory() + " canRead=" + sdDir.canRead() + ")");
             } else {
                 for (File f : sdFiles) {
-                    if (f.isFile() && f.getName().toLowerCase(Locale.US).endsWith(".kfx") && f.length() >= 128) {
+                    String lower = f.getName().toLowerCase(Locale.US);
+                    if (f.isFile() && lower.endsWith(".part")) {
+                        if (now - f.lastModified() > STALE_PART_AGE_MS && f.delete()) {
+                            Log.i(TAG, "Deleted stale .part file: " + f.getAbsolutePath());
+                            changes++;
+                        }
+                        continue;
+                    }
+                    if (f.isFile() && lower.endsWith(".kfx") && f.length() >= 128) {
+                        if (now - f.lastModified() < RECENT_KFX_WINDOW_MS) {
+                            Log.i(TAG, "Skipping recently modified .kfx (<30s): " + f.getAbsolutePath());
+                            activeNames.add(lower);
+                            continue;
+                        }
                         activePaths.add(f.getAbsolutePath());
-                        activeNames.add(f.getName().toLowerCase(Locale.US));
+                        activeNames.add(lower);
                     }
                 }
             }
@@ -319,9 +341,22 @@ public final class AzathLibrarySync {
             boolean privHealthy = privDir.isDirectory() && privDir.canRead() && privFiles != null;
             if (privHealthy) {
                 for (File f : privFiles) {
-                    if (f.isFile() && f.getName().toLowerCase(Locale.US).endsWith(".kfx") && f.length() >= 128) {
+                    String lower = f.getName().toLowerCase(Locale.US);
+                    if (f.isFile() && lower.endsWith(".part")) {
+                        if (now - f.lastModified() > STALE_PART_AGE_MS && f.delete()) {
+                            Log.i(TAG, "Deleted stale .part file: " + f.getAbsolutePath());
+                            changes++;
+                        }
+                        continue;
+                    }
+                    if (f.isFile() && lower.endsWith(".kfx") && f.length() >= 128) {
+                        if (now - f.lastModified() < RECENT_KFX_WINDOW_MS) {
+                            Log.i(TAG, "Skipping recently modified .kfx (<30s): " + f.getAbsolutePath());
+                            activeNames.add(lower);
+                            continue;
+                        }
                         activePaths.add(f.getAbsolutePath());
-                        activeNames.add(f.getName().toLowerCase(Locale.US));
+                        activeNames.add(lower);
                     }
                 }
             }
@@ -407,6 +442,8 @@ public final class AzathLibrarySync {
             Log.i(TAG, "reconcileLibrary complete: activeKfx=" + activePaths.size() + " changes=" + changes);
         } catch (Throwable t) {
             Log.w(TAG, "reconcileLibrary warning: " + t.getMessage());
+        } finally {
+            SYNC_LOCK.unlock();
         }
         return changes;
     }
