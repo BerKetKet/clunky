@@ -32,3 +32,8 @@ Offline-first, Dual Stone Edition EPUB-to-KFX reader and library manager built o
 - **Target Device**: Samsung Galaxy M30 (`32001776e8e82623`), TrebleDroid Android 13 GSI (`arm64-v8a`).
 - **Stock Kindle Isolation**: `com.amazon.kindle` (`v8.160.1.0`) MUST remain **100% untouched and read-only**.
 - **No `ct.reader`**: Play Store Folio must never be launched, inspected, or referenced.
+
+## Submodule / Gitlink Notes (`kfx_converter`)
+- `git ls-tree HEAD kfx_converter`: `160000 commit 61f664c4207ba2eef9d58037f5f4c92dba52230e kfx_converter`.
+- No `.gitmodules` file exists (`git submodule status` reports `fatal: no submodule mapping found in .gitmodules for path 'kfx_converter'`), so `kfx_converter` is a dangling gitlink with no configured remote URL.
+
