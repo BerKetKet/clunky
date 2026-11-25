@@ -1,6 +1,8 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 160 Read-Only Storage Diagnostic (`com.azath.reader`) Completed (2026-11-25)**:
+  - Executed read-only storage audit on **Samsung Galaxy M30** (`32001776e8e82623`): found `/data/user/0/com.azath.reader/files/epub_cache` is **2.9 GB** (pre-converted `.epub.kfx` + `.cover.jpg` + `.sdr` files from `2026-11-25 07:51–08:01`), while `/data/app/...` is `259M`, `/sdcard/Android/data/com.azath.reader` is `33M`, `folio_library` is `4.3M`, and `/sdcard/kindle` is `202,894 KB`. Stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`).
 - **Round 159 (`Azath v17.9 KFX`) Verified, Staged & Audited (2026-11-25)**:
   - Copied Round 159 `FolioMetadataDb.java` (`cleanupLegacyDuplicateRows`), `FolioFolderBrowserDialog.java` (1-tap `Refresh Library Now` prompt after import), and `FolioMoreView.java` (`v17.9 KFX`) verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/` and updated `rebuild_fast.sh` to stage `azath_v17.9_kfx`.
   - Built `classes9.dex` (`493,504` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.9_kfx/base.apk` (`138,852,455` B, SHA256 `767b35469ae502321a3c54b0f4e9bb14f810583fb1e8385a38ecccc10b626410`).
