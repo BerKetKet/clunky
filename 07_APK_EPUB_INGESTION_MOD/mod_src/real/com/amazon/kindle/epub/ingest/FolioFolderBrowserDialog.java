@@ -66,7 +66,7 @@ public final class FolioFolderBrowserDialog {
         });
         final AtomicInteger scanGeneration = new AtomicInteger(0);
         final AtomicBoolean dialogDismissed = new AtomicBoolean(false);
-        final Set<String> importedSourceNames = new HashSet<>();
+        final ImportedIndex importedIndex = new ImportedIndex();
         final List<File> allEpubsInDir = new ArrayList<>();
         final List<File> selectedFiles = new ArrayList<>();
         final boolean[] hideImported = new boolean[] { false };
@@ -409,7 +409,7 @@ public final class FolioFolderBrowserDialog {
             List<File> matched = new ArrayList<>();
             for (File f : allEpubsInDir) {
                 String lower = f.getName().toLowerCase(Locale.ROOT);
-                if (hideImported[0] && importedSourceNames.contains(lower)) continue;
+                if (hideImported[0] && importedIndex.isImported(f)) continue;
                 if (!q.isEmpty() && !lower.contains(q)) continue;
                 matched.add(f);
             }
@@ -430,7 +430,7 @@ public final class FolioFolderBrowserDialog {
 
             for (int i = 0; i < cap; i++) {
                 final File epub = matched.get(i);
-                final boolean already = importedSourceNames.contains(epub.getName().toLowerCase(Locale.ROOT));
+                final boolean already = importedIndex.isImported(epub);
 
                 LinearLayout row = new LinearLayout(ctx);
                 row.setOrientation(LinearLayout.HORIZONTAL);
@@ -524,7 +524,7 @@ public final class FolioFolderBrowserDialog {
 
             scanExecutor.execute(() -> {
                 if (gen != scanGeneration.get()) return;
-                final Set<String> freshImported = loadImportedSources(ctx);
+                final ImportedIndex freshImported = loadImportedSources(ctx);
                 final File dir = new File(dirPath);
                 if (!dir.exists() || !dir.isDirectory()) {
                     mainHandler.post(() -> {
@@ -563,8 +563,7 @@ public final class FolioFolderBrowserDialog {
 
                 mainHandler.post(() -> {
                     if (gen != scanGeneration.get() || dialogDismissed.get() || FolioTheme.isContextDead(ctx)) return;
-                    importedSourceNames.clear();
-                    importedSourceNames.addAll(freshImported);
+                    importedIndex.replaceWith(freshImported);
                     subDirsInDir.clear();
                     subDirsInDir.addAll(foundDirs);
                     allEpubsInDir.clear();
@@ -678,7 +677,7 @@ public final class FolioFolderBrowserDialog {
                 int added = 0;
                 for (File f : currentVisible) {
                     if (added >= 25) break;
-                    if (!importedSourceNames.contains(f.getName().toLowerCase(Locale.ROOT))) {
+                    if (!importedIndex.isImported(f)) {
                         if (!selectedFiles.contains(f)) {
                             selectedFiles.add(f);
                             added++;
@@ -750,7 +749,7 @@ public final class FolioFolderBrowserDialog {
                             Log.w(TAG, "Conversion failed for " + epub.getName() + ": " + (ir != null ? ir.error : "null"));
                             continue;
                         }
-                        importedSourceNames.add(epub.getName().toLowerCase(Locale.ROOT));
+                        importedIndex.markImported(epub);
                         if (ir.kfxFile != null && ir.kfxFile.exists()) lastImportedKfx = ir.kfxFile;
                         okCount++;
                     } catch (Throwable t) {
@@ -821,19 +820,50 @@ public final class FolioFolderBrowserDialog {
         return bg;
     }
 
-    private static Set<String> loadImportedSources(Context ctx) {
-        Set<String> set = new HashSet<>();
+    private static final class ImportedIndex {
+        final Set<String> sizedKeys = new HashSet<>();
+        final Set<String> legacyNamesOnly = new HashSet<>();
+
+        boolean isImported(File f) {
+            if (f == null) return false;
+            String lower = f.getName().toLowerCase(Locale.ROOT);
+            if (sizedKeys.contains(lower + "|" + f.length())) return true;
+            return legacyNamesOnly.contains(lower);
+        }
+
+        void markImported(File f) {
+            if (f == null) return;
+            sizedKeys.add(f.getName().toLowerCase(Locale.ROOT) + "|" + f.length());
+        }
+
+        void replaceWith(ImportedIndex other) {
+            sizedKeys.clear();
+            legacyNamesOnly.clear();
+            if (other != null) {
+                sizedKeys.addAll(other.sizedKeys);
+                legacyNamesOnly.addAll(other.legacyNamesOnly);
+            }
+        }
+    }
+
+    private static ImportedIndex loadImportedSources(Context ctx) {
+        ImportedIndex idx = new ImportedIndex();
         FolioMetadataDb db = new FolioMetadataDb(ctx);
         try {
             for (FolioMetadataDb.BookRecord r : db.getAllBooks()) {
                 if (r.sourceName != null && !r.sourceName.isEmpty()) {
-                    set.add(r.sourceName.toLowerCase(Locale.ROOT));
+                    String lower = r.sourceName.toLowerCase(Locale.ROOT);
+                    if (r.sourceSize > 0) {
+                        idx.sizedKeys.add(lower + "|" + r.sourceSize);
+                    } else {
+                        idx.legacyNamesOnly.add(lower);
+                    }
                 }
             }
         } finally {
             db.close();
         }
-        return set;
+        return idx;
     }
 
     private static java.util.LinkedHashSet<String> loadPinnedDirs(Context ctx) {
