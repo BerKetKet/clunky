@@ -63,6 +63,78 @@ for label, rel in targets:
 
 if not changed:
     print("All target Screenlets already patched.")
+
+top_bar_path = os.path.join(tmp_dir, "com/amazon/kcp/oob/navigation/components/d0.smali")
+with open(top_bar_path, "r", encoding="utf-8") as f:
+    tb_src = f.read()
+
+tb_changed = False
+
+old_j_bar = """    move-object/from16 p1, v2
+
+    move/from16 v2, v19
+
+    invoke-virtual/range {v3 .. v18}, Landroidx/compose/material3/pf;->h(JJJJJJLandroidx/compose/runtime/p;II)Landroidx/compose/material3/nf;"""
+new_j_bar = """    move-object/from16 p1, v2
+
+    move/from16 v2, v19
+
+    invoke-static {}, Lcom/amazon/kindle/epub/catalog/FolioTheme;->composeSurfaceLong()J
+
+    move-result-wide v4
+
+    move-wide v6, v4
+
+    invoke-static {}, Lcom/amazon/kindle/epub/catalog/FolioTheme;->composeOnSurfaceLong()J
+
+    move-result-wide v8
+
+    move-wide v10, v8
+
+    move-wide v12, v8
+
+    const/16 v18, 0x20
+
+    invoke-virtual/range {v3 .. v18}, Landroidx/compose/material3/pf;->h(JJJJJJLandroidx/compose/runtime/p;II)Landroidx/compose/material3/nf;"""
+if old_j_bar in tb_src:
+    tb_src = tb_src.replace(old_j_bar, new_j_bar, 1)
+    tb_changed = True
+    print("Patched d0.smali SearchBoxTopAppBar TopAppBar colors -> FolioTheme live tokens.")
+
+old_m_bar = """    move-object/from16 p3, v4
+
+    move/from16 v4, v22
+
+    invoke-virtual/range {v5 .. v20}, Landroidx/compose/material3/pf;->h(JJJJJJLandroidx/compose/runtime/p;II)Landroidx/compose/material3/nf;"""
+new_m_bar = """    move-object/from16 p3, v4
+
+    move/from16 v4, v22
+
+    invoke-static {}, Lcom/amazon/kindle/epub/catalog/FolioTheme;->composeSurfaceLong()J
+
+    move-result-wide v6
+
+    move-wide v8, v6
+
+    invoke-static {}, Lcom/amazon/kindle/epub/catalog/FolioTheme;->composeOnSurfaceLong()J
+
+    move-result-wide v10
+
+    move-wide v12, v10
+
+    move-wide v14, v10
+
+    const/16 v20, 0x20
+
+    invoke-virtual/range {v5 .. v20}, Landroidx/compose/material3/pf;->h(JJJJJJLandroidx/compose/runtime/p;II)Landroidx/compose/material3/nf;"""
+if old_m_bar in tb_src:
+    tb_src = tb_src.replace(old_m_bar, new_m_bar, 1)
+    tb_changed = True
+    print("Patched d0.smali TitleTopAppBar TopAppBar colors -> FolioTheme live tokens.")
+
+if tb_changed:
+    with open(top_bar_path, "w", encoding="utf-8") as f:
+        f.write(tb_src)
 PYEOF
 
 java -cp "${APKTOOL_JAR}" com.android.tools.smali.smali.Main a "${TMP_DIR}" -o "${INPUT_DEX}"

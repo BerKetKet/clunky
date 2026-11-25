@@ -541,14 +541,15 @@ public final class FolioFolderBrowserDialog {
                 String shortLbl = qd.replace("/sdcard/", "");
                 if (shortLbl.isEmpty()) shortLbl = qd;
                 chip.setText((isPin ? "★ " : "") + shortLbl);
-                chip.setTextColor(Color.parseColor(isCur ? "#15171A" : (isPin ? "#D4C9B8" : "#BDB8AE")));
+                int actTxtCol = FolioTheme.isLimestoneLight(ctx) ? 0xFFF4F0E8 : 0xFF0E0F11;
+                chip.setTextColor(isCur ? actTxtCol : (isPin ? FolioTheme.accent(ctx) : FolioTheme.textSecondary(ctx)));
                 chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
                 chip.setTypeface(isCur || isPin ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                 chip.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
                 GradientDrawable cbg = new GradientDrawable();
-                cbg.setColor((isCur ? FolioTheme.accent() : FolioTheme.bgControl()));
+                cbg.setColor((isCur ? FolioTheme.accent(ctx) : FolioTheme.bgControl(ctx)));
                 cbg.setCornerRadius(dp(ctx, 14));
-                if (!isCur) cbg.setStroke(dp(ctx, 1), (isPin ? FolioTheme.accentBorder() : FolioTheme.border()));
+                if (!isCur) cbg.setStroke(dp(ctx, 1), (isPin ? FolioTheme.accentBorder(ctx) : FolioTheme.border(ctx)));
                 chip.setBackground(cbg);
                 LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -709,9 +710,8 @@ public final class FolioFolderBrowserDialog {
         });
 
         loadDir.run();
-        FolioTheme.applyToTree(ctx, root);
         dialog.show();
-        FolioTheme.styleDialog(ctx, dialog);
+        FolioTheme.applyToDialog(ctx, dialog);
     }
 
     private static GradientDrawable makeInputBg(Context ctx) {

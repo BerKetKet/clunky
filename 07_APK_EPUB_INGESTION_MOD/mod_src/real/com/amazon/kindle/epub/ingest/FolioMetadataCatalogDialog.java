@@ -919,10 +919,11 @@ public final class FolioMetadataCatalogDialog {
         sv.addView(listBox);
         root.addView(sv);
 
-        dlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        dlgRef[0] = new AlertDialog.Builder(ctx)
                 .setView(root)
                 .setPositiveButton("Close", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, dlgRef[0]);
     }
 
     private static void sortBooks(final Context ctx, List<FolioMetadataDb.BookRecord> list, final int mode, final boolean reversed, final Map<String, Integer> progressMap) {
@@ -1912,7 +1913,7 @@ public final class FolioMetadataCatalogDialog {
         removeBtn.setTypeface(Typeface.DEFAULT_BOLD);
         removeBtn.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         removeBtn.setOnClickListener(v -> {
-            new AlertDialog.Builder(ctx)
+            AlertDialog rmConfirm = new AlertDialog.Builder(ctx)
                     .setTitle("Remove Book")
                     .setMessage("Remove \"" + rec.title + "\" from Folio Library?\n\nOriginal EPUB files on external storage are never deleted.")
                     .setPositiveButton("Remove", (cd, cw) -> {
@@ -1923,6 +1924,7 @@ public final class FolioMetadataCatalogDialog {
                     })
                     .setNegativeButton("Cancel", null)
                     .show();
+            FolioTheme.applyToDialog(ctx, rmConfirm);
         });
         footerActionRow.addView(removeBtn);
 
@@ -2072,6 +2074,7 @@ public final class FolioMetadataCatalogDialog {
         wrap.setOnClickListener(v -> dlg.dismiss());
         fullIv.setOnClickListener(v -> dlg.dismiss());
         dlg.show();
+        FolioTheme.applyToDialog(ctx, dlg);
     }
 
     private static void showEditMetadataDialog(final Context ctx, final FolioMetadataDb.BookRecord rec,
@@ -2761,6 +2764,7 @@ public final class FolioMetadataCatalogDialog {
             });
         }
         pickerRef[0] = b.show();
+        FolioTheme.applyToDialog(ctx, pickerRef[0]);
     }
 
     public static int getRating(Context ctx, String kfxPath) {
@@ -2860,7 +2864,8 @@ public final class FolioMetadataCatalogDialog {
                 if (onSaved != null) onSaved.run();
             });
         }
-        b.show();
+        AlertDialog noteDlg = b.show();
+        FolioTheme.applyToDialog(ctx, noteDlg);
     }
 
     public static boolean isFavorite(Context ctx, String kfxPath) {
@@ -3058,7 +3063,7 @@ public final class FolioMetadataCatalogDialog {
         customInput.setSingleLine(true);
         box.addView(customInput);
 
-        dlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        dlgRef[0] = new AlertDialog.Builder(ctx)
                 .setView(box)
                 .setPositiveButton("Apply Custom", (d, w) -> {
                     String val = customInput.getText().toString().trim();
@@ -3074,6 +3079,7 @@ public final class FolioMetadataCatalogDialog {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, dlgRef[0]);
     }
 
     private static void showBulkGenrePicker(
@@ -3159,7 +3165,7 @@ public final class FolioMetadataCatalogDialog {
         customInput.setSingleLine(true);
         box.addView(customInput);
 
-        dlgRef[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        dlgRef[0] = new AlertDialog.Builder(ctx)
                 .setView(box)
                 .setPositiveButton("Apply Genre", (d, w) -> {
                     String val = customInput.getText().toString().trim();
@@ -3170,6 +3176,7 @@ public final class FolioMetadataCatalogDialog {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, dlgRef[0]);
     }
 
     private static int applyBulkGenreMerge(Context ctx, List<FolioMetadataDb.BookRecord> recs, String toAddCsv) {
@@ -3324,7 +3331,7 @@ public final class FolioMetadataCatalogDialog {
         input.setHintTextColor(FolioTheme.textMuted());
         box.addView(input);
 
-        new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        AlertDialog dateDlg = new AlertDialog.Builder(ctx)
                 .setTitle("Finished Date — " + (rec.title != null ? rec.title : "Book"))
                 .setView(box)
                 .setPositiveButton("Save Date", (d, w) -> {
@@ -3340,6 +3347,7 @@ public final class FolioMetadataCatalogDialog {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+        FolioTheme.applyToDialog(ctx, dateDlg);
     }
 
     private static void setBookReadState(Context ctx, String kfxPath, boolean finished) {

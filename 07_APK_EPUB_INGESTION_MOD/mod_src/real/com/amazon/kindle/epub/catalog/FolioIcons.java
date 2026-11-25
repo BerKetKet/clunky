@@ -161,6 +161,8 @@ public final class FolioIcons {
         Object tag = btn.getTag();
         if (tag instanceof IconView) {
             ((IconView) tag).setIconColor(newColor);
+        } else if (tag instanceof ImageView) {
+            ((ImageView) tag).setColorFilter(newColor, android.graphics.PorterDuff.Mode.SRC_IN);
         }
     }
 

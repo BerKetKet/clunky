@@ -123,18 +123,24 @@ public class ExternalEpubActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(20);
         root.setPadding(pad, pad, pad, dp(16));
-        root.setBackgroundColor(Color.parseColor("#15171A"));
+        boolean light = com.amazon.kindle.epub.catalog.FolioTheme.isLimestoneLight(this);
+        root.setBackgroundColor(com.amazon.kindle.epub.catalog.FolioTheme.bgModal(this));
+
+        String accentHex = light ? "#2D3138" : "#D4C9B8";
+        String btnFgOnAccentHex = light ? "#F4F0E8" : "#0E0F11";
+        String controlBgHex = light ? "#DDD6C7" : "#25282D";
+        String textPriHex = light ? "#1A1B1E" : "#ECE8E0";
 
         TextView badge = new TextView(this);
         badge.setText(existing != null ? "ALREADY IN AZATH LIBRARY" : "AZATH EPUB IMPORT");
-        badge.setTextColor(Color.parseColor(existing != null ? "#D4C9B8" : "#D4C9B8"));
+        badge.setTextColor(com.amazon.kindle.epub.catalog.FolioTheme.accent(this));
         badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         badge.setTypeface(Typeface.DEFAULT_BOLD);
         root.addView(badge);
 
         TextView titleView = new TextView(this);
         titleView.setText(meta.title);
-        titleView.setTextColor(Color.parseColor("#ECE8E0"));
+        titleView.setTextColor(com.amazon.kindle.epub.catalog.FolioTheme.textPrimary(this));
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
         titleView.setTypeface(Typeface.DEFAULT_BOLD);
         titleView.setPadding(0, dp(6), 0, dp(4));
@@ -147,7 +153,7 @@ public class ExternalEpubActivity extends Activity {
         }
         TextView authorView = new TextView(this);
         authorView.setText(sub.toString());
-        authorView.setTextColor(Color.parseColor("#BDB8AE"));
+        authorView.setTextColor(com.amazon.kindle.epub.catalog.FolioTheme.textSecondary(this));
         authorView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         authorView.setPadding(0, 0, 0, dp(12));
         root.addView(authorView);
@@ -158,13 +164,13 @@ public class ExternalEpubActivity extends Activity {
         } else {
             desc.setText("Add to your Azath library (saves converted book & metadata in app storage) or open once without saving.");
         }
-        desc.setTextColor(Color.parseColor("#8A857D"));
+        desc.setTextColor(com.amazon.kindle.epub.catalog.FolioTheme.textMuted(this));
         desc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         desc.setPadding(0, 0, 0, dp(18));
         root.addView(desc);
 
         if (existing != null) {
-            TextView btnOpenExisting = makeButton("Open Existing Copy", "#D4C9B8", "#0E0F11");
+            TextView btnOpenExisting = makeButton("Open Existing Copy", accentHex, btnFgOnAccentHex);
             btnOpenExisting.setOnClickListener(v -> {
                 stagedEpub.delete();
                 dismissActiveDialog();
@@ -177,11 +183,11 @@ public class ExternalEpubActivity extends Activity {
             sp0.setLayoutParams(new LinearLayout.LayoutParams(1, dp(10)));
             root.addView(sp0);
 
-            TextView btnReimport = makeButton("Re-Import & Replace", "#25282D", "#ECE8E0");
+            TextView btnReimport = makeButton("Re-Import & Replace", controlBgHex, textPriHex);
             btnReimport.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
             root.addView(btnReimport);
         } else {
-            TextView btnAdd = makeButton("Add to Library & Read", "#D4C9B8", "#0E0F11");
+            TextView btnAdd = makeButton("Add to Library & Read", accentHex, btnFgOnAccentHex);
             btnAdd.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
             root.addView(btnAdd);
 
@@ -189,7 +195,7 @@ public class ExternalEpubActivity extends Activity {
             spacer.setLayoutParams(new LinearLayout.LayoutParams(1, dp(10)));
             root.addView(spacer);
 
-            TextView btnOnce = makeButton("Open Once (Don't Add)", "#25282D", "#ECE8E0");
+            TextView btnOnce = makeButton("Open Once (Don't Add)", controlBgHex, textPriHex);
             btnOnce.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, false));
             root.addView(btnOnce);
         }
@@ -201,7 +207,7 @@ public class ExternalEpubActivity extends Activity {
         TextView btnCancel = new TextView(this);
         btnCancel.setText("Cancel");
         btnCancel.setGravity(Gravity.CENTER);
-        btnCancel.setTextColor(Color.parseColor("#8A857D"));
+        btnCancel.setTextColor(com.amazon.kindle.epub.catalog.FolioTheme.textMuted(this));
         btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         btnCancel.setPadding(0, dp(10), 0, dp(6));
         btnCancel.setOnClickListener(v -> {
@@ -404,7 +410,7 @@ public class ExternalEpubActivity extends Activity {
         box.setOrientation(LinearLayout.HORIZONTAL);
         box.setGravity(Gravity.CENTER_VERTICAL);
         box.setPadding(dp(20), dp(20), dp(20), dp(20));
-        box.setBackgroundColor(Color.parseColor("#15171A"));
+        box.setBackgroundColor(com.amazon.kindle.epub.catalog.FolioTheme.bgModal(this));
 
         ProgressBar pb = new ProgressBar(this);
         pb.setIndeterminate(true);
@@ -416,14 +422,14 @@ public class ExternalEpubActivity extends Activity {
 
         TextView tvTitle = new TextView(this);
         tvTitle.setText(title);
-        tvTitle.setTextColor(Color.parseColor("#ECE8E0"));
+        tvTitle.setTextColor(com.amazon.kindle.epub.catalog.FolioTheme.textPrimary(this));
         tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
         textCol.addView(tvTitle);
 
         TextView tvSub = new TextView(this);
         tvSub.setText(subtitle);
-        tvSub.setTextColor(Color.parseColor("#8A857D"));
+        tvSub.setTextColor(com.amazon.kindle.epub.catalog.FolioTheme.textMuted(this));
         tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         textCol.addView(tvSub);
 
