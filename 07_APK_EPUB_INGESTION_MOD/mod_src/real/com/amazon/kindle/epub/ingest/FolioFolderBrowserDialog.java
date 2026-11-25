@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Dark-themed multi-select EPUB folder importer with:
@@ -285,6 +286,25 @@ public final class FolioFolderBrowserDialog {
         impLp.setMargins(0, dp(ctx, 10), 0, 0);
         btnImport.setLayoutParams(impLp);
         root.addView(btnImport);
+
+        final TextView btnCancelImport = new TextView(ctx);
+        btnCancelImport.setText("Cancel Import");
+        btnCancelImport.setGravity(Gravity.CENTER);
+        btnCancelImport.setTextColor(FolioTheme.textPrimary(ctx));
+        btnCancelImport.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        btnCancelImport.setTypeface(Typeface.DEFAULT_BOLD);
+        btnCancelImport.setPadding(dp(ctx, 16), dp(ctx, 10), dp(ctx, 16), dp(ctx, 10));
+        GradientDrawable cancelBg = new GradientDrawable();
+        cancelBg.setColor(FolioTheme.bgControl(ctx));
+        cancelBg.setCornerRadius(dp(ctx, 10));
+        cancelBg.setStroke(dp(ctx, 1), FolioTheme.border(ctx));
+        btnCancelImport.setBackground(cancelBg);
+        LinearLayout.LayoutParams cancelLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        cancelLp.setMargins(0, dp(ctx, 6), 0, 0);
+        btnCancelImport.setLayoutParams(cancelLp);
+        btnCancelImport.setVisibility(View.GONE);
+        root.addView(btnCancelImport);
 
         final AlertDialog dialog = new AlertDialog.Builder(ctx)
                 .setView(root)
@@ -653,19 +673,32 @@ public final class FolioFolderBrowserDialog {
                 return;
             }
             final List<File> batch = new ArrayList<>(selectedFiles);
+            final AtomicBoolean cancelled = new AtomicBoolean(false);
             btnImport.setEnabled(false);
             btnImport.setText("Importing 0/" + batch.size() + "...");
+            btnCancelImport.setEnabled(true);
+            btnCancelImport.setText("Cancel Import");
+            btnCancelImport.setVisibility(View.VISIBLE);
+            btnCancelImport.setOnClickListener(cv -> {
+                cancelled.set(true);
+                btnCancelImport.setEnabled(false);
+                btnCancelImport.setText("Cancelling after current book...");
+            });
 
             new Thread(() -> {
                 int okCount = 0;
                 File lastImportedKfx = null;
                 File sdKindle = new File("/sdcard/kindle");
                 if (!sdKindle.exists()) sdKindle.mkdirs();
-                File targetDir = (sdKindle.exists() && sdKindle.canWrite())
+                File targetDir = (sdKindle.isDirectory() && sdKindle.canWrite())
                         ? sdKindle : new File(ctx.getFilesDir(), "folio_library");
                 if (!targetDir.exists()) targetDir.mkdirs();
 
                 for (int i = 0; i < batch.size(); i++) {
+                    if (cancelled.get()) {
+                        Log.i(TAG, "Batch import cancelled by user after " + okCount + " of " + batch.size());
+                        break;
+                    }
                     final int idx = i + 1;
                     final File epub = batch.get(i);
                     mainHandler.post(() -> btnImport.setText("Importing " + idx + "/" + batch.size() + "..."));
@@ -685,17 +718,22 @@ public final class FolioFolderBrowserDialog {
 
                 try { AzathLibrarySync.reconcileLibrary(ctx); } catch (Throwable ignored) {}
                 final int finalOk = okCount;
+                final boolean wasCancelled = cancelled.get();
                 final File finalLastKfx = lastImportedKfx;
                 mainHandler.post(() -> {
+                    btnCancelImport.setVisibility(View.GONE);
                     btnImport.setEnabled(true);
                     selectedFiles.clear();
                     updateImportLabel.run();
                     renderList.run();
                     if (finalOk > 0) {
+                        String statusLine = "Converted " + finalOk + " of " + batch.size()
+                                + " EPUB" + (batch.size() == 1 ? "" : "s")
+                                + (wasCancelled ? " (cancelled)" : "")
+                                + " into /sdcard/kindle/. Open now to read and index it immediately in your Library.";
                         AlertDialog.Builder b = new AlertDialog.Builder(ctx)
-                                .setTitle("Imported to Azath Library")
-                                .setMessage("Converted " + finalOk + " of " + batch.size() + " EPUB" + (batch.size() == 1 ? "" : "s")
-                                        + " into /sdcard/kindle/. Open now to read and index it immediately in your Library.")
+                                .setTitle(wasCancelled ? "Imported " + finalOk + " of " + batch.size() + " (cancelled)" : "Imported to Azath Library")
+                                .setMessage(statusLine)
                                 .setNegativeButton("Done", null);
                         if (finalLastKfx != null && finalLastKfx.exists()) {
                             b.setPositiveButton(finalOk == 1 ? "Open Book" : "Open Latest Book", (d2, w2) -> {
@@ -707,7 +745,7 @@ public final class FolioFolderBrowserDialog {
                         FolioTheme.applyToDialog(ctx, doneDlg);
                     } else {
                         Toast.makeText(ctx,
-                                "Imported 0 of " + batch.size() + " EPUBs",
+                                wasCancelled ? "Imported 0 of " + batch.size() + " (cancelled)" : "Imported 0 of " + batch.size() + " EPUBs",
                                 Toast.LENGTH_LONG).show();
                     }
                 });
