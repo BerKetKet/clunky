@@ -541,15 +541,14 @@ public final class FolioFolderBrowserDialog {
                 String shortLbl = qd.replace("/sdcard/", "");
                 if (shortLbl.isEmpty()) shortLbl = qd;
                 chip.setText((isPin ? "★ " : "") + shortLbl);
-                int actTxtCol = FolioTheme.isLimestoneLight(ctx) ? 0xFFF4F0E8 : 0xFF0E0F11;
-                chip.setTextColor(isCur ? actTxtCol : (isPin ? FolioTheme.accent(ctx) : FolioTheme.textSecondary(ctx)));
+                chip.setTextColor(Color.parseColor(isCur ? "#15171A" : (isPin ? "#D4C9B8" : "#BDB8AE")));
                 chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
                 chip.setTypeface(isCur || isPin ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                 chip.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
                 GradientDrawable cbg = new GradientDrawable();
-                cbg.setColor((isCur ? FolioTheme.accent(ctx) : FolioTheme.bgControl(ctx)));
+                cbg.setColor((isCur ? FolioTheme.accent() : FolioTheme.bgControl()));
                 cbg.setCornerRadius(dp(ctx, 14));
-                if (!isCur) cbg.setStroke(dp(ctx, 1), (isPin ? FolioTheme.accentBorder(ctx) : FolioTheme.border(ctx)));
+                if (!isCur) cbg.setStroke(dp(ctx, 1), (isPin ? FolioTheme.accentBorder() : FolioTheme.border()));
                 chip.setBackground(cbg);
                 LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -659,7 +658,10 @@ public final class FolioFolderBrowserDialog {
 
             new Thread(() -> {
                 int okCount = 0;
-                File targetDir = new File(ctx.getFilesDir(), "folio_library");
+                File sdKindle = new File("/sdcard/kindle");
+                if (!sdKindle.exists()) sdKindle.mkdirs();
+                File targetDir = (sdKindle.exists() && sdKindle.canWrite())
+                        ? sdKindle : new File(ctx.getFilesDir(), "folio_library");
                 if (!targetDir.exists()) targetDir.mkdirs();
 
                 for (int i = 0; i < batch.size(); i++) {
@@ -710,8 +712,9 @@ public final class FolioFolderBrowserDialog {
         });
 
         loadDir.run();
+        FolioTheme.applyToTree(ctx, root);
         dialog.show();
-        FolioTheme.applyToDialog(ctx, dialog);
+        FolioTheme.styleDialog(ctx, dialog);
     }
 
     private static GradientDrawable makeInputBg(Context ctx) {

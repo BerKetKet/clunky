@@ -63,6 +63,14 @@ public final class FolioWebBrowserDialog {
     private static final String KEY_RECENT_IMPORTS = "web_recent_imports";
     public static final String DEFAULT_URL = "https://standardebooks.org/ebooks";
 
+    private static final int BG_CANVAS = 0xFF15171A;
+    private static final int BG_SURFACE = 0xFF1C1E22;
+    private static final int BG_CONTROL = 0xFF25282D;
+    private static final int BORDER = 0xFF32353B;
+    private static final int TEXT_PRIMARY = 0xFFECE8E0;
+    private static final int TEXT_MUTED = 0xFF8A857D;
+    private static final int ACCENT_BLUE = 0xFFD4C9B8;
+
     private FolioWebBrowserDialog() {}
 
     public static String getHomeUrl(Context ctx) {
@@ -227,9 +235,9 @@ public final class FolioWebBrowserDialog {
             emp.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
             emp.setPadding(dp(d, 14), dp(d, 16), dp(d, 14), dp(d, 16));
             GradientDrawable eBg = new GradientDrawable();
-            eBg.setColor(FolioTheme.bgControl(ctx));
+            eBg.setColor(BG_CONTROL);
             eBg.setCornerRadius(dp(d, 8));
-            eBg.setStroke(dp(d, 1), FolioTheme.border(ctx));
+            eBg.setStroke(dp(d, 1), BORDER);
             emp.setBackground(eBg);
             root.addView(emp);
         } else {
@@ -244,9 +252,9 @@ public final class FolioWebBrowserDialog {
                 row.setGravity(Gravity.CENTER_VERTICAL);
                 row.setPadding(dp(d, 12), dp(d, 10), dp(d, 12), dp(d, 10));
                 GradientDrawable rBg = new GradientDrawable();
-                rBg.setColor(FolioTheme.bgControl(ctx));
+                rBg.setColor(BG_CONTROL);
                 rBg.setCornerRadius(dp(d, 8));
-                rBg.setStroke(dp(d, 1), FolioTheme.border(ctx));
+                rBg.setStroke(dp(d, 1), BORDER);
                 row.setBackground(rBg);
                 LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -305,7 +313,7 @@ public final class FolioWebBrowserDialog {
             root.addView(sv);
         }
 
-        AlertDialog.Builder b = new AlertDialog.Builder(ctx)
+        AlertDialog.Builder b = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setView(root)
                 .setPositiveButton("Close", null);
         if (!items.isEmpty()) {
@@ -326,12 +334,12 @@ public final class FolioWebBrowserDialog {
         final float d = ctx.getResources().getDisplayMetrics().density;
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(FolioTheme.bgModal(ctx));
+        root.setBackgroundColor(FolioTheme.bgSurface());
         root.setPadding(dp(d, 20), dp(d, 18), dp(d, 20), dp(d, 12));
 
         TextView hdr = new TextView(ctx);
         hdr.setText("Web Browser Settings");
-        hdr.setTextColor(FolioTheme.textPrimary(ctx));
+        hdr.setTextColor(FolioTheme.textPrimary());
         hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         hdr.setTypeface(Typeface.SERIF, Typeface.BOLD);
         hdr.setPadding(0, 0, 0, dp(d, 4));
@@ -339,14 +347,14 @@ public final class FolioWebBrowserDialog {
 
         TextView sub = new TextView(ctx);
         sub.setText("Configure your default catalog homepage URL and reading layout.");
-        sub.setTextColor(FolioTheme.textMuted(ctx));
+        sub.setTextColor(FolioTheme.textMuted());
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         sub.setPadding(0, 0, 0, dp(d, 14));
         root.addView(sub);
 
         TextView lbl = new TextView(ctx);
         lbl.setText("HOMEPAGE URL");
-        lbl.setTextColor(FolioTheme.textMuted(ctx));
+        lbl.setTextColor(FolioTheme.textMuted());
         lbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
         lbl.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
         lbl.setLetterSpacing(0.08f);
@@ -356,15 +364,15 @@ public final class FolioWebBrowserDialog {
         final EditText urlEt = new EditText(ctx);
         urlEt.setText(getHomeUrl(ctx));
         urlEt.setHint("https://standardebooks.org/ebooks");
-        urlEt.setHintTextColor(FolioTheme.textMuted(ctx));
-        urlEt.setTextColor(FolioTheme.textPrimary(ctx));
+        urlEt.setHintTextColor(FolioTheme.textMuted());
+        urlEt.setTextColor(FolioTheme.textPrimary());
         urlEt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         urlEt.setSingleLine(true);
         urlEt.setPadding(dp(d, 12), dp(d, 9), dp(d, 12), dp(d, 9));
         GradientDrawable uBg = new GradientDrawable();
-        uBg.setColor(FolioTheme.bgSurface(ctx));
+        uBg.setColor(BG_CANVAS);
         uBg.setCornerRadius(dp(d, 8));
-        uBg.setStroke(dp(d, 1), FolioTheme.border(ctx));
+        uBg.setStroke(dp(d, 1), BORDER);
         urlEt.setBackground(uBg);
         LinearLayout.LayoutParams uLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -386,13 +394,13 @@ public final class FolioWebBrowserDialog {
         for (final String[] pr : presets) {
             TextView chip = new TextView(ctx);
             chip.setText(pr[0]);
-            chip.setTextColor(FolioTheme.textPrimary(ctx));
+            chip.setTextColor(FolioTheme.textPrimary());
             chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
             chip.setPadding(dp(d, 10), dp(d, 5), dp(d, 10), dp(d, 5));
             GradientDrawable cBg = new GradientDrawable();
-            cBg.setColor(FolioTheme.bgControl(ctx));
+            cBg.setColor(BG_CONTROL);
             cBg.setCornerRadius(dp(d, 8));
-            cBg.setStroke(dp(d, 1), FolioTheme.border(ctx));
+            cBg.setStroke(dp(d, 1), BORDER);
             chip.setBackground(cBg);
             LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -417,14 +425,14 @@ public final class FolioWebBrowserDialog {
                 cleanToggle.setText(on
                         ? "Simplified View: On  — hides banners & popups"
                         : "Simplified View: Off  — original page layout");
-                cleanToggle.setTextColor(on ? FolioTheme.accent(ctx) : FolioTheme.textMuted(ctx));
+                cleanToggle.setTextColor(on ? FolioTheme.accent() : FolioTheme.textMuted());
                 cleanToggle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                 cleanToggle.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
                 cleanToggle.setPadding(dp(d, 12), dp(d, 10), dp(d, 12), dp(d, 10));
                 GradientDrawable ctBg = new GradientDrawable();
-                ctBg.setColor(FolioTheme.bgControl(ctx));
+                ctBg.setColor(BG_CONTROL);
                 ctBg.setCornerRadius(dp(d, 8));
-                ctBg.setStroke(dp(d, 1), on ? FolioTheme.accentBorder(ctx) : FolioTheme.border(ctx));
+                ctBg.setStroke(dp(d, 1), on ? FolioTheme.accentBorder() : BORDER);
                 cleanToggle.setBackground(ctBg);
             }
         };
@@ -436,8 +444,9 @@ public final class FolioWebBrowserDialog {
             }
         });
         root.addView(cleanToggle);
+        FolioTheme.applyToTree(ctx, root);
 
-        AlertDialog sDlg = new AlertDialog.Builder(ctx)
+        AlertDialog sDlg = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setView(root)
                 .setPositiveButton("Save", new DialogInterface.OnClickListener() {
                     @Override public void onClick(DialogInterface dialog, int which) {
@@ -449,7 +458,7 @@ public final class FolioWebBrowserDialog {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
-        FolioTheme.applyToDialog(ctx, sDlg);
+        FolioTheme.styleDialog(ctx, sDlg);
     }
 
     public static void show(final Context ctx, final Runnable onImported) {
@@ -458,44 +467,39 @@ public final class FolioWebBrowserDialog {
 
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(FolioTheme.bgCanvas(ctx));
+        root.setBackgroundColor(BG_CANVAS);
 
         // Top Kindle-native monochrome navigation bar
         LinearLayout topBar = new LinearLayout(ctx);
         topBar.setOrientation(LinearLayout.HORIZONTAL);
         topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setBackgroundColor(FolioTheme.bgSurface(ctx));
+        topBar.setBackgroundColor(FolioTheme.bgSurface());
         topBar.setPadding(dp(d, 8), dp(d, 8), dp(d, 8), dp(d, 8));
 
-        int icoCol = FolioTheme.textSecondary(ctx);
-        int mutCol = FolioTheme.textMuted(ctx);
-        int ctrlCol = FolioTheme.bgControl(ctx);
-        int brdCol = FolioTheme.border(ctx);
-
-        final FrameLayout btnBack = makeBarIcon(ctx, d, FolioIcons.BACK, icoCol, ctrlCol, brdCol);
-        final FrameLayout btnReload = makeBarIcon(ctx, d, FolioIcons.REFRESH, icoCol, ctrlCol, brdCol);
-        final FrameLayout btnHome = makeBarIcon(ctx, d, FolioIcons.HOME, icoCol, ctrlCol, brdCol);
+        final FrameLayout btnBack = makeBarIcon(ctx, d, FolioIcons.BACK, FolioIcons.COLOR_ICON, BG_CONTROL, BORDER);
+        final FrameLayout btnReload = makeBarIcon(ctx, d, FolioIcons.REFRESH, FolioIcons.COLOR_ICON, BG_CONTROL, BORDER);
+        final FrameLayout btnHome = makeBarIcon(ctx, d, FolioIcons.HOME, FolioIcons.COLOR_ICON, BG_CONTROL, BORDER);
 
         final TextView urlChip = new TextView(ctx);
         urlChip.setText(getHomeHostLabel(ctx));
-        urlChip.setTextColor(FolioTheme.textPrimary(ctx));
+        urlChip.setTextColor(FolioTheme.textPrimary());
         urlChip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         urlChip.setSingleLine(true);
         urlChip.setEllipsize(TextUtils.TruncateAt.END);
         urlChip.setPadding(dp(d, 10), dp(d, 6), dp(d, 10), dp(d, 6));
         GradientDrawable ucBg = new GradientDrawable();
-        ucBg.setColor(FolioTheme.bgModal(ctx));
+        ucBg.setColor(BG_CANVAS);
         ucBg.setCornerRadius(dp(d, 7));
-        ucBg.setStroke(dp(d, 1), brdCol);
+        ucBg.setStroke(dp(d, 1), BORDER);
         urlChip.setBackground(ucBg);
         LinearLayout.LayoutParams ucLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         ucLp.leftMargin = dp(d, 4);
         ucLp.rightMargin = dp(d, 6);
         urlChip.setLayoutParams(ucLp);
 
-        final FrameLayout btnClean = makeBarIcon(ctx, d, FolioIcons.SPARKLE, FolioTheme.accent(ctx), ctrlCol, brdCol);
-        final FrameLayout btnSettings = makeBarIcon(ctx, d, FolioIcons.SETTINGS, icoCol, ctrlCol, brdCol);
-        final FrameLayout btnClose = makeBarIcon(ctx, d, FolioIcons.CLOSE, mutCol, ctrlCol, brdCol);
+        final FrameLayout btnClean = makeBarIcon(ctx, d, FolioIcons.SPARKLE, FolioTheme.accent(), BG_CONTROL, BORDER);
+        final FrameLayout btnSettings = makeBarIcon(ctx, d, FolioIcons.SETTINGS, FolioIcons.COLOR_ICON, BG_CONTROL, BORDER);
+        final FrameLayout btnClose = makeBarIcon(ctx, d, FolioIcons.CLOSE, FolioIcons.COLOR_MUTED, BG_CONTROL, BORDER);
 
         topBar.addView(btnBack);
         topBar.addView(btnReload);
@@ -507,14 +511,14 @@ public final class FolioWebBrowserDialog {
         root.addView(topBar);
 
         View barDiv = new View(ctx);
-        barDiv.setBackgroundColor(brdCol);
+        barDiv.setBackgroundColor(BORDER);
         root.addView(barDiv, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, Math.round(d * 0.8f))));
 
         // Restrained Bookmarks & EPUB Scanner Bar
         HorizontalScrollView bmScroll = new HorizontalScrollView(ctx);
         bmScroll.setHorizontalScrollBarEnabled(false);
-        bmScroll.setBackgroundColor(FolioTheme.bgSurface(ctx));
+        bmScroll.setBackgroundColor(FolioTheme.bgSurface());
         bmScroll.setPadding(dp(d, 8), dp(d, 6), dp(d, 8), dp(d, 6));
         final LinearLayout bmRow = new LinearLayout(ctx);
         bmRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -523,7 +527,7 @@ public final class FolioWebBrowserDialog {
         root.addView(bmScroll);
 
         View bmDiv = new View(ctx);
-        bmDiv.setBackgroundColor(brdCol);
+        bmDiv.setBackgroundColor(BORDER);
         root.addView(bmDiv, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, Math.round(d * 0.8f))));
 
@@ -539,12 +543,12 @@ public final class FolioWebBrowserDialog {
         final LinearLayout statusBanner = new LinearLayout(ctx);
         statusBanner.setOrientation(LinearLayout.HORIZONTAL);
         statusBanner.setGravity(Gravity.CENTER_VERTICAL);
-        statusBanner.setBackgroundColor(ctrlCol);
+        statusBanner.setBackgroundColor(BG_CONTROL);
         statusBanner.setPadding(dp(d, 12), dp(d, 8), dp(d, 12), dp(d, 8));
         statusBanner.setVisibility(View.GONE);
 
         final TextView statusTv = new TextView(ctx);
-        statusTv.setTextColor(FolioTheme.textPrimary(ctx));
+        statusTv.setTextColor(FolioTheme.textPrimary());
         statusTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         statusTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
         statusTv.setSingleLine(true);
@@ -554,12 +558,12 @@ public final class FolioWebBrowserDialog {
 
         final TextView openNowBtn = new TextView(ctx);
         openNowBtn.setText("Open");
-        openNowBtn.setTextColor(FolioTheme.bgCanvas(ctx));
+        openNowBtn.setTextColor(FolioTheme.bgCanvas());
         openNowBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         openNowBtn.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
         openNowBtn.setPadding(dp(d, 10), dp(d, 4), dp(d, 10), dp(d, 4));
         GradientDrawable onBg = new GradientDrawable();
-        onBg.setColor(FolioTheme.accent(ctx));
+        onBg.setColor(FolioTheme.accent());
         onBg.setCornerRadius(dp(d, 6));
         openNowBtn.setBackground(onBg);
         openNowBtn.setVisibility(View.GONE);
@@ -570,7 +574,7 @@ public final class FolioWebBrowserDialog {
         int webH = (int) (ctx.getResources().getDisplayMetrics().heightPixels * 0.72f);
         webView.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, webH));
-        webView.setBackgroundColor(FolioTheme.bgCanvas(ctx));
+        webView.setBackgroundColor(BG_CANVAS);
 
         WebSettings ws = webView.getSettings();
         ws.setJavaScriptEnabled(true);
@@ -591,11 +595,11 @@ public final class FolioWebBrowserDialog {
             @Override public void run() {
                 boolean on = isCleanMode(ctx);
                 GradientDrawable bg = new GradientDrawable();
-                bg.setColor(FolioTheme.bgControl(ctx));
+                bg.setColor(BG_CONTROL);
                 bg.setCornerRadius(dp(d, 7));
-                bg.setStroke(dp(d, 1), on ? FolioTheme.accentBorder(ctx) : FolioTheme.border(ctx));
+                bg.setStroke(dp(d, 1), on ? FolioTheme.accentBorder() : BORDER);
                 btnClean.setBackground(bg);
-                FolioIcons.setButtonIconColor(btnClean, on ? FolioTheme.accent(ctx) : FolioTheme.textMuted(ctx));
+                FolioIcons.setButtonIconColor(btnClean, on ? FolioTheme.accent() : FolioIcons.COLOR_MUTED);
             }
         };
         updateCleanPill.run();
@@ -641,23 +645,13 @@ public final class FolioWebBrowserDialog {
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 String safeUrl = failingUrl != null ? failingUrl.replace("<", "&lt;").replace(">", "&gt;") : "";
                 String safeDesc = description != null ? description.replace("<", "&lt;").replace(">", "&gt;") : "No internet connection";
-                boolean lt = FolioTheme.isLimestoneLight(ctx);
-                String bgC = lt ? "#F4F0E8" : "#0E0F11";
-                String cardC = lt ? "#E7E1D5" : "#1C1E22";
-                String brdC = lt ? "#CBC3B3" : "#32353B";
-                String txtC = lt ? "#1A1B1E" : "#ECE8E0";
-                String mutC = lt ? "#73757B" : "#8A857D";
-                String afC = lt ? "#DFD8CA" : "#282520";
-                String abC = lt ? "#AFA695" : "#524B41";
-                String asC = lt ? "#25282E" : "#E6DDD0";
-                String accC = lt ? "#2D3138" : "#D4C9B8";
                 String html = "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
-                        + "<style>body{margin:0;padding:36px 24px;background:" + bgC + ";color:" + txtC + ";font-family:sans-serif;}"
-                        + ".card{background:" + cardC + ";border:1px solid " + brdC + ";border-radius:16px;padding:24px;}"
-                        + "h2{margin:0 0 8px;font-family:Georgia,serif;font-weight:400;font-size:22px;color:" + txtC + ";}"
-                        + "p{margin:0 0 12px;font-size:13px;line-height:1.5;color:" + mutC + ";word-break:break-word;}"
-                        + ".code{display:inline-block;padding:4px 10px;border-radius:999px;background:" + afC + ";border:1px solid " + abC + ";color:" + asC + ";font-size:11px;margin-bottom:16px;}"
-                        + "a.btn{display:inline-block;padding:10px 18px;border-radius:999px;background:" + accC + ";color:" + bgC + ";text-decoration:none;font-weight:700;font-size:13px;}"
+                        + "<style>body{margin:0;padding:36px 24px;background:#0E0F11;color:#ECE8E0;font-family:sans-serif;}"
+                        + ".card{background:#1C1E22;border:1px solid #32353B;border-radius:16px;padding:24px;}"
+                        + "h2{margin:0 0 8px;font-family:Georgia,serif;font-weight:400;font-size:22px;color:#ECE8E0;}"
+                        + "p{margin:0 0 12px;font-size:13px;line-height:1.5;color:#8A857D;word-break:break-word;}"
+                        + ".code{display:inline-block;padding:4px 10px;border-radius:999px;background:#282520;border:1px solid #524B41;color:#E6DDD0;font-size:11px;margin-bottom:16px;}"
+                        + "a.btn{display:inline-block;padding:10px 18px;border-radius:999px;background:#D4C9B8;color:#0E0F11;text-decoration:none;font-weight:700;font-size:13px;}"
                         + "</style></head><body><div class='card'><h2>Page unavailable offline</h2>"
                         + "<p>" + safeUrl + "</p><div class='code'>" + safeDesc + "</div><br/>"
                         + "<a class='btn' href='" + safeUrl + "'>Try Again</a></div></body></html>";
@@ -699,7 +693,7 @@ public final class FolioWebBrowserDialog {
 
                 // Pin button (monochrome)
                 LinearLayout pinBtn = makeChipWithIcon(ctx, d, FolioIcons.STAR, "Pin",
-                        FolioTheme.textPrimary(ctx), FolioTheme.bgControl(ctx), FolioTheme.border(ctx));
+                        FolioTheme.textPrimary(), BG_CONTROL, BORDER);
                 pinBtn.setOnClickListener(new View.OnClickListener() {
                     @Override public void onClick(View v) {
                         String curUrl = webView.getUrl();
@@ -725,9 +719,9 @@ public final class FolioWebBrowserDialog {
                 });
                 bmRow.addView(pinBtn);
 
-                // EPUB Scanner button (single stone accent)
+                // EPUB Scanner button (single Kindle blue accent)
                 LinearLayout scanBtn = makeChipWithIcon(ctx, d, FolioIcons.DOWNLOAD, "EPUBs",
-                        FolioTheme.accent(ctx), FolioTheme.bgControl(ctx), FolioTheme.accentBorder(ctx));
+                        FolioTheme.accent(), BG_CONTROL, FolioTheme.accentBorder());
                 scanBtn.setOnClickListener(new View.OnClickListener() {
                     @Override public void onClick(View v) {
                         scanPageForEpubLinks(ctx, webView, mainHandler, statusBanner, statusTv, openNowBtn, dlgRef, onImported);
@@ -738,7 +732,7 @@ public final class FolioWebBrowserDialog {
                 int dlCount = loadRecentImports(ctx).size();
                 String dlLabel = dlCount > 0 ? ("Downloads (" + dlCount + ")") : "Downloads";
                 LinearLayout dlBtn = makeChipWithIcon(ctx, d, FolioIcons.IMPORT, dlLabel,
-                        FolioTheme.textPrimary(ctx), FolioTheme.bgControl(ctx), FolioTheme.border(ctx));
+                        FolioTheme.textPrimary(), BG_CONTROL, BORDER);
                 dlBtn.setOnClickListener(new View.OnClickListener() {
                     @Override public void onClick(View v) {
                         showRecentDownloadsDialog(ctx, dlgRef[0], renderBookmarksRef[0]);
@@ -751,13 +745,13 @@ public final class FolioWebBrowserDialog {
                     final String[] item = bms.get(i);
                     TextView chip = new TextView(ctx);
                     chip.setText(item[0]);
-                    chip.setTextColor(FolioTheme.textMuted(ctx));
+                    chip.setTextColor(FolioTheme.textMuted());
                     chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
                     chip.setPadding(dp(d, 10), dp(d, 4), dp(d, 10), dp(d, 4));
                     GradientDrawable cBg = new GradientDrawable();
-                    cBg.setColor(FolioTheme.bgCanvas(ctx));
+                    cBg.setColor(BG_CANVAS);
                     cBg.setCornerRadius(dp(d, 7));
-                    cBg.setStroke(dp(d, 1), FolioTheme.border(ctx));
+                    cBg.setStroke(dp(d, 1), BORDER);
                     chip.setBackground(cBg);
                     LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -817,7 +811,7 @@ public final class FolioWebBrowserDialog {
             }
         });
 
-        final AlertDialog dlg = new AlertDialog.Builder(ctx)
+        final AlertDialog dlg = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setView(root)
                 .create();
         dlgRef[0] = dlg;
@@ -847,8 +841,9 @@ public final class FolioWebBrowserDialog {
             }
         });
 
+        FolioTheme.applyToTree(ctx, root);
         dlg.show();
-        FolioTheme.applyToDialog(ctx, dlg);
+        FolioTheme.styleDialog(ctx, dlg);
         Window win = dlg.getWindow();
         if (win != null) {
             win.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
@@ -863,12 +858,12 @@ public final class FolioWebBrowserDialog {
         final float d = ctx.getResources().getDisplayMetrics().density;
         LinearLayout box = new LinearLayout(ctx);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setBackgroundColor(FolioTheme.bgModal(ctx));
+        box.setBackgroundColor(FolioTheme.bgSurface());
         box.setPadding(dp(d, 20), dp(d, 18), dp(d, 20), dp(d, 10));
 
         TextView hdr = new TextView(ctx);
         hdr.setText("Go to URL");
-        hdr.setTextColor(FolioTheme.textPrimary(ctx));
+        hdr.setTextColor(FolioTheme.textPrimary());
         hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         hdr.setTypeface(Typeface.SERIF, Typeface.BOLD);
         hdr.setPadding(0, 0, 0, dp(d, 10));
@@ -879,19 +874,19 @@ public final class FolioWebBrowserDialog {
         et.setText(cur != null && !cur.isEmpty() ? cur : getHomeUrl(ctx));
         et.setSelectAllOnFocus(true);
         et.setHint("https://...");
-        et.setHintTextColor(FolioTheme.textMuted(ctx));
-        et.setTextColor(FolioTheme.textPrimary(ctx));
+        et.setHintTextColor(FolioTheme.textMuted());
+        et.setTextColor(FolioTheme.textPrimary());
         et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         et.setSingleLine(true);
         et.setPadding(dp(d, 12), dp(d, 9), dp(d, 12), dp(d, 9));
         GradientDrawable eBg = new GradientDrawable();
-        eBg.setColor(FolioTheme.bgSurface(ctx));
+        eBg.setColor(BG_CANVAS);
         eBg.setCornerRadius(dp(d, 8));
-        eBg.setStroke(dp(d, 1), FolioTheme.border(ctx));
+        eBg.setStroke(dp(d, 1), BORDER);
         et.setBackground(eBg);
         box.addView(et);
 
-        AlertDialog goDlg = new AlertDialog.Builder(ctx)
+        new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setView(box)
                 .setPositiveButton("Go", new DialogInterface.OnClickListener() {
                     @Override public void onClick(DialogInterface dialog, int which) {
@@ -908,7 +903,6 @@ public final class FolioWebBrowserDialog {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
-        FolioTheme.applyToDialog(ctx, goDlg);
     }
 
     private static void scanPageForEpubLinks(
@@ -950,12 +944,12 @@ public final class FolioWebBrowserDialog {
                 final float d = ctx.getResources().getDisplayMetrics().density;
                 LinearLayout wrap = new LinearLayout(ctx);
                 wrap.setOrientation(LinearLayout.VERTICAL);
-                wrap.setBackgroundColor(FolioTheme.bgModal(ctx));
+                wrap.setBackgroundColor(FolioTheme.bgSurface());
                 wrap.setPadding(dp(d, 20), dp(d, 18), dp(d, 20), dp(d, 10));
 
                 TextView hdr = new TextView(ctx);
                 hdr.setText("EPUB Links (" + found.size() + ")");
-                hdr.setTextColor(FolioTheme.textPrimary(ctx));
+                hdr.setTextColor(FolioTheme.textPrimary());
                 hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
                 hdr.setTypeface(Typeface.SERIF, Typeface.BOLD);
                 hdr.setPadding(0, 0, 0, dp(d, 10));
@@ -975,9 +969,9 @@ public final class FolioWebBrowserDialog {
                     row.setOrientation(LinearLayout.VERTICAL);
                     row.setPadding(dp(d, 12), dp(d, 10), dp(d, 12), dp(d, 10));
                     GradientDrawable rBg = new GradientDrawable();
-                    rBg.setColor(FolioTheme.bgControl(ctx));
+                    rBg.setColor(BG_CONTROL);
                     rBg.setCornerRadius(dp(d, 8));
-                    rBg.setStroke(dp(d, 1), FolioTheme.border(ctx));
+                    rBg.setStroke(dp(d, 1), BORDER);
                     row.setBackground(rBg);
                     LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -986,7 +980,7 @@ public final class FolioWebBrowserDialog {
 
                     TextView tTv = new TextView(ctx);
                     tTv.setText(item[0]);
-                    tTv.setTextColor(FolioTheme.accent(ctx));
+                    tTv.setTextColor(FolioTheme.accent());
                     tTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
                     tTv.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
                     tTv.setSingleLine(true);
@@ -995,7 +989,7 @@ public final class FolioWebBrowserDialog {
 
                     TextView uTv = new TextView(ctx);
                     uTv.setText(item[1]);
-                    uTv.setTextColor(FolioTheme.textMuted(ctx));
+                    uTv.setTextColor(FolioTheme.textMuted());
                     uTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
                     uTv.setSingleLine(true);
                     uTv.setEllipsize(TextUtils.TruncateAt.END);
@@ -1011,11 +1005,10 @@ public final class FolioWebBrowserDialog {
                     list.addView(row);
                 }
 
-                pickDlg[0] = new AlertDialog.Builder(ctx)
+                pickDlg[0] = new AlertDialog.Builder(ctx, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                         .setView(wrap)
                         .setNegativeButton("Close", null)
                         .show();
-                FolioTheme.applyToDialog(ctx, pickDlg[0]);
             }
         });
     }
@@ -1041,8 +1034,8 @@ public final class FolioWebBrowserDialog {
         mainHandler.post(new Runnable() {
             @Override public void run() {
                 statusBanner.setVisibility(View.VISIBLE);
-                statusBanner.setBackgroundColor(FolioTheme.bgControl(ctx));
-                statusTv.setTextColor(FolioTheme.accent(ctx));
+                statusBanner.setBackgroundColor(BG_CONTROL);
+                statusTv.setTextColor(FolioTheme.accent());
                 statusTv.setText("Downloading " + displayFile + "...");
                 openNowBtn.setVisibility(View.GONE);
             }
@@ -1133,7 +1126,10 @@ public final class FolioWebBrowserDialog {
                         }
                     });
 
-                    File targetDir = new File(ctx.getFilesDir(), "folio_library");
+                    File sdKindle = new File("/sdcard/kindle");
+                    if (!sdKindle.exists()) sdKindle.mkdirs();
+                    File targetDir = (sdKindle.exists() && sdKindle.canWrite())
+                            ? sdKindle : new File(ctx.getFilesDir(), "folio_library");
                     if (!targetDir.exists()) targetDir.mkdirs();
 
                     EpubMetadataExtractor.BookMeta meta = EpubMetadataExtractor.extract(dlFile, safeName);
@@ -1162,8 +1158,8 @@ public final class FolioWebBrowserDialog {
                     final String addedTitle = (meta.title != null && !meta.title.isEmpty()) ? meta.title : safeName;
                     mainHandler.post(new Runnable() {
                         @Override public void run() {
-                            statusBanner.setBackgroundColor(FolioTheme.bgControl(ctx));
-                            statusTv.setTextColor(FolioTheme.textPrimary(ctx));
+                            statusBanner.setBackgroundColor(BG_CONTROL);
+                            statusTv.setTextColor(FolioTheme.textPrimary());
                             statusTv.setText("Added \"" + addedTitle + "\" to Library");
                             openNowBtn.setVisibility(View.VISIBLE);
                             openNowBtn.setOnClickListener(new View.OnClickListener() {
@@ -1180,8 +1176,8 @@ public final class FolioWebBrowserDialog {
                     Log.e(TAG, "Web EPUB download/ingest failed", t);
                     mainHandler.post(new Runnable() {
                         @Override public void run() {
-                            statusBanner.setBackgroundColor(FolioTheme.bgControl(ctx));
-                            statusTv.setTextColor(FolioTheme.isLimestoneLight(ctx) ? 0xFFB05B3B : 0xFFC99A7E);
+                            statusBanner.setBackgroundColor(BG_CONTROL);
+                            statusTv.setTextColor(0xFFC99A7E);
                             statusTv.setText(t.getMessage() != null ? t.getMessage() : "Download failed");
                             openNowBtn.setVisibility(View.GONE);
                         }

@@ -1,6 +1,14 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 155 (`Azath v17.5 KFX`) Verified, Staged & Audited (2026-11-25)**:
+  - Copied Round 155 drop-ins (`FolioFolderBrowserDialog.java`, `ExternalEpubActivity.java`, `FolioWebBrowserDialog.java`, `FolioMoreView.java`) verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/` and updated `rebuild_fast.sh` to stage `azath_v17.5_kfx`.
+  - Built `classes9.dex` (`487,308` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.5_kfx/base.apk` (`138,844,263` B, SHA256 `559868e3d561c32fbc2d4c9e4e9d4e5af0cb9d390e85665f2b408d960064dc50`).
+  - Hardware verified on **Samsung Galaxy M30** (`32001776e8e82623`): `com.azath.reader` updated `2026-11-25 12:29:29`, stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`).
+  - Real EPUB Import (`Aldous Huxley - Brave New World.epub`): `EpubTranscoder` converted to `/sdcard/kindle/Brave_New_World_FOLIO_621B293A3B8F.kfx` (`988,906` B) + `.cover.jpg` (`68,883` B) in `15441ms`, and `Brave New World` appeared at #1 in `Library` Grid (`verify_r155_library_after_import.png`) and #2 in `Library` List View in both Granite (`verify_r155_library_list_granite.png`) and Limestone (`verify_r155_library_list_limestone.png`) with crisp titles/authors.
+  - Honest findings logged for Gemini Neon: (1) `FolioMetadataDb.registerInKindleLibraryDb` (`FolioMetadataDb.java:297`) threw `SQLiteConstraintException: NOT NULL constraint failed: UserContent.LAST_ACCESSED (code 1299)`; (2) `Fatal signal 31 (SIGSYS), code 1 (SYS_SECCOMP)` observed in `Thread-20` at `12:32:01.135`.
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 154 (`Azath v17.4 KFX`) Verified, Staged & Audited (2026-11-25)**:
   - Fixed `Library` bottom-nav active-tab desync (`FolioTheme.onTabIdSelected` hooked into `NavigationControllerViewModel.E0` via `patch_classes3.sh`, `FolioTheme.wrapLibraryScreenlet` `setActiveBottomTab(ctx, 1)`, dual `ib.b` + `ib.c` reflection).
   - Fixed Compose `LibraryTopBar` / `TitleTopAppBar` / `SearchBoxTopAppBar` `TopAppBarDefaults.topAppBarColors` (`patch_classes3_azath.sh` + `patch_classes5_azath.sh`) to live `FolioTheme.composeSurfaceLong()` / `composeOnSurfaceLong()` and hooked `LibraryScreenlet.f` + `oob/z.d` (`LegacySearchBar`) into `FolioTheme`.
