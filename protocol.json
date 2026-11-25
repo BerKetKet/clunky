@@ -1,10 +1,10 @@
 {
-  "round": 150,
+  "round": 151,
   "app_name": "Azath",
   "package_name": "com.azath.reader",
-  "version_label": "Azath v17.0 KFX",
-  "milestone": "Round 150 Stone Edition Complete \u2014 Full Granite & Limestone Modal Parity",
+  "version_label": "Azath v17.1 KFX",
   "target_hardware": "Samsung Galaxy M30 (32001776e8e82623)",
   "stock_kindle_invariant": "com.amazon.kindle MUST remain 100% UNTOUCHED and READ-ONLY",
+  "antigravity_role": "FAST EXECUTOR & DATA COLLECTOR ONLY \u2014 do NOT self-debug, refactor, or invent workarounds; copy drop-ins verbatim, build, deploy, collect requested screenshots/data, and report raw errors to Gemini immediately.",
   "strict_policy": "DO NOT launch, inspect, or reference Play Store Folio (ct.reader)."
 }

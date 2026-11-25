@@ -179,7 +179,7 @@ public final class FolioMetadataCatalogDialog {
 
         final TextView heading = new TextView(ctx);
         heading.setText("Library Metadata & Genres (" + allBooks.size() + ")");
-        heading.setTextColor(Color.WHITE);
+        heading.setTextColor(FolioTheme.textPrimary());
         heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         heading.setTypeface(Typeface.SERIF, Typeface.BOLD);
         heading.setSingleLine(true);
@@ -226,7 +226,7 @@ public final class FolioMetadataCatalogDialog {
         final EditText searchBox = new EditText(ctx);
         searchBox.setHint("Filter by title, author, genre, or ISBN...");
         searchBox.setHintTextColor(FolioTheme.textMuted());
-        searchBox.setTextColor(Color.WHITE);
+        searchBox.setTextColor(FolioTheme.textPrimary());
         searchBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         searchBox.setSingleLine(true);
         searchBox.setBackgroundColor(Color.TRANSPARENT);
@@ -671,7 +671,7 @@ public final class FolioMetadataCatalogDialog {
             selectedPaths.clear();
             if (selectMode[0]) {
                 btnSelect.setText("✕ Done");
-                btnSelect.setTextColor(Color.WHITE);
+                btnSelect.setTextColor(FolioTheme.textPrimary());
                 selBtnBg.setColor(FolioTheme.accentBorder());
                 selBtnBg.setStroke(dp(ctx, 1), FolioTheme.accent());
                 bulkBar.setVisibility(View.VISIBLE);
@@ -835,7 +835,7 @@ public final class FolioMetadataCatalogDialog {
 
         TextView titleTv = new TextView(ctx);
         titleTv.setText("Sort Catalog");
-        titleTv.setTextColor(Color.WHITE);
+        titleTv.setTextColor(FolioTheme.textPrimary());
         titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         titleTv.setTypeface(Typeface.DEFAULT_BOLD);
         titleTv.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -1102,7 +1102,7 @@ public final class FolioMetadataCatalogDialog {
         TextView tTv = new TextView(ctx);
         String pref = isFavorite(ctx, rec.kfxPath) ? "★ " : "";
         tTv.setText(pref + rec.title);
-        tTv.setTextColor(Color.WHITE);
+        tTv.setTextColor(FolioTheme.textPrimary());
         tTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         tTv.setTypeface(Typeface.DEFAULT_BOLD);
         tTv.setMinLines(2);
@@ -1861,7 +1861,7 @@ public final class FolioMetadataCatalogDialog {
 
                     TextView stTv = new TextView(ctx);
                     stTv.setText(sib.title != null && !sib.title.isEmpty() ? sib.title : "Untitled");
-                    stTv.setTextColor(Color.WHITE);
+                    stTv.setTextColor(FolioTheme.textPrimary());
                     stTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
                     stTv.setTypeface(Typeface.DEFAULT_BOLD);
                     stTv.setMaxLines(2);
@@ -2085,7 +2085,7 @@ public final class FolioMetadataCatalogDialog {
 
         TextView hdr = new TextView(ctx);
         hdr.setText("Edit Book Metadata");
-        hdr.setTextColor(Color.WHITE);
+        hdr.setTextColor(FolioTheme.textPrimary());
         hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         hdr.setTypeface(Typeface.DEFAULT_BOLD);
         hdr.setPadding(0, 0, 0, dp(ctx, 12));
@@ -2285,7 +2285,7 @@ public final class FolioMetadataCatalogDialog {
 
         EditText et = new EditText(ctx);
         et.setText(value != null ? value : "");
-        et.setTextColor(Color.WHITE);
+        et.setTextColor(FolioTheme.textPrimary());
         et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         et.setSingleLine(true);
         et.setPadding(dp(ctx, 10), dp(ctx, 8), dp(ctx, 10), dp(ctx, 8));
@@ -2470,7 +2470,7 @@ public final class FolioMetadataCatalogDialog {
 
         final TextView hdr = new TextView(ctx);
         hdr.setText("Authors Directory (" + keys.size() + ")");
-        hdr.setTextColor(Color.WHITE);
+        hdr.setTextColor(FolioTheme.textPrimary());
         hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         hdr.setTypeface(Typeface.DEFAULT_BOLD);
         hdr.setPadding(0, 0, 0, dp(ctx, 10));
@@ -2487,7 +2487,7 @@ public final class FolioMetadataCatalogDialog {
         final EditText authSearch = new EditText(ctx);
         authSearch.setHint("Search authors...");
         authSearch.setHintTextColor(FolioTheme.textMuted());
-        authSearch.setTextColor(Color.WHITE);
+        authSearch.setTextColor(FolioTheme.textPrimary());
         authSearch.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         authSearch.setSingleLine(true);
         authSearch.setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8));
@@ -2610,7 +2610,7 @@ public final class FolioMetadataCatalogDialog {
 
                 TextView nameTv = new TextView(ctx);
                 nameTv.setText(name);
-                nameTv.setTextColor(Color.WHITE);
+                nameTv.setTextColor(FolioTheme.textPrimary());
                 nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
                 nameTv.setTypeface(Typeface.DEFAULT_BOLD);
                 nameTv.setMaxLines(1);
@@ -2686,7 +2686,7 @@ public final class FolioMetadataCatalogDialog {
 
         TextView hdr = new TextView(ctx);
         hdr.setText("Assign Shelf · " + rec.title);
-        hdr.setTextColor(Color.WHITE);
+        hdr.setTextColor(FolioTheme.textPrimary());
         hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         hdr.setTypeface(Typeface.DEFAULT_BOLD);
         hdr.setPadding(0, 0, 0, dp(ctx, 10));
@@ -2733,7 +2733,7 @@ public final class FolioMetadataCatalogDialog {
         et.setText(currentShelf);
         et.setHint("Or type a custom shelf name...");
         et.setHintTextColor(FolioTheme.textMuted());
-        et.setTextColor(Color.WHITE);
+        et.setTextColor(FolioTheme.textPrimary());
         et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         et.setSingleLine(true);
         et.setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10));
@@ -2822,7 +2822,7 @@ public final class FolioMetadataCatalogDialog {
 
         TextView hdr = new TextView(ctx);
         hdr.setText("Personal Note · " + rec.title);
-        hdr.setTextColor(Color.WHITE);
+        hdr.setTextColor(FolioTheme.textPrimary());
         hdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         hdr.setTypeface(Typeface.DEFAULT_BOLD);
         hdr.setPadding(0, 0, 0, dp(ctx, 10));
@@ -2832,7 +2832,7 @@ public final class FolioMetadataCatalogDialog {
         et.setText(currentNote);
         et.setHint("Write your thoughts, quotes, or reading reminders...");
         et.setHintTextColor(FolioTheme.textMuted());
-        et.setTextColor(Color.WHITE);
+        et.setTextColor(FolioTheme.textPrimary());
         et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         et.setMinLines(3);
         et.setMaxLines(8);
@@ -2993,7 +2993,7 @@ public final class FolioMetadataCatalogDialog {
 
         TextView titleTv = new TextView(ctx);
         titleTv.setText("Assign Shelf (" + paths.size() + (paths.size() == 1 ? " book)" : " books)"));
-        titleTv.setTextColor(Color.WHITE);
+        titleTv.setTextColor(FolioTheme.textPrimary());
         titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         titleTv.setTypeface(Typeface.DEFAULT_BOLD);
         titleTv.setPadding(0, 0, 0, dp(ctx, 10));
@@ -3053,7 +3053,7 @@ public final class FolioMetadataCatalogDialog {
         final EditText customInput = new EditText(ctx);
         customInput.setHint("Or type a custom shelf name...");
         customInput.setHintTextColor(FolioTheme.textMuted());
-        customInput.setTextColor(Color.WHITE);
+        customInput.setTextColor(FolioTheme.textPrimary());
         customInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         customInput.setSingleLine(true);
         box.addView(customInput);
@@ -3088,7 +3088,7 @@ public final class FolioMetadataCatalogDialog {
 
         TextView titleTv = new TextView(ctx);
         titleTv.setText("Add Genre (" + recs.size() + (recs.size() == 1 ? " book)" : " books)"));
-        titleTv.setTextColor(Color.WHITE);
+        titleTv.setTextColor(FolioTheme.textPrimary());
         titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         titleTv.setTypeface(Typeface.DEFAULT_BOLD);
         titleTv.setPadding(0, 0, 0, dp(ctx, 4));
@@ -3154,7 +3154,7 @@ public final class FolioMetadataCatalogDialog {
         final EditText customInput = new EditText(ctx);
         customInput.setHint("Or type genre(s), comma-separated...");
         customInput.setHintTextColor(FolioTheme.textMuted());
-        customInput.setTextColor(Color.WHITE);
+        customInput.setTextColor(FolioTheme.textPrimary());
         customInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         customInput.setSingleLine(true);
         box.addView(customInput);
@@ -3320,7 +3320,7 @@ public final class FolioMetadataCatalogDialog {
         input.setSelection(input.getText().length());
         input.setSingleLine(true);
         input.setHint("YYYY-MM-DD (e.g. " + today + ")");
-        input.setTextColor(Color.WHITE);
+        input.setTextColor(FolioTheme.textPrimary());
         input.setHintTextColor(FolioTheme.textMuted());
         box.addView(input);
 

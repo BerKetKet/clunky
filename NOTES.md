@@ -1,6 +1,12 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 151 (`Azath v17.1 KFX`) Verified, Staged & Data Collected (2026-11-25)**:
+  - Copied verbatim Round 151 `FolioMoreView.java` (`v17.1 KFX`), `FolioTheme.java` (`applyWindowBars` + `styleDialog` footer painting), `OpenCatalogView.java` (`26sp` EB Garamond header parity), and `FolioMetadataCatalogDialog.java` (`FolioTheme.textPrimary()` heading/inputs) into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/`. Updated `rebuild_fast.sh` to stage `azath_v17.1_kfx`.
+  - Built `classes9.dex` (`474,212` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.1_kfx/base.apk` (`138,831,975` B, SHA256 `eed25c1e152126c288185163127802d8502386db88b53d997a9daf0b668655fc`).
+  - Hardware verified on **Samsung Galaxy M30** (`32001776e8e82623`): `com.azath.reader` updated `2026-11-25 03:00:15`, stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`), `ZERO_CRASHES_AND_NO_SIGSYS`, restored cleanly to `Granite`, visually verified `verify_r151_azath_catalog_limestone.png` (`368,135` B — `#1A1B1E` `"Library Metadata & Genres (24)"` heading + `#EFEAE0` `CLOSE` footer bar fixed cleanly), and collected `"Library"` bounds (`[43,135][178,198]`) + raw `Lib/b.<clinit>` smali palette tokens for Round 152.
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 150 Milestone (`Azath v17.0 KFX`) Verified, Staged & Audited (2026-11-25)**:
   - Integrated Round 150 `FolioTheme.java` (zero-arg `sLastLight` cached getters), `FolioMoreView.java` (`v17.0 KFX`), `FolioFolderBrowserDialog.java`, `FolioMetadataCatalogDialog.java` (with 2-line `javac` type fix on lines `2938` & `2967` synced to `dropin_src/`), and `FolioWebBrowserDialog.java`. Updated `rebuild_fast.sh` to stage `azath_v17.0_kfx`.
   - Built `classes9.dex` (`473,568` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.0_kfx/base.apk` (`138,831,975` B, SHA256 `2152ecf1ad99c7e4c2ad63397839f7a0484b3680735fab97fd496814c73cad63`).

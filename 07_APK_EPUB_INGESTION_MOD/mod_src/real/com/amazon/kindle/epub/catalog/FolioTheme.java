@@ -315,21 +315,52 @@ public final class FolioTheme {
         styleDialog(ctx, dlg);
     }
 
+    public static void applyWindowBars(Context ctx) {
+        if (!(ctx instanceof android.app.Activity)) return;
+        try {
+            android.view.Window win = ((android.app.Activity) ctx).getWindow();
+            if (win == null) return;
+            boolean light = isLimestoneLight(ctx);
+            win.setStatusBarColor(bgCanvas(ctx));
+            win.setNavigationBarColor(bgModal(ctx));
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                android.view.WindowInsetsController wic = win.getInsetsController();
+                if (wic != null) {
+                    int flags = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                            | android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                    wic.setSystemBarsAppearance(light ? flags : 0, flags);
+                }
+            }
+        } catch (Throwable ignored) {}
+    }
+
     public static void styleDialog(Context ctx, AlertDialog dlg) {
         if (ctx == null || dlg == null) return;
         ensureFonts(ctx);
         try {
+            int modalBg = bgModal(ctx);
             Button pos = dlg.getButton(DialogInterface.BUTTON_POSITIVE);
+            Button neg = dlg.getButton(DialogInterface.BUTTON_NEGATIVE);
+            Button neu = dlg.getButton(DialogInterface.BUTTON_NEUTRAL);
+            Button anchorBtn = pos != null ? pos : (neg != null ? neg : neu);
+            if (anchorBtn != null) {
+                android.view.ViewParent p1 = anchorBtn.getParent();
+                if (p1 instanceof View) {
+                    ((View) p1).setBackgroundColor(modalBg);
+                    android.view.ViewParent p2 = p1.getParent();
+                    if (p2 instanceof View) {
+                        ((View) p2).setBackgroundColor(modalBg);
+                    }
+                }
+            }
             if (pos != null) {
                 pos.setTextColor(accent(ctx));
                 pos.setTypeface(sansBold);
             }
-            Button neg = dlg.getButton(DialogInterface.BUTTON_NEGATIVE);
             if (neg != null) {
                 neg.setTextColor(textMuted(ctx));
                 neg.setTypeface(sansReg);
             }
-            Button neu = dlg.getButton(DialogInterface.BUTTON_NEUTRAL);
             if (neu != null) {
                 neu.setTextColor(textSecondary(ctx));
                 neu.setTypeface(sansReg);

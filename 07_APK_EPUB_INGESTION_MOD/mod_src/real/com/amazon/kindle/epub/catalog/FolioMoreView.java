@@ -90,6 +90,7 @@ public final class FolioMoreView {
         final int dynAccentBorder = FolioTheme.accentBorder(ctx);
         final int dynAccentSoft = FolioTheme.accentSoftText(ctx);
 
+        FolioTheme.applyWindowBars(ctx);
         ScrollView scroll = new ScrollView(ctx);
         scroll.setBackgroundColor(dynBg);
         scroll.setFillViewport(true);
@@ -139,7 +140,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v17.0 KFX");
+        badgeTv.setText("v17.1 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(dynAccentSoft);
         badgeTv.setTypeface(FolioTheme.sansBold(ctx));
@@ -5599,7 +5600,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Azath — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Azath v17.0 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Azath v17.1 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;

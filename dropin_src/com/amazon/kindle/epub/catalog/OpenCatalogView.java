@@ -318,7 +318,7 @@ public final class OpenCatalogView {
         final LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(cBgDark);
-        root.setPadding(dp(d, 16), dp(d, 10), dp(d, 16), dp(d, 24));
+        root.setPadding(dp(d, 20), dp(d, 12), dp(d, 20), dp(d, 24));
         mainScroll.addView(root);
 
         // --- Top Brand Header ---
@@ -330,7 +330,7 @@ public final class OpenCatalogView {
         TextView brand = new TextView(ctx);
         brand.setText("Azath");
         brand.setTextColor(cTextPrimary);
-        brand.setTextSize(30f);
+        brand.setTextSize(26f);
         brand.setTypeface(FolioTheme.serif(ctx));
         brand.setLetterSpacing(-0.02f);
         headerRow.addView(brand, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
@@ -694,6 +694,7 @@ public final class OpenCatalogView {
         loadPopularRef[0].run();
 
         FolioTheme.applyToTree(ctx, mainScroll);
+        FolioTheme.applyWindowBars(ctx);
         return mainScroll;
     }
 
