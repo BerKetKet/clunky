@@ -669,33 +669,11 @@ public final class FolioFolderBrowserDialog {
                     final File epub = batch.get(i);
                     mainHandler.post(() -> btnImport.setText("Importing " + idx + "/" + batch.size() + "..."));
                     try {
-                        EpubMetadataExtractor.BookMeta meta =
-                                EpubMetadataExtractor.extract(epub, epub.getName());
-                        String bookKey = FolioMetadataDb.computeBookKey(meta.title, epub.length());
-                        String safeBase = sanitizeFilename(meta.title) + "_" + bookKey;
-                        File outKfx = new File(targetDir, safeBase + ".kfx");
-                        File outCover = new File(outKfx.getAbsolutePath() + ".cover.jpg");
-
-                        boolean converted = ExternalEpubActivity.convertEpubToKfx(ctx, epub, outKfx);
-                        if (!converted || !outKfx.exists() || outKfx.length() < 128) {
-                            Log.w(TAG, "Conversion failed for " + epub.getName());
+                        AzathLibrarySync.IngestResult ir = AzathLibrarySync.ingestEpub(ctx, epub, epub.getName(), false);
+                        if (ir == null || !ir.ok) {
+                            Log.w(TAG, "Conversion failed for " + epub.getName() + ": " + (ir != null ? ir.error : "null"));
                             continue;
                         }
-
-                        MetadataEnricher.enrichInPlace(meta);
-
-                        FolioMetadataDb db = new FolioMetadataDb(ctx);
-                        try {
-                            db.upsertBook(bookKey, outKfx, outCover, epub.getName(), meta);
-                        } finally {
-                            db.close();
-                        }
-                        if (!outKfx.getAbsolutePath().startsWith("/sdcard/kindle")) {
-                            FolioMetadataDb.registerInKindleLibraryDb(ctx, bookKey, outKfx, outCover, meta);
-                        }
-                        dp.g.ingestKfxLive(outKfx);
-                        com.amazon.kindle.epub.catalog.FolioTheme.triggerLibraryRescan(ctx, outKfx);
-                        try { android.media.MediaScannerConnection.scanFile(ctx, new String[]{ outKfx.getAbsolutePath() }, null, null); } catch (Throwable ignored) {}
                         importedSourceNames.add(epub.getName().toLowerCase(Locale.ROOT));
                         okCount++;
                     } catch (Throwable t) {
@@ -703,7 +681,7 @@ public final class FolioFolderBrowserDialog {
                     }
                 }
 
-                try { FolioMetadataDb.cleanupLegacyDuplicateRows(ctx); } catch (Throwable ignored) {}
+                try { AzathLibrarySync.reconcileLibrary(ctx); } catch (Throwable ignored) {}
                 final int finalOk = okCount;
                 mainHandler.post(() -> {
                     btnImport.setEnabled(true);

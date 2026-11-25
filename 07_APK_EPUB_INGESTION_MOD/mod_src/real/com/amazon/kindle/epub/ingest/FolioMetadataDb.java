@@ -402,6 +402,13 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
      * Removes legacy synthetic AMZNID0/CR!...KFX/0/ rows written prior to Round 158
      * so books in /sdcard/kindle/ appear exactly once (indexed by Kindle's native scanner).
      */
+    public void deleteBook(String bookKey) {
+        if (bookKey == null || bookKey.isEmpty()) return;
+        try {
+            getWritableDatabase().delete("books_metadata", "book_key = ?", new String[]{ bookKey });
+        } catch (Throwable ignored) {}
+    }
+
     public static int cleanupLegacyDuplicateRows(Context ctx) {
         if (ctx == null) return 0;
         File dbFile = ctx.getDatabasePath("kindle_library.db");

@@ -1,6 +1,13 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 162 (`Azath v18.1 KFX`) Verified, Staged & Audited (2026-11-25)**:
+  - Integrated Round 162 `AzathLibrarySync.java`, `FolioMetadataDb.java` (with 1-symbol fix `TABLE` -> `"books_metadata"` at line 408), `FolioFolderBrowserDialog.java`, `OpenCatalogView.java`, and `FolioMoreView.java` (`v18.1 KFX`).
+  - Built `classes9.dex` (`498,016` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.1_kfx/base.apk` (`138,856,551` B, SHA256 `a7023ce857181d4536c0017a6b1d4fe30830e575113c8f6240121d6edf9b57a8`).
+  - Executed 12-Point QC Sweep on **Samsung Galaxy M30** (`32001776e8e82623`): `AzathLibrarySync: reconcileLibrary complete: activeKfx=27`, `/data/user/0/com.azath.reader = 35M` (`epub_cache = 4.2M`), `PID_START=22886 == PID_END=22886` across `Granite <-> Limestone`, `Library Metadata & Genres (27)`, `The 210th Day` `31% -> 34%` reader progress, Backup `folio_metadata_backup.json` updated, zero `FATAL EXCEPTION` / zero `SIGSYS` / zero `SQLiteConstraintException`, and stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`).
+  - Honest QC finding: tapping `REFRESH LIBRARY NOW` after EPUB import closed `com.azath.reader` to the Android home screen without relaunching it to the foreground.
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 161 (`Azath v18.0 KFX`) Verified, Staged & Audited (2026-11-25)**:
   - Copied Round 161 `dp/g.java` (removed `.epub` from background sideload enumerator + `shouldBlockAutoEpubCrawl`) and `FolioMoreView.java` (`v18.0 KFX`) verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/` and updated `rebuild_fast.sh` to stage `azath_v18.0_kfx`.
   - Built `classes9.dex` (`493,524` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.0_kfx/base.apk` (`138,852,455` B, SHA256 `80ba7bda7ec795c2547fc05bbdf875d3bfe40cb127a3e7cbdd0af62049cc5ee4`).

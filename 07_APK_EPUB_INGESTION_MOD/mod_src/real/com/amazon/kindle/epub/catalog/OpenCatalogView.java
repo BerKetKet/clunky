@@ -284,6 +284,7 @@ public final class OpenCatalogView {
 
     public static View build(final Context ctx) {
         DiskCache.init(ctx);
+        com.amazon.kindle.epub.ingest.AzathLibrarySync.reconcileOnLaunchAsync(ctx);
         final Handler mainHandler = new Handler(Looper.getMainLooper());
         final SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         final float d = ctx.getResources().getDisplayMetrics().density;
@@ -413,7 +414,7 @@ public final class OpenCatalogView {
         popSection.addView(popTitle);
         final TextView popStatus = new TextView(ctx);
         popStatus.setText("Loading Project Gutenberg catalog...");
-        popStatus.setTextColor(FolioTheme.textMuted(ctx));
+        popStatus.setTextColor(TEXT_MUTED);
         popStatus.setTextSize(13f);
         popStatus.setPadding(0, dp(d, 6), 0, dp(d, 12));
         popSection.addView(popStatus);
@@ -443,7 +444,7 @@ public final class OpenCatalogView {
                 srHdr.setGravity(Gravity.CENTER_VERTICAL);
                 TextView srTitle = makeSectionTitle(ctx, d, q.isEmpty() ? src.getName() : ("Results for \"" + q + "\""));
                 srHdr.addView(srTitle, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-                TextView clearBtn = makePill(ctx, d, "Clear", FolioTheme.bgSurface(ctx), FolioTheme.textMuted(ctx));
+                TextView clearBtn = makePill(ctx, d, "Clear", BG_SURFACE, TEXT_MUTED);
                 clearBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -457,7 +458,7 @@ public final class OpenCatalogView {
 
                 final TextView loadingTv = new TextView(ctx);
                 loadingTv.setText("Searching " + src.getName() + "...");
-                loadingTv.setTextColor(FolioTheme.textMuted(ctx));
+                loadingTv.setTextColor(TEXT_MUTED);
                 loadingTv.setTextSize(13f);
                 loadingTv.setPadding(0, dp(d, 6), 0, dp(d, 12));
                 searchSection.addView(loadingTv);
@@ -474,7 +475,7 @@ public final class OpenCatalogView {
                                     if (results.isEmpty()) {
                                         TextView emptyTv = new TextView(ctx);
                                         emptyTv.setText("No books found. Try another keyword or OPDS feed.");
-                                        emptyTv.setTextColor(FolioTheme.textMuted(ctx));
+                                        emptyTv.setTextColor(TEXT_MUTED);
                                         emptyTv.setPadding(0, dp(d, 8), 0, dp(d, 16));
                                         searchSection.addView(emptyTv);
                                         return;
@@ -926,7 +927,7 @@ public final class OpenCatalogView {
         LinearLayout row = new LinearLayout(ctx);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setBackground(roundRect(FolioTheme.bgSurface(ctx), dp(d, 10), FolioTheme.border(ctx), dp(d, 1)));
+        row.setBackground(roundRect(BG_SURFACE, dp(d, 10), 0xFF25282D, dp(d, 1)));
         row.setPadding(dp(d, 10), dp(d, 10), dp(d, 12), dp(d, 10));
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -934,13 +935,13 @@ public final class OpenCatalogView {
         row.setLayoutParams(rlp);
 
         FrameLayout thumbBox = new FrameLayout(ctx);
-        thumbBox.setBackground(roundRect(FolioTheme.bgControl(ctx), dp(d, 6), 0, 0));
+        thumbBox.setBackground(roundRect(BG_CARD, dp(d, 6), 0, 0));
         final ImageView iv = new ImageView(ctx);
         iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
         thumbBox.addView(iv, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         final TextView fb = new TextView(ctx);
         fb.setText("EPUB");
-        fb.setTextColor(FolioTheme.textMuted(ctx));
+        fb.setTextColor(TEXT_MUTED);
         fb.setTextSize(10f);
         fb.setGravity(Gravity.CENTER);
         thumbBox.addView(fb);
@@ -952,7 +953,7 @@ public final class OpenCatalogView {
         info.setOrientation(LinearLayout.VERTICAL);
         TextView tvTitle = new TextView(ctx);
         tvTitle.setText(book.title);
-        tvTitle.setTextColor(FolioTheme.textPrimary(ctx));
+        tvTitle.setTextColor(TEXT_PRIMARY);
         tvTitle.setTextSize(15f);
         tvTitle.setTypeface(null, Typeface.BOLD);
         tvTitle.setMaxLines(2);
@@ -962,7 +963,7 @@ public final class OpenCatalogView {
         TextView tvMeta = new TextView(ctx);
         String metaLine = book.author + (book.downloadCount > 0 ? (" • " + book.downloadCount + " downloads") : (" • " + book.sourceName));
         tvMeta.setText(metaLine);
-        tvMeta.setTextColor(FolioTheme.textMuted(ctx));
+        tvMeta.setTextColor(TEXT_MUTED);
         tvMeta.setTextSize(12.5f);
         tvMeta.setPadding(0, dp(d, 3), 0, 0);
         info.addView(tvMeta);
@@ -1071,13 +1072,10 @@ public final class OpenCatalogView {
         presetLabel.setText("Quick OPDS Catalogs:");
         presetLabel.setTextSize(14f);
         presetLabel.setTypeface(null, Typeface.BOLD);
-        presetLabel.setTextColor(FolioTheme.textPrimary(ctx));
         layout.addView(presetLabel);
 
         final EditText input = new EditText(ctx);
         input.setHint("https://example.org/opds.xml");
-        input.setTextColor(FolioTheme.textPrimary(ctx));
-        input.setHintTextColor(FolioTheme.textMuted(ctx));
         input.setText(prefs.getString(KEY_CUSTOM_OPDS, ""));
 
         final String[][] presets = new String[][]{
@@ -1089,12 +1087,6 @@ public final class OpenCatalogView {
             Button b = new Button(ctx);
             b.setText(p[0]);
             b.setAllCaps(false);
-            b.setTextColor(FolioTheme.textPrimary(ctx));
-            b.setBackgroundColor(FolioTheme.bgControl(ctx));
-            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            blp.topMargin = 8;
-            b.setLayoutParams(blp);
             b.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -1107,7 +1099,6 @@ public final class OpenCatalogView {
         TextView customLabel = new TextView(ctx);
         customLabel.setText("\nOr enter any OPDS 1.2 feed URL:");
         customLabel.setTextSize(13f);
-        customLabel.setTextColor(FolioTheme.textSecondary(ctx));
         layout.addView(customLabel);
         layout.addView(input);
 
@@ -1474,8 +1465,12 @@ public final class OpenCatalogView {
                         throw (lastErr != null) ? lastErr : new java.io.IOException("All download mirrors failed");
                     }
 
-                    final File kfxFile = new File(outDir, safeName + "_" + book.id + ".kfx");
-                    boolean kfxOk = com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubFile, kfxFile);
+                    com.amazon.kindle.epub.ingest.AzathLibrarySync.IngestResult ir =
+                            com.amazon.kindle.epub.ingest.AzathLibrarySync.ingestEpub(ctx, epubFile, book.title, true);
+                    final File kfxFile = (ir != null && ir.ok && ir.kfxFile != null)
+                            ? ir.kfxFile : new File(outDir, safeName + "_" + book.id + ".kfx");
+                    boolean kfxOk = (ir != null && ir.ok)
+                            || com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubFile, kfxFile);
                     if (kfxOk) {
                         registerDownloadedBook(ctx, book.title, book.author, kfxFile);
                     }

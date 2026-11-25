@@ -145,7 +145,7 @@ public final class FolioMoreView {
         headerRow.addView(quickSearchBtn);
 
         TextView badgeTv = new TextView(ctx);
-        badgeTv.setText("v18.0 KFX");
+        badgeTv.setText("v18.1 KFX");
         badgeTv.setTextSize(11);
         badgeTv.setTextColor(dynAccentSoft);
         badgeTv.setTypeface(FolioTheme.sansBold(ctx));
@@ -223,7 +223,7 @@ public final class FolioMoreView {
             @Override public void onClick(View v) { showTonightsPickDialog(ctx, refreshStats); }
         });
 
-        try { com.amazon.kindle.epub.ingest.FolioMetadataDb.cleanupLegacyDuplicateRows(ctx); } catch (Throwable ignored) {}
+        com.amazon.kindle.epub.ingest.AzathLibrarySync.reconcileOnLaunchAsync(ctx);
         int[] stats = readQuickStats(ctx);
         LinearLayout statsRow = new LinearLayout(ctx);
         statsRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -5606,7 +5606,7 @@ public final class FolioMoreView {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Azath — Offline EPUB & KFX Reader\n");
-        sb.append("Version: Azath v18.0 KFX (Enhanced Typesetting)\n");
+        sb.append("Version: Azath v18.1 KFX (Enhanced Typesetting)\n");
         String arch = (android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0)
                 ? android.os.Build.SUPPORTED_ABIS[0] : "ARM64";
         String mfg = android.os.Build.MANUFACTURER;
