@@ -259,6 +259,8 @@ public class ExternalEpubActivity extends Activity {
                         metaDb.close();
                     }
                     FolioMetadataDb.registerInKindleLibraryDb(this, bookKey, outKfx, outCover, meta);
+                    dp.g.ingestKfxLive(outKfx);
+                    try { android.media.MediaScannerConnection.scanFile(this, new String[]{ outKfx.getAbsolutePath() }, null, null); } catch (Throwable ignored) {}
                 }
 
                 stagedEpub.delete();

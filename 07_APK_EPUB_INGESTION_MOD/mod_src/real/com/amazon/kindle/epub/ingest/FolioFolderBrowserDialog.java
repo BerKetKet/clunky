@@ -691,6 +691,8 @@ public final class FolioFolderBrowserDialog {
                             db.close();
                         }
                         FolioMetadataDb.registerInKindleLibraryDb(ctx, bookKey, outKfx, outCover, meta);
+                        dp.g.ingestKfxLive(outKfx);
+                        try { android.media.MediaScannerConnection.scanFile(ctx, new String[]{ outKfx.getAbsolutePath() }, null, null); } catch (Throwable ignored) {}
                         importedSourceNames.add(epub.getName().toLowerCase(Locale.ROOT));
                         okCount++;
                     } catch (Throwable t) {

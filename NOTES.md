@@ -1,6 +1,14 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 157 (`Azath v17.7 KFX`) Verified, Staged & Audited (2026-11-25)**:
+  - Merged Round 157 `dp/g.java` (`ingestKfxLive`), `FolioMoreView.java` (`v17.7 KFX`), `ExternalEpubActivity.java`, `FolioFolderBrowserDialog.java`, `FolioWebBrowserDialog.java`, and `FolioTheme.syncLibrarySearchBand` (preserving Round 154 smali hooks).
+  - Built `classes9.dex` (`489,656` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.7_kfx/base.apk` (`138,848,359` B, SHA256 `510b923f2484d6dd8f6e99b7fdd33cad8303f065cd9e7f2318a904470d9229d8`).
+  - Hardware verified on **Samsung Galaxy M30** (`32001776e8e82623`): `com.azath.reader` updated `2026-11-25 13:49:15`, stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`), zero crashes / zero `SIGSYS`.
+  - Imported `Aldous Huxley - Island.epub`: converted in `931ms` (`Island_FOLIO_8CE251A8A07B.kfx` `1,223,991` B in `/sdcard/kindle/`).
+  - Honest findings logged for Round 158: (1) `Island` did NOT appear live in `Library` without relaunch and `AzathLiveIngest` was absent from `logcat`; (2) `Crome Yellow` appears twice (DB row + `/sdcard/kindle/` scanner row); (3) `#101112` outer band behind `"Search Azath"` remains dark in Limestone (`verify_r157_library_live_limestone.png`); (4) `StoneBottomBarView` left cutout exposes dark `Home` tab when no floating cover is mounted.
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 156 (`Azath v17.6 KFX`) Verified, Staged & Audited (2026-11-25)**:
   - Copied Round 156 `FolioMetadataDb.java` (`fillMissingNotNullDefaults` + case-insensitive column mapping), `ExternalEpubActivity.java` (`/sdcard/kindle/` output), and `FolioMoreView.java` (`v17.6 KFX`) verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/` and updated `rebuild_fast.sh` to stage `azath_v17.6_kfx`.
   - Built `classes9.dex` (`488,384` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.6_kfx/base.apk` (`138,848,359` B, SHA256 `a7ad8d1b478967b0e0903632a94f53be064646a765c07ec163cae719c2972195`).

@@ -1152,6 +1152,8 @@ public final class FolioWebBrowserDialog {
                         db.close();
                     }
                     FolioMetadataDb.registerInKindleLibraryDb(ctx, bookKey, outKfx, outCover, meta);
+                        dp.g.ingestKfxLive(outKfx);
+                        try { android.media.MediaScannerConnection.scanFile(ctx, new String[]{ outKfx.getAbsolutePath() }, null, null); } catch (Throwable ignored) {}
                     recordRecentImport(ctx, meta.title, meta.author, outKfx.getAbsolutePath());
                     dlFile.delete();
 

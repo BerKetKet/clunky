@@ -527,6 +527,38 @@ public final class FolioTheme {
             }
             bar.refreshState(isLimestoneLight(ctx), sActiveBottomTab);
             bar.bringToFront();
+            syncLibrarySearchBand(act);
+        } catch (Throwable ignored) {}
+    }
+
+    /**
+     * Paints the thin outer Compose/FrameLayout band wrapping the Library "Search Azath" pill
+     * so no dark #101112 stripe shows behind the search box in Limestone Light Mode.
+     */
+    public static void syncLibrarySearchBand(android.app.Activity act) {
+        if (act == null) return;
+        try {
+            int resId = act.getResources().getIdentifier("search_box_text_view", "id", act.getPackageName());
+            if (resId == 0) return;
+            View sb = act.findViewById(resId);
+            if (sb == null) return;
+            float d = act.getResources().getDisplayMetrics().density;
+            int screenW = act.getResources().getDisplayMetrics().widthPixels;
+            int maxBandH = Math.round(115f * d);
+            int targetBg = bgModal(act);
+            View content = act.findViewById(android.R.id.content);
+            android.view.ViewParent p = sb.getParent();
+            int depth = 0;
+            while (p instanceof View && p != content && depth < 5) {
+                View pv = (View) p;
+                int pw = pv.getWidth();
+                int ph = pv.getHeight();
+                if (pw >= screenW - Math.round(16f * d) && ph > 0 && ph <= maxBandH) {
+                    pv.setBackgroundColor(targetBg);
+                }
+                p = pv.getParent();
+                depth++;
+            }
         } catch (Throwable ignored) {}
     }
 
