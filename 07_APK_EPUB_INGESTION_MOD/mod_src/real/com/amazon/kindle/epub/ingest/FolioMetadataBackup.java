@@ -80,13 +80,7 @@ public final class FolioMetadataBackup {
             root.put("books", arr);
 
             File out = getBackupFile(ctx);
-            FileOutputStream fos = new FileOutputStream(out);
-            try {
-                fos.write(root.toString(2).getBytes(StandardCharsets.UTF_8));
-                fos.flush();
-            } finally {
-                fos.close();
-            }
+            writeAtomicUtf8(out, root.toString(2));
             Log.i(TAG, "Exported " + all.size() + " books to " + out.getAbsolutePath());
             return all.size();
         } catch (Throwable t) {
@@ -114,13 +108,30 @@ public final class FolioMetadataBackup {
             }
 
             JSONObject root = new JSONObject(sb.toString());
+            JSONArray arr = root.optJSONArray("books");
+            if (arr == null || arr.length() == 0) {
+                Log.w(TAG, "Backup validation failed: missing or empty 'books' array");
+                return -1;
+            }
+            boolean hasValidEntry = false;
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject obj = arr.optJSONObject(i);
+                if (obj != null && !obj.optString("book_key", "").isEmpty()
+                        && !obj.optString("kfx_path", "").isEmpty()) {
+                    hasValidEntry = true;
+                    break;
+                }
+            }
+            if (!hasValidEntry) {
+                Log.w(TAG, "Backup validation failed: no valid book_key/kfx_path entries");
+                return -1;
+            }
+
             int restoredGoal = root.optInt("reading_goal_target", 0);
             if (restoredGoal > 0) {
                 ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
                         .edit().putInt("reading_goal_target", restoredGoal).apply();
             }
-            JSONArray arr = root.optJSONArray("books");
-            if (arr == null) return 0;
 
             int restored = 0;
             for (int i = 0; i < arr.length(); i++) {
@@ -327,13 +338,7 @@ public final class FolioMetadataBackup {
         try {
             String md = buildReadingLogMarkdown(ctx, curatedOnly);
             File out = getReadingLogFile(ctx);
-            FileOutputStream fos = new FileOutputStream(out);
-            try {
-                fos.write(md.getBytes(StandardCharsets.UTF_8));
-                fos.flush();
-            } finally {
-                fos.close();
-            }
+            writeAtomicUtf8(out, md);
             Log.i(TAG, "Exported reading log to " + out.getAbsolutePath());
             return out;
         } catch (Throwable t) {
@@ -354,8 +359,8 @@ public final class FolioMetadataBackup {
 
     private static String csvEsc(String v) {
         if (v == null) return "";
-        String clean = v.replace("\r\n", " ").replace("\n", " ").trim();
-        if (clean.contains(",") || clean.contains("\"")) {
+        String clean = v.trim();
+        if (clean.contains(",") || clean.contains("\"") || clean.contains("\n") || clean.contains("\r")) {
             return "\"" + clean.replace("\"", "\"\"") + "\"";
         }
         return clean;
@@ -395,13 +400,7 @@ public final class FolioMetadataBackup {
                    .append(csvEsc(note)).append("\n");
             }
             File out = getCsvFile(ctx);
-            FileOutputStream fos = new FileOutputStream(out);
-            try {
-                fos.write(csv.toString().getBytes(StandardCharsets.UTF_8));
-                fos.flush();
-            } finally {
-                fos.close();
-            }
+            writeAtomicUtf8(out, csv.toString());
             Log.i(TAG, "Exported CSV library (" + all.size() + " rows) to " + out.getAbsolutePath());
             return out;
         } catch (Throwable t) {
@@ -510,13 +509,7 @@ public final class FolioMetadataBackup {
             h.append("</body></html>");
 
             File out = getHtmlFile(ctx);
-            FileOutputStream fos = new FileOutputStream(out);
-            try {
-                fos.write(h.toString().getBytes(StandardCharsets.UTF_8));
-                fos.flush();
-            } finally {
-                fos.close();
-            }
+            writeAtomicUtf8(out, h.toString());
             Log.i(TAG, "Exported HTML catalog (" + all.size() + " books) to " + out.getAbsolutePath());
             return out;
         } catch (Throwable t) {
@@ -524,6 +517,37 @@ public final class FolioMetadataBackup {
             return null;
         } finally {
             db.close();
+        }
+    }
+
+    private static void writeAtomicUtf8(File out, String content) throws Exception {
+        File parent = out.getParentFile();
+        if (parent != null && !parent.exists()) parent.mkdirs();
+        File tmp = new File(parent, out.getName() + ".tmp");
+        boolean ok = false;
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(tmp);
+            fos.write(content.getBytes(StandardCharsets.UTF_8));
+            fos.flush();
+            fos.close();
+            fos = null;
+            if (out.exists() && !tmp.renameTo(out)) {
+                out.delete();
+                if (!tmp.renameTo(out)) {
+                    throw new java.io.IOException("Atomic rename failed: " + tmp.getAbsolutePath());
+                }
+            } else if (!out.exists() && !tmp.renameTo(out)) {
+                throw new java.io.IOException("Atomic rename failed: " + tmp.getAbsolutePath());
+            }
+            ok = true;
+        } finally {
+            if (fos != null) {
+                try { fos.close(); } catch (Throwable ignored) {}
+            }
+            if (!ok && tmp.exists()) {
+                tmp.delete();
+            }
         }
     }
 }
