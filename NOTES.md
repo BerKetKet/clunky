@@ -1,6 +1,13 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 163 QC Remediation (`Azath v18.4 KFX`, branch `round-163-qc-fixes`) Executed & Audited (2026-11-26)**:
+  - Completed Tasks A1–A4 (`d5405f5`, `1765170`, `ad121e0`, `bb74643`) and B1–B4 (`478ad22`, `b5acb86`, `9cca2c1`, `a635ca7`) on branch `round-163-qc-fixes` (one commit per task, canonical `07_APK_EPUB_INGESTION_MOD/mod_src/real/` only).
+  - Built `classes9.dex` (`516,048` B), deployed `com.azath.reader` (`lastUpdateTime=2026-11-26 00:23:46`), and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.4_kfx/base.apk` (SHA256 `a9e458b5d940dd278fd57cf72baccc08a13a36988c31b54525831f7743960b86`).
+  - Device tests on **Samsung Galaxy M30** (`32001776e8e82623`): **T1 PASS** (`30 -> 30` DB rows, `4.2M -> 4.2M` `epub_cache`, circuit breaker tripped), **T2 PASS** (`AMZNID0/CR!5445A3745815KFX/0/|42|1` persisted), **T3 PASS** (mid-conversion `force-stop` left `NO_PARTIAL_KFX` + stale `>1h` `.part` deleted), **T4 PASS** (`added_at=1795642004105` preserved on re-import, distinct `t4_b` kept separate), **T5 PASS** (`user_version 1 -> 2`, `content_hash`/`source_size`/`genres_json` added), **T6 NOT VERIFIED ON DEVICE** (`/sdcard/kindle` remained writable so private-dir `registerInKindleLibraryDb` path was not hit).
+  - Stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`), zero `FATAL EXCEPTION`, zero `SIGSYS`, zero `SQLiteConstraintException`.
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 164 (`Azath v18.3 KFX`) Verified, Staged & Pushed (2026-11-25)**:
   - Copied Round 164 `FolioMoreView.java` (`v18.3 KFX`), `AzathLibrarySync.java` (zero-`SIGSYS` `openImportedBookLive`), and `FolioFolderBrowserDialog.java` (`OPEN BOOK` + `DONE`) verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/` and updated `rebuild_fast.sh` to stage `azath_v18.3_kfx`.
   - Built `classes9.dex` (`497,484` B), installed `com.azath.reader` (`lastUpdateTime=2026-11-25 19:09:01`), and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.3_kfx/base.apk` (`138,856,551` B, SHA256 `0ea7caf2f4654f5bda694fc623a3fe70a7323581eadb1976a68774338755fd08`).
