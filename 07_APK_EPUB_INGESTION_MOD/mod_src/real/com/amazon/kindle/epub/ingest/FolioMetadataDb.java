@@ -94,47 +94,78 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         upsertBook(bookKey, kfxFile, coverFile, sourceName, meta, null, 0L);
     }
 
+    private static String nonBlankOrPrior(String incoming, String priorVal) {
+        if (incoming != null && !incoming.trim().isEmpty()) return incoming;
+        return priorVal != null ? priorVal : "";
+    }
+
     public void upsertBook(String bookKey, File kfxFile, File coverFile,
                            String sourceName, EpubMetadataExtractor.BookMeta meta,
                            String contentHash, long sourceSize) {
-        BookRecord prior = findExisting(bookKey, contentHash);
-        String genres = meta.genresCsv();
-        if (genres.isEmpty() && prior != null && !prior.genres.isEmpty()) {
-            genres = prior.genres;
-        }
-        String publisher = meta.publisher != null && !meta.publisher.isEmpty()
-                ? meta.publisher : (prior != null ? prior.publisher : "");
-        String pubDate = meta.pubDate != null && !meta.pubDate.isEmpty()
-                ? meta.pubDate : (prior != null ? prior.pubDate : "");
-        String isbn = meta.isbn != null && !meta.isbn.isEmpty()
-                ? meta.isbn : (prior != null ? prior.isbn : "");
-        String olKey = meta.openLibraryKey != null && !meta.openLibraryKey.isEmpty()
-                ? meta.openLibraryKey : (prior != null ? prior.openLibraryKey : "");
-
+        String kfxPath = kfxFile.getAbsolutePath();
         SQLiteDatabase db = getWritableDatabase();
-        java.util.Map<String, String> cols = tableColumns(db, "books_metadata");
-        ContentValues cv = new ContentValues();
-        cv.put("book_key", bookKey);
-        cv.put("kfx_path", kfxFile.getAbsolutePath());
-        cv.put("cover_path", (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "");
-        cv.put("source_name", sourceName != null ? sourceName : kfxFile.getName());
-        cv.put("title", meta.title != null ? meta.title : kfxFile.getName());
-        cv.put("author", meta.author != null ? meta.author : "Unknown Author");
-        cv.put("publisher", publisher);
-        cv.put("pub_date", pubDate);
-        cv.put("genres", genres);
-        cv.put("language", meta.language != null ? meta.language : "");
-        cv.put("isbn", isbn);
-        cv.put("description", meta.description != null ? meta.description : "");
-        cv.put("open_library_key", olKey);
-        if (cols.containsKey("CONTENT_HASH") && contentHash != null && !contentHash.isEmpty()) {
-            cv.put("content_hash", contentHash);
+        db.beginTransaction();
+        try {
+            java.util.Map<String, String> cols = tableColumns(db, "books_metadata");
+            BookRecord prior = null;
+            Cursor c = null;
+            try {
+                c = db.rawQuery(
+                        "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
+                        + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
+                        + "FROM books_metadata WHERE book_key = ? OR kfx_path = ? LIMIT 1",
+                        new String[] { bookKey != null ? bookKey : "", kfxPath });
+                if (c.moveToFirst()) {
+                    prior = readRow(c);
+                }
+            } finally {
+                if (c != null) c.close();
+            }
+
+            String incomingCover = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "";
+            String coverPath = nonBlankOrPrior(incomingCover, prior != null ? prior.coverPath : "");
+            String genres = nonBlankOrPrior(meta.genresCsv(), prior != null ? prior.genres : "");
+            String publisher = nonBlankOrPrior(meta.publisher, prior != null ? prior.publisher : "");
+            String pubDate = nonBlankOrPrior(meta.pubDate, prior != null ? prior.pubDate : "");
+            String isbn = nonBlankOrPrior(meta.isbn, prior != null ? prior.isbn : "");
+            String olKey = nonBlankOrPrior(meta.openLibraryKey, prior != null ? prior.openLibraryKey : "");
+            String description = nonBlankOrPrior(meta.description, prior != null ? prior.description : "");
+            String language = nonBlankOrPrior(meta.language, prior != null ? prior.language : "");
+            long addedAt = (prior != null && prior.addedAt > 0) ? prior.addedAt : System.currentTimeMillis();
+
+            ContentValues cv = new ContentValues();
+            cv.put("book_key", prior != null && !prior.bookKey.isEmpty() ? prior.bookKey : bookKey);
+            cv.put("kfx_path", kfxPath);
+            cv.put("cover_path", coverPath);
+            cv.put("source_name", sourceName != null ? sourceName : kfxFile.getName());
+            cv.put("title", meta.title != null && !meta.title.trim().isEmpty()
+                    ? meta.title : (prior != null && !prior.title.isEmpty() ? prior.title : kfxFile.getName()));
+            cv.put("author", meta.author != null && !meta.author.trim().isEmpty()
+                    ? meta.author : (prior != null && !prior.author.isEmpty() ? prior.author : "Unknown Author"));
+            cv.put("publisher", publisher);
+            cv.put("pub_date", pubDate);
+            cv.put("genres", genres);
+            cv.put("language", language);
+            cv.put("isbn", isbn);
+            cv.put("description", description);
+            cv.put("open_library_key", olKey);
+            if (cols.containsKey("CONTENT_HASH") && contentHash != null && !contentHash.isEmpty()) {
+                cv.put("content_hash", contentHash);
+            }
+            if (cols.containsKey("SOURCE_SIZE") && sourceSize > 0) {
+                cv.put("source_size", sourceSize);
+            }
+            cv.put("added_at", addedAt);
+
+            if (prior != null) {
+                db.update("books_metadata", cv, "id = ?", new String[] { String.valueOf(prior.id) });
+            } else {
+                db.insertOrThrow("books_metadata", null, cv);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            if (db.inTransaction()) db.endTransaction();
         }
-        if (cols.containsKey("SOURCE_SIZE") && sourceSize > 0) {
-            cv.put("source_size", sourceSize);
-        }
-        cv.put("added_at", System.currentTimeMillis());
-        db.insertWithOnConflict("books_metadata", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
     /**
