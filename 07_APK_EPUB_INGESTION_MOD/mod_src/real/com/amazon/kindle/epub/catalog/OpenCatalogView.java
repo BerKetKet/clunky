@@ -81,6 +81,7 @@ public final class OpenCatalogView {
             host.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
                 @Override
                 public void onViewAttachedToWindow(View view) {
+                    FolioTheme.setActiveBottomTab(ctx, 0);
                     view.post(hideTask);
                     view.postDelayed(hideTask, 250);
                     view.postDelayed(hideTask, 800);
@@ -694,6 +695,7 @@ public final class OpenCatalogView {
         loadPopularRef[0].run();
 
         FolioTheme.applyToTree(ctx, mainScroll);
+        FolioTheme.setActiveBottomTab(ctx, 0);
         FolioTheme.applyWindowBars(ctx);
         return mainScroll;
     }

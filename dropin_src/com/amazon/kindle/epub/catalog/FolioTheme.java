@@ -362,6 +362,7 @@ public final class FolioTheme {
 
     public static void applyWindowBars(Context ctx) {
         syncComposeBottomBarColors(ctx);
+        syncStoneBottomBar(ctx);
         if (!(ctx instanceof android.app.Activity)) return;
         try {
             android.view.Window win = ((android.app.Activity) ctx).getWindow();
@@ -413,4 +414,159 @@ public final class FolioTheme {
             }
         } catch (Throwable ignored) {}
     }
+
+    private static volatile int sActiveBottomTab = 0; // 0=Home, 1=Library, 2=More
+    private static final String TAG_STONE_BOTTOM_BAR = "azath_stone_bottom_bar_v1";
+
+    public static void setActiveBottomTab(Context ctx, int tabIdx) {
+        sActiveBottomTab = tabIdx;
+        syncStoneBottomBar(ctx);
+    }
+
+    public static void syncStoneBottomBar(Context ctx) {
+        if (!(ctx instanceof android.app.Activity)) return;
+        try {
+            final android.app.Activity act = (android.app.Activity) ctx;
+            String clsName = act.getClass().getName();
+            // Only mount on main shell activity, never inside book reader or dialogs
+            if (clsName.contains("Reader") || clsName.contains("ExternalEpub") || clsName.contains("Notification")) {
+                return;
+            }
+            final android.view.ViewGroup content = act.findViewById(android.R.id.content);
+            if (content == null) return;
+
+            View existing = content.findViewWithTag(TAG_STONE_BOTTOM_BAR);
+            StoneBottomBarView bar;
+            if (existing instanceof StoneBottomBarView) {
+                bar = (StoneBottomBarView) existing;
+            } else {
+                bar = new StoneBottomBarView(act);
+                bar.setTag(TAG_STONE_BOTTOM_BAR);
+                float d = act.getResources().getDisplayMetrics().density;
+                android.widget.FrameLayout.LayoutParams lp = new android.widget.FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, Math.round(63f * d));
+                lp.gravity = android.view.Gravity.BOTTOM;
+                content.addView(bar, lp);
+            }
+            bar.refreshState(isLimestoneLight(ctx), sActiveBottomTab);
+            bar.bringToFront();
+        } catch (Throwable ignored) {}
+    }
+
+    private static final class StoneBottomBarView extends View {
+        private boolean lightMode = false;
+        private int activeTab = 0;
+        private final android.graphics.Paint fillPaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final android.graphics.Paint strokePaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final android.graphics.Paint textPaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+        StoneBottomBarView(Context ctx) {
+            super(ctx);
+            setClickable(false);
+            setFocusable(false);
+            setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+            strokePaint.setStyle(android.graphics.Paint.Style.STROKE);
+            strokePaint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+            strokePaint.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+            textPaint.setTextAlign(android.graphics.Paint.Align.CENTER);
+        }
+
+        void refreshState(boolean light, int tab) {
+            this.lightMode = light;
+            this.activeTab = tab;
+            // Only overlay in Limestone Light Mode so Granite Dark Mode uses native bar + floating cover untouched
+            setVisibility(light ? VISIBLE : GONE);
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(android.graphics.Canvas canvas) {
+            super.onDraw(canvas);
+            if (!lightMode) return;
+            float d = getResources().getDisplayMetrics().density;
+            float w = getWidth();
+            float h = getHeight();
+            if (w <= 0 || h <= 0) return;
+
+            int bgCol = LIGHT_BG_MODAL;       // #EFEAE0 warm Limestone
+            int seamCol = LIGHT_BORDER_HAIRLINE; // #CBC3B3
+            int actCol = LIGHT_ACCENT_GRANITE; // #2D3138 deep Granite
+            int inactCol = LIGHT_TEXT_MUTED;   // #73757B weathered Granite
+
+            // Cutout around floating mini book cover on far left (26dp..76dp, 0..53dp)
+            float cutL = 26f * d;
+            float cutR = 76f * d;
+            float cutB = 53f * d;
+
+            fillPaint.setColor(bgCol);
+            canvas.drawRect(0f, 0f, cutL, h, fillPaint);
+            canvas.drawRect(cutR, 0f, w, h, fillPaint);
+            canvas.drawRect(cutL, cutB, cutR, h, fillPaint);
+
+            // Top 1dp Limestone hairline seam
+            fillPaint.setColor(seamCol);
+            float seamH = Math.max(1f, d);
+            canvas.drawRect(0f, 0f, cutL, seamH, fillPaint);
+            canvas.drawRect(cutR, 0f, w, seamH, fillPaint);
+
+            // 3 tab centers matching Kindle's exact bottom bar geometry (37.3%, 62.4%, 87.5%)
+            float[] centers = new float[] { w * 0.373f, w * 0.624f, w * 0.875f };
+            String[] labels = new String[] { "Home", "Library", "More" };
+            float iconCy = h * 0.38f;
+            float iconR = 9.5f * d;
+            float labelY = h * 0.79f;
+
+            textPaint.setTextSize(11.5f * d);
+            strokePaint.setStrokeWidth(Math.max(1.8f, 1.75f * d));
+
+            for (int i = 0; i < 3; i++) {
+                boolean isAct = (i == activeTab);
+                int col = isAct ? actCol : inactCol;
+                float cx = centers[i];
+
+                // Draw crisp vector icon
+                strokePaint.setColor(col);
+                fillPaint.setColor(col);
+                if (i == 0) {
+                    // Home icon
+                    android.graphics.Path hp = new android.graphics.Path();
+                    hp.moveTo(cx - iconR, iconCy - 1f * d);
+                    hp.lineTo(cx, iconCy - iconR);
+                    hp.lineTo(cx + iconR, iconCy - 1f * d);
+                    hp.lineTo(cx + iconR * 0.76f, iconCy - 1f * d);
+                    hp.lineTo(cx + iconR * 0.76f, iconCy + iconR * 0.85f);
+                    hp.lineTo(cx - iconR * 0.76f, iconCy + iconR * 0.85f);
+                    hp.lineTo(cx - iconR * 0.76f, iconCy - 1f * d);
+                    hp.close();
+                    canvas.drawPath(hp, isAct ? fillPaint : strokePaint);
+                } else if (i == 1) {
+                    // Library 3-books icon
+                    float bw = 3.2f * d;
+                    float bh = iconR * 1.65f;
+                    float top = iconCy - bh * 0.5f;
+                    canvas.drawRect(cx - 8f * d, top, cx - 8f * d + bw, top + bh, isAct ? fillPaint : strokePaint);
+                    canvas.drawRect(cx - 2f * d, top, cx - 2f * d + bw, top + bh, isAct ? fillPaint : strokePaint);
+                    canvas.save();
+                    canvas.rotate(-10f, cx + 6f * d, iconCy);
+                    canvas.drawRect(cx + 4f * d, top, cx + 4f * d + bw, top + bh, isAct ? fillPaint : strokePaint);
+                    canvas.restore();
+                } else {
+                    // More 3-lines icon
+                    float xL = cx - 8.5f * d;
+                    float xR = cx + 8.5f * d;
+                    for (int li = -1; li <= 1; li++) {
+                        float ly = iconCy + li * 5.2f * d;
+                        canvas.drawCircle(xL, ly, 1.3f * d, fillPaint);
+                        canvas.drawLine(xL + 4.2f * d, ly, xR, ly, strokePaint);
+                    }
+                }
+
+                // Draw Inter label
+                textPaint.setColor(col);
+                textPaint.setTypeface(isAct ? sansBold(getContext()) : sans(getContext()));
+                canvas.drawText(labels[i], cx, labelY, textPaint);
+            }
+        }
+    }
+
 }

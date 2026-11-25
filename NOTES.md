@@ -1,6 +1,12 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 153 (`Azath v17.3 KFX`) Verified, Staged & Audited (2026-11-25)**:
+  - Copied verbatim Round 153 `FolioTheme.java` (`StoneBottomBarView` non-clickable touch-passthrough `#EFEAE0` bottom navigation bar overlay for Limestone Light Mode with left floating-cover cutout), `FolioMoreView.java` (`v17.3 KFX`), and `OpenCatalogView.java` into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/`. Updated `rebuild_fast.sh` to stage `azath_v17.3_kfx`.
+  - Built `classes9.dex` (`478,760` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.3_kfx/base.apk` (`138,836,071` B, SHA256 `737e130b42e5b51c67be31e31301f633b99cfb5ef8af703f3fc5316c0674d216`).
+  - Hardware verified on **Samsung Galaxy M30** (`32001776e8e82623`): `com.azath.reader` updated `2026-11-25 03:13:56`, stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`), `ZERO_CRASHES_AND_NO_SIGSYS`. Visually verified `verify_r153_azath_home_limestone_complete.png` (`883,730` B): seamless `#EFEAE0` bottom bar, crisp `#2D3138`/`#73757B` Home/Library/More icons & Inter labels, clean floating-cover cutout, touch-passthrough navigation confirmed across `More <-> Home`, and restored cleanly to `Granite` (`[887,222][1038,286]`).
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 152 (`Azath v17.2 KFX`) Verified, Staged & Audited (2026-11-25)**:
   - Copied verbatim Round 152 `FolioTheme.java` (`syncComposeBottomBarColors`), `FolioMoreView.java` (`v17.2 KFX`, `22sp` header + `16dp/14dp` padding), and `OpenCatalogView.java` (`22sp` `Azath` header + `16dp/14dp` padding) into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/catalog/`. Updated `rebuild_fast.sh` to stage `azath_v17.2_kfx`.
   - Built `classes9.dex` (`475,644` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.2_kfx/base.apk` (`138,831,975` B, SHA256 `a7c1f0d67e2b5a041f4afd7da22d81ce4aa1cd41892263348881e66aee96a5fb`).
