@@ -1048,10 +1048,13 @@ public final class FolioWebBrowserDialog {
                 String safeName = displayFile.replaceAll("[^a-zA-Z0-9._-]", "_");
                 if (!safeName.toLowerCase(Locale.US).endsWith(".epub")) safeName = safeName + ".epub";
                 File dlFile = new File(tmpDir, safeName);
+                HttpURLConnection conn = null;
+                InputStream in = null;
+                FileOutputStream fos = null;
+                boolean dlOk = false;
 
                 try {
                     String currentUrl = urlStr;
-                    HttpURLConnection conn = null;
                     for (int hop = 0; hop < 6; hop++) {
                         URL u = new URL(currentUrl);
                         conn = (HttpURLConnection) u.openConnection();
@@ -1077,6 +1080,7 @@ public final class FolioWebBrowserDialog {
                         if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
                             String loc = conn.getHeaderField("Location");
                             conn.disconnect();
+                            conn = null;
                             if (loc == null || loc.isEmpty()) break;
                             currentUrl = new URL(u, loc).toString();
                             continue;
@@ -1088,15 +1092,22 @@ public final class FolioWebBrowserDialog {
                     }
 
                     final long totalLen = conn.getContentLengthLong();
-                    InputStream in = new BufferedInputStream(conn.getInputStream());
-                    FileOutputStream fos = new FileOutputStream(dlFile);
+                    final long maxBytes = 250L * 1024L * 1024L;
+                    if (totalLen > maxBytes) {
+                        throw new Exception("EPUB exceeds 250 MB limit");
+                    }
+                    in = new BufferedInputStream(conn.getInputStream());
+                    fos = new FileOutputStream(dlFile);
                     byte[] buf = new byte[16384];
                     long readBytes = 0;
                     long lastUiMs = 0;
                     int r;
                     while ((r = in.read(buf)) != -1) {
-                        fos.write(buf, 0, r);
                         readBytes += r;
+                        if (readBytes > maxBytes) {
+                            throw new Exception("EPUB exceeds 250 MB limit");
+                        }
+                        fos.write(buf, 0, r);
                         long now = System.currentTimeMillis();
                         if (now - lastUiMs > 220) {
                             lastUiMs = now;
@@ -1111,14 +1122,18 @@ public final class FolioWebBrowserDialog {
                             });
                         }
                     }
+                    fos.flush();
                     fos.close();
+                    fos = null;
                     in.close();
+                    in = null;
                     conn.disconnect();
+                    conn = null;
 
                     if (!isZipFile(dlFile)) {
-                        dlFile.delete();
                         throw new Exception("Downloaded file is not a valid EPUB");
                     }
+                    dlOk = true;
 
                     mainHandler.post(new Runnable() {
                         @Override public void run() {
@@ -1126,37 +1141,13 @@ public final class FolioWebBrowserDialog {
                         }
                     });
 
-                    File sdKindle = new File("/sdcard/kindle");
-                    if (!sdKindle.exists()) sdKindle.mkdirs();
-                    File targetDir = (sdKindle.exists() && sdKindle.canWrite())
-                            ? sdKindle : new File(ctx.getFilesDir(), "folio_library");
-                    if (!targetDir.exists()) targetDir.mkdirs();
-
-                    EpubMetadataExtractor.BookMeta meta = EpubMetadataExtractor.extract(dlFile, safeName);
-                    String bookKey = FolioMetadataDb.computeBookKey(meta.title, dlFile.length());
-                    String safeBase = sanitizeFilename(meta.title) + "_" + bookKey;
-                    final File outKfx = new File(targetDir, safeBase + ".kfx");
-                    File outCover = new File(outKfx.getAbsolutePath() + ".cover.jpg");
-
-                    boolean converted = ExternalEpubActivity.convertEpubToKfx(ctx, dlFile, outKfx);
-                    if (!converted || !outKfx.exists() || outKfx.length() < 128) {
-                        throw new Exception("KFX conversion failed");
+                    AzathLibrarySync.IngestResult ir = AzathLibrarySync.ingestEpub(ctx, dlFile, safeName, true);
+                    if (ir == null || !ir.ok || ir.kfxFile == null || !ir.kfxFile.exists()) {
+                        throw new Exception(ir != null && ir.error != null ? ir.error : "KFX conversion failed");
                     }
-
-                    try { MetadataEnricher.enrichInPlace(meta); } catch (Throwable ignored) {}
-
-                    FolioMetadataDb db = new FolioMetadataDb(ctx);
-                    try {
-                        db.upsertBook(bookKey, outKfx, outCover, safeName, meta);
-                    } finally {
-                        db.close();
-                    }
-                    if (!outKfx.getAbsolutePath().startsWith("/sdcard/kindle")) {
-                            FolioMetadataDb.registerInKindleLibraryDb(ctx, bookKey, outKfx, outCover, meta);
-                        }
-                        dp.g.ingestKfxLive(outKfx);
-                        com.amazon.kindle.epub.catalog.FolioTheme.triggerLibraryRescan(ctx, outKfx);
-                        try { android.media.MediaScannerConnection.scanFile(ctx, new String[]{ outKfx.getAbsolutePath() }, null, null); } catch (Throwable ignored) {}
+                    final File outKfx = ir.kfxFile;
+                    EpubMetadataExtractor.BookMeta meta = ir.meta != null ? ir.meta : new EpubMetadataExtractor.BookMeta();
+                    com.amazon.kindle.epub.catalog.FolioTheme.triggerLibraryRescan(ctx, outKfx);
                     recordRecentImport(ctx, meta.title, meta.author, outKfx.getAbsolutePath());
                     dlFile.delete();
 
@@ -1187,6 +1178,19 @@ public final class FolioWebBrowserDialog {
                             openNowBtn.setVisibility(View.GONE);
                         }
                     });
+                } finally {
+                    if (fos != null) {
+                        try { fos.close(); } catch (Throwable ignored) {}
+                    }
+                    if (in != null) {
+                        try { in.close(); } catch (Throwable ignored) {}
+                    }
+                    if (conn != null) {
+                        try { conn.disconnect(); } catch (Throwable ignored) {}
+                    }
+                    if (dlFile.exists()) {
+                        try { dlFile.delete(); } catch (Throwable ignored) {}
+                    }
                 }
             }
         }, "folio-web-epub-dl").start();
