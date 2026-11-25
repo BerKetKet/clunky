@@ -477,6 +477,21 @@ public final class AzathLibrarySync {
                 }
             }
 
+            // Sweep stale epub_staging/* files older than 1 hour
+            File epubStaging = new File(ctx.getCacheDir(), "epub_staging");
+            if (epubStaging.isDirectory()) {
+                File[] stagedFiles = epubStaging.listFiles();
+                if (stagedFiles != null) {
+                    for (File sf : stagedFiles) {
+                        if (now - sf.lastModified() > STALE_PART_AGE_MS) {
+                            deleteRecursive(sf);
+                            Log.i(TAG, "Deleted stale epub_staging entry: " + sf.getAbsolutePath());
+                            changes++;
+                        }
+                    }
+                }
+            }
+
             Log.i(TAG, "reconcileLibrary complete: activeKfx=" + activePaths.size() + " changes=" + changes);
         } catch (Throwable t) {
             Log.w(TAG, "reconcileLibrary warning: " + t.getMessage());
