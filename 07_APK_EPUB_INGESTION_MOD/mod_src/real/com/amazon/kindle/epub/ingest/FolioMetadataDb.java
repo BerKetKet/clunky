@@ -673,28 +673,22 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             db.beginTransaction();
 
             List<String> keysList = new ArrayList<>();
-            Cursor kcCur = null;
+            Cursor lcCur = null;
             try {
-                kcCur = db.rawQuery(
-                        "SELECT ID FROM KindleContent WHERE ID LIKE 'AMZNID0/CR!%KFX/0/' AND FILE_PATH LIKE '/sdcard/kindle/%'",
+                lcCur = db.rawQuery(
+                        "SELECT KEY FROM LocalContent WHERE KEY LIKE 'AMZNID0/CR!%KFX/0/' AND FILE_PATH LIKE '/sdcard/kindle/%'",
                         null);
-                while (kcCur.moveToNext()) {
-                    String id = kcCur.getString(0);
-                    if (id != null && !id.isEmpty()) keysList.add(id);
+                while (lcCur.moveToNext()) {
+                    String k = lcCur.getString(0);
+                    if (k != null && !k.isEmpty()) keysList.add(k);
                 }
             } catch (Throwable t) {
-                Log.w(TAG, "cleanupLegacyDuplicateRows KindleContent query failed", t);
+                Log.w(TAG, "cleanupLegacyDuplicateRows LocalContent query failed", t);
             } finally {
-                if (kcCur != null) kcCur.close();
+                if (lcCur != null) lcCur.close();
             }
 
             if (!keysList.isEmpty()) {
-                try {
-                    removed += db.delete("KindleContent",
-                            "ID LIKE 'AMZNID0/CR!%KFX/0/' AND FILE_PATH LIKE '/sdcard/kindle/%'", null);
-                } catch (Throwable t) {
-                    Log.w(TAG, "cleanupLegacyDuplicateRows KindleContent delete failed", t);
-                }
                 final int chunkSize = 450;
                 for (int start = 0; start < keysList.size(); start += chunkSize) {
                     int end = Math.min(start + chunkSize, keysList.size());
@@ -705,6 +699,12 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                         placeholders.append('?');
                     }
                     String[] args = sub.toArray(new String[0]);
+                    try {
+                        removed += db.delete("KindleContent",
+                                "ID IN (" + placeholders + ")", args);
+                    } catch (Throwable t) {
+                        Log.w(TAG, "cleanupLegacyDuplicateRows KindleContent delete failed", t);
+                    }
                     try {
                         removed += db.delete("LocalContent",
                                 "KEY IN (" + placeholders + ")", args);
