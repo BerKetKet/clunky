@@ -90,18 +90,26 @@ public class ExternalEpubActivity extends Activity {
 
                 final EpubMetadataExtractor.BookMeta meta =
                         EpubMetadataExtractor.extract(stagedEpub, displayName);
-                final String bookKey = FolioMetadataDb.computeBookKey(meta.title, stagedEpub.length());
+                final String contentHash = FolioMetadataDb.computeContentHash(stagedEpub);
+                final String bookKey = !contentHash.isEmpty()
+                        ? FolioMetadataDb.computeBookKeyFromHash(contentHash)
+                        : FolioMetadataDb.computeBookKey(meta.title, stagedEpub.length());
 
                 FolioMetadataDb.BookRecord existing = null;
+                FolioMetadataDb.BookRecord possibleDup = null;
                 FolioMetadataDb db = new FolioMetadataDb(this);
                 try {
-                    existing = db.findExisting(bookKey, meta.title, meta.author);
+                    existing = db.findExisting(bookKey, contentHash);
+                    if (existing == null) {
+                        possibleDup = db.findPossibleDuplicate(meta.title, meta.author);
+                    }
                 } finally {
                     db.close();
                 }
 
                 final FolioMetadataDb.BookRecord finalExisting = existing;
-                mainHandler.post(() -> showChoiceDialog(stagedEpub, displayName, meta, finalExisting));
+                final FolioMetadataDb.BookRecord finalPossibleDup = possibleDup;
+                mainHandler.post(() -> showChoiceDialog(stagedEpub, displayName, meta, bookKey, contentHash, finalExisting, finalPossibleDup));
             } catch (Throwable t) {
                 Log.e(TAG, "Failed to inspect incoming EPUB", t);
                 mainHandler.post(() -> {
@@ -115,7 +123,9 @@ public class ExternalEpubActivity extends Activity {
 
     private void showChoiceDialog(final File stagedEpub, final String displayName,
                                   final EpubMetadataExtractor.BookMeta meta,
-                                  final FolioMetadataDb.BookRecord existing) {
+                                  final String bookKey, final String contentHash,
+                                  final FolioMetadataDb.BookRecord existing,
+                                  final FolioMetadataDb.BookRecord possibleDup) {
         dismissActiveDialog();
         if (isFinishing()) return;
 
@@ -126,7 +136,9 @@ public class ExternalEpubActivity extends Activity {
         root.setBackgroundColor(Color.parseColor("#15171A"));
 
         TextView badge = new TextView(this);
-        badge.setText(existing != null ? "ALREADY IN AZATH LIBRARY" : "AZATH EPUB IMPORT");
+        badge.setText(existing != null
+                ? "ALREADY IN AZATH LIBRARY"
+                : (possibleDup != null ? "POSSIBLE DUPLICATE IN LIBRARY" : "AZATH EPUB IMPORT"));
         badge.setTextColor(Color.parseColor(existing != null ? "#D4C9B8" : "#D4C9B8"));
         badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         badge.setTypeface(Typeface.DEFAULT_BOLD);
@@ -155,6 +167,9 @@ public class ExternalEpubActivity extends Activity {
         TextView desc = new TextView(this);
         if (existing != null) {
             desc.setText("This book is already saved in Azath's app storage. Open your existing copy instantly, or re-import and replace it.");
+        } else if (possibleDup != null) {
+            desc.setText("Advisory: another file with the same title and author (\"" + possibleDup.title
+                    + "\") is already in your library. Importing will keep both as separate editions.");
         } else {
             desc.setText("Add to your Azath library (saves converted book & metadata in app storage) or open once without saving.");
         }
@@ -178,11 +193,11 @@ public class ExternalEpubActivity extends Activity {
             root.addView(sp0);
 
             TextView btnReimport = makeButton("Re-Import & Replace", "#25282D", "#ECE8E0");
-            btnReimport.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
+            btnReimport.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, bookKey, contentHash, true));
             root.addView(btnReimport);
         } else {
             TextView btnAdd = makeButton("Add to Library & Read", "#D4C9B8", "#0E0F11");
-            btnAdd.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
+            btnAdd.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, bookKey, contentHash, true));
             root.addView(btnAdd);
 
             View spacer = new View(this);
@@ -190,7 +205,7 @@ public class ExternalEpubActivity extends Activity {
             root.addView(spacer);
 
             TextView btnOnce = makeButton("Open Once (Don't Add)", "#25282D", "#ECE8E0");
-            btnOnce.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, false));
+            btnOnce.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, bookKey, contentHash, false));
             root.addView(btnOnce);
         }
 
@@ -224,7 +239,9 @@ public class ExternalEpubActivity extends Activity {
     }
 
     private void processAndOpen(final File stagedEpub, final String displayName,
-                                final EpubMetadataExtractor.BookMeta meta, final boolean addToLibrary) {
+                                final EpubMetadataExtractor.BookMeta meta,
+                                final String bookKey, final String contentHash,
+                                final boolean addToLibrary) {
         showProgressDialog(
                 addToLibrary ? "Adding to Azath Library..." : "Preparing Book...",
                 addToLibrary ? "Converting to KFX & enriching book metadata"
@@ -232,7 +249,6 @@ public class ExternalEpubActivity extends Activity {
 
         new Thread(() -> {
             try {
-                final String bookKey = FolioMetadataDb.computeBookKey(meta.title, stagedEpub.length());
                 final String safeBase = sanitizeFilename(meta.title) + "_" + bookKey;
 
                 File sdKindle = new File("/sdcard/kindle");
@@ -254,7 +270,7 @@ public class ExternalEpubActivity extends Activity {
                     MetadataEnricher.enrichInPlace(meta);
                     FolioMetadataDb metaDb = new FolioMetadataDb(this);
                     try {
-                        metaDb.upsertBook(bookKey, outKfx, outCover, displayName, meta);
+                        metaDb.upsertBook(bookKey, outKfx, outCover, displayName, meta, contentHash, stagedEpub.length());
                     } finally {
                         metaDb.close();
                     }

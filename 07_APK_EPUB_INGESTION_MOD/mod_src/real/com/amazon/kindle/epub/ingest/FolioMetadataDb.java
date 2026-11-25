@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,6 +45,8 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         public String isbn = "";
         public String description = "";
         public String openLibraryKey = "";
+        public String contentHash = "";
+        public long sourceSize;
         public long addedAt;
 
         public boolean hasGenre(String target) {
@@ -88,7 +91,13 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
 
     public void upsertBook(String bookKey, File kfxFile, File coverFile,
                            String sourceName, EpubMetadataExtractor.BookMeta meta) {
-        BookRecord prior = findExisting(bookKey, meta.title, meta.author);
+        upsertBook(bookKey, kfxFile, coverFile, sourceName, meta, null, 0L);
+    }
+
+    public void upsertBook(String bookKey, File kfxFile, File coverFile,
+                           String sourceName, EpubMetadataExtractor.BookMeta meta,
+                           String contentHash, long sourceSize) {
+        BookRecord prior = findExisting(bookKey, contentHash);
         String genres = meta.genresCsv();
         if (genres.isEmpty() && prior != null && !prior.genres.isEmpty()) {
             genres = prior.genres;
@@ -103,6 +112,7 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                 ? meta.openLibraryKey : (prior != null ? prior.openLibraryKey : "");
 
         SQLiteDatabase db = getWritableDatabase();
+        java.util.Map<String, String> cols = tableColumns(db, "books_metadata");
         ContentValues cv = new ContentValues();
         cv.put("book_key", bookKey);
         cv.put("kfx_path", kfxFile.getAbsolutePath());
@@ -117,29 +127,43 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         cv.put("isbn", isbn);
         cv.put("description", meta.description != null ? meta.description : "");
         cv.put("open_library_key", olKey);
+        if (cols.containsKey("CONTENT_HASH") && contentHash != null && !contentHash.isEmpty()) {
+            cv.put("content_hash", contentHash);
+        }
+        if (cols.containsKey("SOURCE_SIZE") && sourceSize > 0) {
+            cv.put("source_size", sourceSize);
+        }
         cv.put("added_at", System.currentTimeMillis());
         db.insertWithOnConflict("books_metadata", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
     /**
-     * Finds an existing imported book by book_key OR case-insensitive title+author
+     * Finds an existing imported book strictly by content_hash OR book_key ONLY
      * whose kfx_path still exists on disk.
      */
-    public BookRecord findExisting(String bookKey, String title, String author) {
+    public BookRecord findExisting(String bookKey, String contentHash) {
         SQLiteDatabase db = getReadableDatabase();
         Cursor c = null;
         try {
-            c = db.rawQuery(
-                    "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
-                    + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
-                    + "FROM books_metadata "
-                    + "WHERE book_key = ? OR (LOWER(TRIM(title)) = LOWER(TRIM(?)) AND LOWER(TRIM(author)) = LOWER(TRIM(?))) "
-                    + "ORDER BY added_at DESC LIMIT 1",
-                    new String[] {
-                        bookKey != null ? bookKey : "",
-                        title != null ? title : "",
-                        author != null ? author : ""
-                    });
+            java.util.Map<String, String> cols = tableColumns(db, "books_metadata");
+            boolean hasHashCol = cols.containsKey("CONTENT_HASH");
+            if (hasHashCol && contentHash != null && !contentHash.isEmpty()) {
+                c = db.rawQuery(
+                        "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
+                        + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
+                        + "FROM books_metadata "
+                        + "WHERE content_hash = ? OR book_key = ? "
+                        + "ORDER BY added_at DESC LIMIT 1",
+                        new String[] { contentHash, bookKey != null ? bookKey : "" });
+            } else {
+                c = db.rawQuery(
+                        "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
+                        + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
+                        + "FROM books_metadata "
+                        + "WHERE book_key = ? "
+                        + "ORDER BY added_at DESC LIMIT 1",
+                        new String[] { bookKey != null ? bookKey : "" });
+            }
             if (c.moveToFirst()) {
                 BookRecord rec = readRow(c);
                 if (rec.kfxPath != null && new File(rec.kfxPath).exists()) {
@@ -148,6 +172,40 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             }
         } catch (Throwable t) {
             Log.w(TAG, "findExisting query failed", t);
+        } finally {
+            if (c != null) c.close();
+        }
+        return null;
+    }
+
+    /**
+     * Advisory-only title+author match for import dialog hints.
+     * Never triggers when author is blank or "Unknown Author", and never merges automatically.
+     */
+    public BookRecord findPossibleDuplicate(String title, String author) {
+        if (title == null || title.trim().isEmpty()) return null;
+        if (author == null || author.trim().isEmpty()
+                || "Unknown Author".equalsIgnoreCase(author.trim())) {
+            return null;
+        }
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor c = null;
+        try {
+            c = db.rawQuery(
+                    "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
+                    + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
+                    + "FROM books_metadata "
+                    + "WHERE LOWER(TRIM(title)) = LOWER(TRIM(?)) AND LOWER(TRIM(author)) = LOWER(TRIM(?)) "
+                    + "ORDER BY added_at DESC LIMIT 1",
+                    new String[] { title, author });
+            if (c.moveToFirst()) {
+                BookRecord rec = readRow(c);
+                if (rec.kfxPath != null && new File(rec.kfxPath).exists()) {
+                    return rec;
+                }
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "findPossibleDuplicate query failed", t);
         } finally {
             if (c != null) c.close();
         }
@@ -485,6 +543,50 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             }
         }
         return removed;
+    }
+
+    public static String computeContentHash(File file) {
+        if (file == null || !file.isFile()) return "";
+        try (FileInputStream fis = new FileInputStream(file)) {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] buf = new byte[16384];
+            int n;
+            while ((n = fis.read(buf)) > 0) {
+                md.update(buf, 0, n);
+            }
+            byte[] h = md.digest();
+            StringBuilder sb = new StringBuilder(64);
+            for (byte b : h) {
+                sb.append(String.format(Locale.ROOT, "%02x", b));
+            }
+            return sb.toString();
+        } catch (Throwable t) {
+            Log.w(TAG, "computeContentHash failed for " + file.getName(), t);
+            return "";
+        }
+    }
+
+    public static String computeBookKeyFromHash(String contentHash) {
+        if (contentHash != null && contentHash.length() >= 12) {
+            return "FOLIO_" + contentHash.substring(0, 12).toUpperCase(Locale.ROOT);
+        }
+        return "FOLIO_" + Long.toHexString(System.currentTimeMillis()).toUpperCase(Locale.ROOT);
+    }
+
+    public static String extractBookKeyFromFilename(String filename) {
+        if (filename == null) return null;
+        String base = filename;
+        if (base.toLowerCase(Locale.ROOT).endsWith(".kfx")) {
+            base = base.substring(0, base.length() - 4);
+        }
+        int idx = base.lastIndexOf("_FOLIO_");
+        if (idx >= 0) {
+            String suffix = base.substring(idx + 1);
+            if (suffix.startsWith("FOLIO_") && suffix.length() >= 10) {
+                return suffix;
+            }
+        }
+        return null;
     }
 
     public static String computeBookKey(String title, long sizeBytes) {

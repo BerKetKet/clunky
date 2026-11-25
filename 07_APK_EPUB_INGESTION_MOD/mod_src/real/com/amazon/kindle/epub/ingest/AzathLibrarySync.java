@@ -88,7 +88,10 @@ public final class AzathLibrarySync {
             String dispName = (sourceLabel != null && !sourceLabel.trim().isEmpty())
                     ? sourceLabel.trim() : epubFile.getName();
             EpubMetadataExtractor.BookMeta meta = EpubMetadataExtractor.extract(epubFile, dispName);
-            String bookKey = FolioMetadataDb.computeBookKey(meta.title, epubFile.length());
+            String contentHash = FolioMetadataDb.computeContentHash(epubFile);
+            String bookKey = !contentHash.isEmpty()
+                    ? FolioMetadataDb.computeBookKeyFromHash(contentHash)
+                    : FolioMetadataDb.computeBookKey(meta.title, epubFile.length());
             File targetDir = getCanonicalLibraryDir(ctx);
             String safeBase = sanitizeFilename(meta.title) + "_" + bookKey;
             File outKfx = new File(targetDir, safeBase + ".kfx");
@@ -101,9 +104,10 @@ public final class AzathLibrarySync {
 
             try { MetadataEnricher.enrichInPlace(meta); } catch (Throwable ignored) {}
 
+            long sourceSize = epubFile.length();
             FolioMetadataDb db = new FolioMetadataDb(ctx);
             try {
-                db.upsertBook(bookKey, outKfx, outCover, dispName, meta);
+                db.upsertBook(bookKey, outKfx, outCover, dispName, meta, contentHash, sourceSize);
             } catch (Throwable dbErr) {
                 Log.e(TAG, "FolioMetadataDb upsert failed; keeping source EPUB", dbErr);
                 return new IngestResult(false, bookKey, outKfx, outCover, meta,
@@ -433,7 +437,10 @@ public final class AzathLibrarySync {
                     EpubMetadataExtractor.BookMeta meta = new EpubMetadataExtractor.BookMeta();
                     meta.title = baseTitle;
                     meta.author = "Unknown Author";
-                    String key = FolioMetadataDb.computeBookKey(baseTitle, kfx.length());
+                    String key = FolioMetadataDb.extractBookKeyFromFilename(kfx.getName());
+                    if (key == null || key.isEmpty()) {
+                        key = FolioMetadataDb.computeBookKey(baseTitle, kfx.length());
+                    }
                     File cov = new File(kfx.getAbsolutePath() + ".cover.jpg");
                     db.upsertBook(key, kfx, cov.exists() ? cov : null, kfx.getName(), meta);
                     changes++;
