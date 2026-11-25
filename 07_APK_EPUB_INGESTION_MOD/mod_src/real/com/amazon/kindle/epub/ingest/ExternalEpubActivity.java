@@ -235,8 +235,10 @@ public class ExternalEpubActivity extends Activity {
                 final String bookKey = FolioMetadataDb.computeBookKey(meta.title, stagedEpub.length());
                 final String safeBase = sanitizeFilename(meta.title) + "_" + bookKey;
 
+                File sdKindle = new File("/sdcard/kindle");
+                if (addToLibrary && !sdKindle.exists()) sdKindle.mkdirs();
                 File targetDir = addToLibrary
-                        ? new File(getFilesDir(), "folio_library")
+                        ? ((sdKindle.exists() && sdKindle.canWrite()) ? sdKindle : new File(getFilesDir(), "folio_library"))
                         : new File(getCacheDir(), "folio_once");
                 if (!targetDir.exists()) targetDir.mkdirs();
 

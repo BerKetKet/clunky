@@ -1,6 +1,14 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 156 (`Azath v17.6 KFX`) Verified, Staged & Audited (2026-11-25)**:
+  - Copied Round 156 `FolioMetadataDb.java` (`fillMissingNotNullDefaults` + case-insensitive column mapping), `ExternalEpubActivity.java` (`/sdcard/kindle/` output), and `FolioMoreView.java` (`v17.6 KFX`) verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/` and updated `rebuild_fast.sh` to stage `azath_v17.6_kfx`.
+  - Built `classes9.dex` (`488,384` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.6_kfx/base.apk` (`138,848,359` B, SHA256 `a7ad8d1b478967b0e0903632a94f53be064646a765c07ec163cae719c2972195`).
+  - Hardware verified on **Samsung Galaxy M30** (`32001776e8e82623`): `com.azath.reader` updated `2026-11-25 13:29:14`, stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`), zero `FATAL EXCEPTION` and zero `SIGSYS` in `logcat`.
+  - Imported `Aldous Huxley - Crome Yellow.epub`: converted in `832ms` (`615,399` B `Crome_Yellow_FOLIO_8355CBC70E53.kfx` + `29,407` B `.cover.jpg` in `/sdcard/kindle/`) with **ZERO `SQLiteConstraintException`**. Appeared at #1 in `Library` after relaunch and opened cleanly in `StandAloneBookReaderActivity` (`verify_r156_import_and_open.png`).
+  - Honest findings logged for Round 157: (1) `Crome Yellow` did not appear in `Library` live without relaunch (`verify_r156_library_live.png`); (2) thin `#101112` Compose outer band behind `"Search Azath"` pill on `Library` in Limestone Light Mode.
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 155 (`Azath v17.5 KFX`) Verified, Staged & Audited (2026-11-25)**:
   - Copied Round 155 drop-ins (`FolioFolderBrowserDialog.java`, `ExternalEpubActivity.java`, `FolioWebBrowserDialog.java`, `FolioMoreView.java`) verbatim into `07_APK_EPUB_INGESTION_MOD/mod_src/real/com/amazon/kindle/epub/` and updated `rebuild_fast.sh` to stage `azath_v17.5_kfx`.
   - Built `classes9.dex` (`487,308` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.5_kfx/base.apk` (`138,844,263` B, SHA256 `559868e3d561c32fbc2d4c9e4e9d4e5af0cb9d390e85665f2b408d960064dc50`).
