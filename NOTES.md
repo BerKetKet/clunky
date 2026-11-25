@@ -1,6 +1,13 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 164 QC Remediation (`Azath v18.5 KFX`, branch `round-164-qc-fixes`) Verified & Pushed (2026-11-26)**:
+  - Completed `R163-Closeout` (`6037f2a`, `f086d62`) and Tasks `C1`–`C4`, `D1`–`D5` (`54dac5b`, `5d23910`, `fcc00fe`, `2699c1a`, `bcaaefc`, `99e512b`, `912bb23`, `d336031`, `71c095f`) on branch `round-164-qc-fixes`.
+  - Built `classes9.dex` (`529,188` B), deployed `com.azath.reader` (`lastUpdateTime=2026-11-26 01:57:18`), and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.5_kfx/base.apk` (SHA256 `a410b2f543f05c579a0ba130be4e5b45a42e2649f22f02f2a1c63778104333ee`).
+  - Device tests on **Samsung Galaxy M30** (`32001776e8e82623`): **T6 PASS** (`files/db_backups/kindle_library_1795647531359.db` + `attempt 1/3` 200ms retry), **T7 PASS** (`Online enrichment disabled` skip), **T8 PARTIAL** (OPF preserved; bogus author returned 0 OL docs), **T9 PASS** (`Imported 2 of 3 (cancelled)`), **T10 PASS** (`T10_ZERO_CRASHES`), **T11 PASS** (`(filename, source_size)` + Dual-Stone `verify_r164_qc_folder_{granite,limestone}.png`), **T12 PASS** (`ZERO_CRASHES_ZERO_WARNINGS`, `reconcileLibrary complete: activeKfx=30 changes=0`).
+  - Stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`), zero `FATAL EXCEPTION`, zero `SIGSYS`, zero `SQLiteConstraintException`.
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 163 QC Remediation (`Azath v18.4 KFX`, branch `round-163-qc-fixes`) Executed & Audited (2026-11-26)**:
   - Completed Tasks A1–A4 (`d5405f5`, `1765170`, `ad121e0`, `bb74643`) and B1–B4 (`478ad22`, `b5acb86`, `9cca2c1`, `a635ca7`) on branch `round-163-qc-fixes` (one commit per task, canonical `07_APK_EPUB_INGESTION_MOD/mod_src/real/` only).
   - Built `classes9.dex` (`516,048` B), deployed `com.azath.reader` (`lastUpdateTime=2026-11-26 00:23:46`), and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.4_kfx/base.apk` (SHA256 `a9e458b5d940dd278fd57cf72baccc08a13a36988c31b54525831f7743960b86`).
