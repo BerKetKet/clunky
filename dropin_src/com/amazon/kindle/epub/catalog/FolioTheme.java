@@ -315,7 +315,53 @@ public final class FolioTheme {
         styleDialog(ctx, dlg);
     }
 
+    private static long toComposeColorLong(int argb) {
+        return (((long) argb) & 0xFFFFFFFFL) << 32;
+    }
+
+    private static void setStaticLongField(Class<?> cls, String name, long val) {
+        try {
+            java.lang.reflect.Field f = cls.getDeclaredField(name);
+            f.setAccessible(true);
+            f.setLong(null, val);
+        } catch (Throwable ignored) {}
+    }
+
+    /**
+     * Dynamically aligns Kindle's Compose dark/light palette tokens (ib.b) for the bottom navigation bar
+     * and top chrome with Azath's active Stone theme (Granite Dark vs Limestone Light) without Activity.recreate().
+     */
+    public static void syncComposeBottomBarColors(Context ctx) {
+        if (ctx == null) return;
+        boolean light = isLimestoneLight(ctx);
+        try {
+            Class<?> cls = Class.forName("ib.b");
+            long surface = toComposeColorLong(light ? LIGHT_BG_MODAL : BG_MODAL);
+            long surfaceLow = toComposeColorLong(light ? LIGHT_BG_SURFACE : BG_SURFACE);
+            long surfaceCont = toComposeColorLong(light ? LIGHT_BG_CONTROL : BG_CONTROL);
+            long onSurface = toComposeColorLong(light ? LIGHT_TEXT_PRIMARY : TEXT_PRIMARY);
+            long onSurfaceVar = toComposeColorLong(light ? LIGHT_TEXT_MUTED : TEXT_MUTED);
+            long outline = toComposeColorLong(light ? LIGHT_BORDER_HAIRLINE : BORDER_HAIRLINE);
+            long primary = toComposeColorLong(light ? LIGHT_ACCENT_GRANITE : ACCENT_LIMESTONE);
+
+            setStaticLongField(cls, "functionalCorePrimary", primary);
+            setStaticLongField(cls, "functionalCorePrimaryInteractive", primary);
+            setStaticLongField(cls, "functionalSupplementalInteractionActive", primary);
+            setStaticLongField(cls, "functionalSupplementalInteractionOutlineSelected", primary);
+            setStaticLongField(cls, "functionalNeutralSurface", surface);
+            setStaticLongField(cls, "functionalNeutralSurfaceContainerLowest", surface);
+            setStaticLongField(cls, "functionalNeutralSurfaceContainerLow", surface);
+            setStaticLongField(cls, "functionalNeutralSurfaceContainer", surfaceLow);
+            setStaticLongField(cls, "functionalNeutralSurfaceContainerHigh", surfaceCont);
+            setStaticLongField(cls, "functionalNeutralOnSurface", onSurface);
+            setStaticLongField(cls, "functionalNeutralOnSurfaceVariant", onSurfaceVar);
+            setStaticLongField(cls, "functionalNeutralOutline", onSurfaceVar);
+            setStaticLongField(cls, "functionalNeutralOutlineVariant", outline);
+        } catch (Throwable ignored) {}
+    }
+
     public static void applyWindowBars(Context ctx) {
+        syncComposeBottomBarColors(ctx);
         if (!(ctx instanceof android.app.Activity)) return;
         try {
             android.view.Window win = ((android.app.Activity) ctx).getWindow();
