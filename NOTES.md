@@ -1,6 +1,14 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 158 (`Azath v17.8 KFX`) Verified, Staged & Audited (2026-11-25)**:
+  - Merged Round 158 `FolioMoreView.java` (`v17.8 KFX`), `FolioFolderBrowserDialog.java`, `ExternalEpubActivity.java`, `FolioWebBrowserDialog.java`, and `FolioTheme.java` (`SearchBandMaskView`, `triggerLibraryRescan`, `sFloatingCoverActive`) while preserving Round 154 smali hooks.
+  - Built `classes9.dex` (`491,916` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.8_kfx/base.apk` (`138,848,359` B, SHA256 `d5c46b0d136917699fbf4d2115a2a93e69d04dd07da929446d5e18afd5df9f73`).
+  - Hardware verified on **Samsung Galaxy M30** (`32001776e8e82623`): `com.azath.reader` updated `2026-11-25 14:10:14`, stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`), zero crashes / zero `SIGSYS`.
+  - Visually verified `verify_r158_library_limestone_clean.png`: `#101112` Search outer band is **100% GONE** (`#EFEAE0` Limestone + `#CBC3B3` hairline) and bottom-left cutout bug is **100% GONE** (centered full-width Limestone bottom bar).
+  - Imported `Aldous Huxley - Eyeless In Gaza.epub`: converted in `31346ms` (`1,298,643` B `Eyeless_In_Gaza_FOLIO_83848DCC3B03.kfx` + `29,736` B `.cover.jpg` in `/sdcard/kindle/`). Honest finding: `AzathLiveIngest` did not log and `Eyeless In Gaza` did not appear in `Library` without relaunching yet.
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 157 (`Azath v17.7 KFX`) Verified, Staged & Audited (2026-11-25)**:
   - Merged Round 157 `dp/g.java` (`ingestKfxLive`), `FolioMoreView.java` (`v17.7 KFX`), `ExternalEpubActivity.java`, `FolioFolderBrowserDialog.java`, `FolioWebBrowserDialog.java`, and `FolioTheme.syncLibrarySearchBand` (preserving Round 154 smali hooks).
   - Built `classes9.dex` (`489,656` B) and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v17.7_kfx/base.apk` (`138,848,359` B, SHA256 `510b923f2484d6dd8f6e99b7fdd33cad8303f065cd9e7f2318a904470d9229d8`).

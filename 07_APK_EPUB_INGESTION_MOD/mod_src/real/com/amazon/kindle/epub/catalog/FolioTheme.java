@@ -531,35 +531,127 @@ public final class FolioTheme {
         } catch (Throwable ignored) {}
     }
 
+    private static final String TAG_SEARCH_BAND_MASK = "azath_limestone_search_band_v1";
+    private static volatile boolean sFloatingCoverActive = false;
+
+    public static void markFloatingCoverActive() {
+        sFloatingCoverActive = true;
+    }
+
     /**
-     * Paints the thin outer Compose/FrameLayout band wrapping the Library "Search Azath" pill
-     * so no dark #101112 stripe shows behind the search box in Limestone Light Mode.
+     * Triggers Kindle's live sideload/library rescan and logs available scan methods on ILibraryService
+     * so newly converted /sdcard/kindle/*.kfx books appear without relaunching.
+     */
+    public static void triggerLibraryRescan(Context ctx, java.io.File kfxFile) {
+        try {
+            if (ctx != null && kfxFile != null && kfxFile.exists()) {
+                android.media.MediaScannerConnection.scanFile(
+                        ctx, new String[] { kfxFile.getAbsolutePath() }, null, null);
+            }
+            Object factory = com.amazon.kcp.util.Utils.getFactory();
+            if (factory != null) {
+                Object lib = null;
+                try {
+                    lib = factory.getClass().getMethod("getLibraryService").invoke(factory);
+                } catch (Throwable ignored) {}
+                if (lib != null) {
+                    for (java.lang.reflect.Method m : lib.getClass().getMethods()) {
+                        String mn = m.getName().toLowerCase(java.util.Locale.US);
+                        if (m.getParameterTypes().length == 0
+                                && (mn.contains("scan") || mn.contains("sideload") || mn.contains("refresh") || mn.contains("sync"))) {
+                            try {
+                                m.invoke(lib);
+                                android.util.Log.i("AzathLiveIngest", "Invoked live rescan: " + lib.getClass().getName() + "." + m.getName() + "()");
+                            } catch (Throwable ignored) {}
+                        }
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            android.util.Log.w("AzathLiveIngest", "triggerLibraryRescan error: " + t.getMessage());
+        }
+    }
+
+    /**
+     * Masks the thin #101112 Compose outer band surrounding the Library "Search Azath" pill in Limestone Light Mode
+     * using 4 non-clickable #EFEAE0 border strips around search_box, leaving the pill itself 100% interactive.
      */
     public static void syncLibrarySearchBand(android.app.Activity act) {
         if (act == null) return;
         try {
-            int resId = act.getResources().getIdentifier("search_box_text_view", "id", act.getPackageName());
-            if (resId == 0) return;
-            View sb = act.findViewById(resId);
-            if (sb == null) return;
-            float d = act.getResources().getDisplayMetrics().density;
-            int screenW = act.getResources().getDisplayMetrics().widthPixels;
-            int maxBandH = Math.round(115f * d);
-            int targetBg = bgModal(act);
-            View content = act.findViewById(android.R.id.content);
-            android.view.ViewParent p = sb.getParent();
-            int depth = 0;
-            while (p instanceof View && p != content && depth < 5) {
-                View pv = (View) p;
-                int pw = pv.getWidth();
-                int ph = pv.getHeight();
-                if (pw >= screenW - Math.round(16f * d) && ph > 0 && ph <= maxBandH) {
-                    pv.setBackgroundColor(targetBg);
-                }
-                p = pv.getParent();
-                depth++;
+            android.view.ViewGroup content = act.findViewById(android.R.id.content);
+            if (content == null) return;
+            View existing = content.findViewWithTag(TAG_SEARCH_BAND_MASK);
+            boolean showMask = isLimestoneLight(act) && (sActiveBottomTab == 1);
+            if (!showMask) {
+                if (existing != null) existing.setVisibility(View.GONE);
+                return;
             }
+            int sbId = act.getResources().getIdentifier("search_box", "id", act.getPackageName());
+            View sb = sbId != 0 ? act.findViewById(sbId) : null;
+            if (sb == null || sb.getWidth() <= 0 || sb.getHeight() <= 0) {
+                if (existing != null) existing.setVisibility(View.GONE);
+                return;
+            }
+            int[] sbLoc = new int[2];
+            int[] cLoc = new int[2];
+            sb.getLocationOnScreen(sbLoc);
+            content.getLocationOnScreen(cLoc);
+            int relL = sbLoc[0] - cLoc[0];
+            int relT = sbLoc[1] - cLoc[1];
+            int relR = relL + sb.getWidth();
+            int relB = relT + sb.getHeight();
+
+            SearchBandMaskView mask;
+            if (existing instanceof SearchBandMaskView) {
+                mask = (SearchBandMaskView) existing;
+            } else {
+                mask = new SearchBandMaskView(act);
+                mask.setTag(TAG_SEARCH_BAND_MASK);
+                content.addView(mask, new android.widget.FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            }
+            mask.updateHole(relL, relT, relR, relB);
+            mask.setVisibility(View.VISIBLE);
+            mask.bringToFront();
         } catch (Throwable ignored) {}
+    }
+
+    private static final class SearchBandMaskView extends View {
+        private int holeL, holeT, holeR, holeB;
+        private final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+        SearchBandMaskView(Context ctx) {
+            super(ctx);
+            setClickable(false);
+            setFocusable(false);
+            setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
+
+        void updateHole(int l, int t, int r, int b) {
+            this.holeL = l;
+            this.holeT = t;
+            this.holeR = r;
+            this.holeB = b;
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(android.graphics.Canvas canvas) {
+            super.onDraw(canvas);
+            if (holeR <= holeL || holeB <= holeT) return;
+            float d = getResources().getDisplayMetrics().density;
+            float w = getWidth();
+            float bandTop = Math.max(0f, holeT - 10f * d);
+            float bandBot = holeB + 17f * d;
+            p.setColor(LIGHT_BG_MODAL);
+            canvas.drawRect(0f, bandTop, w, holeT, p);
+            canvas.drawRect(0f, holeB, w, bandBot, p);
+            canvas.drawRect(0f, holeT, holeL, holeB, p);
+            canvas.drawRect(holeR, holeT, w, holeB, p);
+            p.setColor(LIGHT_BORDER_HAIRLINE);
+            canvas.drawRect(0f, bandBot - Math.max(1f, d), w, bandBot, p);
+        }
     }
 
     private static final class StoneBottomBarView extends View {
@@ -602,24 +694,28 @@ public final class FolioTheme {
             int actCol = LIGHT_ACCENT_GRANITE; // #2D3138 deep Granite
             int inactCol = LIGHT_TEXT_MUTED;   // #73757B weathered Granite
 
-            // Cutout around floating mini book cover on far left (26dp..76dp, 0..53dp)
-            float cutL = 26f * d;
-            float cutR = 76f * d;
-            float cutB = 53f * d;
-
-            fillPaint.setColor(bgCol);
-            canvas.drawRect(0f, 0f, cutL, h, fillPaint);
-            canvas.drawRect(cutR, 0f, w, h, fillPaint);
-            canvas.drawRect(cutL, cutB, cutR, h, fillPaint);
-
-            // Top 1dp Limestone hairline seam
-            fillPaint.setColor(seamCol);
             float seamH = Math.max(1f, d);
-            canvas.drawRect(0f, 0f, cutL, seamH, fillPaint);
-            canvas.drawRect(cutR, 0f, w, seamH, fillPaint);
-
-            // 3 tab centers matching Kindle's exact bottom bar geometry (37.3%, 62.4%, 87.5%)
-            float[] centers = new float[] { w * 0.373f, w * 0.624f, w * 0.875f };
+            boolean hasFloat = sFloatingCoverActive;
+            float[] centers;
+            if (hasFloat) {
+                float cutL = 26f * d;
+                float cutR = 76f * d;
+                float cutB = 53f * d;
+                fillPaint.setColor(bgCol);
+                canvas.drawRect(0f, 0f, cutL, h, fillPaint);
+                canvas.drawRect(cutR, 0f, w, h, fillPaint);
+                canvas.drawRect(cutL, cutB, cutR, h, fillPaint);
+                fillPaint.setColor(seamCol);
+                canvas.drawRect(0f, 0f, cutL, seamH, fillPaint);
+                canvas.drawRect(cutR, 0f, w, seamH, fillPaint);
+                centers = new float[] { w * 0.373f, w * 0.624f, w * 0.875f };
+            } else {
+                fillPaint.setColor(bgCol);
+                canvas.drawRect(0f, 0f, w, h, fillPaint);
+                fillPaint.setColor(seamCol);
+                canvas.drawRect(0f, 0f, w, seamH, fillPaint);
+                centers = new float[] { w * 0.167f, w * 0.500f, w * 0.833f };
+            }
             String[] labels = new String[] { "Home", "Library", "More" };
             float iconCy = h * 0.38f;
             float iconR = 9.5f * d;

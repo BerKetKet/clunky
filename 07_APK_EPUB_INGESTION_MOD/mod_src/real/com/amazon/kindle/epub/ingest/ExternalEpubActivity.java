@@ -258,8 +258,11 @@ public class ExternalEpubActivity extends Activity {
                     } finally {
                         metaDb.close();
                     }
-                    FolioMetadataDb.registerInKindleLibraryDb(this, bookKey, outKfx, outCover, meta);
+                    if (!outKfx.getAbsolutePath().startsWith("/sdcard/kindle")) {
+                        FolioMetadataDb.registerInKindleLibraryDb(this, bookKey, outKfx, outCover, meta);
+                    }
                     dp.g.ingestKfxLive(outKfx);
+                    com.amazon.kindle.epub.catalog.FolioTheme.triggerLibraryRescan(this, outKfx);
                     try { android.media.MediaScannerConnection.scanFile(this, new String[]{ outKfx.getAbsolutePath() }, null, null); } catch (Throwable ignored) {}
                 }
 
@@ -372,6 +375,7 @@ public class ExternalEpubActivity extends Activity {
             return;
         }
         kfxFile = resolved;
+        com.amazon.kindle.epub.catalog.FolioTheme.markFloatingCoverActive();
         try {
             android.os.StrictMode.class.getMethod("disableDeathOnFileUriExposure").invoke(null);
         } catch (Throwable ignored) {}

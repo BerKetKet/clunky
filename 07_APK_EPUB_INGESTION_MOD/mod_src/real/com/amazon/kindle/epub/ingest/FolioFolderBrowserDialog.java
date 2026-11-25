@@ -690,8 +690,11 @@ public final class FolioFolderBrowserDialog {
                         } finally {
                             db.close();
                         }
-                        FolioMetadataDb.registerInKindleLibraryDb(ctx, bookKey, outKfx, outCover, meta);
+                        if (!outKfx.getAbsolutePath().startsWith("/sdcard/kindle")) {
+                            FolioMetadataDb.registerInKindleLibraryDb(ctx, bookKey, outKfx, outCover, meta);
+                        }
                         dp.g.ingestKfxLive(outKfx);
+                        com.amazon.kindle.epub.catalog.FolioTheme.triggerLibraryRescan(ctx, outKfx);
                         try { android.media.MediaScannerConnection.scanFile(ctx, new String[]{ outKfx.getAbsolutePath() }, null, null); } catch (Throwable ignored) {}
                         importedSourceNames.add(epub.getName().toLowerCase(Locale.ROOT));
                         okCount++;
