@@ -266,6 +266,7 @@ public class ExternalEpubActivity extends Activity {
                     throw new IllegalStateException("KFX conversion failed");
                 }
 
+                boolean registeredOk = true;
                 if (addToLibrary) {
                     MetadataEnricher.enrichInPlace(meta);
                     FolioMetadataDb metaDb = new FolioMetadataDb(this);
@@ -275,19 +276,27 @@ public class ExternalEpubActivity extends Activity {
                         metaDb.close();
                     }
                     if (!outKfx.getAbsolutePath().startsWith("/sdcard/kindle")) {
-                        FolioMetadataDb.registerInKindleLibraryDb(this, bookKey, outKfx, outCover, meta);
+                        registeredOk = FolioMetadataDb.registerInKindleLibraryDb(this, bookKey, outKfx, outCover, meta);
                     }
-                    dp.g.ingestKfxLive(outKfx);
+                    boolean liveOk = dp.g.ingestKfxLive(outKfx);
+                    if (!liveOk) {
+                        Log.w(TAG, "dp.g.ingestKfxLive returned false for " + outKfx.getName());
+                    }
                     com.amazon.kindle.epub.catalog.FolioTheme.triggerLibraryRescan(this, outKfx);
                     try { android.media.MediaScannerConnection.scanFile(this, new String[]{ outKfx.getAbsolutePath() }, null, null); } catch (Throwable ignored) {}
                 }
 
                 stagedEpub.delete();
 
+                final boolean finalRegisteredOk = registeredOk;
                 mainHandler.post(() -> {
                     dismissActiveDialog();
                     if (addToLibrary) {
-                        Toast.makeText(this, "Added \"" + meta.title + "\" to Azath Library", Toast.LENGTH_SHORT).show();
+                        if (finalRegisteredOk) {
+                            Toast.makeText(this, "Added \"" + meta.title + "\" to Azath Library", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(this, "Converted \"" + meta.title + "\", but Library DB registration failed", Toast.LENGTH_LONG).show();
+                        }
                     }
                     launchKfxReader(this, outKfx);
                     finish();

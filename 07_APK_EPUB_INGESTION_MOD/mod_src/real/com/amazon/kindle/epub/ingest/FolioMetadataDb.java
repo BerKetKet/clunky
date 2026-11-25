@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteDatabaseLockedException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
@@ -11,9 +12,12 @@ import org.json.JSONArray;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -384,6 +388,57 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         return s == null ? "" : s;
     }
 
+    private static volatile boolean sBackedUpThisProcess = false;
+
+    private static void backupKindleLibraryDbOnce(Context ctx, File dbFile) {
+        if (ctx == null || dbFile == null || !dbFile.exists() || sBackedUpThisProcess) return;
+        sBackedUpThisProcess = true;
+        try {
+            File backupDir = new File(ctx.getFilesDir(), "db_backups");
+            if (!backupDir.exists()) backupDir.mkdirs();
+            File[] existing = backupDir.listFiles((dir, name) ->
+                    name.startsWith("kindle_library_") && name.endsWith(".db"));
+            long now = System.currentTimeMillis();
+            if (existing != null && existing.length > 0) {
+                Arrays.sort(existing, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                if (now - existing[0].lastModified() < 5 * 60_000L) {
+                    Log.i(TAG, "Skipping kindle_library.db backup; newest backup < 5m old");
+                    return;
+                }
+            }
+            File dest = new File(backupDir, "kindle_library_" + now + ".db");
+            try (FileInputStream fis = new FileInputStream(dbFile);
+                 FileOutputStream fos = new FileOutputStream(dest)) {
+                byte[] buf = new byte[16384];
+                int n;
+                while ((n = fis.read(buf)) > 0) {
+                    fos.write(buf, 0, n);
+                }
+            }
+            Log.i(TAG, "Backed up kindle_library.db -> " + dest.getAbsolutePath());
+            File[] after = backupDir.listFiles((dir, name) ->
+                    name.startsWith("kindle_library_") && name.endsWith(".db"));
+            if (after != null && after.length > 3) {
+                Arrays.sort(after, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                for (int i = 3; i < after.length; i++) {
+                    if (after[i].delete()) {
+                        Log.i(TAG, "Pruned old backup: " + after[i].getName());
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to backup kindle_library.db", t);
+        }
+    }
+
+    private static boolean isLockOrBusy(Throwable t) {
+        if (t instanceof SQLiteDatabaseLockedException) return true;
+        String msg = t.getMessage();
+        if (msg == null) return false;
+        String lower = msg.toLowerCase(Locale.ROOT);
+        return lower.contains("locked") || lower.contains("busy");
+    }
+
     /**
      * Schema-adaptive transactional registration into kindle_library.db aligned
      * with Kindle v8.159 NOT NULL columns so imported books appear immediately
@@ -397,103 +452,124 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             Log.w(TAG, "kindle_library.db not found yet at " + dbFile);
             return false;
         }
-        SQLiteDatabase db = null;
-        try {
-            db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
-            db.beginTransaction();
-            long now = System.currentTimeMillis();
-            String path = kfxFile.getAbsolutePath();
-            String coverPath = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "";
-            String title = !EpubMetadataExtractor.isBlank(meta.title) ? meta.title : kfxFile.getName();
-            String author = !EpubMetadataExtractor.isBlank(meta.author) ? meta.author : "Unknown Author";
-            String asin = "CR!" + bookKey.replace("FOLIO_", "") + "KFX";
-            String amznId = "AMZNID0/" + asin + "/0/";
-            int hasCover = coverPath.isEmpty() ? 0 : 1;
+        backupKindleLibraryDbOnce(ctx, dbFile);
 
-            // Remove any prior row pointing to the exact same path to prevent duplicates
+        final int maxAttempts = 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            SQLiteDatabase db = null;
             try {
-                db.delete("LocalContent", "FILE_PATH = ?", new String[] { path });
-            } catch (Throwable ignored) {}
+                db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+                db.beginTransaction();
+                long now = System.currentTimeMillis();
+                String path = kfxFile.getAbsolutePath();
+                String coverPath = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "";
+                String title = !EpubMetadataExtractor.isBlank(meta.title) ? meta.title : kfxFile.getName();
+                String author = !EpubMetadataExtractor.isBlank(meta.author) ? meta.author : "Unknown Author";
+                String asin = "CR!" + bookKey.replace("FOLIO_", "") + "KFX";
+                String amznId = "AMZNID0/" + asin + "/0/";
+                int hasCover = coverPath.isEmpty() ? 0 : 1;
 
-            // 1. KindleContent
-            java.util.Map<String, String> kcCols = tableColumns(db, "KindleContent");
-            if (!kcCols.isEmpty()) {
-                ContentValues kc = new ContentValues();
-                putIfPresent(kc, kcCols, "ID", amznId);
-                putIfPresent(kc, kcCols, "KEY", bookKey);
-                putIfPresent(kc, kcCols, "CONTENT_ID", bookKey);
-                putIfPresent(kc, kcCols, "ASIN", asin);
-                putIfPresent(kc, kcCols, "TITLE", title);
-                putIfPresent(kc, kcCols, "TITLE_SORT", title.toLowerCase(Locale.ROOT));
-                putIfPresent(kc, kcCols, "AUTHOR", author);
-                putIfPresent(kc, kcCols, "AUTHORS", author);
-                putIfPresent(kc, kcCols, "AUTHOR_SORT", author.toLowerCase(Locale.ROOT));
-                putIfPresent(kc, kcCols, "TYPE", "BT_EBOOK_PDOC");
-                putIfPresent(kc, kcCols, "CONTENT_TYPE", "application/x-kfx-ebook");
-                putIfPresent(kc, kcCols, "MIME_TYPE", "application/x-kfx-ebook");
-                putIfPresent(kc, kcCols, "STATE", "LOCAL");
-                putIfPresent(kc, kcCols, "ARCHIVABLE", 0);
-                putIfPresent(kc, kcCols, "HAS_READ_ALONG", 0);
-                putIfPresent(kc, kcCols, "HAS_LOADED_COVER", hasCover);
-                putIfPresent(kc, kcCols, "FILE_PATH", path);
-                putIfPresent(kc, kcCols, "COVER_URL", coverPath);
-                putIfPresent(kc, kcCols, "PUBLISHER", meta.publisher);
-                putIfPresent(kc, kcCols, "PUBLICATION_DATE", meta.pubDate);
-                putIfPresent(kc, kcCols, "LANGUAGE", meta.language);
-                putIfPresent(kc, kcCols, "FILE_SIZE", kfxFile.length());
-                putIfPresent(kc, kcCols, "LAST_ACCESS_TIME", now);
-                putIfPresent(kc, kcCols, "PURCHASE_DATE", now);
-                putIfPresent(kc, kcCols, "IS_LOCAL", 1);
-                putIfPresent(kc, kcCols, "DOWNLOAD_STATE", 1);
-                fillMissingNotNullDefaults(db, "KindleContent", kc);
-                db.insertWithOnConflict("KindleContent", null, kc, SQLiteDatabase.CONFLICT_REPLACE);
-            }
-
-            // 2. LocalContent
-            java.util.Map<String, String> lcCols = tableColumns(db, "LocalContent");
-            if (!lcCols.isEmpty()) {
-                ContentValues lc = new ContentValues();
-                putIfPresent(lc, lcCols, "KEY", amznId);
-                putIfPresent(lc, lcCols, "CONTENT_ID", amznId);
-                putIfPresent(lc, lcCols, "FILE_PATH", path);
-                putIfPresent(lc, lcCols, "GUID", asin);
-                putIfPresent(lc, lcCols, "COVER_PATH", coverPath);
-                putIfPresent(lc, lcCols, "FILE_SIZE", kfxFile.length());
-                putIfPresent(lc, lcCols, "LAST_MODIFIED", now);
-                putIfPresent(lc, lcCols, "OWNERSHIP_TYPE", "Unknown");
-                putIfPresent(lc, lcCols, "MIME_TYPE", "application/x-kfx-ebook");
-                fillMissingNotNullDefaults(db, "LocalContent", lc);
-                db.insertWithOnConflict("LocalContent", null, lc, SQLiteDatabase.CONFLICT_REPLACE);
-            }
-
-            // 3. UserContent
-            java.util.Map<String, String> ucCols = tableColumns(db, "UserContent");
-            if (!ucCols.isEmpty()) {
-                ContentValues uc = new ContentValues();
-                putIfPresent(uc, ucCols, "KEY", amznId);
-                putIfPresent(uc, ucCols, "USER_ID", "MASTER");
-                putIfPresent(uc, ucCols, "LAST_ACCESSED", now);
-                putIfPresent(uc, ucCols, "LAST_ACCESS_TIME", now);
-                putIfPresent(uc, ucCols, "IS_IN_CAROUSEL", 1);
-                putIfPresent(uc, ucCols, "CLIPPING_BALANCE", 0);
-                putIfPresent(uc, ucCols, "READING_PROGRESS", 0);
-                fillMissingNotNullDefaults(db, "UserContent", uc);
-                db.insertWithOnConflict("UserContent", null, uc, SQLiteDatabase.CONFLICT_REPLACE);
-            }
-
-            db.setTransactionSuccessful();
-            return true;
-        } catch (Throwable t) {
-            Log.e(TAG, "Failed to register book in kindle_library.db", t);
-            return false;
-        } finally {
-            if (db != null) {
+                // Remove any prior row pointing to the exact same path to prevent duplicates
                 try {
-                    if (db.inTransaction()) db.endTransaction();
-                    db.close();
-                } catch (Throwable ignored) {}
+                    db.delete("LocalContent", "FILE_PATH = ?", new String[] { path });
+                } catch (Throwable t) {
+                    if (isLockOrBusy(t)) throw t;
+                    Log.w(TAG, "LocalContent pre-delete warning", t);
+                }
+
+                // 1. KindleContent
+                java.util.Map<String, String> kcCols = tableColumns(db, "KindleContent");
+                if (!kcCols.isEmpty()) {
+                    ContentValues kc = new ContentValues();
+                    putIfPresent(kc, kcCols, "ID", amznId);
+                    putIfPresent(kc, kcCols, "KEY", bookKey);
+                    putIfPresent(kc, kcCols, "CONTENT_ID", bookKey);
+                    putIfPresent(kc, kcCols, "ASIN", asin);
+                    putIfPresent(kc, kcCols, "TITLE", title);
+                    putIfPresent(kc, kcCols, "TITLE_SORT", title.toLowerCase(Locale.ROOT));
+                    putIfPresent(kc, kcCols, "AUTHOR", author);
+                    putIfPresent(kc, kcCols, "AUTHORS", author);
+                    putIfPresent(kc, kcCols, "AUTHOR_SORT", author.toLowerCase(Locale.ROOT));
+                    putIfPresent(kc, kcCols, "TYPE", "BT_EBOOK_PDOC");
+                    putIfPresent(kc, kcCols, "CONTENT_TYPE", "application/x-kfx-ebook");
+                    putIfPresent(kc, kcCols, "MIME_TYPE", "application/x-kfx-ebook");
+                    putIfPresent(kc, kcCols, "STATE", "LOCAL");
+                    putIfPresent(kc, kcCols, "ARCHIVABLE", 0);
+                    putIfPresent(kc, kcCols, "HAS_READ_ALONG", 0);
+                    putIfPresent(kc, kcCols, "HAS_LOADED_COVER", hasCover);
+                    putIfPresent(kc, kcCols, "FILE_PATH", path);
+                    putIfPresent(kc, kcCols, "COVER_URL", coverPath);
+                    putIfPresent(kc, kcCols, "PUBLISHER", meta.publisher);
+                    putIfPresent(kc, kcCols, "PUBLICATION_DATE", meta.pubDate);
+                    putIfPresent(kc, kcCols, "LANGUAGE", meta.language);
+                    putIfPresent(kc, kcCols, "FILE_SIZE", kfxFile.length());
+                    putIfPresent(kc, kcCols, "LAST_ACCESS_TIME", now);
+                    putIfPresent(kc, kcCols, "PURCHASE_DATE", now);
+                    putIfPresent(kc, kcCols, "IS_LOCAL", 1);
+                    putIfPresent(kc, kcCols, "DOWNLOAD_STATE", 1);
+                    if (!fillMissingNotNullDefaults(db, "KindleContent", kc)) {
+                        return false;
+                    }
+                    db.insertWithOnConflict("KindleContent", null, kc, SQLiteDatabase.CONFLICT_REPLACE);
+                }
+
+                // 2. LocalContent
+                java.util.Map<String, String> lcCols = tableColumns(db, "LocalContent");
+                if (!lcCols.isEmpty()) {
+                    ContentValues lc = new ContentValues();
+                    putIfPresent(lc, lcCols, "KEY", amznId);
+                    putIfPresent(lc, lcCols, "CONTENT_ID", amznId);
+                    putIfPresent(lc, lcCols, "FILE_PATH", path);
+                    putIfPresent(lc, lcCols, "GUID", asin);
+                    putIfPresent(lc, lcCols, "COVER_PATH", coverPath);
+                    putIfPresent(lc, lcCols, "FILE_SIZE", kfxFile.length());
+                    putIfPresent(lc, lcCols, "LAST_MODIFIED", now);
+                    putIfPresent(lc, lcCols, "OWNERSHIP_TYPE", "Unknown");
+                    putIfPresent(lc, lcCols, "MIME_TYPE", "application/x-kfx-ebook");
+                    if (!fillMissingNotNullDefaults(db, "LocalContent", lc)) {
+                        return false;
+                    }
+                    db.insertWithOnConflict("LocalContent", null, lc, SQLiteDatabase.CONFLICT_REPLACE);
+                }
+
+                // 3. UserContent
+                java.util.Map<String, String> ucCols = tableColumns(db, "UserContent");
+                if (!ucCols.isEmpty()) {
+                    ContentValues uc = new ContentValues();
+                    putIfPresent(uc, ucCols, "KEY", amznId);
+                    putIfPresent(uc, ucCols, "USER_ID", "MASTER");
+                    putIfPresent(uc, ucCols, "LAST_ACCESSED", now);
+                    putIfPresent(uc, ucCols, "LAST_ACCESS_TIME", now);
+                    putIfPresent(uc, ucCols, "IS_IN_CAROUSEL", 1);
+                    putIfPresent(uc, ucCols, "CLIPPING_BALANCE", 0);
+                    putIfPresent(uc, ucCols, "READING_PROGRESS", 0);
+                    if (!fillMissingNotNullDefaults(db, "UserContent", uc)) {
+                        return false;
+                    }
+                    db.insertWithOnConflict("UserContent", null, uc, SQLiteDatabase.CONFLICT_REPLACE);
+                }
+
+                db.setTransactionSuccessful();
+                return true;
+            } catch (Throwable t) {
+                if (isLockOrBusy(t) && attempt < maxAttempts) {
+                    Log.w(TAG, "kindle_library.db locked/busy (attempt " + attempt + "/" + maxAttempts
+                            + "), retrying in 200ms: " + t.getMessage());
+                    try { Thread.sleep(200L); } catch (InterruptedException ignored) {}
+                    continue;
+                }
+                Log.e(TAG, "Failed to register book in kindle_library.db (attempt " + attempt + ")", t);
+                return false;
+            } finally {
+                if (db != null) {
+                    try {
+                        if (db.inTransaction()) db.endTransaction();
+                        db.close();
+                    } catch (Throwable ignored) {}
+                }
             }
         }
+        return false;
     }
 
     private static java.util.Map<String, String> tableColumns(SQLiteDatabase db, String table) {
@@ -515,8 +591,9 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         return cols;
     }
 
-    private static void fillMissingNotNullDefaults(SQLiteDatabase db, String table, ContentValues cv) {
+    private static boolean fillMissingNotNullDefaults(SQLiteDatabase db, String table, ContentValues cv) {
         Cursor c = null;
+        int forgedCount = 0;
         try {
             c = db.rawQuery("PRAGMA table_info(" + table + ")", null);
             int nameIdx = c.getColumnIndex("name");
@@ -530,6 +607,12 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                 int pk = pkIdx >= 0 ? c.getInt(pkIdx) : 0;
                 String dflt = (dfltIdx >= 0 && !c.isNull(dfltIdx)) ? c.getString(dfltIdx) : null;
                 if (n != null && nn == 1 && pk == 0 && dflt == null && !cv.containsKey(n)) {
+                    forgedCount++;
+                    Log.w(TAG, "fillMissingNotNullDefaults forging column " + table + "." + n + " (#" + forgedCount + ")");
+                    if (forgedCount > 3) {
+                        Log.e(TAG, "Schema drift detected in " + table + ": >3 NOT NULL columns would be forged; aborting write");
+                        return false;
+                    }
                     String tp = typeIdx >= 0 && c.getString(typeIdx) != null
                             ? c.getString(typeIdx).toUpperCase(Locale.ROOT) : "";
                     if (tp.contains("INT") || tp.contains("REAL") || tp.contains("NUM") || tp.contains("BOOL")) {
@@ -539,7 +622,10 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                     }
                 }
             }
-        } catch (Throwable ignored) {
+            return true;
+        } catch (Throwable t) {
+            Log.e(TAG, "fillMissingNotNullDefaults failed for " + table, t);
+            return false;
         } finally {
             if (c != null) c.close();
         }

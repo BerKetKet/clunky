@@ -39,15 +39,25 @@ public final class AzathLibrarySync {
         public final File coverFile;
         public final EpubMetadataExtractor.BookMeta meta;
         public final String error;
+        public final boolean registered;
+        public final boolean liveIndexed;
 
         IngestResult(boolean ok, String bookKey, File kfxFile, File coverFile,
                      EpubMetadataExtractor.BookMeta meta, String error) {
+            this(ok, bookKey, kfxFile, coverFile, meta, error, false, false);
+        }
+
+        IngestResult(boolean ok, String bookKey, File kfxFile, File coverFile,
+                     EpubMetadataExtractor.BookMeta meta, String error,
+                     boolean registered, boolean liveIndexed) {
             this.ok = ok;
             this.bookKey = bookKey;
             this.kfxFile = kfxFile;
             this.coverFile = coverFile;
             this.meta = meta;
             this.error = error;
+            this.registered = registered;
+            this.liveIndexed = liveIndexed;
         }
     }
 
@@ -116,12 +126,13 @@ public final class AzathLibrarySync {
                 db.close();
             }
 
+            boolean registered = true;
             if (!outKfx.getAbsolutePath().startsWith("/sdcard/kindle")) {
-                boolean regOk = FolioMetadataDb.registerInKindleLibraryDb(ctx, bookKey, outKfx, outCover, meta);
-                if (!regOk) {
+                registered = FolioMetadataDb.registerInKindleLibraryDb(ctx, bookKey, outKfx, outCover, meta);
+                if (!registered) {
                     Log.e(TAG, "kindle_library.db registration failed on private-dir path; keeping source EPUB");
                     return new IngestResult(false, bookKey, outKfx, outCover, meta,
-                            "kindle_library.db registration failed");
+                            "kindle_library.db registration failed", false, false);
                 }
             } else {
                 FolioMetadataDb.cleanupLegacyDuplicateRows(ctx);
@@ -140,10 +151,15 @@ public final class AzathLibrarySync {
             try {
                 MediaScannerConnection.scanFile(ctx, new String[] { outKfx.getAbsolutePath() }, null, null);
             } catch (Throwable ignored) {}
-            try { dp.g.ingestKfxLive(outKfx); } catch (Throwable ignored) {}
+            boolean liveIndexed = false;
+            try {
+                liveIndexed = dp.g.ingestKfxLive(outKfx);
+            } catch (Throwable t) {
+                Log.w(TAG, "ingestKfxLive exception: " + t.getClass().getName() + ": " + t.getMessage(), t);
+            }
 
-            Log.i(TAG, "Ingested OK: " + outKfx.getAbsolutePath() + " (" + outKfx.length() + " B)");
-            return new IngestResult(true, bookKey, outKfx, outCover, meta, null);
+            Log.i(TAG, "Ingested OK: " + outKfx.getAbsolutePath() + " (" + outKfx.length() + " B, liveIndexed=" + liveIndexed + ")");
+            return new IngestResult(true, bookKey, outKfx, outCover, meta, null, registered, liveIndexed);
         } catch (Throwable t) {
             Log.e(TAG, "ingestEpub failed for " + epubFile.getName(), t);
             return new IngestResult(false, "", null, null, null, t.getMessage());
