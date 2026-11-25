@@ -1013,9 +1013,10 @@ public final class FolioMetadataCatalogDialog {
         final Map<String, Integer> freq = new HashMap<>();
         final Map<String, String> display = new HashMap<>();
         for (FolioMetadataDb.BookRecord r : outBooks) {
-            if (r.genres == null || r.genres.isEmpty()) continue;
+            List<String> gList = r.genreList();
+            if (gList.isEmpty()) continue;
             Set<String> seenInBook = new LinkedHashSet<>();
-            for (String g : r.genres.split(",")) {
+            for (String g : gList) {
                 String c = g.trim();
                 if (c.length() >= 3 && c.length() <= 22
                         && !c.contains("--")
@@ -1037,7 +1038,7 @@ public final class FolioMetadataCatalogDialog {
             return a.compareTo(b);
         });
         outGenres.add("All");
-        for (int i = 0; i < sortedKeys.size() && outGenres.size() < 12; i++) {
+        for (int i = 0; i < sortedKeys.size(); i++) {
             outGenres.add(display.get(sortedKeys.get(i)));
         }
     }

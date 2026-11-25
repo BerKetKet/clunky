@@ -7,6 +7,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import org.json.JSONArray;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.security.MessageDigest;
@@ -28,7 +30,7 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
 
     private static final String TAG = "FolioMetadataDb";
     private static final String DB_NAME = "folio_metadata.db";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
 
     public static final class BookRecord {
         public long id;
@@ -41,6 +43,7 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         public String publisher = "";
         public String pubDate = "";
         public String genres = "";
+        public String genresJson = "";
         public String language = "";
         public String isbn = "";
         public String description = "";
@@ -49,11 +52,31 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         public long sourceSize;
         public long addedAt;
 
+        public List<String> genreList() {
+            List<String> out = new ArrayList<>();
+            if (genresJson != null && !genresJson.trim().isEmpty()) {
+                try {
+                    JSONArray arr = new JSONArray(genresJson);
+                    for (int i = 0; i < arr.length(); i++) {
+                        String g = arr.optString(i, "").trim();
+                        if (!g.isEmpty()) out.add(g);
+                    }
+                    if (!out.isEmpty()) return out;
+                } catch (Throwable ignored) {}
+            }
+            if (genres != null && !genres.trim().isEmpty()) {
+                for (String part : genres.split(",")) {
+                    String g = part.trim();
+                    if (!g.isEmpty()) out.add(g);
+                }
+            }
+            return out;
+        }
+
         public boolean hasGenre(String target) {
             if (target == null || target.isEmpty() || "All".equalsIgnoreCase(target)) return true;
-            if (genres == null || genres.isEmpty()) return false;
             String needle = target.trim().toLowerCase(Locale.ROOT);
-            for (String part : genres.split(",")) {
+            for (String part : genreList()) {
                 if (part.trim().toLowerCase(Locale.ROOT).equals(needle)) return true;
             }
             return false;
@@ -63,6 +86,11 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
     public FolioMetadataDb(Context context) {
         super(context.getApplicationContext(), DB_NAME, null, DB_VERSION);
     }
+
+    private static final String SELECT_COLS =
+            "id, book_key, kfx_path, cover_path, source_name, title, author, "
+            + "publisher, pub_date, genres, language, isbn, description, open_library_key, "
+            + "added_at, content_hash, source_size, genres_json";
 
     @Override
     public void onCreate(SQLiteDatabase db) {
@@ -77,16 +105,67 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                 + "publisher TEXT, "
                 + "pub_date TEXT, "
                 + "genres TEXT, "
+                + "genres_json TEXT, "
                 + "language TEXT, "
                 + "isbn TEXT, "
                 + "description TEXT, "
                 + "open_library_key TEXT, "
+                + "content_hash TEXT, "
+                + "source_size INTEGER, "
                 + "added_at INTEGER NOT NULL"
                 + ")");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        if (oldVersion < 2) {
+            java.util.Map<String, String> cols = tableColumns(db, "books_metadata");
+            if (!cols.containsKey("CONTENT_HASH")) {
+                db.execSQL("ALTER TABLE books_metadata ADD COLUMN content_hash TEXT");
+            }
+            if (!cols.containsKey("SOURCE_SIZE")) {
+                db.execSQL("ALTER TABLE books_metadata ADD COLUMN source_size INTEGER");
+            }
+            if (!cols.containsKey("GENRES_JSON")) {
+                db.execSQL("ALTER TABLE books_metadata ADD COLUMN genres_json TEXT");
+            }
+            // Best-effort migration of legacy CSV genres -> genres_json
+            Cursor c = null;
+            try {
+                c = db.rawQuery("SELECT id, genres, genres_json FROM books_metadata", null);
+                while (c.moveToNext()) {
+                    long id = c.getLong(0);
+                    String csv = c.getString(1);
+                    String existingJson = c.getString(2);
+                    if ((existingJson == null || existingJson.trim().isEmpty())
+                            && csv != null && !csv.trim().isEmpty()) {
+                        String json = genresCsvToJson(csv);
+                        if (!json.isEmpty()) {
+                            ContentValues cv = new ContentValues();
+                            cv.put("genres_json", json);
+                            db.update("books_metadata", cv, "id = ?", new String[]{ String.valueOf(id) });
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "onUpgrade v2 genres_json migration warning", t);
+            } finally {
+                if (c != null) c.close();
+            }
+        }
+    }
+
+    public static String genresCsvToJson(String csv) {
+        if (csv == null || csv.trim().isEmpty()) return "";
+        JSONArray arr = new JSONArray();
+        Set<String> seen = new LinkedHashSet<>();
+        for (String part : csv.split(",")) {
+            String g = part.trim();
+            if (!g.isEmpty() && seen.add(g.toLowerCase(Locale.ROOT))) {
+                arr.put(g);
+            }
+        }
+        return arr.length() > 0 ? arr.toString() : "";
     }
 
     public void upsertBook(String bookKey, File kfxFile, File coverFile,
@@ -111,9 +190,8 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             Cursor c = null;
             try {
                 c = db.rawQuery(
-                        "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
-                        + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
-                        + "FROM books_metadata WHERE book_key = ? OR kfx_path = ? LIMIT 1",
+                        "SELECT " + SELECT_COLS
+                        + " FROM books_metadata WHERE book_key = ? OR kfx_path = ? LIMIT 1",
                         new String[] { bookKey != null ? bookKey : "", kfxPath });
                 if (c.moveToFirst()) {
                     prior = readRow(c);
@@ -125,6 +203,7 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             String incomingCover = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "";
             String coverPath = nonBlankOrPrior(incomingCover, prior != null ? prior.coverPath : "");
             String genres = nonBlankOrPrior(meta.genresCsv(), prior != null ? prior.genres : "");
+            String genresJson = nonBlankOrPrior(genresCsvToJson(genres), prior != null ? prior.genresJson : "");
             String publisher = nonBlankOrPrior(meta.publisher, prior != null ? prior.publisher : "");
             String pubDate = nonBlankOrPrior(meta.pubDate, prior != null ? prior.pubDate : "");
             String isbn = nonBlankOrPrior(meta.isbn, prior != null ? prior.isbn : "");
@@ -145,6 +224,9 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             cv.put("publisher", publisher);
             cv.put("pub_date", pubDate);
             cv.put("genres", genres);
+            if (cols.containsKey("GENRES_JSON")) {
+                cv.put("genres_json", genresJson);
+            }
             cv.put("language", language);
             cv.put("isbn", isbn);
             cv.put("description", description);
@@ -180,17 +262,15 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             boolean hasHashCol = cols.containsKey("CONTENT_HASH");
             if (hasHashCol && contentHash != null && !contentHash.isEmpty()) {
                 c = db.rawQuery(
-                        "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
-                        + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
-                        + "FROM books_metadata "
+                        "SELECT " + SELECT_COLS
+                        + " FROM books_metadata "
                         + "WHERE content_hash = ? OR book_key = ? "
                         + "ORDER BY added_at DESC LIMIT 1",
                         new String[] { contentHash, bookKey != null ? bookKey : "" });
             } else {
                 c = db.rawQuery(
-                        "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
-                        + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
-                        + "FROM books_metadata "
+                        "SELECT " + SELECT_COLS
+                        + " FROM books_metadata "
                         + "WHERE book_key = ? "
                         + "ORDER BY added_at DESC LIMIT 1",
                         new String[] { bookKey != null ? bookKey : "" });
@@ -223,9 +303,8 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         Cursor c = null;
         try {
             c = db.rawQuery(
-                    "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
-                    + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
-                    + "FROM books_metadata "
+                    "SELECT " + SELECT_COLS
+                    + " FROM books_metadata "
                     + "WHERE LOWER(TRIM(title)) = LOWER(TRIM(?)) AND LOWER(TRIM(author)) = LOWER(TRIM(?)) "
                     + "ORDER BY added_at DESC LIMIT 1",
                     new String[] { title, author });
@@ -249,9 +328,8 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         Cursor c = null;
         try {
             c = db.rawQuery(
-                    "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
-                    + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
-                    + "FROM books_metadata ORDER BY added_at DESC", null);
+                    "SELECT " + SELECT_COLS
+                    + " FROM books_metadata ORDER BY added_at DESC", null);
             while (c.moveToNext()) {
                 out.add(readRow(c));
             }
@@ -268,15 +346,12 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         set.add("All");
         if (books != null) {
             for (BookRecord r : books) {
-                if (r.genres == null || r.genres.isEmpty()) continue;
-                for (String g : r.genres.split(",")) {
+                for (String g : r.genreList()) {
                     String clean = g.trim();
                     if (!clean.isEmpty() && clean.length() <= 32) {
                         set.add(clean);
-                        if (set.size() >= 12) break;
                     }
                 }
-                if (set.size() >= 12) break;
             }
         }
         return new ArrayList<>(set);
@@ -299,6 +374,9 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         r.description = safeStr(c.getString(12));
         r.openLibraryKey = safeStr(c.getString(13));
         r.addedAt = c.getLong(14);
+        if (c.getColumnCount() > 15) r.contentHash = safeStr(c.getString(15));
+        if (c.getColumnCount() > 16 && !c.isNull(16)) r.sourceSize = c.getLong(16);
+        if (c.getColumnCount() > 17) r.genresJson = safeStr(c.getString(17));
         return r;
     }
 
