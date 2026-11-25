@@ -109,10 +109,14 @@ public class ExternalEpubActivity extends Activity {
 
                 final FolioMetadataDb.BookRecord finalExisting = existing;
                 final FolioMetadataDb.BookRecord finalPossibleDup = possibleDup;
-                mainHandler.post(() -> showChoiceDialog(stagedEpub, displayName, meta, bookKey, contentHash, finalExisting, finalPossibleDup));
+                mainHandler.post(() -> {
+                    if (com.amazon.kindle.epub.catalog.FolioTheme.isContextDead(this)) return;
+                    showChoiceDialog(stagedEpub, displayName, meta, bookKey, contentHash, finalExisting, finalPossibleDup);
+                });
             } catch (Throwable t) {
                 Log.e(TAG, "Failed to inspect incoming EPUB", t);
                 mainHandler.post(() -> {
+                    if (com.amazon.kindle.epub.catalog.FolioTheme.isContextDead(this)) return;
                     dismissActiveDialog();
                     Toast.makeText(this, "Could not open EPUB: " + t.getMessage(), Toast.LENGTH_LONG).show();
                     finish();
@@ -291,6 +295,7 @@ public class ExternalEpubActivity extends Activity {
 
                 final boolean finalRegisteredOk = registeredOk;
                 mainHandler.post(() -> {
+                    if (com.amazon.kindle.epub.catalog.FolioTheme.isContextDead(this)) return;
                     dismissActiveDialog();
                     if (addToLibrary) {
                         if (finalRegisteredOk) {
@@ -306,6 +311,7 @@ public class ExternalEpubActivity extends Activity {
                 Log.e(TAG, "Failed to process external EPUB", t);
                 stagedEpub.delete();
                 mainHandler.post(() -> {
+                    if (com.amazon.kindle.epub.catalog.FolioTheme.isContextDead(this)) return;
                     dismissActiveDialog();
                     Toast.makeText(this, "Import error: " + t.getMessage(), Toast.LENGTH_LONG).show();
                     finish();

@@ -63,6 +63,25 @@ public final class FolioTheme {
 
     private FolioTheme() {}
 
+    /**
+     * Returns true if ctx is null or its underlying Activity is finishing or destroyed.
+     */
+    public static boolean isContextDead(Context ctx) {
+        if (ctx == null) return true;
+        Context cur = ctx;
+        while (cur instanceof android.content.ContextWrapper) {
+            if (cur instanceof android.app.Activity) break;
+            Context base = ((android.content.ContextWrapper) cur).getBaseContext();
+            if (base == null || base == cur) break;
+            cur = base;
+        }
+        if (cur instanceof android.app.Activity) {
+            android.app.Activity act = (android.app.Activity) cur;
+            return act.isFinishing() || act.isDestroyed();
+        }
+        return false;
+    }
+
     public static String getThemeMode(Context ctx) {
         if (ctx == null) return "granite";
         try {

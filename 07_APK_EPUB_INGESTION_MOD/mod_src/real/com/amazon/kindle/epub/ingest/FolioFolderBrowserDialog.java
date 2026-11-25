@@ -65,6 +65,7 @@ public final class FolioFolderBrowserDialog {
             return t;
         });
         final AtomicInteger scanGeneration = new AtomicInteger(0);
+        final AtomicBoolean dialogDismissed = new AtomicBoolean(false);
         final Set<String> importedSourceNames = new HashSet<>();
         final List<File> allEpubsInDir = new ArrayList<>();
         final List<File> selectedFiles = new ArrayList<>();
@@ -527,7 +528,7 @@ public final class FolioFolderBrowserDialog {
                 final File dir = new File(dirPath);
                 if (!dir.exists() || !dir.isDirectory()) {
                     mainHandler.post(() -> {
-                        if (gen != scanGeneration.get()) return;
+                        if (gen != scanGeneration.get() || dialogDismissed.get() || FolioTheme.isContextDead(ctx)) return;
                         listContainer.removeAllViews();
                         statusTv.setText("Folder not found: " + dirPath);
                     });
@@ -536,7 +537,7 @@ public final class FolioFolderBrowserDialog {
                 File[] children = dir.listFiles();
                 if (children == null) {
                     mainHandler.post(() -> {
-                        if (gen != scanGeneration.get()) return;
+                        if (gen != scanGeneration.get() || dialogDismissed.get() || FolioTheme.isContextDead(ctx)) return;
                         listContainer.removeAllViews();
                         statusTv.setText("Cannot read folder: " + dirPath);
                     });
@@ -561,7 +562,7 @@ public final class FolioFolderBrowserDialog {
                 foundEpubs.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
 
                 mainHandler.post(() -> {
-                    if (gen != scanGeneration.get()) return;
+                    if (gen != scanGeneration.get() || dialogDismissed.get() || FolioTheme.isContextDead(ctx)) return;
                     importedSourceNames.clear();
                     importedSourceNames.addAll(freshImported);
                     subDirsInDir.clear();
@@ -738,7 +739,11 @@ public final class FolioFolderBrowserDialog {
                     }
                     final int idx = i + 1;
                     final File epub = batch.get(i);
-                    mainHandler.post(() -> btnImport.setText("Importing " + idx + "/" + batch.size() + "..."));
+                    mainHandler.post(() -> {
+                        if (!dialogDismissed.get() && !FolioTheme.isContextDead(ctx)) {
+                            btnImport.setText("Importing " + idx + "/" + batch.size() + "...");
+                        }
+                    });
                     try {
                         AzathLibrarySync.IngestResult ir = AzathLibrarySync.ingestEpub(ctx, epub, epub.getName(), false);
                         if (ir == null || !ir.ok) {
@@ -758,11 +763,18 @@ public final class FolioFolderBrowserDialog {
                 final boolean wasCancelled = cancelled.get();
                 final File finalLastKfx = lastImportedKfx;
                 mainHandler.post(() -> {
+                    if (FolioTheme.isContextDead(ctx)) return;
                     btnCancelImport.setVisibility(View.GONE);
                     btnImport.setEnabled(true);
                     selectedFiles.clear();
                     updateImportLabel.run();
                     renderList.run();
+                    if (dialogDismissed.get()) {
+                        Toast.makeText(ctx.getApplicationContext(),
+                                "Imported " + finalOk + " of " + batch.size() + " EPUB(s)",
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
                     if (finalOk > 0) {
                         String statusLine = "Converted " + finalOk + " of " + batch.size()
                                 + " EPUB" + (batch.size() == 1 ? "" : "s")
@@ -789,7 +801,13 @@ public final class FolioFolderBrowserDialog {
             }, "folio-batch-import").start();
         });
 
+        dialog.setOnDismissListener(d -> {
+            dialogDismissed.set(true);
+            scanGeneration.incrementAndGet();
+            scanExecutor.shutdownNow();
+        });
         loadDir.run();
+        if (FolioTheme.isContextDead(ctx)) return;
         FolioTheme.applyToTree(ctx, root);
         dialog.show();
         FolioTheme.styleDialog(ctx, dialog);
