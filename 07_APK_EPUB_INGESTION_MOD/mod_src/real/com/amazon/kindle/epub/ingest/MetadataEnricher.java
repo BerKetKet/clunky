@@ -13,6 +13,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -103,8 +106,8 @@ public final class MetadataEnricher {
             try {
                 String q = "isbn=" + URLEncoder.encode(meta.isbn.trim(), "UTF-8");
                 JSONObject doc = queryFirstDoc(q);
-                if (doc != null) {
-                    applyDoc(meta, doc);
+                if (doc != null && validateAndApplyDoc(meta, doc)) {
+                    // matched
                 }
             } catch (Throwable ignored) {}
         }
@@ -125,7 +128,7 @@ public final class MetadataEnricher {
                 }
                 JSONObject doc = queryFirstDoc(q.toString());
                 if (doc != null) {
-                    applyDoc(meta, doc);
+                    validateAndApplyDoc(meta, doc);
                 }
             } catch (Throwable ignored) {}
         }
@@ -164,6 +167,114 @@ public final class MetadataEnricher {
                 try { conn.disconnect(); } catch (Throwable ignored) {}
             }
         }
+    }
+
+    private static String normalizeTitle(String raw) {
+        if (raw == null) return "";
+        String s = raw.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9\\s]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+        if (s.startsWith("the ")) s = s.substring(4).trim();
+        else if (s.startsWith("an ")) s = s.substring(3).trim();
+        else if (s.startsWith("a ")) s = s.substring(2).trim();
+        return s;
+    }
+
+    private static String normalizeIsbn(String raw) {
+        if (raw == null) return "";
+        return raw.replaceAll("[^0-9Xx]", "").toUpperCase(Locale.ROOT);
+    }
+
+    private static Set<String> tokens(String normalized) {
+        if (normalized == null || normalized.isEmpty()) return new HashSet<>();
+        Set<String> out = new HashSet<>();
+        for (String tok : normalized.split("\\s+")) {
+            if (!tok.isEmpty()) out.add(tok);
+        }
+        return out;
+    }
+
+    private static boolean authorMatches(String epubAuthor, String olAuthor) {
+        if (epubAuthor == null || epubAuthor.trim().isEmpty()
+                || "Unknown Author".equalsIgnoreCase(epubAuthor.trim())) {
+            return true;
+        }
+        if (olAuthor == null || olAuthor.trim().isEmpty()) return false;
+        String na = epubAuthor.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9\\s]", " ").replaceAll("\\s+", " ").trim();
+        String nb = olAuthor.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9\\s]", " ").replaceAll("\\s+", " ").trim();
+        if (na.equals(nb)) return true;
+        Set<String> ta = tokens(na);
+        Set<String> tb = tokens(nb);
+        for (String t : ta) {
+            if (t.length() >= 3 && tb.contains(t)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Pure, Android-free Open Library match predicate for JVM unit testing and runtime validation.
+     */
+    public static boolean isAcceptableMatch(
+            String epubTitle, String epubAuthor, String epubIsbn,
+            String olTitle, String olAuthor, String olIsbn) {
+        String nEpubIsbn = normalizeIsbn(epubIsbn);
+        String nOlIsbn = normalizeIsbn(olIsbn);
+        if (!nEpubIsbn.isEmpty() && !nOlIsbn.isEmpty() && nEpubIsbn.equals(nOlIsbn)) {
+            return true;
+        }
+
+        String ntEpub = normalizeTitle(epubTitle);
+        String ntOl = normalizeTitle(olTitle);
+        if (ntEpub.isEmpty() || ntOl.isEmpty()) return false;
+
+        boolean titleOk;
+        if (ntEpub.equals(ntOl)) {
+            titleOk = true;
+        } else {
+            Set<String> ta = tokens(ntEpub);
+            Set<String> tb = tokens(ntOl);
+            int inter = 0;
+            for (String t : ta) {
+                if (tb.contains(t)) inter++;
+            }
+            int union = ta.size() + tb.size() - inter;
+            double jaccard = union > 0 ? ((double) inter / (double) union) : 0.0;
+            titleOk = jaccard >= 0.75;
+        }
+        return titleOk && authorMatches(epubAuthor, olAuthor);
+    }
+
+    private static boolean validateAndApplyDoc(EpubMetadataExtractor.BookMeta meta, JSONObject doc) {
+        String olTitle = doc.optString("title", "").trim();
+        String olAuthor = "";
+        JSONArray authors = doc.optJSONArray("author_name");
+        if (authors != null && authors.length() > 0) {
+            olAuthor = authors.optString(0, "").trim();
+        }
+        String olIsbn = "";
+        JSONArray isbns = doc.optJSONArray("isbn");
+        if (isbns != null && !EpubMetadataExtractor.isBlank(meta.isbn)) {
+            String targetIsbn = normalizeIsbn(meta.isbn);
+            for (int i = 0; i < isbns.length(); i++) {
+                String cand = isbns.optString(i, "").trim();
+                if (normalizeIsbn(cand).equals(targetIsbn)) {
+                    olIsbn = cand;
+                    break;
+                }
+            }
+        }
+        if (olIsbn.isEmpty() && isbns != null && isbns.length() > 0) {
+            olIsbn = isbns.optString(0, "").trim();
+        }
+
+        if (!isAcceptableMatch(meta.title, meta.author, meta.isbn, olTitle, olAuthor, olIsbn)) {
+            Log.i(TAG, "Rejected mismatched Open Library candidate: epub=('" + meta.title
+                    + "', '" + meta.author + "') vs ol=('" + olTitle + "', '" + olAuthor + "')");
+            return false;
+        }
+        applyDoc(meta, doc);
+        return true;
     }
 
     private static void applyDoc(EpubMetadataExtractor.BookMeta meta, JSONObject doc) {
