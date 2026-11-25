@@ -55,11 +55,11 @@ public final class FolioTheme {
     public static final int LIGHT_ACCENT_BORDER = 0xFFAFA695;
     public static final int LIGHT_ACCENT_SOFT_TEXT = 0xFF25282E;
 
-    private static boolean fontsLoaded = false;
-    private static Typeface serifReg = null;
-    private static Typeface serifBold = null;
-    private static Typeface sansReg = null;
-    private static Typeface sansBold = null;
+    private static volatile boolean fontsLoaded = false;
+    private static volatile Typeface serifReg = null;
+    private static volatile Typeface serifBold = null;
+    private static volatile Typeface sansReg = null;
+    private static volatile Typeface sansBold = null;
 
     private FolioTheme() {}
 
@@ -176,7 +176,8 @@ public final class FolioTheme {
         if (fontsLoaded || ctx == null) return;
         fontsLoaded = true;
         try {
-            AssetManager am = ctx.getAssets();
+            Context appCtx = ctx.getApplicationContext() != null ? ctx.getApplicationContext() : ctx;
+            AssetManager am = appCtx.getAssets();
             try {
                 String[] azFiles = am.list("azath_fonts");
                 if (azFiles != null) {
