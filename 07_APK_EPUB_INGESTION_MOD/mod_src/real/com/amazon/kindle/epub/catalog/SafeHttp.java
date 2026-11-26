@@ -69,8 +69,14 @@ public final class SafeHttp {
     }
 
     public static final int MAX_GET_BYTES = 2 * 1024 * 1024;
+    public static final long OPDS_COVER_MAX_BYTES = 8L * 1024L * 1024L;
 
     public static byte[] getBytes(String urlStr) throws Exception {
+        return getBytes(urlStr, MAX_GET_BYTES);
+    }
+
+    public static byte[] getBytes(String urlStr, long maxBytes) throws Exception {
+        long cap = maxBytes > 0L ? maxBytes : MAX_GET_BYTES;
         InputStream is = openStream(urlStr);
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -79,8 +85,8 @@ public final class SafeHttp {
             int n;
             while ((n = is.read(buf)) > 0) {
                 total += n;
-                if (total > MAX_GET_BYTES) {
-                    throw new IOException("Response exceeds " + MAX_GET_BYTES + " bytes limit");
+                if (total > cap) {
+                    throw new IOException("Response exceeds " + cap + " bytes limit");
                 }
                 baos.write(buf, 0, n);
             }

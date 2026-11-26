@@ -1011,7 +1011,7 @@ public final class OpenCatalogView {
                     bmp = DiskCache.getCoverBitmap(book.coverUrl);
                     if (bmp == null) {
                         try {
-                            byte[] raw = SafeHttp.getBytes(book.coverUrl);
+                            byte[] raw = SafeHttp.getBytes(book.coverUrl, SafeHttp.OPDS_COVER_MAX_BYTES);
                             bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length);
                             if (bmp != null) DiskCache.putCoverBytes(book.coverUrl, raw, bmp);
                         } catch (Throwable ignored) {}

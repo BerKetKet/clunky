@@ -589,6 +589,17 @@ public final class AzathUnitTests {
                     blocked = ioe.getMessage() != null && ioe.getMessage().contains("exceeds");
                 }
                 check("SafeHttp.getBytes > 2MB throws IOException", blocked);
+                byte[] raisedOk = SafeHttp.getBytes(
+                        "http://127.0.0.1:" + port + "/over2mb", SafeHttp.OPDS_COVER_MAX_BYTES);
+                check("SafeHttp.getBytes(url, 8MB) allows >2MB OPDS cover",
+                        raisedOk.length == SafeHttp.MAX_GET_BYTES + 1024);
+                boolean customBlocked = false;
+                try {
+                    SafeHttp.getBytes("http://127.0.0.1:" + port + "/ok", 512L);
+                } catch (java.io.IOException ioe) {
+                    customBlocked = ioe.getMessage() != null && ioe.getMessage().contains("512");
+                }
+                check("SafeHttp.getBytes(url, 512) blocks 1024B payload", customBlocked);
                 try (InputStream is = SafeHttp.openStream("http://127.0.0.1:" + port + "/ok")) {
                     check("SafeHttp.openStream returns FilterInputStream wrapper",
                             is.getClass().getName().startsWith(SafeHttp.class.getName()) && is.read() == 'K');
