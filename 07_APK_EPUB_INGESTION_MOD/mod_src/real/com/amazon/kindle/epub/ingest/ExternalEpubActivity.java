@@ -34,7 +34,12 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.util.Locale;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Cleanly intercepts external EPUB open intents (file:// or content:// from ANY
@@ -267,10 +272,18 @@ public class ExternalEpubActivity extends Activity {
                                 final EpubMetadataExtractor.BookMeta meta,
                                 final String bookKey, final String contentHash,
                                 final boolean addToLibrary) {
+        final AtomicBoolean cancelFlag = new AtomicBoolean(false);
         showProgressDialog(
                 addToLibrary ? "Adding to Azath Library..." : "Preparing Book...",
                 addToLibrary ? "Converting to KFX & enriching book metadata"
-                             : "Converting EPUB to native KFX");
+                             : "Converting EPUB to native KFX",
+                () -> {
+                    cancelFlag.set(true);
+                    if (stagedEpub != null && stagedEpub.exists()) {
+                        stagedEpub.delete();
+                    }
+                    finish();
+                });
 
         new Thread(() -> {
             try {
@@ -286,7 +299,15 @@ public class ExternalEpubActivity extends Activity {
                 File outKfx = new File(targetDir, safeBase + ".kfx");
                 File outCover = new File(outKfx.getAbsolutePath() + ".cover.jpg");
 
-                boolean ok = convertEpubToKfx(this, stagedEpub, outKfx);
+                boolean ok = convertEpubToKfx(this, stagedEpub, outKfx, KFX_CONV_TIMEOUT_SEC, cancelFlag);
+                if (cancelFlag.get()) {
+                    File partOut = new File(outKfx.getParentFile(), outKfx.getName() + ".part");
+                    File partCover = new File(partOut.getAbsolutePath() + ".cover.jpg");
+                    if (partOut.exists()) partOut.delete();
+                    if (partCover.exists()) partCover.delete();
+                    if (stagedEpub.exists()) stagedEpub.delete();
+                    return;
+                }
                 if (!ok || !outKfx.exists() || outKfx.length() < 128) {
                     throw new IllegalStateException("KFX conversion failed");
                 }
@@ -342,26 +363,58 @@ public class ExternalEpubActivity extends Activity {
     }
 
     public static boolean convertEpubToKfx(Context ctx, File epubIn, File kfxOut) {
+        return convertEpubToKfx(ctx, epubIn, kfxOut, KFX_CONV_TIMEOUT_SEC, null);
+    }
+
+    public static boolean convertEpubToKfx(Context ctx, File epubIn, File kfxOut,
+                                           long timeoutSec, AtomicBoolean cancelFlag) {
         if (kfxOut == null) return false;
         File parent = kfxOut.getParentFile();
         if (parent != null && !parent.exists()) parent.mkdirs();
-        File partOut = new File(parent, kfxOut.getName() + ".part");
-        File partCover = new File(partOut.getAbsolutePath() + ".cover.jpg");
-        File finalCover = new File(kfxOut.getAbsolutePath() + ".cover.jpg");
+        final File partOut = new File(parent, kfxOut.getName() + ".part");
+        final File partCover = new File(partOut.getAbsolutePath() + ".cover.jpg");
+        final File finalCover = new File(kfxOut.getAbsolutePath() + ".cover.jpg");
         if (partOut.exists()) partOut.delete();
         if (partCover.exists()) partCover.delete();
 
         boolean ok = false;
+        ExecutorService inProcExec = null;
         try {
-            try {
-                if (com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubIn, partOut)) {
-                    ok = isValidKfxPart(partOut);
+            inProcExec = Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "azath-inproc-kfx");
+                t.setDaemon(true);
+                return t;
+            });
+            Future<Boolean> fut = inProcExec.submit((Callable<Boolean>) () ->
+                    com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubIn, partOut, timeoutSec, cancelFlag));
+            long deadline = System.currentTimeMillis() + Math.max(1L, timeoutSec) * 1000L;
+            while (System.currentTimeMillis() < deadline) {
+                if (cancelFlag != null && cancelFlag.get()) {
+                    fut.cancel(true);
+                    break;
                 }
-            } catch (Throwable t) {
-                Log.w(TAG, "EpubTranscoder direct call failed: " + t.getMessage());
+                try {
+                    Boolean res = fut.get(250, TimeUnit.MILLISECONDS);
+                    ok = Boolean.TRUE.equals(res) && isValidKfxPart(partOut);
+                    break;
+                } catch (java.util.concurrent.TimeoutException te) {
+                    // keep polling until deadline or cancelFlag
+                }
             }
+            if (!fut.isDone()) {
+                fut.cancel(true);
+                Log.w(TAG, "EpubTranscoder.transcodeToKfx timed out or cancelled after " + timeoutSec + "s");
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "EpubTranscoder direct call failed: " + t.getMessage());
+        } finally {
+            if (inProcExec != null) {
+                try { inProcExec.shutdownNow(); } catch (Throwable ignored) {}
+            }
+        }
 
-            if (!ok) {
+        try {
+            if (!ok && (cancelFlag == null || !cancelFlag.get())) {
                 if (partOut.exists()) partOut.delete();
                 File bin = new File(ctx.getApplicationInfo().nativeLibraryDir, "libkfxconv.so");
                 if (!bin.exists()) {
@@ -376,39 +429,20 @@ public class ExternalEpubActivity extends Activity {
                     { bin.getAbsolutePath(), epubIn.getAbsolutePath(), partOut.getAbsolutePath() }
                 };
                 for (String[] cmd : argVariants) {
-                    try {
-                        if (partOut.exists()) partOut.delete();
-                        ProcessBuilder pb = new ProcessBuilder(cmd);
-                        pb.redirectErrorStream(true);
-                        Process proc = pb.start();
-                        BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-                        StringBuilder outLog = new StringBuilder();
-                        String line;
-                        while ((line = br.readLine()) != null) {
-                            outLog.append(line).append('\n');
-                        }
-                        int code = -1;
-                        boolean finished = proc.waitFor(KFX_CONV_TIMEOUT_SEC, TimeUnit.SECONDS);
-                        if (!finished) {
-                            proc.destroyForcibly();
-                            Log.w(TAG, "libkfxconv timed out after " + KFX_CONV_TIMEOUT_SEC + "s; destroyed process");
-                            if (partOut.exists()) partOut.delete();
-                            continue;
-                        }
-                        code = proc.exitValue();
-                        Log.i(TAG, "libkfxconv exit=" + code + " partOut=" + partOut.length() + "B");
-                        if (code == 0 && isValidKfxPart(partOut)) {
-                            ok = true;
-                            break;
-                        }
-                        Log.w(TAG, "libkfxconv output: " + outLog);
-                    } catch (Throwable t) {
-                        Log.e(TAG, "libkfxconv exec error", t);
+                    if (cancelFlag != null && cancelFlag.get()) break;
+                    if (partOut.exists()) partOut.delete();
+                    StringBuilder outLog = new StringBuilder();
+                    int code = runProcessWithTimeout(cmd, timeoutSec, cancelFlag, outLog);
+                    Log.i(TAG, "libkfxconv exit=" + code + " partOut=" + partOut.length() + "B");
+                    if (code == 0 && isValidKfxPart(partOut)) {
+                        ok = true;
+                        break;
                     }
+                    Log.w(TAG, "libkfxconv output: " + outLog);
                 }
             }
 
-            if (ok) {
+            if (ok && (cancelFlag == null || !cancelFlag.get())) {
                 if (kfxOut.exists()) kfxOut.delete();
                 if (!partOut.renameTo(kfxOut)) {
                     Log.e(TAG, "Atomic rename failed: " + partOut.getAbsolutePath() + " -> " + kfxOut.getAbsolutePath());
@@ -422,10 +456,65 @@ public class ExternalEpubActivity extends Activity {
             }
             return false;
         } finally {
-            if (!ok) {
+            if (!ok || (cancelFlag != null && cancelFlag.get())) {
                 if (partOut.exists()) partOut.delete();
                 if (partCover.exists()) partCover.delete();
             }
+        }
+    }
+
+    /**
+     * Runs an external process with stdout/stderr drained on a separate daemon thread BEFORE waitFor,
+     * enforcing timeoutSec and optional cancelFlag with destroyForcibly() cleanup.
+     */
+    public static int runProcessWithTimeout(String[] cmd, long timeoutSec,
+                                            AtomicBoolean cancelFlag, StringBuilder outLog) {
+        Process proc = null;
+        try {
+            ProcessBuilder pb = new ProcessBuilder(cmd);
+            pb.redirectErrorStream(true);
+            proc = pb.start();
+            final InputStream pis = proc.getInputStream();
+            Thread drainer = new Thread(() -> {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(pis))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        if (outLog != null && outLog.length() < 16384) {
+                            outLog.append(line).append('\n');
+                        }
+                    }
+                } catch (Throwable ignored) {}
+            }, "azath-proc-drain");
+            drainer.setDaemon(true);
+            drainer.start();
+
+            long deadline = System.currentTimeMillis() + Math.max(1L, timeoutSec) * 1000L;
+            boolean finished = false;
+            while (System.currentTimeMillis() < deadline) {
+                if ((cancelFlag != null && cancelFlag.get()) || Thread.currentThread().isInterrupted()) {
+                    proc.destroyForcibly();
+                    try { proc.waitFor(2, TimeUnit.SECONDS); } catch (Throwable ignored) {}
+                    return -2;
+                }
+                if (proc.waitFor(200, TimeUnit.MILLISECONDS)) {
+                    finished = true;
+                    break;
+                }
+            }
+            if (!finished) {
+                proc.destroyForcibly();
+                try { proc.waitFor(2, TimeUnit.SECONDS); } catch (Throwable ignored) {}
+                Log.w(TAG, "Process timed out after " + timeoutSec + "s; destroyed forcibly");
+                return -1;
+            }
+            try { drainer.join(500); } catch (Throwable ignored) {}
+            return proc.exitValue();
+        } catch (Throwable t) {
+            if (proc != null) {
+                try { proc.destroyForcibly(); } catch (Throwable ignored) {}
+            }
+            Log.e(TAG, "runProcessWithTimeout error", t);
+            return -1;
         }
     }
 
@@ -512,6 +601,10 @@ public class ExternalEpubActivity extends Activity {
     }
 
     private void showProgressDialog(String title, String subtitle) {
+        showProgressDialog(title, subtitle, null);
+    }
+
+    private void showProgressDialog(String title, String subtitle, final Runnable onCancel) {
         dismissActiveDialog();
         if (isFinishing()) return;
 
@@ -544,10 +637,14 @@ public class ExternalEpubActivity extends Activity {
 
         box.addView(textCol);
 
-        activeDialog = new AlertDialog.Builder(this)
+        AlertDialog.Builder b = new AlertDialog.Builder(this)
                 .setView(box)
-                .setCancelable(false)
-                .create();
+                .setCancelable(onCancel != null);
+        if (onCancel != null) {
+            b.setNegativeButton("Cancel", (d, w) -> onCancel.run());
+            b.setOnCancelListener(d -> onCancel.run());
+        }
+        activeDialog = b.create();
         activeDialog.show();
         com.amazon.kindle.epub.catalog.FolioTheme.applyToDialog(this, activeDialog);
     }

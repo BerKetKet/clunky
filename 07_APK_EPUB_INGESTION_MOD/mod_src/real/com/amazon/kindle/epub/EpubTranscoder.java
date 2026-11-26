@@ -170,12 +170,18 @@ public final class EpubTranscoder {
     }
 
     public static boolean transcodeToKfx(File inEpub, File outKfx) {
+        return transcodeToKfx(inEpub, outKfx, 120L, null);
+    }
+
+    public static boolean transcodeToKfx(File inEpub, File outKfx, long timeoutSec,
+                                         java.util.concurrent.atomic.AtomicBoolean cancelFlag) {
         File bin = getKfxConvBinary();
         if (bin == null) {
             android.util.Log.w("EpubTranscoder", "kfx-conv binary not found; falling back to KF8");
             return false;
         }
         long startTime = System.currentTimeMillis();
+        Process proc = null;
         try {
             if (outKfx.exists()) {
                 outKfx.delete();
@@ -188,12 +194,46 @@ public final class EpubTranscoder {
                 "-c", "EBOK"
             );
             pb.redirectErrorStream(true);
-            Process proc = pb.start();
-            java.io.InputStream is = proc.getInputStream();
-            byte[] buf = new byte[1024];
-            while (is.read(buf) != -1) {}
-            is.close();
-            int exitCode = proc.waitFor();
+            proc = pb.start();
+            final java.io.InputStream is = proc.getInputStream();
+            Thread drainer = new Thread(new Runnable() {
+                @Override public void run() {
+                    byte[] buf = new byte[4096];
+                    try {
+                        while (is.read(buf) != -1) {}
+                    } catch (Throwable ignored) {
+                    } finally {
+                        try { is.close(); } catch (Throwable ignored) {}
+                    }
+                }
+            }, "azath-kfxconv-drain");
+            drainer.setDaemon(true);
+            drainer.start();
+
+            long deadline = System.currentTimeMillis() + Math.max(1L, timeoutSec) * 1000L;
+            boolean finished = false;
+            while (System.currentTimeMillis() < deadline) {
+                if ((cancelFlag != null && cancelFlag.get()) || Thread.currentThread().isInterrupted()) {
+                    proc.destroyForcibly();
+                    try { proc.waitFor(2, java.util.concurrent.TimeUnit.SECONDS); } catch (Throwable ignored) {}
+                    if (outKfx.exists()) outKfx.delete();
+                    android.util.Log.w("EpubTranscoder", "transcodeToKfx cancelled");
+                    return false;
+                }
+                if (proc.waitFor(250, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                    finished = true;
+                    break;
+                }
+            }
+            if (!finished) {
+                proc.destroyForcibly();
+                try { proc.waitFor(2, java.util.concurrent.TimeUnit.SECONDS); } catch (Throwable ignored) {}
+                if (outKfx.exists()) outKfx.delete();
+                android.util.Log.w("EpubTranscoder", "transcodeToKfx timed out after " + timeoutSec + "s");
+                return false;
+            }
+            try { drainer.join(500); } catch (Throwable ignored) {}
+            int exitCode = proc.exitValue();
             long elapsed = System.currentTimeMillis() - startTime;
             if (exitCode == 0 && verifyKfxMagic(outKfx)) {
                 android.util.Log.i("EpubTranscoder", "Successfully converted " + inEpub.getName() + " to KFX on-device in " + elapsed + "ms (" + outKfx.length() + " bytes)");
@@ -205,6 +245,9 @@ public final class EpubTranscoder {
                 }
             }
         } catch (Throwable t) {
+            if (proc != null) {
+                try { proc.destroyForcibly(); } catch (Throwable ignored) {}
+            }
             android.util.Log.w("EpubTranscoder", "transcodeToKfx exception: " + t.getMessage(), t);
             if (outKfx.exists() && !verifyKfxMagic(outKfx)) {
                 outKfx.delete();
@@ -307,6 +350,9 @@ public final class EpubTranscoder {
             byte[] buf = new byte[8192];
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
+                if (Thread.currentThread().isInterrupted()) {
+                    throw new InterruptedException("EPUB transcode cancelled/interrupted");
+                }
                 if (entry.isDirectory()) continue;
                 String name = normalizeZipPath(entry.getName());
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
