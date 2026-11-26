@@ -102,7 +102,7 @@ public final class MetadataEnricher {
         }
     }
 
-    private static long parseRetryAfterMs(String headerVal, int retryAttempt) {
+    public static long parseRetryAfterMs(String headerVal, int retryAttempt) {
         if (headerVal != null && !headerVal.trim().isEmpty()) {
             try {
                 long secs = Long.parseLong(headerVal.trim());
@@ -319,11 +319,39 @@ public final class MetadataEnricher {
         return enriched;
     }
 
+    private static void logWarn(String msg) {
+        try { Log.w(TAG, msg); } catch (Throwable ignored) {}
+    }
+
+    private static void logDebug(String msg) {
+        try { Log.d(TAG, msg); } catch (Throwable ignored) {}
+    }
+
     private static JSONArray queryDocs(Context ctx, String queryParams, int limit) {
         if (!isNetworkConnected(ctx)) return null;
         String ua = buildUserAgent(ctx);
         String urlStr = "https://openlibrary.org/search.json?" + queryParams
                 + "&fields=key,title,author_name,first_publish_year,subject,publisher,isbn&limit=" + limit;
+        return queryDocsUrl(urlStr, ua);
+    }
+
+    public static JSONArray queryDocsUrl(String urlStr, String ua) {
+        String body = queryDocsRawJsonUrl(urlStr, ua);
+        if (body == null) return null;
+        try {
+            JSONObject root = new JSONObject(body);
+            JSONArray docs = root.optJSONArray("docs");
+            if (docs == null || docs.length() == 0) return null;
+            return docs;
+        } catch (Throwable t) {
+            logDebug("Open Library JSON parse failed: " + t.getMessage());
+            return null;
+        }
+    }
+
+    /** Executes HTTP GET with Open Library rate-limiting and 429/503 Retry-After backoff; testable on host JVM. */
+    public static String queryDocsRawJsonUrl(String urlStr, String ua) {
+        if (urlStr == null || urlStr.isEmpty()) return null;
 
         for (int attempt = 0; attempt <= MAX_HTTP_RETRIES; attempt++) {
             throttleOpenLibraryRequest();
@@ -342,7 +370,7 @@ public final class MetadataEnricher {
                 if (code == 429 || code == 503) {
                     if (attempt < MAX_HTTP_RETRIES) {
                         long sleepMs = parseRetryAfterMs(conn.getHeaderField("Retry-After"), attempt);
-                        Log.w(TAG, "Open Library HTTP " + code + "; backing off " + sleepMs + "ms");
+                        logWarn("Open Library HTTP " + code + "; backing off " + sleepMs + "ms");
                         try { Thread.sleep(sleepMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); return null; }
                         continue;
                     }
@@ -358,18 +386,15 @@ public final class MetadataEnricher {
                 while ((n = in.read(buf)) > 0) {
                     total += n;
                     if (total > MAX_JSON_BYTES) {
-                        Log.w(TAG, "Aborting Open Library JSON response exceeding " + MAX_JSON_BYTES + " bytes");
+                        logWarn("Aborting Open Library JSON response exceeding " + MAX_JSON_BYTES + " bytes");
                         return null;
                     }
                     baos.write(buf, 0, n);
                 }
 
-                JSONObject root = new JSONObject(new String(baos.toByteArray(), StandardCharsets.UTF_8));
-                JSONArray docs = root.optJSONArray("docs");
-                if (docs == null || docs.length() == 0) return null;
-                return docs;
+                return new String(baos.toByteArray(), StandardCharsets.UTF_8);
             } catch (Throwable t) {
-                Log.d(TAG, "Open Library query failed: " + t.getMessage());
+                logDebug("Open Library query failed: " + t.getMessage());
                 return null;
             } finally {
                 if (in != null) {
