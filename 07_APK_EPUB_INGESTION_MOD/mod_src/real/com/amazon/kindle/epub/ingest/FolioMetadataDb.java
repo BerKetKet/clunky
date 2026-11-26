@@ -748,8 +748,7 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
     }
 
     /**
-     * Removes legacy synthetic AMZNID0/CR!...KFX/0/ rows written prior to Round 158
-     * so books in /sdcard/kindle/ appear exactly once (indexed by Kindle's native scanner).
+     * Deletes a single book metadata row by book_key and returns true only when >=1 row was deleted.
      */
     public boolean deleteBook(String bookKey) {
         if (bookKey == null || bookKey.isEmpty()) return false;
@@ -762,6 +761,13 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         }
     }
 
+    /**
+     * Removes legacy synthetic AMZNID0/CR!...KFX/0/ rows written prior to Round 158
+     * so books in /sdcard/kindle/ appear exactly once (indexed by Kindle's native scanner).
+     * Verified against M30 kindle_library.db PRAGMA table_info: FILE_PATH lives on LocalContent
+     * (cid=1, not KindleContent or UserContent), while deletions key on KindleContent.ID,
+     * LocalContent.KEY, and UserContent.KEY.
+     */
     public static int cleanupLegacyDuplicateRows(Context ctx) {
         if (ctx == null) return 0;
         File dbFile = ctx.getDatabasePath("kindle_library.db");
