@@ -82,6 +82,7 @@ public final class AzathUnitTests {
         testRound168Task3TimeoutAndSubtitle();
         testRound168Task4ReconcileSummary();
         testRound168Task6StandardEbooksUrlNormalization();
+        testRound168Task8OrderInterpolation();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -808,5 +809,109 @@ public final class AzathUnitTests {
         checkEq("Leaves non-standardebooks EPUB URL unchanged",
                 "http://aleph.gutenberg.org/cache/epub/174/pg174-images.epub",
                 FolioWebBrowserDialog.normalizeDownloadUrl("http://aleph.gutenberg.org/cache/epub/174/pg174-images.epub"));
+    }
+
+    private static void applyOrderPlanToSimTable(
+            List<FolioMetadataDb.OrderRow> table,
+            String id, String key, boolean reversed,
+            List<Long> assignedOut) {
+        FolioMetadataDb.OrderPlan plan = FolioMetadataDb.planOrderInsertion(table, key, reversed);
+        for (int i = 0; i < table.size(); i++) {
+            FolioMetadataDb.OrderRow r = table.get(i);
+            Long upd = plan.updatedNeighborOrders.get(r.id);
+            if (upd != null) {
+                table.set(i, new FolioMetadataDb.OrderRow(r.id, r.sortKey, upd.longValue()));
+            }
+        }
+        table.add(new FolioMetadataDb.OrderRow(id, key, plan.assignedOrder));
+        assignedOut.add(plan.assignedOrder);
+    }
+
+    private static long orderForId(List<FolioMetadataDb.OrderRow> table, String id) {
+        for (FolioMetadataDb.OrderRow r : table) {
+            if (id.equals(r.id)) return r.orderValue;
+        }
+        return -1L;
+    }
+
+    private static void testRound168Task8OrderInterpolation() {
+        // 1. Standard gap: insert 5 books between the same two neighbors (Moby and Odyssey)
+        List<FolioMetadataDb.OrderRow> wide = new ArrayList<>();
+        wide.add(new FolioMetadataDb.OrderRow("PREV", "moby", 1_000_000L));
+        wide.add(new FolioMetadataDb.OrderRow("NEXT", "odyssey", 2_000_000L));
+        List<Long> wideAssigned = new ArrayList<>();
+        String[] keys = new String[] { "n1", "n2", "n3", "n4", "n5" };
+        for (int i = 0; i < 5; i++) {
+            applyOrderPlanToSimTable(wide, "B" + i, keys[i], false, wideAssigned);
+        }
+        Set<Long> wideSeen = new HashSet<>(wideAssigned);
+        boolean wideStrictlyInc = wideAssigned.size() == 5 && wideSeen.size() == 5;
+        for (int i = 0; i < wideAssigned.size(); i++) {
+            long v = wideAssigned.get(i);
+            if (!(v > orderForId(wide, "PREV") && v < orderForId(wide, "NEXT"))) {
+                wideStrictlyInc = false;
+            }
+            if (i > 0 && !(wideAssigned.get(i) > wideAssigned.get(i - 1))) {
+                wideStrictlyInc = false;
+            }
+        }
+        check("Wide gap: 5 inserts unique, strictly increasing, strictly inside (prev, next)", wideStrictlyInc);
+
+        // 2. Tied sortKeys ("middle" x5) also remain strictly increasing & unique
+        List<FolioMetadataDb.OrderRow> tied = new ArrayList<>();
+        tied.add(new FolioMetadataDb.OrderRow("PREV", "alpha", 1_000L));
+        tied.add(new FolioMetadataDb.OrderRow("NEXT", "zeta", 2_000L));
+        List<Long> tiedAssigned = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            applyOrderPlanToSimTable(tied, "T" + i, "middle", false, tiedAssigned);
+        }
+        boolean tiedOk = new HashSet<>(tiedAssigned).size() == 5;
+        for (int i = 0; i < tiedAssigned.size(); i++) {
+            long v = tiedAssigned.get(i);
+            if (!(v > orderForId(tied, "PREV") && v < orderForId(tied, "NEXT"))) tiedOk = false;
+            if (i > 0 && !(tiedAssigned.get(i) > tiedAssigned.get(i - 1))) tiedOk = false;
+        }
+        check("Tied sort keys: 5 inserts unique, strictly increasing, strictly inside (prev, next)", tiedOk);
+
+        // 3. Tight gap (next - prev == 1: prev=100, next=101 surrounded by outer bounds 10 and 10_000)
+        List<FolioMetadataDb.OrderRow> tight = new ArrayList<>();
+        tight.add(new FolioMetadataDb.OrderRow("OUT_L", "aardvark", 10L));
+        tight.add(new FolioMetadataDb.OrderRow("PREV", "moby", 100L));
+        tight.add(new FolioMetadataDb.OrderRow("NEXT", "odyssey", 101L));
+        tight.add(new FolioMetadataDb.OrderRow("OUT_R", "zuleika", 10_000L));
+        List<Long> tightAssigned = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            applyOrderPlanToSimTable(tight, "TG" + i, keys[i], false, tightAssigned);
+        }
+        long tightPrev = orderForId(tight, "PREV");
+        long tightNext = orderForId(tight, "NEXT");
+        boolean tightOk = new HashSet<>(tightAssigned).size() == 5
+                && orderForId(tight, "OUT_L") < tightPrev
+                && tightNext < orderForId(tight, "OUT_R");
+        for (int i = 0; i < tightAssigned.size(); i++) {
+            long v = tightAssigned.get(i);
+            if (!(v > tightPrev && v < tightNext)) tightOk = false;
+            if (i > 0 && !(tightAssigned.get(i) > tightAssigned.get(i - 1))) tightOk = false;
+        }
+        check("Tight gap (100, 101): re-spread keeps all 5 inserts unique & strictly between prev & next", tightOk);
+
+        // 4. Minimal 2-row tight gap [100, 101] with no outer neighbors + reversed AUTHOR_ORDER_REVERSED check
+        List<FolioMetadataDb.OrderRow> twoOnly = new ArrayList<>();
+        twoOnly.add(new FolioMetadataDb.OrderRow("PREV", "zed", 100L));
+        twoOnly.add(new FolioMetadataDb.OrderRow("NEXT", "alpha", 101L));
+        List<Long> revAssigned = new ArrayList<>();
+        String[] revKeys = new String[] { "middle5", "middle4", "middle3", "middle2", "middle1" };
+        for (int i = 0; i < 5; i++) {
+            applyOrderPlanToSimTable(twoOnly, "R" + i, revKeys[i], true, revAssigned);
+        }
+        long revPrev = orderForId(twoOnly, "PREV");
+        long revNext = orderForId(twoOnly, "NEXT");
+        boolean revOk = new HashSet<>(revAssigned).size() == 5;
+        for (int i = 0; i < revAssigned.size(); i++) {
+            long v = revAssigned.get(i);
+            if (!(v > revPrev && v < revNext)) revOk = false;
+            if (i > 0 && !(revAssigned.get(i) > revAssigned.get(i - 1))) revOk = false;
+        }
+        check("Reversed 2-row tight gap (100, 101): 5 inserts unique & strictly ordered", revOk);
     }
 }

@@ -14,6 +14,7 @@ import org.json.JSONArray;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -748,6 +749,176 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         return raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT);
     }
 
+    public static final class OrderRow {
+        public final String id;
+        public final String sortKey;
+        public final long orderValue;
+
+        public OrderRow(String id, String sortKey, long orderValue) {
+            this.id = id != null ? id : "";
+            this.sortKey = toSortableText(sortKey);
+            this.orderValue = orderValue;
+        }
+    }
+
+    public static final class OrderPlan {
+        public final long assignedOrder;
+        public final Map<String, Long> updatedNeighborOrders;
+
+        public OrderPlan(long assignedOrder, Map<String, Long> updatedNeighborOrders) {
+            this.assignedOrder = assignedOrder;
+            this.updatedNeighborOrders = updatedNeighborOrders != null
+                    ? updatedNeighborOrders : Collections.<String, Long>emptyMap();
+        }
+    }
+
+    /**
+     * Pure Android-free order-key allocator guaranteeing strictly increasing, unique
+     * TITLE_ORDER / AUTHOR_ORDER / AUTHOR_ORDER_REVERSED values across consecutive inserts
+     * between the same neighbors (midpoint fast-path with local neighborhood re-spread when
+     * next - prev <= 1 or on collision).
+     */
+    public static OrderPlan planOrderInsertion(
+            List<OrderRow> existingRows, String rawSortKey, final boolean reversed) {
+        final String targetKey = toSortableText(rawSortKey);
+        final long defaultBase = 1_000_000_000_000L;
+        if (existingRows == null || existingRows.isEmpty()) {
+            return new OrderPlan(defaultBase, Collections.<String, Long>emptyMap());
+        }
+
+        List<OrderRow> rows = new ArrayList<>(existingRows.size());
+        Set<Long> used = new HashSet<>();
+        for (OrderRow r : existingRows) {
+            if (r != null && !r.id.isEmpty() && r.orderValue > 0L) {
+                rows.add(r);
+                used.add(r.orderValue);
+            }
+        }
+        if (rows.isEmpty()) {
+            return new OrderPlan(defaultBase, Collections.<String, Long>emptyMap());
+        }
+
+        Collections.sort(rows, new Comparator<OrderRow>() {
+            @Override
+            public int compare(OrderRow a, OrderRow b) {
+                int c = Long.compare(a.orderValue, b.orderValue);
+                if (c != 0) return c;
+                int ks = a.sortKey.compareTo(b.sortKey);
+                if (reversed) ks = -ks;
+                if (ks != 0) return ks;
+                return a.id.compareTo(b.id);
+            }
+        });
+
+        int n = rows.size();
+        int insIdx = 0;
+        for (int i = 0; i < n; i++) {
+            String rowSort = rows.get(i).sortKey;
+            if (rowSort.isEmpty()) {
+                insIdx = i + 1;
+                continue;
+            }
+            int cmp = rowSort.compareTo(targetKey);
+            if (reversed) cmp = -cmp;
+            if (cmp <= 0) {
+                insIdx = i + 1;
+            } else {
+                break;
+            }
+        }
+
+        if (insIdx > 0 && insIdx < n) {
+            long prev = rows.get(insIdx - 1).orderValue;
+            long next = rows.get(insIdx).orderValue;
+            if (next > prev + 1L) {
+                long mid = prev + ((next - prev) >>> 1);
+                if (mid > prev && mid < next && !used.contains(mid)) {
+                    return new OrderPlan(mid, Collections.<String, Long>emptyMap());
+                }
+            }
+        } else if (insIdx == 0) {
+            long next = rows.get(0).orderValue;
+            if (next > 1L) {
+                long cand = next >>> 1;
+                if (cand > 0L && cand < next && !used.contains(cand)) {
+                    return new OrderPlan(cand, Collections.<String, Long>emptyMap());
+                }
+            }
+        } else {
+            long prev = rows.get(n - 1).orderValue;
+            if (prev < Long.MAX_VALUE - 1L) {
+                long cand = prev + ((Long.MAX_VALUE - prev) >>> 1);
+                if (cand > prev && !used.contains(cand)) {
+                    return new OrderPlan(cand, Collections.<String, Long>emptyMap());
+                }
+            }
+        }
+
+        // Tight-gap / boundary / collision fallback: re-spread minimal local window [L..R]
+        int L = Math.max(0, insIdx - 1);
+        int R = Math.min(n - 1, insIdx);
+        if (insIdx == 0) { L = 0; R = 0; }
+        else if (insIdx == n) { L = n - 1; R = n - 1; }
+
+        final long targetPerSlotGap = 64L;
+        long lowBound;
+        long highBound;
+        int slots;
+        boolean expandRightNext = true;
+        while (true) {
+            lowBound = (L == 0) ? 0L : rows.get(L - 1).orderValue;
+            if (R == n - 1) {
+                BigInteger tailBase = BigInteger.valueOf(Math.max(rows.get(n - 1).orderValue, lowBound));
+                BigInteger grow = tailBase.add(BigInteger.valueOf(1_000_000L * (long) (R - L + 4)));
+                BigInteger maxCap = BigInteger.valueOf(Long.MAX_VALUE);
+                highBound = (grow.compareTo(maxCap) > 0 ? maxCap : grow).longValue();
+            } else {
+                highBound = rows.get(R + 1).orderValue;
+            }
+            slots = (R - L + 1) + 1;
+            BigInteger span = BigInteger.valueOf(highBound).subtract(BigInteger.valueOf(lowBound));
+            BigInteger desired = BigInteger.valueOf((long) (slots + 1) * targetPerSlotGap);
+            BigInteger minimum = BigInteger.valueOf(slots + 1L);
+            if (span.compareTo(desired) >= 0) break;
+            if (L == 0 && R == n - 1) {
+                if (span.compareTo(minimum) >= 0) break;
+                highBound = Long.MAX_VALUE;
+                break;
+            }
+            if (expandRightNext && R < n - 1) {
+                R++;
+            } else if (!expandRightNext && L > 0) {
+                L--;
+            } else if (R < n - 1) {
+                R++;
+            } else if (L > 0) {
+                L--;
+            }
+            expandRightNext = !expandRightNext;
+        }
+
+        BigInteger lo = BigInteger.valueOf(lowBound);
+        BigInteger sp = BigInteger.valueOf(highBound).subtract(lo);
+        BigInteger denom = BigInteger.valueOf(slots + 1L);
+        long assigned = -1L;
+        Map<String, Long> updates = new LinkedHashMap<>();
+        int slotIdx = 1;
+        for (int j = L; j <= R; j++) {
+            if (j == insIdx) {
+                assigned = lo.add(sp.multiply(BigInteger.valueOf(slotIdx++)).divide(denom)).longValue();
+            }
+            long newVal = lo.add(sp.multiply(BigInteger.valueOf(slotIdx++)).divide(denom)).longValue();
+            OrderRow orig = rows.get(j);
+            if (newVal != orig.orderValue) {
+                updates.put(orig.id, newVal);
+            }
+        }
+        if (insIdx == R + 1) {
+            assigned = lo.add(sp.multiply(BigInteger.valueOf(slotIdx)).divide(denom)).longValue();
+        }
+        return new OrderPlan(assigned, updates);
+    }
+
     private static long computeOrderPosition(
             SQLiteDatabase db,
             java.util.Map<String, String> cols,
@@ -757,30 +928,25 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             String sortKey,
             boolean reversed) {
         if (db == null || cols == null || sortKey == null || sortKey.isEmpty()) return -1L;
+        String actualId = cols.get("ID");
         String actualSort = cols.get(sortCol.toUpperCase(Locale.ROOT));
         String actualOrder = cols.get(orderCol.toUpperCase(Locale.ROOT));
-        if (actualSort == null || actualOrder == null) return -1L;
+        if (actualId == null || actualSort == null || actualOrder == null) return -1L;
 
-        long prevOrder = -1L;
-        long nextOrder = -1L;
+        List<OrderRow> rows = new ArrayList<>();
         Cursor c = null;
         try {
             c = db.rawQuery(
-                    "SELECT " + actualSort + ", " + actualOrder + " FROM KindleContent "
-                            + "WHERE ID != ? AND " + actualOrder + " > 0 AND " + actualSort + " IS NOT NULL "
+                    "SELECT " + actualId + ", " + actualSort + ", " + actualOrder + " FROM KindleContent "
+                            + "WHERE " + actualId + " != ? AND " + actualOrder + " > 0 AND " + actualSort + " IS NOT NULL "
                             + "ORDER BY " + actualOrder + " ASC",
                     new String[] { excludeId });
             while (c.moveToNext()) {
-                String rowSort = toSortableText(c.getString(0));
-                long rowOrder = c.getLong(1);
-                if (rowSort.isEmpty() || rowOrder <= 0L) continue;
-                int cmp = rowSort.compareTo(sortKey);
-                if (reversed) cmp = -cmp;
-                if (cmp <= 0) {
-                    prevOrder = rowOrder;
-                } else {
-                    nextOrder = rowOrder;
-                    break;
+                String id = safeStr(c.getString(0));
+                String rowSort = toSortableText(c.getString(1));
+                long rowOrder = c.getLong(2);
+                if (!id.isEmpty() && !rowSort.isEmpty() && rowOrder > 0L) {
+                    rows.add(new OrderRow(id, rowSort, rowOrder));
                 }
             }
         } catch (Throwable t) {
@@ -790,16 +956,15 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             if (c != null) c.close();
         }
 
-        if (prevOrder > 0L && nextOrder > prevOrder + 1L) {
-            return prevOrder + ((nextOrder - prevOrder) / 2L);
+        OrderPlan plan = planOrderInsertion(rows, sortKey, reversed);
+        if (!plan.updatedNeighborOrders.isEmpty()) {
+            for (Map.Entry<String, Long> upd : plan.updatedNeighborOrders.entrySet()) {
+                ContentValues cvUpd = new ContentValues();
+                cvUpd.put(actualOrder, upd.getValue().longValue());
+                db.update("KindleContent", cvUpd, actualId + " = ?", new String[] { upd.getKey() });
+            }
         }
-        if (prevOrder > 0L && nextOrder == -1L && prevOrder < Long.MAX_VALUE - 1L) {
-            return prevOrder + ((Long.MAX_VALUE - prevOrder) / 2L);
-        }
-        if (prevOrder == -1L && nextOrder > 1L) {
-            return nextOrder / 2L;
-        }
-        return -1L;
+        return plan.assignedOrder;
     }
 
     /**
