@@ -1,8 +1,14 @@
-# Round 166 QC Closeout Report — Azath v18.7 KFX (`round-166-qc-closeout`)
+# Round 167 Final Closeout Report — Azath v18.7 KFX (`master` / `v18.7-kfx`)
 
-## 1. Hardware & Safety Invariants
+## 1. Hardware & Safety Invariants (Round 167 Final Closeout)
 - **Target Hardware**: Physical **Samsung Galaxy M30** (`32001776e8e82623`), TrebleDroid Android 13 GSI (`arm64-v8a`).
-- **Git Branch & History**: `round-166-qc-closeout` (branched cleanly from `round-165-qc-fixes` at `b0ff924`; pushed to `origin/round-166-qc-closeout` with zero history rewrite or force-push).
+- **Git Merge, Revert & Tag**:
+  - **F4 Undone (`classes4.dex` restored)**: `REVERT_F4_SHA=dde820c0068a37108ef0aebba6b9e403067363cc` (`Revert F4: restore classes4.dex tracking and skip provenance items per Project Lead`) on `round-166-qc-closeout` (`e5e9004..dde820c`), with `git ls-files 07_APK_EPUB_INGESTION_MOD/dex/classes4.dex` verified returning `07_APK_EPUB_INGESTION_MOD/dex/classes4.dex`.
+  - **Clean `--no-ff` Merge into `master`**: `MERGE_SHA=9a0973c93b9737aa304e2b1a42d32646801d6316` (`Merge QC Remediation Rounds 163-166 (Azath v18.7 KFX) into master`), conflict-free, zero history rewrite, zero force-push.
+  - **Annotated Tag**: `v18.7-kfx` (`TAG_SHA=270efcc7fbb2a92c7dfb3d09abed6880d84b95da`, `Azath v18.7 KFX — QC Remediation Closeout (Rounds 163-166)`).
+  - **Unit Tests (`master`)**: `./scripts/run_unit_tests.sh` -> `AzathUnitTests: passed=84 failed=0 total=84`.
+  - **M30 Verification (`32001776e8e82623`)**: `com.amazon.kindle` untouched (`versionName=8.160.1.0(2.0.124621.0)`, `lastUpdateTime=2026-11-19 21:59:23`); `com.azath.reader` (`versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-26 11:18:08`, `pkgFlags=[ HAS_CODE ALLOW_CLEAR_USER_DATA LARGE_HEAP ]`); `pm list packages | grep -i ct.reader` -> `NONE`; `adb logcat -d -b crash,main` -> `0` matches for `FATAL EXCEPTION|SIGSYS|SQLiteConstraintException|ct\.reader`.
+- **Round 166 Origin Branch**: `round-166-qc-closeout` (branched cleanly from `round-165-qc-fixes` at `b0ff924`; pushed to `origin/round-166-qc-closeout` with zero history rewrite or force-push).
 - **Active Package (`com.azath.reader`)**: `versionName=8.159.0.100(2.0.115180.0)`, `lastUpdateTime=2026-11-26 11:18:08`, `pkgFlags=[ HAS_CODE ALLOW_CLEAR_USER_DATA LARGE_HEAP ]` (non-debuggable), UI badge **`v18.7 KFX`**.
 - **Staged Release**: `07_APK_EPUB_INGESTION_MOD/release/azath_v18.7_kfx/base.apk` (`138,922,087` bytes, SHA256 `7d04b3afb5c67ed8cf5e5708f47ee95930f634741104ea12dadcdfbd3b9930d8`).
 - **Compiled Mod DEX**: `07_APK_EPUB_INGESTION_MOD/dex/classes9.dex` (`562,824` bytes, built purely from `07_APK_EPUB_INGESTION_MOD/mod_src/real/`).
@@ -147,11 +153,11 @@ cid             name              type    notnull  dflt_value  pk
 
 ---
 
-## 5. Open Escalations for Project Lead (Decisions Deferred)
-1. **Branch Merge & Round-Number Collision**: How should the `round-163-qc-fixes` -> `round-164-qc-fixes` -> `round-165-qc-fixes` -> `round-166-qc-closeout` chain be merged into `master`, and how should the round-number collision with `master`'s existing `v18.2` and `v18.3` commits be resolved?
-2. **`classes4.dex` History Purge & Repo Visibility**: Should git history be rewritten to purge tracked `07_APK_EPUB_INGESTION_MOD/dex/classes4.dex` blobs from prior commits, and should the `BerKetKet/clunky` repository be made private?
-3. **`classes9.dex` Provenance Check**: Note: `classes9.dex` is compiled strictly by `07_APK_EPUB_INGESTION_MOD/tools/compile_mod_dex.sh` from `mod_src/real/` alone (using `mod_src/stubs/` + `android.jar` only at compile time, no Amazon DEX classes merged); Project Lead confirmation requested on whether `classes9.dex` or the base APK still contains any other Amazon code paths needing audit/separation.
-4. **Open Library `User-Agent` Contact**: Currently uses dynamic `AzathReader/<versionName> (Android; https://github.com/BerKetKet/clunky)` without a personal contact email — should it stay on the repository URL or use a dedicated maintainer email address?
+## 5. Resolved Escalations (Round 167 Final Closeout)
+1. **Branch Merge & Round-Number Collision — RESOLVED**: Merged `round-166-qc-closeout` cleanly into `master` via `--no-ff` (`MERGE_SHA=9a0973c93b9737aa304e2b1a42d32646801d6316`) and created annotated tag `v18.7-kfx` (`TAG_SHA=270efcc7fbb2a92c7dfb3d09abed6880d84b95da`). Documented in `NOTES.md` that `master`'s `v18.2` (`7ab6643`) and `v18.3` (`253dfdc`) were pre-QC release commits preceding `QC Remediation Rounds 163–166`.
+2. **`classes4.dex` History Purge & Repo Visibility — UNDONE / SKIPPED**: Per Project Lead directive (*"undo and skip anything to do with provenance the rest just decide what is best on your own"*), F4 (`3f54edb`) was reverted via `REVERT_F4_SHA=dde820c0068a37108ef0aebba6b9e403067363cc` (removing `07_APK_EPUB_INGESTION_MOD/dex/classes4.dex` from `.gitignore` and restoring tracking). History rewrite, repo visibility changes, and `README.md` provenance/Amazon-binary warnings were skipped/absent.
+3. **`classes9.dex` Provenance Check — SKIPPED**: Skipped per Project Lead directive above; `dropin_*` and `kfx_converter` kept intact as shipped in `v18.7 KFX`.
+4. **Open Library `User-Agent` Contact — RESOLVED**: Kept dynamic `AzathReader/<versionName> (Android; https://github.com/BerKetKet/clunky)` using the repository URL without a personal contact email.
 
 ---
 

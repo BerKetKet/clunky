@@ -1,6 +1,15 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 167 Final Closeout (`Azath v18.7 KFX`, `master` merge & tag `v18.7-kfx`) Completed & Verified (2026-11-26)**:
+  - Undid Task F4 (`dde820c0068a37108ef0aebba6b9e403067363cc`): removed `07_APK_EPUB_INGESTION_MOD/dex/classes4.dex` from `.gitignore` and restored `git ls-files` tracking (`07_APK_EPUB_INGESTION_MOD/dex/classes4.dex`); skipped all provenance/history-purge/visibility items per Project Lead directive.
+  - Resolved round-number collision non-destructively: `master`'s earlier pre-QC `v18.2` (`7ab6643`) and `v18.3` (`253dfdc`) commits preceded the `QC Remediation Rounds 163–166 (Azath v18.4–v18.7 KFX)` branch chain (`round-163-qc-fixes` -> `round-164-qc-fixes` -> `round-165-qc-fixes` -> `round-166-qc-closeout`), preserved intact via `--no-ff` merge.
+  - Clean `--no-ff` merge of `round-166-qc-closeout` into `master`: merge commit `9a0973c93b9737aa304e2b1a42d32646801d6316`, annotated tag `v18.7-kfx` (`270efcc7fbb2a92c7dfb3d09abed6880d84b95da`), pushed cleanly to `origin/master` and `origin/v18.7-kfx` (zero history rewrite, zero force-push).
+  - Kept Open Library dynamic repo-URL `User-Agent` (`AzathReader/<versionName> (Android; https://github.com/BerKetKet/clunky)`) and left `dropin_rust/`, `dropin_res/`, `dropin_assets/`, and `kfx_converter` intact.
+  - Re-ran `./scripts/run_unit_tests.sh` on `master`: `AzathUnitTests: passed=84 failed=0 total=84`.
+  - M30 (`32001776e8e82623`) safety invariants verified: stock `com.amazon.kindle` untouched (`versionName=8.160.1.0(2.0.124621.0)`, `lastUpdateTime=2026-11-19 21:59:23`), `com.azath.reader` (`Azath v18.7 KFX`, `lastUpdateTime=2026-11-26 11:18:08`, `pkgFlags=[ HAS_CODE ALLOW_CLEAR_USER_DATA LARGE_HEAP ]`), zero `ct.reader` (`NONE`), zero `FATAL EXCEPTION` / `SIGSYS` / `SQLiteConstraintException`.
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 166 QC Closeout (`Azath v18.7 KFX`, branch `round-166-qc-closeout`) Verified & Pushed (2026-11-26)**:
   - Executed **Tasks 1–10** strictly sequentially (`61926ea`, `1d73c4c`, `d6ca380`, `efc0c70`, `1b6ac64`, `ad3ddf8`, `7f837b4`, `990dfe6`, `d2376f2`, `4369484`) from `b0ff924`.
   - Task 1 (`sleep 300` timeout test): `rc=-1 elapsedMs=2052 stdoutLen=0 procAliveAfterTimeout=false partExists=false partCoverExists=false stagedExists=false` + `T1_CANCEL rc=-2 elapsedCancelMs=403 alive=false` (**PARTIAL** — JVM host verified; M30 hung native binary N/A).
