@@ -54,6 +54,7 @@ public class ExternalEpubActivity extends Activity {
     private static final long KFX_CONV_TIMEOUT_SEC = 120L;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private AlertDialog activeDialog;
+    private TextView activeProgressSub;
 
     public static boolean interceptIfExternalEpub(Activity caller, Intent intent) {
         if (caller == null || intent == null) return false;
@@ -274,15 +275,55 @@ public class ExternalEpubActivity extends Activity {
         com.amazon.kindle.epub.catalog.FolioTheme.applyToDialog(this, activeDialog);
     }
 
+    public static boolean acquireLockCancelable(
+            java.util.concurrent.locks.Lock lock,
+            AtomicBoolean cancelFlag,
+            Runnable onWaiting,
+            long pollIntervalMs) {
+        if (lock == null) return false;
+        long stepMs = Math.max(1L, pollIntervalMs);
+        boolean waitingNotified = false;
+        while (true) {
+            if ((cancelFlag != null && cancelFlag.get()) || Thread.currentThread().isInterrupted()) {
+                return false;
+            }
+            try {
+                if (lock.tryLock(stepMs, TimeUnit.MILLISECONDS)) {
+                    if ((cancelFlag != null && cancelFlag.get()) || Thread.currentThread().isInterrupted()) {
+                        lock.unlock();
+                        return false;
+                    }
+                    return true;
+                }
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+            if ((cancelFlag != null && cancelFlag.get()) || Thread.currentThread().isInterrupted()) {
+                return false;
+            }
+            if (!waitingNotified) {
+                waitingNotified = true;
+                if (onWaiting != null) {
+                    try {
+                        onWaiting.run();
+                    } catch (Throwable ignored) {}
+                }
+            }
+        }
+    }
+
     private void processAndOpen(final File stagedEpub, final String displayName,
                                 final EpubMetadataExtractor.BookMeta meta,
                                 final String bookKey, final String contentHash,
                                 final boolean addToLibrary) {
         final AtomicBoolean cancelFlag = new AtomicBoolean(false);
+        final String convSubtitle = addToLibrary
+                ? "Converting to KFX & enriching book metadata"
+                : "Converting EPUB to native KFX";
         showProgressDialog(
                 addToLibrary ? "Adding to Azath Library..." : "Preparing Book...",
-                addToLibrary ? "Converting to KFX & enriching book metadata"
-                             : "Converting EPUB to native KFX",
+                convSubtitle,
                 () -> {
                     cancelFlag.set(true);
                     if (stagedEpub != null && stagedEpub.exists()) {
@@ -292,8 +333,19 @@ public class ExternalEpubActivity extends Activity {
                 });
 
         new Thread(() -> {
-            AzathLibrarySync.SYNC_LOCK.lock();
+            boolean lockAcquired = false;
             try {
+                lockAcquired = acquireLockCancelable(
+                        AzathLibrarySync.SYNC_LOCK,
+                        cancelFlag,
+                        () -> updateProgressSubtitle("Waiting for another import..."),
+                        200L);
+                if (!lockAcquired) {
+                    Log.i(TAG, "Cancelled while waiting for SYNC_LOCK: " + displayName);
+                    if (stagedEpub != null && stagedEpub.exists()) stagedEpub.delete();
+                    return;
+                }
+                updateProgressSubtitle(convSubtitle);
                 final String safeBase = AzathLibrarySync.sanitizeFilenameBase(meta.title, bookKey);
 
                 File sdKindle = new File("/sdcard/kindle");
@@ -363,7 +415,7 @@ public class ExternalEpubActivity extends Activity {
                 });
             } catch (Throwable t) {
                 Log.e(TAG, "Failed to process external EPUB", t);
-                stagedEpub.delete();
+                if (stagedEpub != null && stagedEpub.exists()) stagedEpub.delete();
                 mainHandler.post(() -> {
                     if (com.amazon.kindle.epub.catalog.FolioTheme.isContextDead(this)) return;
                     dismissActiveDialog();
@@ -371,7 +423,9 @@ public class ExternalEpubActivity extends Activity {
                     finish();
                 });
             } finally {
-                AzathLibrarySync.SYNC_LOCK.unlock();
+                if (lockAcquired) {
+                    AzathLibrarySync.SYNC_LOCK.unlock();
+                }
             }
         }, "folio-epub-convert").start();
     }
@@ -723,6 +777,7 @@ public class ExternalEpubActivity extends Activity {
         tvSub.setTextColor(FolioTheme.textMuted(this));
         tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         textCol.addView(tvSub);
+        activeProgressSub = tvSub;
 
         box.addView(textCol);
 
@@ -738,7 +793,17 @@ public class ExternalEpubActivity extends Activity {
         com.amazon.kindle.epub.catalog.FolioTheme.applyToDialog(this, activeDialog);
     }
 
+    private void updateProgressSubtitle(final String subtitle) {
+        mainHandler.post(() -> {
+            if (com.amazon.kindle.epub.catalog.FolioTheme.isContextDead(this)) return;
+            if (activeProgressSub != null && activeDialog != null && activeDialog.isShowing()) {
+                activeProgressSub.setText(subtitle != null ? subtitle : "");
+            }
+        });
+    }
+
     private void dismissActiveDialog() {
+        activeProgressSub = null;
         if (activeDialog != null) {
             try { activeDialog.dismiss(); } catch (Throwable ignored) {}
             activeDialog = null;
