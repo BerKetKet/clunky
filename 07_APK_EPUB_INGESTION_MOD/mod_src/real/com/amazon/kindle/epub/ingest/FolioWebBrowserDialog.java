@@ -638,6 +638,7 @@ public final class FolioWebBrowserDialog {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request != null && request.getUrl() != null ? request.getUrl().toString() : "";
                 if (isLikelyEpubUrl(url)) {
+                    url = normalizeDownloadUrl(url);
                     downloadAndIngestEpub(ctx, url, view.getSettings().getUserAgentString(),
                             null, "application/epub+zip", mainHandler, statusBanner, statusTv, openNowBtn, dlgRef, onImported);
                     return true;
@@ -697,7 +698,7 @@ public final class FolioWebBrowserDialog {
             @Override
             public void onDownloadStart(String url, String userAgent, String contentDisposition,
                                         String mimetype, long contentLength) {
-                downloadAndIngestEpub(ctx, url, userAgent, contentDisposition, mimetype,
+                downloadAndIngestEpub(ctx, normalizeDownloadUrl(url), userAgent, contentDisposition, mimetype,
                         mainHandler, statusBanner, statusTv, openNowBtn, dlgRef, onImported);
             }
         });
@@ -1006,8 +1007,10 @@ public final class FolioWebBrowserDialog {
                     tTv.setEllipsize(TextUtils.TruncateAt.END);
                     row.addView(tTv);
 
+                    final String dlUrl = normalizeDownloadUrl(item[1]);
+
                     TextView uTv = new TextView(ctx);
-                    uTv.setText(item[1]);
+                    uTv.setText(dlUrl);
                     uTv.setTextColor(FolioTheme.textMuted());
                     uTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
                     uTv.setSingleLine(true);
@@ -1017,7 +1020,7 @@ public final class FolioWebBrowserDialog {
                     row.setOnClickListener(new View.OnClickListener() {
                         @Override public void onClick(View v) {
                             if (pickDlg[0] != null) pickDlg[0].dismiss();
-                            downloadAndIngestEpub(ctx, item[1], webView.getSettings().getUserAgentString(),
+                            downloadAndIngestEpub(ctx, dlUrl, webView.getSettings().getUserAgentString(),
                                     null, "application/epub+zip", mainHandler, statusBanner, statusTv, openNowBtn, dlgRef, onImported);
                         }
                     });
@@ -1030,6 +1033,66 @@ public final class FolioWebBrowserDialog {
                         .show();
             }
         });
+    }
+
+    /**
+     * Pure, Android-free URL normalizer that automatically appends source=download
+     * to standardebooks.org .epub links (preserving existing query params and #fragments
+     * without duplicating source=download).
+     */
+    public static String normalizeDownloadUrl(String url) {
+        if (url == null) return null;
+        String trimmed = url.trim();
+        if (trimmed.isEmpty()) return url;
+        String lower = trimmed.toLowerCase(Locale.US);
+        if (!lower.startsWith("https://") && !lower.startsWith("http://")) {
+            return url;
+        }
+        int hashIdx = trimmed.indexOf('#');
+        String frag = hashIdx >= 0 ? trimmed.substring(hashIdx) : "";
+        String noFrag = hashIdx >= 0 ? trimmed.substring(0, hashIdx) : trimmed;
+        int qIdx = noFrag.indexOf('?');
+        String base = qIdx >= 0 ? noFrag.substring(0, qIdx) : noFrag;
+        String query = qIdx >= 0 ? noFrag.substring(qIdx + 1) : null;
+
+        int schemeEnd = base.indexOf("://");
+        int hostStart = schemeEnd + 3;
+        int pathStart = base.indexOf('/', hostStart);
+        String authority = pathStart >= 0 ? base.substring(hostStart, pathStart) : base.substring(hostStart);
+        int atIdx = authority.lastIndexOf('@');
+        if (atIdx >= 0) authority = authority.substring(atIdx + 1);
+        int colonIdx = authority.indexOf(':');
+        String host = (colonIdx >= 0 ? authority.substring(0, colonIdx) : authority).toLowerCase(Locale.US);
+        String pathLower = (pathStart >= 0 ? base.substring(pathStart) : "").toLowerCase(Locale.US);
+
+        boolean isStandardEbooks = "standardebooks.org".equals(host) || host.endsWith(".standardebooks.org");
+        boolean isEpubPath = pathLower.endsWith(".epub") || pathLower.endsWith(".kepub.epub");
+        if (!isStandardEbooks || !isEpubPath) {
+            return url;
+        }
+
+        StringBuilder qOut = new StringBuilder();
+        boolean hasSourceDownload = false;
+        if (query != null && !query.isEmpty()) {
+            String[] params = query.split("&");
+            for (String p : params) {
+                if (p.isEmpty()) continue;
+                String pLower = p.toLowerCase(Locale.US);
+                if ("source=download".equals(pLower)) {
+                    if (hasSourceDownload) continue;
+                    hasSourceDownload = true;
+                } else if (pLower.startsWith("source=")) {
+                    continue;
+                }
+                if (qOut.length() > 0) qOut.append('&');
+                qOut.append(p);
+            }
+        }
+        if (!hasSourceDownload) {
+            if (qOut.length() > 0) qOut.append('&');
+            qOut.append("source=download");
+        }
+        return base + "?" + qOut.toString() + frag;
     }
 
     private static boolean isLikelyEpubUrl(String url) {
@@ -1108,11 +1171,13 @@ public final class FolioWebBrowserDialog {
     }
 
     private static void downloadAndIngestEpub(
-            final Context ctx, final String urlStr, final String userAgent,
+            final Context ctx, final String rawUrlStr, final String userAgent,
             final String contentDisposition, final String mimeType,
             final Handler mainHandler, final LinearLayout statusBanner,
             final TextView statusTv, final TextView openNowBtn,
             final AlertDialog[] dlgRef, final Runnable onImported) {
+
+        final String urlStr = normalizeDownloadUrl(rawUrlStr);
 
         if (!isSafeHttpUrl(urlStr)) {
             mainHandler.post(new Runnable() {

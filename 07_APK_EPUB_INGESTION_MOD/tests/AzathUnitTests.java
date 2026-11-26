@@ -81,6 +81,7 @@ public final class AzathUnitTests {
         testRound168Task2GenreCleanup();
         testRound168Task3TimeoutAndSubtitle();
         testRound168Task4ReconcileSummary();
+        testRound168Task6StandardEbooksUrlNormalization();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -771,5 +772,30 @@ public final class AzathUnitTests {
                 AzathLibrarySync.shouldBlockAutoEpubCrawl(new File("/sdcard/kindle/Pride_and_Prejudice_1342.epub")));
         check("shouldBlockAutoEpubCrawl allows .kfx in /sdcard/kindle/",
                 !AzathLibrarySync.shouldBlockAutoEpubCrawl(new File("/sdcard/kindle/Point_Counter_Point_FOLIO_F806A2F54FD4.kfx")));
+    }
+
+    private static void testRound168Task6StandardEbooksUrlNormalization() {
+        String plain = "https://standardebooks.org/ebooks/anton-chekhov/ivanov/constance-garnett/downloads/anton-chekhov_ivanov_constance-garnett.epub";
+        checkEq("Appends ?source=download when missing",
+                plain + "?source=download",
+                FolioWebBrowserDialog.normalizeDownloadUrl(plain));
+        checkEq("Does not duplicate ?source=download",
+                plain + "?source=download",
+                FolioWebBrowserDialog.normalizeDownloadUrl(plain + "?source=download"));
+        checkEq("Preserves existing query params and appends &source=download",
+                plain + "?ref=opds&source=download",
+                FolioWebBrowserDialog.normalizeDownloadUrl(plain + "?ref=opds"));
+        checkEq("Does not duplicate source=download alongside existing query params",
+                plain + "?ref=opds&source=download",
+                FolioWebBrowserDialog.normalizeDownloadUrl(plain + "?ref=opds&source=download"));
+        checkEq("Handles empty trailing ? and preserves #fragment",
+                plain + "?source=download#dl",
+                FolioWebBrowserDialog.normalizeDownloadUrl(plain + "?#dl"));
+        checkEq("Leaves standardebooks HTML page URL unchanged",
+                "https://standardebooks.org/ebooks/anton-chekhov/ivanov",
+                FolioWebBrowserDialog.normalizeDownloadUrl("https://standardebooks.org/ebooks/anton-chekhov/ivanov"));
+        checkEq("Leaves non-standardebooks EPUB URL unchanged",
+                "http://aleph.gutenberg.org/cache/epub/174/pg174-images.epub",
+                FolioWebBrowserDialog.normalizeDownloadUrl("http://aleph.gutenberg.org/cache/epub/174/pg174-images.epub"));
     }
 }
