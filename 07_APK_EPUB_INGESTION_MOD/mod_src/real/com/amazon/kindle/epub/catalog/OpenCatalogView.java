@@ -835,17 +835,39 @@ public final class OpenCatalogView {
                     targetPath = LocalLibraryReader.resolveLocalFile(targetPath, lb.title);
                 }
                 if (targetPath != null && !targetPath.isEmpty() && new File(targetPath).exists()) {
-                    Intent openIntent = new Intent(Intent.ACTION_VIEW);
-                    openIntent.setClassName(ctx.getPackageName(), "com.amazon.kindle.ThirdPartyUpgradePage");
-                    String mime = "application/epub+zip";
-                    if (targetPath.toLowerCase(Locale.US).endsWith(".pdf")) {
-                        mime = "application/pdf";
-                    } else if (targetPath.toLowerCase(Locale.US).endsWith(".kfx")) {
-                        mime = "application/x-kfx";
+                    final File targetFile = new File(targetPath);
+                    final String lowerTarget = targetPath.toLowerCase(Locale.US);
+                    if (lowerTarget.endsWith(".kfx")) {
+                        com.amazon.kindle.epub.ingest.ExternalEpubActivity.launchKfxReader(ctx, targetFile);
+                    } else if (com.amazon.kindle.epub.ingest.ExternalEpubActivity.isBlockedPrivateFile(ctx, targetFile)) {
+                        if (lowerTarget.endsWith(".epub")) {
+                            Toast.makeText(ctx, "Preparing " + lb.title + "...", Toast.LENGTH_SHORT).show();
+                            new Thread(new Runnable() {
+                                @Override public void run() {
+                                    final com.amazon.kindle.epub.ingest.AzathLibrarySync.IngestResult ir =
+                                            com.amazon.kindle.epub.ingest.AzathLibrarySync.ingestEpub(ctx, targetFile, lb.title, false);
+                                    mainHandler.post(new Runnable() {
+                                        @Override public void run() {
+                                            if (ir != null && ir.ok && ir.kfxFile != null && ir.kfxFile.exists()) {
+                                                com.amazon.kindle.epub.ingest.ExternalEpubActivity.launchKfxReader(ctx, ir.kfxFile);
+                                            } else {
+                                                Toast.makeText(ctx, "Could not open private EPUB", Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+                                    });
+                                }
+                            }, "folio-open-priv-epub").start();
+                        } else {
+                            Toast.makeText(ctx, "Blocked: cannot launch private storage URI", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        Intent openIntent = new Intent(Intent.ACTION_VIEW);
+                        openIntent.setClassName(ctx.getPackageName(), "com.amazon.kindle.ThirdPartyUpgradePage");
+                        String mime = lowerTarget.endsWith(".pdf") ? "application/pdf" : "application/epub+zip";
+                        openIntent.setDataAndType(Uri.fromFile(targetFile), mime);
+                        openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        ctx.startActivity(openIntent);
                     }
-                    openIntent.setDataAndType(Uri.fromFile(new File(targetPath)), mime);
-                    openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    ctx.startActivity(openIntent);
                 } else {
                     Intent readerIntent = new Intent();
                     readerIntent.setClassName(ctx.getPackageName(), "com.amazon.kcp.reader.StandAloneBookReaderActivity");
