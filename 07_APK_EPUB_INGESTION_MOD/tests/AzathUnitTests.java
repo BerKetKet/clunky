@@ -77,6 +77,7 @@ public final class AzathUnitTests {
         testKfxMagicAndPathGuards();
         testSecurityHelpers();
         testRound167Helpers();
+        testRound168Task1Helpers();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -594,5 +595,14 @@ public final class AzathUnitTests {
         } catch (Throwable t) {
             check("Mock HttpServer suite threw: " + t, false);
         }
+    }
+
+    private static void testRound168Task1Helpers() {
+        check("shouldRunLaunchSweep true when online=true & debugDisabled=false",
+                MetadataEnricher.shouldRunLaunchSweep(true, false));
+        check("shouldRunLaunchSweep false when online=false",
+                !MetadataEnricher.shouldRunLaunchSweep(false, false));
+        check("shouldRunLaunchSweep false when debugDisabled=true",
+                !MetadataEnricher.shouldRunLaunchSweep(true, true));
     }
 }

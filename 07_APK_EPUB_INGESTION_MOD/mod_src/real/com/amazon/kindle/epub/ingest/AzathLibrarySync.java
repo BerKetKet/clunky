@@ -187,6 +187,7 @@ public final class AzathLibrarySync {
      */
     public static void reconcileOnLaunchAsync(final Context ctx) {
         if (ctx == null || !sLaunchReconciled.compareAndSet(false, true)) return;
+        startThreadSnapshotDiagIfEnabled(ctx.getApplicationContext());
         new Thread(new Runnable() {
             @Override public void run() {
                 Context appCtx = ctx.getApplicationContext();
@@ -194,6 +195,59 @@ public final class AzathLibrarySync {
                 MetadataEnricher.sweepUnenrichedAsync(appCtx);
             }
         }, "azath-launch-reconcile").start();
+    }
+
+    private static volatile boolean sThreadDiagStarted = false;
+
+    public static void startThreadSnapshotDiagIfEnabled(final Context ctx) {
+        if (ctx == null || sThreadDiagStarted) return;
+        boolean enabled = false;
+        try {
+            if (new File("/sdcard/kindle/.diag_threads").exists()) {
+                enabled = true;
+            } else {
+                enabled = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                        .getBoolean("diag_thread_snap_enabled", false);
+            }
+        } catch (Throwable ignored) {}
+        if (!enabled) return;
+        sThreadDiagStarted = true;
+        Thread diag = new Thread(new Runnable() {
+            @Override public void run() {
+                long startMs = System.currentTimeMillis();
+                while (!Thread.currentThread().isInterrupted()) {
+                    try {
+                        long sec = (System.currentTimeMillis() - startMs) / 1000L;
+                        java.util.Map<Thread, StackTraceElement[]> all = Thread.getAllStackTraces();
+                        StringBuilder az = new StringBuilder();
+                        StringBuilder oth = new StringBuilder();
+                        int azCount = 0;
+                        int total = all.size();
+                        for (Thread t : all.keySet()) {
+                            String n = t.getName();
+                            if (n == null) continue;
+                            if (n.contains("azath") || n.contains("folio") || n.contains("Thread-20") || n.contains("Thread-22")) {
+                                if (az.length() > 0) az.append(',');
+                                az.append(n).append(':').append(t.getState());
+                                azCount++;
+                            } else if (n.startsWith("Thread-") || n.contains("pool-")) {
+                                if (oth.length() > 0 && oth.length() < 240) oth.append(',');
+                                if (oth.length() < 240) oth.append(n);
+                            }
+                        }
+                        Log.i(TAG, "ThreadSnap t=" + sec + "s total=" + total
+                                + " syncLocked=" + SYNC_LOCK.isLocked()
+                                + " azath=[" + az + "] workers=[" + oth + "]");
+                        Thread.sleep(5000L);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    } catch (Throwable ignored) {}
+                }
+            }
+        }, "azath-diag-threads");
+        diag.setDaemon(true);
+        diag.start();
     }
 
     public static final class BookEntry {

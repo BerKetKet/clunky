@@ -43,6 +43,9 @@ public final class MetadataEnricher {
     private static final String TAG = "MetadataEnricher";
     private static final String PREFS_UI = "folio_ui_prefs";
     private static final String KEY_ONLINE_ENRICHMENT = "online_enrichment_enabled";
+    private static final String KEY_DISABLE_LAUNCH_SWEEP_DEBUG = "disable_launch_sweep_debug";
+    private static final String DEBUG_DISABLE_ENRICH_FILE = "/sdcard/kindle/.disable_online_enrichment";
+    private static final String DEBUG_DISABLE_SWEEP_FILE = "/sdcard/kindle/.disable_launch_sweep";
     private static final int CONNECT_TIMEOUT_MS = 8000;
     private static final int READ_TIMEOUT_MS = 10000;
     private static final int MAX_JSON_BYTES = 256 * 1024;
@@ -115,6 +118,11 @@ public final class MetadataEnricher {
     }
 
     public static boolean isOnlineEnrichmentEnabled(Context ctx) {
+        try {
+            if (new File(DEBUG_DISABLE_ENRICH_FILE).exists()) {
+                return false;
+            }
+        } catch (Throwable ignored) {}
         if (ctx == null) return true;
         try {
             SharedPreferences sp = ctx.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE);
@@ -122,6 +130,33 @@ public final class MetadataEnricher {
         } catch (Throwable ignored) {
             return true;
         }
+    }
+
+    public static boolean isLaunchSweepDisabledDebug(Context ctx) {
+        try {
+            if (new File(DEBUG_DISABLE_SWEEP_FILE).exists()) {
+                return true;
+            }
+        } catch (Throwable ignored) {}
+        if (ctx == null) return false;
+        try {
+            SharedPreferences sp = ctx.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE);
+            return sp.getBoolean(KEY_DISABLE_LAUNCH_SWEEP_DEBUG, false);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    public static void setLaunchSweepDisabledDebug(Context ctx, boolean disabled) {
+        if (ctx == null) return;
+        try {
+            ctx.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
+                    .edit().putBoolean(KEY_DISABLE_LAUNCH_SWEEP_DEBUG, disabled).apply();
+        } catch (Throwable ignored) {}
+    }
+
+    public static boolean shouldRunLaunchSweep(boolean onlineEnabled, boolean debugDisabled) {
+        return onlineEnabled && !debugDisabled;
     }
 
     public static void setOnlineEnrichmentEnabled(Context ctx, boolean enabled) {
@@ -165,7 +200,14 @@ public final class MetadataEnricher {
      * Launch-time sweep: queues online enrichment for existing library books missing genres/genres_json or open_library_key.
      */
     public static int sweepUnenrichedAsync(final Context ctx) {
-        if (ctx == null || !isOnlineEnrichmentEnabled(ctx) || !isNetworkConnected(ctx)) {
+        if (ctx == null) {
+            return 0;
+        }
+        if (isLaunchSweepDisabledDebug(ctx)) {
+            Log.i(TAG, "Launch-time enrichment sweep disabled (debug switch)");
+            return 0;
+        }
+        if (!shouldRunLaunchSweep(isOnlineEnrichmentEnabled(ctx), false) || !isNetworkConnected(ctx)) {
             return 0;
         }
         int queued = 0;
