@@ -4863,6 +4863,14 @@ public final class FolioMoreView {
     }
 
     private static void showLibraryInsightsDialog(final Context ctx) {
+        loadQuickStatsAsync(ctx, new StatsCallback() {
+            @Override public void onStats(int[] qs) {
+                showLibraryInsightsDialogLoaded(ctx, qs);
+            }
+        });
+    }
+
+    private static void showLibraryInsightsDialogLoaded(final Context ctx, final int[] qs) {
         final float d = ctx.getResources().getDisplayMetrics().density;
         java.util.List<com.amazon.kindle.epub.ingest.FolioMetadataDb.BookRecord> all = new java.util.ArrayList<>();
         com.amazon.kindle.epub.ingest.FolioMetadataDb mdb = new com.amazon.kindle.epub.ingest.FolioMetadataDb(ctx);
@@ -4992,27 +5000,16 @@ public final class FolioMoreView {
         String avgStr = ratedCount > 0
                 ? String.format(java.util.Locale.US, "%.1f★ avg (%d rated)", ratingSum / (float) ratedCount, ratedCount)
                 : "No ratings yet";
-        final int catalogCount = all.size();
-        final int favCount = favs;
-        final int notedCount = noted;
-        final int shelvedCount = shelved;
-        final int queuedCount = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.countQueue(ctx);
-        final String avgDisplay = avgStr;
-        final TextView summaryTv = new TextView(ctx);
-        summaryTv.setText(catalogCount + " cataloged · … reading · … finished\n"
-                + favCount + " fav · " + notedCount + " noted · " + shelvedCount + " shelved · " + queuedCount + " queued · " + avgDisplay);
+        final int finCnt = (qs != null && qs.length >= 3) ? qs[2] : 0;
+        final int readCnt = (qs != null && qs.length >= 2) ? qs[1] : 0;
+        TextView summaryTv = new TextView(ctx);
+        summaryTv.setText(all.size() + " cataloged · " + readCnt + " reading · " + finCnt + " finished\n"
+                + favs + " fav · " + noted + " noted · " + shelved + " shelved · "
+                + com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.countQueue(ctx) + " queued · " + avgStr);
         summaryTv.setTextColor(TEXT_MUTED);
         summaryTv.setTextSize(12);
         summaryTv.setPadding(0, 0, 0, dp(d, 14));
         root.addView(summaryTv);
-        loadQuickStatsAsync(ctx, new StatsCallback() {
-            @Override public void onStats(int[] qs) {
-                int rdg = (qs != null && qs.length >= 2) ? qs[1] : 0;
-                int fin = (qs != null && qs.length >= 3) ? qs[2] : 0;
-                summaryTv.setText(catalogCount + " cataloged · " + rdg + " reading · " + fin + " finished\n"
-                        + favCount + " fav · " + notedCount + " noted · " + shelvedCount + " shelved · " + queuedCount + " queued · " + avgDisplay);
-            }
-        });
 
         final AlertDialog[] insightDlgRef = new AlertDialog[1];
 
@@ -5100,8 +5097,6 @@ public final class FolioMoreView {
         content.addView(rtRow);
 
         // Section 0: Interactive Reading Status Stacked Bar (Finished / Reading / Unread)
-        int finCnt = qs[2];
-        int readCnt = qs[1];
         int unrdCnt = Math.max(0, all.size() - finCnt - readCnt);
         int totalStat = Math.max(1, finCnt + readCnt + unrdCnt);
 
