@@ -24,8 +24,75 @@ public final class FolioMetadataBackup {
     private static final String TAG = "FolioMetaBackup";
     private static final String BACKUP_DIR = "/sdcard/kindle/backups";
     private static final String BACKUP_FILE = "folio_metadata_backup.json";
+    public static final long MAX_BACKUP_FILE_BYTES = 16L * 1024L * 1024L;
+    public static final int MAX_BACKUP_BOOKS = 10000;
+    public static final int MAX_BOOK_KEY_LEN = 64;
+    public static final int MAX_TEXT_FIELD_LEN = 2000;
+    public static final int MAX_DESC_FIELD_LEN = 4000;
+    public static final int MAX_READING_GOAL = 1000;
 
     private FolioMetadataBackup() {}
+
+    public static boolean isValidBackupBookKey(String bookKey) {
+        if (bookKey == null) return false;
+        String s = bookKey.trim();
+        if (s.isEmpty() || s.length() > MAX_BOOK_KEY_LEN) return false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c <= 0x20 || c == 0x7F || c == '/' || c == '\\') return false;
+        }
+        return !s.contains("..");
+    }
+
+    public static boolean isValidBackupBookPath(String rawPath) {
+        if (rawPath == null) return false;
+        String s = rawPath.trim();
+        if (s.isEmpty() || s.length() > 1024 || !s.startsWith("/")) return false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c < 0x20 || c == 0x7F) return false;
+        }
+        String norm = s.replace('\\', '/');
+        for (String seg : norm.split("/")) {
+            if ("..".equals(seg)) return false;
+        }
+        String lower = norm.toLowerCase(java.util.Locale.ROOT);
+        if (lower.contains("/databases/") || lower.contains("/shared_prefs/")) return false;
+        return lower.endsWith(".kfx");
+    }
+
+    public static boolean isValidBackupCoverPath(String rawPath) {
+        if (rawPath == null || rawPath.trim().isEmpty()) return false;
+        String s = rawPath.trim();
+        if (s.length() > 1024 || !s.startsWith("/")) return false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c < 0x20 || c == 0x7F) return false;
+        }
+        String norm = s.replace('\\', '/');
+        for (String seg : norm.split("/")) {
+            if ("..".equals(seg)) return false;
+        }
+        String lower = norm.toLowerCase(java.util.Locale.ROOT);
+        if (lower.contains("/databases/") || lower.contains("/shared_prefs/")) return false;
+        return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".webp");
+    }
+
+    public static int clampReadingGoal(int g) {
+        if (g <= 0) return 0;
+        return Math.min(g, MAX_READING_GOAL);
+    }
+
+    public static int clampStarRating(int r) {
+        if (r <= 0) return 0;
+        return Math.min(Math.max(r, 1), 5);
+    }
+
+    private static String boundString(String s, int maxLen) {
+        if (s == null) return "";
+        String t = s.trim();
+        return t.length() <= maxLen ? t : t.substring(0, maxLen);
+    }
 
     public static File getBackupFile(Context ctx) {
         File extDir = new File(BACKUP_DIR);
@@ -93,7 +160,11 @@ public final class FolioMetadataBackup {
 
     public static int restoreFromJson(Context ctx) {
         File inFile = getBackupFile(ctx);
-        if (!inFile.exists()) return -1;
+        if (!inFile.exists() || !inFile.isFile()) return -1;
+        if (inFile.length() > MAX_BACKUP_FILE_BYTES) {
+            Log.e(TAG, "Backup validation failed: file exceeds 16 MB size cap (" + inFile.length() + " B)");
+            return -1;
+        }
 
         FolioMetadataDb db = new FolioMetadataDb(ctx);
         try {
@@ -101,23 +172,42 @@ public final class FolioMetadataBackup {
             BufferedReader br = new BufferedReader(
                     new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8));
             try {
-                String line;
-                while ((line = br.readLine()) != null) sb.append(line);
+                char[] cbuf = new char[8192];
+                int n;
+                long totalChars = 0L;
+                while ((n = br.read(cbuf)) != -1) {
+                    totalChars += n;
+                    if (totalChars > MAX_BACKUP_FILE_BYTES) {
+                        Log.e(TAG, "Backup stream exceeded 16 MB character limit");
+                        return -1;
+                    }
+                    sb.append(cbuf, 0, n);
+                }
             } finally {
                 br.close();
             }
 
             JSONObject root = new JSONObject(sb.toString());
+            int ver = root.optInt("version", 1);
+            if (ver < 1 || ver > 10) {
+                Log.w(TAG, "Backup validation failed: unsupported schema version=" + ver);
+                return -1;
+            }
             JSONArray arr = root.optJSONArray("books");
             if (arr == null || arr.length() == 0) {
                 Log.w(TAG, "Backup validation failed: missing or empty 'books' array");
                 return -1;
             }
+            if (arr.length() > MAX_BACKUP_BOOKS) {
+                Log.w(TAG, "Backup validation: capping restore count from " + arr.length() + " to " + MAX_BACKUP_BOOKS);
+            }
             boolean hasValidEntry = false;
-            for (int i = 0; i < arr.length(); i++) {
+            int limit = Math.min(arr.length(), MAX_BACKUP_BOOKS);
+            for (int i = 0; i < limit; i++) {
                 JSONObject obj = arr.optJSONObject(i);
-                if (obj != null && !obj.optString("book_key", "").isEmpty()
-                        && !obj.optString("kfx_path", "").isEmpty()) {
+                if (obj != null
+                        && isValidBackupBookKey(obj.optString("book_key", ""))
+                        && isValidBackupBookPath(obj.optString("kfx_path", ""))) {
                     hasValidEntry = true;
                     break;
                 }
@@ -127,64 +217,75 @@ public final class FolioMetadataBackup {
                 return -1;
             }
 
-            int restoredGoal = root.optInt("reading_goal_target", 0);
+            int restoredGoal = clampReadingGoal(root.optInt("reading_goal_target", 0));
             if (restoredGoal > 0) {
                 ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
                         .edit().putInt("reading_goal_target", restoredGoal).apply();
             }
 
             int restored = 0;
-            for (int i = 0; i < arr.length(); i++) {
+            for (int i = 0; i < limit; i++) {
                 JSONObject obj = arr.optJSONObject(i);
                 if (obj == null) continue;
-                String bookKey = obj.optString("book_key", "");
-                String kfxPath = obj.optString("kfx_path", "");
-                if (bookKey.isEmpty() || kfxPath.isEmpty()) continue;
+                String bookKey = obj.optString("book_key", "").trim();
+                String kfxPath = obj.optString("kfx_path", "").trim();
+                if (!isValidBackupBookKey(bookKey) || !isValidBackupBookPath(kfxPath)) {
+                    Log.w(TAG, "Skipping invalid backup row at index=" + i);
+                    continue;
+                }
 
                 EpubMetadataExtractor.BookMeta meta = new EpubMetadataExtractor.BookMeta();
-                meta.title = obj.optString("title", "");
-                meta.author = obj.optString("author", "Unknown Author");
-                meta.publisher = obj.optString("publisher", "");
-                meta.pubDate = obj.optString("pub_date", "");
-                meta.language = obj.optString("language", "");
-                meta.isbn = obj.optString("isbn", "");
-                meta.description = obj.optString("description", "");
-                meta.openLibraryKey = obj.optString("open_library_key", "");
-                String genresStr = obj.optString("genres", "");
+                meta.title = boundString(obj.optString("title", ""), MAX_TEXT_FIELD_LEN);
+                String rawAuthor = boundString(obj.optString("author", "Unknown Author"), MAX_TEXT_FIELD_LEN);
+                meta.author = rawAuthor.isEmpty() ? "Unknown Author" : rawAuthor;
+                meta.publisher = boundString(obj.optString("publisher", ""), MAX_TEXT_FIELD_LEN);
+                String rawPubDate = boundString(obj.optString("pub_date", ""), 64);
+                String normPubDate = EpubMetadataExtractor.normalizePubDate(rawPubDate);
+                meta.pubDate = normPubDate.isEmpty() ? rawPubDate : normPubDate;
+                meta.language = boundString(obj.optString("language", ""), 32);
+                String rawIsbn = boundString(obj.optString("isbn", ""), 64);
+                String normIsbn = EpubMetadataExtractor.normalizeIsbn(rawIsbn);
+                meta.isbn = normIsbn.isEmpty() ? rawIsbn : normIsbn;
+                meta.description = EpubMetadataExtractor.truncateDescription(obj.optString("description", ""));
+                meta.openLibraryKey = boundString(obj.optString("open_library_key", ""), 128);
+                String genresStr = boundString(obj.optString("genres", ""), MAX_TEXT_FIELD_LEN);
                 if (!genresStr.isEmpty()) {
                     for (String g : genresStr.split(",")) {
                         String c = g.trim();
-                        if (!c.isEmpty()) meta.genres.add(c);
+                        if (!c.isEmpty() && c.length() <= 60 && meta.genres.size() < 12) {
+                            meta.genres.add(c);
+                        }
                     }
                 }
 
-                String coverPath = obj.optString("cover_path", "");
-                String sourceName = obj.optString("source_name", "");
+                String coverPath = obj.optString("cover_path", "").trim();
+                File validCover = isValidBackupCoverPath(coverPath) ? new File(coverPath) : null;
+                String sourceName = boundString(obj.optString("source_name", ""), 256);
                 db.upsertBook(
                         bookKey,
                         new File(kfxPath),
-                        coverPath.isEmpty() ? null : new File(coverPath),
+                        validCover,
                         sourceName,
                         meta);
                 if (obj.optBoolean("is_favorite", false)) {
                     FolioMetadataCatalogDialog.setFavorite(ctx, kfxPath, true);
                 }
-                String pNote = obj.optString("personal_note", "");
+                String pNote = boundString(obj.optString("personal_note", ""), MAX_DESC_FIELD_LEN);
                 if (!pNote.isEmpty()) {
                     FolioMetadataCatalogDialog.setNote(ctx, kfxPath, pNote);
                 }
-                int sRate = obj.optInt("star_rating", 0);
+                int sRate = clampStarRating(obj.optInt("star_rating", 0));
                 if (sRate > 0) {
                     FolioMetadataCatalogDialog.setRating(ctx, kfxPath, sRate);
                 }
-                String shName = obj.optString("shelf", "");
+                String shName = boundString(obj.optString("shelf", ""), 128);
                 if (!shName.isEmpty()) {
                     FolioMetadataCatalogDialog.setShelf(ctx, kfxPath, shName);
                 }
                 if (obj.optBoolean("in_queue", false)) {
                     FolioMetadataCatalogDialog.setInQueue(ctx, kfxPath, true);
                 }
-                String finDt = obj.optString("finished_date", "");
+                String finDt = boundString(obj.optString("finished_date", ""), 64);
                 if (!finDt.isEmpty()) {
                     FolioMetadataCatalogDialog.setFinishedDate(ctx, kfxPath, finDt);
                 }

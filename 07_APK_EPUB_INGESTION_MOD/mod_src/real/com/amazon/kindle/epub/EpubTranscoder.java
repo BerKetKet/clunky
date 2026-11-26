@@ -39,6 +39,9 @@ import java.util.zip.ZipInputStream;
 public final class EpubTranscoder {
     private static final Charset UTF8 = Charset.forName("UTF-8");
     public static volatile String lastCoverPath = null;
+    public static final int MAX_ZIP_ENTRIES = 10000;
+    public static final long MAX_ZIP_ENTRY_BYTES = 32L * 1024L * 1024L;
+    public static final long MAX_ZIP_TOTAL_BYTES = 150L * 1024L * 1024L;
 
     private static final class ChapterToc {
         final String label;
@@ -347,21 +350,64 @@ public final class EpubTranscoder {
         }
     }
 
+    public static boolean isSafeZipEntryName(String rawName) {
+        if (rawName == null || rawName.isEmpty()) return false;
+        for (int i = 0; i < rawName.length(); i++) {
+            char c = rawName.charAt(i);
+            if (c < 0x20 || c == 0x7F) return false;
+        }
+        String norm = rawName.replace('\\', '/');
+        String lower = norm.toLowerCase(Locale.US);
+        if (lower.contains("%2e%2e")) return false;
+        for (String seg : norm.split("/")) {
+            if ("..".equals(seg)) return false;
+        }
+        return true;
+    }
+
     public static void transcode(File inFile, File outFile, boolean kf8Mode) throws Exception {
         Map<String, byte[]> zipEntries = new LinkedHashMap<String, byte[]>();
         ZipInputStream zis = new ZipInputStream(new FileInputStream(inFile));
         try {
             byte[] buf = new byte[8192];
             ZipEntry entry;
+            int entryCount = 0;
+            long totalBytes = 0L;
             while ((entry = zis.getNextEntry()) != null) {
                 if (Thread.currentThread().isInterrupted()) {
                     throw new InterruptedException("EPUB transcode cancelled/interrupted");
                 }
+                entryCount++;
+                if (entryCount > MAX_ZIP_ENTRIES) {
+                    throw new java.io.IOException("EPUB exceeds max ZIP entry count (" + MAX_ZIP_ENTRIES + ")");
+                }
+                String rawEntryName = entry.getName();
+                if (!isSafeZipEntryName(rawEntryName)) {
+                    throw new SecurityException("Unsafe ZIP entry path rejected: " + rawEntryName);
+                }
                 if (entry.isDirectory()) continue;
-                String name = normalizeZipPath(entry.getName());
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                long declaredSize = entry.getSize();
+                if (declaredSize > MAX_ZIP_ENTRY_BYTES) {
+                    throw new java.io.IOException("ZIP entry exceeds 32 MB cap: " + rawEntryName);
+                }
+                String name = normalizeZipPath(rawEntryName);
+                if (name.isEmpty()) continue;
+                int initCap = (declaredSize > 0 && declaredSize <= MAX_ZIP_ENTRY_BYTES) ? (int) declaredSize : 4096;
+                ByteArrayOutputStream baos = new ByteArrayOutputStream(initCap);
+                long entryBytes = 0L;
                 int n;
                 while ((n = zis.read(buf)) > 0) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        throw new InterruptedException("EPUB transcode cancelled/interrupted");
+                    }
+                    entryBytes += n;
+                    if (entryBytes > MAX_ZIP_ENTRY_BYTES) {
+                        throw new java.io.IOException("ZIP entry exceeds 32 MB uncompressed limit: " + name);
+                    }
+                    totalBytes += n;
+                    if (totalBytes > MAX_ZIP_TOTAL_BYTES) {
+                        throw new java.io.IOException("EPUB exceeds 150 MB total uncompressed limit");
+                    }
                     baos.write(buf, 0, n);
                 }
                 zipEntries.put(name, baos.toByteArray());
@@ -1390,7 +1436,23 @@ public final class EpubTranscoder {
         boolean isJpeg = ((raw[0] & 0xFF) == 0xFF && (raw[1] & 0xFF) == 0xD8);
         if (isJpeg && (!isCover || raw.length <= 350000)) return raw;
         try {
-            Bitmap bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length);
+            BitmapFactory.Options boundsOpts = new BitmapFactory.Options();
+            boundsOpts.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(raw, 0, raw.length, boundsOpts);
+            int maxW = isCover ? 1080 : 1440;
+            int maxH = isCover ? 1600 : 2160;
+            int sample = 1;
+            if (boundsOpts.outWidth > 0 && boundsOpts.outHeight > 0) {
+                int halfW = boundsOpts.outWidth / 2;
+                int halfH = boundsOpts.outHeight / 2;
+                while ((halfW / sample) >= maxW && (halfH / sample) >= maxH) {
+                    sample *= 2;
+                }
+            }
+            BitmapFactory.Options decodeOpts = new BitmapFactory.Options();
+            decodeOpts.inSampleSize = sample;
+            decodeOpts.inPreferredConfig = Bitmap.Config.RGB_565;
+            Bitmap bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length, decodeOpts);
             if (bmp != null) {
                 int w = bmp.getWidth(), h = bmp.getHeight();
                 if (isCover && (w > 1080 || h > 1600)) {
@@ -1558,6 +1620,9 @@ public final class EpubTranscoder {
 
     private static String normalizeZipPath(String p) {
         if (p == null) return "";
+        if (!isSafeZipEntryName(p)) {
+            throw new SecurityException("Unsafe ZIP path rejected: " + p);
+        }
         p = p.replace('\\', '/');
         while (p.startsWith("/")) p = p.substring(1);
         return p;
