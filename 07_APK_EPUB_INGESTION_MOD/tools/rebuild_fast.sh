@@ -2,7 +2,7 @@
 set -euo pipefail
 export PATH="/opt/android-sdk/build-tools/36.0.0:${PATH}"
 
-MOD_ROOT="/home/bgg/projects/clunky/07_APK_EPUB_INGESTION_MOD"
+MOD_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORK_DIR="/tmp/kindle_clone_build"
 NEW_PKG="com.azath.reader"
 
@@ -41,13 +41,13 @@ cp -a "${MOD_ROOT}/assets/azath_fonts/EBGaramond-Regular.ttf" "${WORK_DIR}/base_
 cp -a "${MOD_ROOT}/assets/azath_fonts/EBGaramond-Regular.ttf" "${WORK_DIR}/base_dec/res/font/amazon_ember_serif_he.ttf"
 python3 "${MOD_ROOT}/tools/patch_res_azath_covers.py" "${WORK_DIR}/base_dec/res"
 
-echo "[1c/5] Updating launcher icons from dropin_res (Stone #141517)..."
-python3 -c '
+echo "[1c/5] Updating launcher icons from assets/launcher (Stone #141517)..."
+MOD_ROOT="${MOD_ROOT}" python3 -c '
 import os, shutil
 from PIL import Image
 
 res_dir = "/tmp/kindle_clone_build/base_dec/res"
-dropin_res = "/home/bgg/projects/clunky/dropin_res"
+dropin_res = os.path.join(os.environ["MOD_ROOT"], "assets", "launcher")
 
 stone_bg = (20, 21, 23)
 bg_512 = Image.new("RGBA", (512, 512), stone_bg + (255,))
