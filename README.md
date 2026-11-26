@@ -4,6 +4,7 @@ Offline-first, Dual Stone Edition EPUB-to-KFX reader and library manager built o
 
 ## Architecture Overview
 - **Canonical Mod Source**: `07_APK_EPUB_INGESTION_MOD/mod_src/real/`
+- **Launcher & UI Assets**: `07_APK_EPUB_INGESTION_MOD/assets/` (`launcher/`, `azath_fonts/`, `azath_icons/`) and `handoff_assets/debug.keystore`
 - **EPUB -> KFX Pipeline**:
   1. EPUBs imported via Storage (`FolioFolderBrowserDialog`), Web Browser (`FolioWebBrowserDialog`), OPDS (`OpenCatalogView`), or External Intent (`ExternalEpubActivity`) are converted via `EpubTranscoder` / native `libkfxconv.so` using atomic `.kfx.part` -> `.kfx` writes into `/sdcard/kindle/` (or `files/folio_library/` fallback).
   2. Metadata is extracted locally (`EpubMetadataExtractor`), persisted transactionally in `folio_metadata.db` (`DB_VERSION = 2` with `content_hash`, `source_size`, `genres_json`), and optionally enriched asynchronously (`MetadataEnricher`) when `online_enrichment_enabled` is `true`.
@@ -33,7 +34,6 @@ Offline-first, Dual Stone Edition EPUB-to-KFX reader and library manager built o
 - **Stock Kindle Isolation**: `com.amazon.kindle` (`v8.160.1.0`) MUST remain **100% untouched and read-only**.
 - **No `ct.reader`**: Play Store Folio must never be launched, inspected, or referenced.
 
-## Submodule / Gitlink Notes (`kfx_converter`)
-- `git ls-tree HEAD kfx_converter`: `160000 commit 61f664c4207ba2eef9d58037f5f4c92dba52230e kfx_converter`.
-- No `.gitmodules` file exists (`git submodule status` reports `fatal: no submodule mapping found in .gitmodules for path 'kfx_converter'`), so `kfx_converter` is a dangling gitlink with no configured remote URL.
+## Release Backup
+- Full historical pre-cleanup snapshot of `Azath v18.8 KFX`: branch `release/v18.8-kfx-stable` and tag `v18.8-kfx` (`515c02b`).
 

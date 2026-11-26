@@ -2,5 +2,7 @@
 *.apk
 *.idsig
 07_APK_EPUB_INGESTION_MOD/release/
-kfx_converter/target/
+kfx_converter/
 kfxgen/
+__pycache__/
+*.pyc
