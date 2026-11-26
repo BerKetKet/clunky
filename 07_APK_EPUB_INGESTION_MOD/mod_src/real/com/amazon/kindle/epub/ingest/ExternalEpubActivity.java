@@ -308,10 +308,10 @@ public class ExternalEpubActivity extends Activity {
 
                 boolean ok = convertEpubToKfx(this, stagedEpub, outKfx, KFX_CONV_TIMEOUT_SEC, cancelFlag);
                 if (cancelFlag.get()) {
-                    File partOut = new File(outKfx.getParentFile(), outKfx.getName() + ".part");
-                    File partCover = new File(partOut.getAbsolutePath() + ".cover.jpg");
-                    if (partOut.exists()) partOut.delete();
-                    if (partCover.exists()) partCover.delete();
+                    deleteAttemptArtifacts(buildAttemptPartFile(outKfx, "inproc"));
+                    deleteAttemptArtifacts(buildAttemptPartFile(outKfx, "native1"));
+                    deleteAttemptArtifacts(buildAttemptPartFile(outKfx, "native2"));
+                    deleteAttemptArtifacts(new File(outKfx.getParentFile(), outKfx.getName() + ".part"));
                     if (stagedEpub.exists()) stagedEpub.delete();
                     return;
                 }
@@ -380,56 +380,115 @@ public class ExternalEpubActivity extends Activity {
         return convertEpubToKfx(ctx, epubIn, kfxOut, KFX_CONV_TIMEOUT_SEC, null);
     }
 
+    public static File buildAttemptPartFile(File kfxOut, String attemptTag) {
+        if (kfxOut == null) return null;
+        File parent = kfxOut.getParentFile();
+        String tag = (attemptTag == null) ? "" : attemptTag.replaceAll("[^A-Za-z0-9_-]+", "");
+        if (tag.isEmpty()) tag = "attempt";
+        return new File(parent != null ? parent : new File("."), kfxOut.getName() + ".part." + tag);
+    }
+
+    public static long computeDeadlineNanos(long nowNanos, long totalTimeoutSec) {
+        return nowNanos + Math.max(1L, totalTimeoutSec) * 1_000_000_000L;
+    }
+
+    public static long remainingTimeoutMs(long nowNanos, long deadlineNanos) {
+        long rem = (deadlineNanos - nowNanos) / 1_000_000L;
+        return rem > 0L ? rem : 0L;
+    }
+
+    public static boolean shouldRunFallback(
+            boolean primaryOk, boolean primaryTimedOut, boolean cancelled, long nowNanos, long deadlineNanos) {
+        return !primaryOk && !primaryTimedOut && !cancelled && remainingTimeoutMs(nowNanos, deadlineNanos) > 0L;
+    }
+
+    private static void deleteAttemptArtifacts(File partFile) {
+        if (partFile == null) return;
+        if (partFile.exists()) partFile.delete();
+        File partCover = new File(partFile.getAbsolutePath() + ".cover.jpg");
+        if (partCover.exists()) partCover.delete();
+    }
+
     public static boolean convertEpubToKfx(Context ctx, File epubIn, File kfxOut,
                                            long timeoutSec, AtomicBoolean cancelFlag) {
         if (kfxOut == null) return false;
         File parent = kfxOut.getParentFile();
         if (parent != null && !parent.exists()) parent.mkdirs();
-        final File partOut = new File(parent, kfxOut.getName() + ".part");
-        final File partCover = new File(partOut.getAbsolutePath() + ".cover.jpg");
-        final File finalCover = new File(kfxOut.getAbsolutePath() + ".cover.jpg");
-        if (partOut.exists()) partOut.delete();
-        if (partCover.exists()) partCover.delete();
 
+        final File partInproc = buildAttemptPartFile(kfxOut, "inproc");
+        final File partNative1 = buildAttemptPartFile(kfxOut, "native1");
+        final File partNative2 = buildAttemptPartFile(kfxOut, "native2");
+        final File legacyPart = new File(parent != null ? parent : new File("."), kfxOut.getName() + ".part");
+        final File finalCover = new File(kfxOut.getAbsolutePath() + ".cover.jpg");
+        deleteAttemptArtifacts(partInproc);
+        deleteAttemptArtifacts(partNative1);
+        deleteAttemptArtifacts(partNative2);
+        deleteAttemptArtifacts(legacyPart);
+
+        final long deadlineNanos = computeDeadlineNanos(System.nanoTime(), timeoutSec);
         boolean ok = false;
-        ExecutorService inProcExec = null;
+        boolean inProcCompleted = false;
+        boolean inProcTimedOut = false;
+        File winningPart = null;
+
+        long inProcRemSec = Math.max(1L, (remainingTimeoutMs(System.nanoTime(), deadlineNanos) + 999L) / 1000L);
+        final java.util.concurrent.FutureTask<Boolean> fut = new java.util.concurrent.FutureTask<>(
+                (Callable<Boolean>) () -> com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(
+                        epubIn, partInproc, inProcRemSec, cancelFlag));
+        final Thread inProcThread = new Thread(fut, "azath-inproc-kfx");
+        inProcThread.setDaemon(true);
         try {
-            inProcExec = Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(r, "azath-inproc-kfx");
-                t.setDaemon(true);
-                return t;
-            });
-            Future<Boolean> fut = inProcExec.submit((Callable<Boolean>) () ->
-                    com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubIn, partOut, timeoutSec, cancelFlag));
-            long deadline = System.currentTimeMillis() + Math.max(1L, timeoutSec) * 1000L;
-            while (System.currentTimeMillis() < deadline) {
+            inProcThread.start();
+            while (true) {
                 if (cancelFlag != null && cancelFlag.get()) {
                     fut.cancel(true);
+                    inProcThread.interrupt();
+                    break;
+                }
+                long remMs = remainingTimeoutMs(System.nanoTime(), deadlineNanos);
+                if (remMs <= 0L) {
+                    inProcTimedOut = true;
                     break;
                 }
                 try {
-                    Boolean res = fut.get(250, TimeUnit.MILLISECONDS);
-                    ok = Boolean.TRUE.equals(res) && isValidKfxPart(partOut);
+                    long sliceMs = Math.min(250L, remMs);
+                    Boolean res = fut.get(Math.max(1L, sliceMs), TimeUnit.MILLISECONDS);
+                    inProcCompleted = true;
+                    if (Boolean.TRUE.equals(res) && isValidKfxPart(partInproc)) {
+                        ok = true;
+                        winningPart = partInproc;
+                    }
                     break;
                 } catch (java.util.concurrent.TimeoutException te) {
-                    // keep polling until deadline or cancelFlag
+                    // continue until shared deadline or cancelFlag
                 }
             }
-            if (!fut.isDone()) {
-                fut.cancel(true);
-                Log.w(TAG, "EpubTranscoder.transcodeToKfx timed out or cancelled after " + timeoutSec + "s");
+            if (!inProcCompleted && (cancelFlag == null || !cancelFlag.get())) {
+                inProcTimedOut = true;
+                Log.w(TAG, "EpubTranscoder.transcodeToKfx timed out at shared deadline (" + timeoutSec + "s)");
             }
         } catch (Throwable t) {
             Log.w(TAG, "EpubTranscoder direct call failed: " + t.getMessage());
         } finally {
-            if (inProcExec != null) {
-                try { inProcExec.shutdownNow(); } catch (Throwable ignored) {}
+            if (!fut.isDone()) {
+                fut.cancel(true);
+                inProcThread.interrupt();
+            }
+            if (!ok) {
+                try {
+                    inProcThread.join(750L);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+                if (inProcThread.isAlive()) {
+                    Log.w(TAG, "In-process converter thread still running after 750ms join");
+                }
             }
         }
 
         try {
-            if (!ok && (cancelFlag == null || !cancelFlag.get())) {
-                if (partOut.exists()) partOut.delete();
+            boolean cancelled = cancelFlag != null && cancelFlag.get();
+            if (shouldRunFallback(ok, inProcTimedOut, cancelled, System.nanoTime(), deadlineNanos)) {
                 File bin = new File(ctx.getApplicationInfo().nativeLibraryDir, "libkfxconv.so");
                 if (!bin.exists() && isDebuggable(ctx)) {
                     bin = new File("/data/local/tmp/kfx-conv");
@@ -438,42 +497,53 @@ public class ExternalEpubActivity extends Activity {
                     Log.e(TAG, "libkfxconv.so missing at " + bin.getAbsolutePath());
                     return false;
                 }
+                File[] attemptParts = new File[] { partNative1, partNative2 };
                 String[][] argVariants = new String[][] {
-                    { bin.getAbsolutePath(), epubIn.getAbsolutePath(), "-o", partOut.getAbsolutePath() },
-                    { bin.getAbsolutePath(), epubIn.getAbsolutePath(), partOut.getAbsolutePath() }
+                    { bin.getAbsolutePath(), epubIn.getAbsolutePath(), "-o", partNative1.getAbsolutePath() },
+                    { bin.getAbsolutePath(), epubIn.getAbsolutePath(), partNative2.getAbsolutePath() }
                 };
-                for (String[] cmd : argVariants) {
-                    if (cancelFlag != null && cancelFlag.get()) break;
-                    if (partOut.exists()) partOut.delete();
+                for (int i = 0; i < argVariants.length; i++) {
+                    cancelled = cancelFlag != null && cancelFlag.get();
+                    if (cancelled || remainingTimeoutMs(System.nanoTime(), deadlineNanos) <= 0L) {
+                        break;
+                    }
+                    File attemptPart = attemptParts[i];
+                    deleteAttemptArtifacts(attemptPart);
                     StringBuilder outLog = new StringBuilder();
-                    int code = runProcessWithTimeout(cmd, timeoutSec, cancelFlag, outLog);
-                    Log.i(TAG, "libkfxconv exit=" + code + " partOut=" + partOut.length() + "B");
-                    if (code == 0 && isValidKfxPart(partOut)) {
+                    int code = runProcessWithTimeoutUntil(argVariants[i], deadlineNanos, cancelFlag, outLog);
+                    Log.i(TAG, "libkfxconv attempt=" + attemptPart.getName() + " exit=" + code + " size=" + attemptPart.length() + "B");
+                    if (code == 0 && isValidKfxPart(attemptPart)) {
                         ok = true;
+                        winningPart = attemptPart;
                         break;
                     }
                     Log.w(TAG, "libkfxconv output: " + outLog);
+                    if (code == -1 || code == -2) {
+                        break;
+                    }
                 }
             }
 
-            if (ok && (cancelFlag == null || !cancelFlag.get())) {
+            cancelled = cancelFlag != null && cancelFlag.get();
+            if (ok && winningPart != null && !cancelled) {
                 if (kfxOut.exists()) kfxOut.delete();
-                if (!partOut.renameTo(kfxOut)) {
-                    Log.e(TAG, "Atomic rename failed: " + partOut.getAbsolutePath() + " -> " + kfxOut.getAbsolutePath());
+                if (!winningPart.renameTo(kfxOut)) {
+                    Log.e(TAG, "Atomic rename failed: " + winningPart.getAbsolutePath() + " -> " + kfxOut.getAbsolutePath());
                     return false;
                 }
-                if (partCover.exists() && partCover.length() > 0) {
+                File winCover = new File(winningPart.getAbsolutePath() + ".cover.jpg");
+                if (winCover.exists() && winCover.length() > 0) {
                     if (finalCover.exists()) finalCover.delete();
-                    partCover.renameTo(finalCover);
+                    winCover.renameTo(finalCover);
                 }
                 return true;
             }
             return false;
         } finally {
-            if (!ok || (cancelFlag != null && cancelFlag.get())) {
-                if (partOut.exists()) partOut.delete();
-                if (partCover.exists()) partCover.delete();
-            }
+            deleteAttemptArtifacts(partInproc);
+            deleteAttemptArtifacts(partNative1);
+            deleteAttemptArtifacts(partNative2);
+            deleteAttemptArtifacts(legacyPart);
         }
     }
 
@@ -483,8 +553,16 @@ public class ExternalEpubActivity extends Activity {
      */
     public static int runProcessWithTimeout(String[] cmd, long timeoutSec,
                                             AtomicBoolean cancelFlag, StringBuilder outLog) {
+        return runProcessWithTimeoutUntil(cmd, computeDeadlineNanos(System.nanoTime(), timeoutSec), cancelFlag, outLog);
+    }
+
+    public static int runProcessWithTimeoutUntil(String[] cmd, long deadlineNanos,
+                                                 AtomicBoolean cancelFlag, StringBuilder outLog) {
         Process proc = null;
         try {
+            if (remainingTimeoutMs(System.nanoTime(), deadlineNanos) <= 0L) {
+                return -1;
+            }
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
             proc = pb.start();
@@ -502,15 +580,15 @@ public class ExternalEpubActivity extends Activity {
             drainer.setDaemon(true);
             drainer.start();
 
-            long deadline = System.currentTimeMillis() + Math.max(1L, timeoutSec) * 1000L;
             boolean finished = false;
-            while (System.currentTimeMillis() < deadline) {
+            while (remainingTimeoutMs(System.nanoTime(), deadlineNanos) > 0L) {
                 if ((cancelFlag != null && cancelFlag.get()) || Thread.currentThread().isInterrupted()) {
                     proc.destroyForcibly();
                     try { proc.waitFor(2, TimeUnit.SECONDS); } catch (Throwable ignored) {}
                     return -2;
                 }
-                if (proc.waitFor(200, TimeUnit.MILLISECONDS)) {
+                long remMs = remainingTimeoutMs(System.nanoTime(), deadlineNanos);
+                if (proc.waitFor(Math.min(200L, Math.max(1L, remMs)), TimeUnit.MILLISECONDS)) {
                     finished = true;
                     break;
                 }
@@ -518,7 +596,7 @@ public class ExternalEpubActivity extends Activity {
             if (!finished) {
                 proc.destroyForcibly();
                 try { proc.waitFor(2, TimeUnit.SECONDS); } catch (Throwable ignored) {}
-                Log.w(TAG, "Process timed out after " + timeoutSec + "s; destroyed forcibly");
+                Log.w(TAG, "Process timed out at shared deadline; destroyed forcibly");
                 return -1;
             }
             try { drainer.join(500); } catch (Throwable ignored) {}

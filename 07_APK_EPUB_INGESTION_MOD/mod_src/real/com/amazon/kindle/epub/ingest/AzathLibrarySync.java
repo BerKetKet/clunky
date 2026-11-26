@@ -277,6 +277,11 @@ public final class AzathLibrarySync {
         return privDir.isDirectory() && privDir.canRead() && privDir.listFiles() != null;
     }
 
+    public static boolean isPartArtifactName(String lowerName) {
+        if (lowerName == null || lowerName.isEmpty()) return false;
+        return lowerName.endsWith(".part") || lowerName.contains(".kfx.part.");
+    }
+
     public static final class ReconcilePreview {
         public final ReconcilePlan forcedPlan;
         public final boolean circuitBreakerWouldTrip;
@@ -506,7 +511,7 @@ public final class AzathLibrarySync {
             } else {
                 for (File f : sdFiles) {
                     String lower = f.getName().toLowerCase(Locale.US);
-                    if (f.isFile() && lower.endsWith(".part")) {
+                    if (f.isFile() && isPartArtifactName(lower)) {
                         if (now - f.lastModified() > STALE_PART_AGE_MS && f.delete()) {
                             Log.i(TAG, "Deleted stale .part file: " + f.getAbsolutePath());
                             changes++;
@@ -533,7 +538,7 @@ public final class AzathLibrarySync {
             } else if (privFiles != null) {
                 for (File f : privFiles) {
                     String lower = f.getName().toLowerCase(Locale.US);
-                    if (f.isFile() && lower.endsWith(".part")) {
+                    if (f.isFile() && isPartArtifactName(lower)) {
                         if (now - f.lastModified() > STALE_PART_AGE_MS && f.delete()) {
                             Log.i(TAG, "Deleted stale .part file: " + f.getAbsolutePath());
                             changes++;
