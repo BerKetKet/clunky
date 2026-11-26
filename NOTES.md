@@ -1,6 +1,15 @@
 # Kindle Android v8.159.0.100 - Deployment & Restoration Notes
 
 ## Status
+- **Round 166 QC Closeout (`Azath v18.7 KFX`, branch `round-166-qc-closeout`) Verified & Pushed (2026-11-26)**:
+  - Executed **Tasks 1–10** strictly sequentially (`61926ea`, `1d73c4c`, `d6ca380`, `efc0c70`, `1b6ac64`, `ad3ddf8`, `7f837b4`, `990dfe6`, `d2376f2`, `4369484`) from `b0ff924`.
+  - Task 1 (`sleep 300` timeout test): `rc=-1 elapsedMs=2052 stdoutLen=0 procAliveAfterTimeout=false partExists=false partCoverExists=false stagedExists=false` + `T1_CANCEL rc=-2 elapsedCancelMs=403 alive=false` (**PARTIAL** — JVM host verified; M30 hung native binary N/A).
+  - Pure-JVM unit tests (`./scripts/run_unit_tests.sh`): `AzathUnitTests: passed=84 failed=0 total=84`.
+  - Deep security/stability audit written to `QC_FINDINGS_ROUND_166.md`; P0/P1 fixed in `EpubTranscoder.java`, `FolioWebBrowserDialog.java`, `OpenCatalogView.java`, and `FolioMetadataBackup.java`.
+  - Built `classes9.dex` (`562,824` B), deployed `com.azath.reader` (`lastUpdateTime=2026-11-26 11:18:08`), and staged `07_APK_EPUB_INGESTION_MOD/release/azath_v18.7_kfx/base.apk` (`138,922,087` B, SHA256 `7d04b3afb5c67ed8cf5e5708f47ee95930f634741104ea12dadcdfbd3b9930d8`).
+  - M30 verification (`32001776e8e82623`): `v18.7 KFX` + `Force Reconcile Preview` (`activeKfx=30`, `0` missing/orphan), `Granite <-> Limestone` hot-swap + `StandAloneBookReaderActivity` open without `StrictMode` (`PID_START=4764 == PID_AFTER_THEME=4764 == PID_AFTER_READER=4764`), blocked `file:///data/data/com.azath.reader/databases/kindle_library.db` cleanly, `Launch-time enrichment sweep queued 24 book(s)` + live `Unknown Author` mismatch rejection, `CONT` KFX header verified (`xxd`), verbatim M30 `PRAGMA table_info` captured (`LocalContent.FILE_PATH` present, `KindleContent`/`UserContent` no `FILE_PATH`), stock `com.amazon.kindle` untouched (`lastUpdateTime=2026-11-19 21:59:23`), zero `FATAL EXCEPTION` / `SIGSYS` / `SQLiteConstraintException`.
+  - **Cover Architecture Directive (Mandatory)**:
+    > "The approach to display the cover as part of the book is a mistake. The correct path to approach the cover to render properly reliably is the following: when parsing the EPUB for the first time and converting it, remove the cover page from the reflowable spine and take the image for the cover. It is then processed separately and kept in its own class/structure and inserted when displaying the book separately (as a dedicated UI cover view) rather than as a reflowable spine page."
 - **Round 165 QC Remediation (`Azath v18.6 KFX`, branch `round-165-qc-fixes`) Verified & Pushed (2026-11-26)**:
   - Completed Tasks `E1`–`E6` (`574707a`, `fc357a7`, `62657af`, `531340c`, `9140cfa`, `267164a`), `F1`–`F6` (`1a03839`, `8f48a76`, `92bd2cb`, `3f54edb`, `dc40c8b`, `bc232b9`), and `G-P0P1` (`ba42c77`, `QC_FINDINGS_ROUND_165.md`) on branch `round-165-qc-fixes`.
   - Pure-JVM unit tests (`./scripts/run_unit_tests.sh`): `AzathUnitTests: passed=38 failed=0 total=38`.
