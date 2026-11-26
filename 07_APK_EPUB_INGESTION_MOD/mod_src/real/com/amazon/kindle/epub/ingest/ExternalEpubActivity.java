@@ -461,6 +461,18 @@ public class ExternalEpubActivity extends Activity {
         if (partFile.exists()) partFile.delete();
         File partCover = new File(partFile.getAbsolutePath() + ".cover.jpg");
         if (partCover.exists()) partCover.delete();
+        deleteTree(new File(partFile.getAbsolutePath() + ".sdr"));
+    }
+
+    private static void deleteTree(File f) {
+        if (f == null || !f.exists()) return;
+        if (f.isDirectory()) {
+            File[] kids = f.listFiles();
+            if (kids != null) {
+                for (File k : kids) deleteTree(k);
+            }
+        }
+        try { f.delete(); } catch (Throwable ignored) {}
     }
 
     public static boolean convertEpubToKfx(Context ctx, File epubIn, File kfxOut,
