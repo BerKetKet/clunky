@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.net.http.SslError;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
@@ -19,6 +20,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
+import android.webkit.SslErrorHandler;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -579,6 +581,8 @@ public final class FolioWebBrowserDialog {
         WebSettings ws = webView.getSettings();
         ws.setJavaScriptEnabled(true);
         ws.setDomStorageEnabled(true);
+        ws.setAllowFileAccess(false);
+        ws.setAllowContentAccess(false);
         ws.setLoadWithOverviewMode(true);
         ws.setUseWideViewPort(true);
         ws.setBuiltInZoomControls(true);
@@ -642,9 +646,24 @@ public final class FolioWebBrowserDialog {
             }
 
             @Override
+            public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
+                if (handler != null) {
+                    handler.cancel();
+                }
+                Log.w(TAG, "Blocked TLS SSL error on WebView: " + (error != null ? error.toString() : "unknown"));
+                mainHandler.post(new Runnable() {
+                    @Override public void run() {
+                        if (!FolioTheme.isContextDead(ctx)) {
+                            Toast.makeText(ctx, "Blocked insecure TLS certificate", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+            }
+
+            @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                String safeUrl = failingUrl != null ? failingUrl.replace("<", "&lt;").replace(">", "&gt;") : "";
-                String safeDesc = description != null ? description.replace("<", "&lt;").replace(">", "&gt;") : "No internet connection";
+                String safeUrl = escapeHtmlAttr(failingUrl != null ? failingUrl : "");
+                String safeDesc = escapeHtmlAttr(description != null ? description : "No internet connection");
                 String html = "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
                         + "<style>body{margin:0;padding:36px 24px;background:#0E0F11;color:#ECE8E0;font-family:sans-serif;}"
                         + ".card{background:#1C1E22;border:1px solid #32353B;border-radius:16px;padding:24px;}"
@@ -1021,6 +1040,73 @@ public final class FolioWebBrowserDialog {
         return path.endsWith(".epub") || path.endsWith(".kepub.epub");
     }
 
+    private static String escapeHtmlAttr(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
+    }
+
+    /**
+     * Pure, Android-free Content-Disposition / URL filename sanitizer:
+     * strips directories, "..", NUL/control chars, unsafe chars, enforces .epub, and caps <= 80 chars.
+     */
+    public static String sanitizeDownloadFilename(String contentDisposition, String urlOrFallback) {
+        String candidate = null;
+        if (contentDisposition != null && !contentDisposition.trim().isEmpty()) {
+            java.util.regex.Matcher mUtf8 = java.util.regex.Pattern.compile(
+                    "(?i)filename\\*\\s*=\\s*(?:UTF-8''|utf-8'')?\"?([^\";\\r\\n]+)\"?")
+                    .matcher(contentDisposition);
+            if (mUtf8.find()) {
+                candidate = mUtf8.group(1);
+            } else {
+                java.util.regex.Matcher mPlain = java.util.regex.Pattern.compile(
+                        "(?i)filename\\s*=\\s*(?:\"([^\"]*)\"|([^;\\r\\n]+))")
+                        .matcher(contentDisposition);
+                if (mPlain.find()) {
+                    candidate = mPlain.group(1) != null ? mPlain.group(1) : mPlain.group(2);
+                }
+            }
+        }
+        if ((candidate == null || candidate.trim().isEmpty()) && urlOrFallback != null) {
+            String u = urlOrFallback.trim();
+            int q = u.indexOf('?');
+            if (q >= 0) u = u.substring(0, q);
+            int hash = u.indexOf('#');
+            if (hash >= 0) u = u.substring(0, hash);
+            candidate = u;
+        }
+        if (candidate == null) candidate = "";
+        // Strip NUL and ASCII control chars first
+        candidate = candidate.replaceAll("[\\u0000-\\u001F\\u007F]+", "");
+        // Strip directory prefix (both / and \)
+        int sep = Math.max(candidate.lastIndexOf('/'), candidate.lastIndexOf('\\'));
+        if (sep >= 0) candidate = candidate.substring(sep + 1);
+        // Strip any remaining traversal or host-unsafe characters
+        while (candidate.contains("..")) {
+            candidate = candidate.replace("..", "_");
+        }
+        String clean = candidate.replaceAll("[^a-zA-Z0-9._-]+", "_").replaceAll("_+", "_");
+        clean = clean.replaceAll("^[._-]+|[._-]+$", "");
+        if (clean.toLowerCase(Locale.US).endsWith(".epub")) {
+            clean = clean.substring(0, clean.length() - 5).replaceAll("[._-]+$", "");
+        }
+        if (clean.isEmpty()) clean = "book";
+        if (clean.length() > 75) {
+            clean = clean.substring(0, 75).replaceAll("[._-]+$", "");
+            if (clean.isEmpty()) clean = "book";
+        }
+        return clean + ".epub";
+    }
+
+    private static boolean isSafeHttpUrl(String url) {
+        if (url == null) return false;
+        String lower = url.trim().toLowerCase(Locale.US);
+        return lower.startsWith("https://") || lower.startsWith("http://");
+    }
+
     private static void downloadAndIngestEpub(
             final Context ctx, final String urlStr, final String userAgent,
             final String contentDisposition, final String mimeType,
@@ -1028,8 +1114,27 @@ public final class FolioWebBrowserDialog {
             final TextView statusTv, final TextView openNowBtn,
             final AlertDialog[] dlgRef, final Runnable onImported) {
 
-        final String guessed = URLUtil.guessFileName(urlStr, contentDisposition, mimeType);
-        final String displayFile = (guessed != null && !guessed.isEmpty()) ? guessed : "book.epub";
+        if (!isSafeHttpUrl(urlStr)) {
+            mainHandler.post(new Runnable() {
+                @Override public void run() {
+                    if (!FolioTheme.isContextDead(ctx)) {
+                        Toast.makeText(ctx, "Blocked non-HTTP/HTTPS download URL", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            return;
+        }
+
+        String guessedName = sanitizeDownloadFilename(contentDisposition, null);
+        if ("book.epub".equals(guessedName)) {
+            try {
+                guessedName = sanitizeDownloadFilename(null, URLUtil.guessFileName(urlStr, contentDisposition, mimeType));
+            } catch (Throwable ignored) {
+                guessedName = sanitizeDownloadFilename(null, urlStr);
+            }
+        }
+        final String safeName = guessedName;
+        final String displayFile = safeName;
 
         mainHandler.post(new Runnable() {
             @Override public void run() {
@@ -1045,14 +1150,22 @@ public final class FolioWebBrowserDialog {
             @Override public void run() {
                 File tmpDir = new File(ctx.getCacheDir(), "folio_web_dl");
                 if (!tmpDir.exists()) tmpDir.mkdirs();
-                String safeName = displayFile.replaceAll("[^a-zA-Z0-9._-]", "_");
-                if (!safeName.toLowerCase(Locale.US).endsWith(".epub")) safeName = safeName + ".epub";
                 File dlFile = new File(tmpDir, safeName);
+                HttpURLConnection conn = null;
+                InputStream in = null;
+                FileOutputStream fos = null;
+                boolean dlOk = false;
 
                 try {
+                    String tmpCanon = tmpDir.getCanonicalPath() + File.separator;
+                    if (!dlFile.getCanonicalPath().startsWith(tmpCanon)) {
+                        throw new SecurityException("Blocked invalid download destination path");
+                    }
                     String currentUrl = urlStr;
-                    HttpURLConnection conn = null;
                     for (int hop = 0; hop < 6; hop++) {
+                        if (!isSafeHttpUrl(currentUrl)) {
+                            throw new SecurityException("Blocked redirect to non-HTTP(S) URL");
+                        }
                         URL u = new URL(currentUrl);
                         conn = (HttpURLConnection) u.openConnection();
                         conn.setInstanceFollowRedirects(false);
@@ -1077,6 +1190,7 @@ public final class FolioWebBrowserDialog {
                         if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
                             String loc = conn.getHeaderField("Location");
                             conn.disconnect();
+                            conn = null;
                             if (loc == null || loc.isEmpty()) break;
                             currentUrl = new URL(u, loc).toString();
                             continue;
@@ -1088,15 +1202,22 @@ public final class FolioWebBrowserDialog {
                     }
 
                     final long totalLen = conn.getContentLengthLong();
-                    InputStream in = new BufferedInputStream(conn.getInputStream());
-                    FileOutputStream fos = new FileOutputStream(dlFile);
+                    final long maxBytes = 250L * 1024L * 1024L;
+                    if (totalLen > maxBytes) {
+                        throw new Exception("EPUB exceeds 250 MB limit");
+                    }
+                    in = new BufferedInputStream(conn.getInputStream());
+                    fos = new FileOutputStream(dlFile);
                     byte[] buf = new byte[16384];
                     long readBytes = 0;
                     long lastUiMs = 0;
                     int r;
                     while ((r = in.read(buf)) != -1) {
-                        fos.write(buf, 0, r);
                         readBytes += r;
+                        if (readBytes > maxBytes) {
+                            throw new Exception("EPUB exceeds 250 MB limit");
+                        }
+                        fos.write(buf, 0, r);
                         long now = System.currentTimeMillis();
                         if (now - lastUiMs > 220) {
                             lastUiMs = now;
@@ -1111,14 +1232,18 @@ public final class FolioWebBrowserDialog {
                             });
                         }
                     }
+                    fos.flush();
                     fos.close();
+                    fos = null;
                     in.close();
+                    in = null;
                     conn.disconnect();
+                    conn = null;
 
                     if (!isZipFile(dlFile)) {
-                        dlFile.delete();
                         throw new Exception("Downloaded file is not a valid EPUB");
                     }
+                    dlOk = true;
 
                     mainHandler.post(new Runnable() {
                         @Override public void run() {
@@ -1126,37 +1251,13 @@ public final class FolioWebBrowserDialog {
                         }
                     });
 
-                    File sdKindle = new File("/sdcard/kindle");
-                    if (!sdKindle.exists()) sdKindle.mkdirs();
-                    File targetDir = (sdKindle.exists() && sdKindle.canWrite())
-                            ? sdKindle : new File(ctx.getFilesDir(), "folio_library");
-                    if (!targetDir.exists()) targetDir.mkdirs();
-
-                    EpubMetadataExtractor.BookMeta meta = EpubMetadataExtractor.extract(dlFile, safeName);
-                    String bookKey = FolioMetadataDb.computeBookKey(meta.title, dlFile.length());
-                    String safeBase = sanitizeFilename(meta.title) + "_" + bookKey;
-                    final File outKfx = new File(targetDir, safeBase + ".kfx");
-                    File outCover = new File(outKfx.getAbsolutePath() + ".cover.jpg");
-
-                    boolean converted = ExternalEpubActivity.convertEpubToKfx(ctx, dlFile, outKfx);
-                    if (!converted || !outKfx.exists() || outKfx.length() < 128) {
-                        throw new Exception("KFX conversion failed");
+                    AzathLibrarySync.IngestResult ir = AzathLibrarySync.ingestEpub(ctx, dlFile, safeName, true);
+                    if (ir == null || !ir.ok || ir.kfxFile == null || !ir.kfxFile.exists()) {
+                        throw new Exception(ir != null && ir.error != null ? ir.error : "KFX conversion failed");
                     }
-
-                    try { MetadataEnricher.enrichInPlace(meta); } catch (Throwable ignored) {}
-
-                    FolioMetadataDb db = new FolioMetadataDb(ctx);
-                    try {
-                        db.upsertBook(bookKey, outKfx, outCover, safeName, meta);
-                    } finally {
-                        db.close();
-                    }
-                    if (!outKfx.getAbsolutePath().startsWith("/sdcard/kindle")) {
-                            FolioMetadataDb.registerInKindleLibraryDb(ctx, bookKey, outKfx, outCover, meta);
-                        }
-                        dp.g.ingestKfxLive(outKfx);
-                        com.amazon.kindle.epub.catalog.FolioTheme.triggerLibraryRescan(ctx, outKfx);
-                        try { android.media.MediaScannerConnection.scanFile(ctx, new String[]{ outKfx.getAbsolutePath() }, null, null); } catch (Throwable ignored) {}
+                    final File outKfx = ir.kfxFile;
+                    EpubMetadataExtractor.BookMeta meta = ir.meta != null ? ir.meta : new EpubMetadataExtractor.BookMeta();
+                    com.amazon.kindle.epub.catalog.FolioTheme.triggerLibraryRescan(ctx, outKfx);
                     recordRecentImport(ctx, meta.title, meta.author, outKfx.getAbsolutePath());
                     dlFile.delete();
 
@@ -1187,6 +1288,19 @@ public final class FolioWebBrowserDialog {
                             openNowBtn.setVisibility(View.GONE);
                         }
                     });
+                } finally {
+                    if (fos != null) {
+                        try { fos.close(); } catch (Throwable ignored) {}
+                    }
+                    if (in != null) {
+                        try { in.close(); } catch (Throwable ignored) {}
+                    }
+                    if (conn != null) {
+                        try { conn.disconnect(); } catch (Throwable ignored) {}
+                    }
+                    if (dlFile.exists()) {
+                        try { dlFile.delete(); } catch (Throwable ignored) {}
+                    }
                 }
             }
         }, "folio-web-epub-dl").start();

@@ -4,13 +4,20 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteDatabaseLockedException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import org.json.JSONArray;
+
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -27,7 +34,7 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
 
     private static final String TAG = "FolioMetadataDb";
     private static final String DB_NAME = "folio_metadata.db";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
 
     public static final class BookRecord {
         public long id;
@@ -40,17 +47,40 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         public String publisher = "";
         public String pubDate = "";
         public String genres = "";
+        public String genresJson = "";
         public String language = "";
         public String isbn = "";
         public String description = "";
         public String openLibraryKey = "";
+        public String contentHash = "";
+        public long sourceSize;
         public long addedAt;
+
+        public List<String> genreList() {
+            List<String> out = new ArrayList<>();
+            if (genresJson != null && !genresJson.trim().isEmpty()) {
+                try {
+                    JSONArray arr = new JSONArray(genresJson);
+                    for (int i = 0; i < arr.length(); i++) {
+                        String g = arr.optString(i, "").trim();
+                        if (!g.isEmpty()) out.add(g);
+                    }
+                    if (!out.isEmpty()) return out;
+                } catch (Throwable ignored) {}
+            }
+            if (genres != null && !genres.trim().isEmpty()) {
+                for (String part : genres.split(",")) {
+                    String g = part.trim();
+                    if (!g.isEmpty()) out.add(g);
+                }
+            }
+            return out;
+        }
 
         public boolean hasGenre(String target) {
             if (target == null || target.isEmpty() || "All".equalsIgnoreCase(target)) return true;
-            if (genres == null || genres.isEmpty()) return false;
             String needle = target.trim().toLowerCase(Locale.ROOT);
-            for (String part : genres.split(",")) {
+            for (String part : genreList()) {
                 if (part.trim().toLowerCase(Locale.ROOT).equals(needle)) return true;
             }
             return false;
@@ -60,6 +90,11 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
     public FolioMetadataDb(Context context) {
         super(context.getApplicationContext(), DB_NAME, null, DB_VERSION);
     }
+
+    private static final String SELECT_COLS =
+            "id, book_key, kfx_path, cover_path, source_name, title, author, "
+            + "publisher, pub_date, genres, language, isbn, description, open_library_key, "
+            + "added_at, content_hash, source_size, genres_json";
 
     @Override
     public void onCreate(SQLiteDatabase db) {
@@ -74,72 +109,192 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                 + "publisher TEXT, "
                 + "pub_date TEXT, "
                 + "genres TEXT, "
+                + "genres_json TEXT, "
                 + "language TEXT, "
                 + "isbn TEXT, "
                 + "description TEXT, "
                 + "open_library_key TEXT, "
+                + "content_hash TEXT, "
+                + "source_size INTEGER, "
                 + "added_at INTEGER NOT NULL"
                 + ")");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        if (oldVersion < 2) {
+            java.util.Map<String, String> cols = tableColumns(db, "books_metadata");
+            if (!cols.containsKey("CONTENT_HASH")) {
+                db.execSQL("ALTER TABLE books_metadata ADD COLUMN content_hash TEXT");
+            }
+            if (!cols.containsKey("SOURCE_SIZE")) {
+                db.execSQL("ALTER TABLE books_metadata ADD COLUMN source_size INTEGER");
+            }
+            if (!cols.containsKey("GENRES_JSON")) {
+                db.execSQL("ALTER TABLE books_metadata ADD COLUMN genres_json TEXT");
+            }
+            // Best-effort migration of legacy CSV genres -> genres_json
+            Cursor c = null;
+            try {
+                c = db.rawQuery("SELECT id, genres, genres_json FROM books_metadata", null);
+                while (c.moveToNext()) {
+                    long id = c.getLong(0);
+                    String csv = c.getString(1);
+                    String existingJson = c.getString(2);
+                    if ((existingJson == null || existingJson.trim().isEmpty())
+                            && csv != null && !csv.trim().isEmpty()) {
+                        String json = genresCsvToJson(csv);
+                        if (!json.isEmpty()) {
+                            ContentValues cv = new ContentValues();
+                            cv.put("genres_json", json);
+                            db.update("books_metadata", cv, "id = ?", new String[]{ String.valueOf(id) });
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "onUpgrade v2 genres_json migration warning", t);
+            } finally {
+                if (c != null) c.close();
+            }
+        }
+    }
+
+    public static String genresCsvToJson(String csv) {
+        if (csv == null || csv.trim().isEmpty()) return "";
+        JSONArray arr = new JSONArray();
+        Set<String> seen = new LinkedHashSet<>();
+        for (String part : csv.split(",")) {
+            String g = part.trim();
+            if (!g.isEmpty() && !EpubMetadataExtractor.isNoiseTag(g)
+                    && seen.add(g.toLowerCase(Locale.ROOT))) {
+                arr.put(g);
+            }
+        }
+        return arr.length() > 0 ? arr.toString() : "";
+    }
+
+    public static String dedupeGenresCsv(String csv) {
+        if (csv == null || csv.trim().isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        Set<String> seen = new LinkedHashSet<>();
+        for (String part : csv.split(",")) {
+            String g = part.trim();
+            if (!g.isEmpty() && !EpubMetadataExtractor.isNoiseTag(g)
+                    && seen.add(g.toLowerCase(Locale.ROOT))) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(g);
+            }
+        }
+        return sb.toString();
     }
 
     public void upsertBook(String bookKey, File kfxFile, File coverFile,
                            String sourceName, EpubMetadataExtractor.BookMeta meta) {
-        BookRecord prior = findExisting(bookKey, meta.title, meta.author);
-        String genres = meta.genresCsv();
-        if (genres.isEmpty() && prior != null && !prior.genres.isEmpty()) {
-            genres = prior.genres;
-        }
-        String publisher = meta.publisher != null && !meta.publisher.isEmpty()
-                ? meta.publisher : (prior != null ? prior.publisher : "");
-        String pubDate = meta.pubDate != null && !meta.pubDate.isEmpty()
-                ? meta.pubDate : (prior != null ? prior.pubDate : "");
-        String isbn = meta.isbn != null && !meta.isbn.isEmpty()
-                ? meta.isbn : (prior != null ? prior.isbn : "");
-        String olKey = meta.openLibraryKey != null && !meta.openLibraryKey.isEmpty()
-                ? meta.openLibraryKey : (prior != null ? prior.openLibraryKey : "");
+        upsertBook(bookKey, kfxFile, coverFile, sourceName, meta, null, 0L);
+    }
 
+    private static String nonBlankOrPrior(String incoming, String priorVal) {
+        if (incoming != null && !incoming.trim().isEmpty()) return incoming;
+        return priorVal != null ? priorVal : "";
+    }
+
+    public void upsertBook(String bookKey, File kfxFile, File coverFile,
+                           String sourceName, EpubMetadataExtractor.BookMeta meta,
+                           String contentHash, long sourceSize) {
+        String kfxPath = kfxFile.getAbsolutePath();
         SQLiteDatabase db = getWritableDatabase();
-        ContentValues cv = new ContentValues();
-        cv.put("book_key", bookKey);
-        cv.put("kfx_path", kfxFile.getAbsolutePath());
-        cv.put("cover_path", (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "");
-        cv.put("source_name", sourceName != null ? sourceName : kfxFile.getName());
-        cv.put("title", meta.title != null ? meta.title : kfxFile.getName());
-        cv.put("author", meta.author != null ? meta.author : "Unknown Author");
-        cv.put("publisher", publisher);
-        cv.put("pub_date", pubDate);
-        cv.put("genres", genres);
-        cv.put("language", meta.language != null ? meta.language : "");
-        cv.put("isbn", isbn);
-        cv.put("description", meta.description != null ? meta.description : "");
-        cv.put("open_library_key", olKey);
-        cv.put("added_at", System.currentTimeMillis());
-        db.insertWithOnConflict("books_metadata", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+        db.beginTransaction();
+        try {
+            java.util.Map<String, String> cols = tableColumns(db, "books_metadata");
+            BookRecord prior = null;
+            Cursor c = null;
+            try {
+                c = db.rawQuery(
+                        "SELECT " + SELECT_COLS
+                        + " FROM books_metadata WHERE book_key = ? OR kfx_path = ? LIMIT 1",
+                        new String[] { bookKey != null ? bookKey : "", kfxPath });
+                if (c.moveToFirst()) {
+                    prior = readRow(c);
+                }
+            } finally {
+                if (c != null) c.close();
+            }
+
+            String incomingCover = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "";
+            String coverPath = nonBlankOrPrior(incomingCover, prior != null ? prior.coverPath : "");
+            String genres = dedupeGenresCsv(nonBlankOrPrior(meta.genresCsv(), prior != null ? prior.genres : ""));
+            String genresJson = nonBlankOrPrior(genresCsvToJson(genres), prior != null ? prior.genresJson : "");
+            String publisher = nonBlankOrPrior(meta.publisher, prior != null ? prior.publisher : "");
+            String pubDate = nonBlankOrPrior(meta.pubDate, prior != null ? prior.pubDate : "");
+            String isbn = nonBlankOrPrior(meta.isbn, prior != null ? prior.isbn : "");
+            String olKey = nonBlankOrPrior(meta.openLibraryKey, prior != null ? prior.openLibraryKey : "");
+            String description = nonBlankOrPrior(meta.description, prior != null ? prior.description : "");
+            String language = nonBlankOrPrior(meta.language, prior != null ? prior.language : "");
+            long addedAt = (prior != null && prior.addedAt > 0) ? prior.addedAt : System.currentTimeMillis();
+
+            ContentValues cv = new ContentValues();
+            cv.put("book_key", prior != null && !prior.bookKey.isEmpty() ? prior.bookKey : bookKey);
+            cv.put("kfx_path", kfxPath);
+            cv.put("cover_path", coverPath);
+            cv.put("source_name", sourceName != null ? sourceName : kfxFile.getName());
+            cv.put("title", meta.title != null && !meta.title.trim().isEmpty()
+                    ? meta.title : (prior != null && !prior.title.isEmpty() ? prior.title : kfxFile.getName()));
+            cv.put("author", meta.author != null && !meta.author.trim().isEmpty()
+                    ? meta.author : (prior != null && !prior.author.isEmpty() ? prior.author : "Unknown Author"));
+            cv.put("publisher", publisher);
+            cv.put("pub_date", pubDate);
+            cv.put("genres", genres);
+            if (cols.containsKey("GENRES_JSON")) {
+                cv.put("genres_json", genresJson);
+            }
+            cv.put("language", language);
+            cv.put("isbn", isbn);
+            cv.put("description", description);
+            cv.put("open_library_key", olKey);
+            if (cols.containsKey("CONTENT_HASH") && contentHash != null && !contentHash.isEmpty()) {
+                cv.put("content_hash", contentHash);
+            }
+            if (cols.containsKey("SOURCE_SIZE") && sourceSize > 0) {
+                cv.put("source_size", sourceSize);
+            }
+            cv.put("added_at", addedAt);
+
+            if (prior != null) {
+                db.update("books_metadata", cv, "id = ?", new String[] { String.valueOf(prior.id) });
+            } else {
+                db.insertOrThrow("books_metadata", null, cv);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            if (db.inTransaction()) db.endTransaction();
+        }
     }
 
     /**
-     * Finds an existing imported book by book_key OR case-insensitive title+author
+     * Finds an existing imported book strictly by content_hash OR book_key ONLY
      * whose kfx_path still exists on disk.
      */
-    public BookRecord findExisting(String bookKey, String title, String author) {
+    public BookRecord findExisting(String bookKey, String contentHash) {
         SQLiteDatabase db = getReadableDatabase();
         Cursor c = null;
         try {
-            c = db.rawQuery(
-                    "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
-                    + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
-                    + "FROM books_metadata "
-                    + "WHERE book_key = ? OR (LOWER(TRIM(title)) = LOWER(TRIM(?)) AND LOWER(TRIM(author)) = LOWER(TRIM(?))) "
-                    + "ORDER BY added_at DESC LIMIT 1",
-                    new String[] {
-                        bookKey != null ? bookKey : "",
-                        title != null ? title : "",
-                        author != null ? author : ""
-                    });
+            java.util.Map<String, String> cols = tableColumns(db, "books_metadata");
+            boolean hasHashCol = cols.containsKey("CONTENT_HASH");
+            if (hasHashCol && contentHash != null && !contentHash.isEmpty()) {
+                c = db.rawQuery(
+                        "SELECT " + SELECT_COLS
+                        + " FROM books_metadata "
+                        + "WHERE content_hash = ? OR book_key = ? "
+                        + "ORDER BY added_at DESC LIMIT 1",
+                        new String[] { contentHash, bookKey != null ? bookKey : "" });
+            } else {
+                c = db.rawQuery(
+                        "SELECT " + SELECT_COLS
+                        + " FROM books_metadata "
+                        + "WHERE book_key = ? "
+                        + "ORDER BY added_at DESC LIMIT 1",
+                        new String[] { bookKey != null ? bookKey : "" });
+            }
             if (c.moveToFirst()) {
                 BookRecord rec = readRow(c);
                 if (rec.kfxPath != null && new File(rec.kfxPath).exists()) {
@@ -154,15 +309,47 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         return null;
     }
 
+    /**
+     * Advisory-only title+author match for import dialog hints.
+     * Never triggers when author is blank or "Unknown Author", and never merges automatically.
+     */
+    public BookRecord findPossibleDuplicate(String title, String author) {
+        if (title == null || title.trim().isEmpty()) return null;
+        if (author == null || author.trim().isEmpty()
+                || "Unknown Author".equalsIgnoreCase(author.trim())) {
+            return null;
+        }
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor c = null;
+        try {
+            c = db.rawQuery(
+                    "SELECT " + SELECT_COLS
+                    + " FROM books_metadata "
+                    + "WHERE LOWER(TRIM(title)) = LOWER(TRIM(?)) AND LOWER(TRIM(author)) = LOWER(TRIM(?)) "
+                    + "ORDER BY added_at DESC LIMIT 1",
+                    new String[] { title, author });
+            if (c.moveToFirst()) {
+                BookRecord rec = readRow(c);
+                if (rec.kfxPath != null && new File(rec.kfxPath).exists()) {
+                    return rec;
+                }
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "findPossibleDuplicate query failed", t);
+        } finally {
+            if (c != null) c.close();
+        }
+        return null;
+    }
+
     public List<BookRecord> getAllBooks() {
         List<BookRecord> out = new ArrayList<>();
         SQLiteDatabase db = getReadableDatabase();
         Cursor c = null;
         try {
             c = db.rawQuery(
-                    "SELECT id, book_key, kfx_path, cover_path, source_name, title, author, "
-                    + "publisher, pub_date, genres, language, isbn, description, open_library_key, added_at "
-                    + "FROM books_metadata ORDER BY added_at DESC", null);
+                    "SELECT " + SELECT_COLS
+                    + " FROM books_metadata ORDER BY added_at DESC", null);
             while (c.moveToNext()) {
                 out.add(readRow(c));
             }
@@ -179,15 +366,12 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         set.add("All");
         if (books != null) {
             for (BookRecord r : books) {
-                if (r.genres == null || r.genres.isEmpty()) continue;
-                for (String g : r.genres.split(",")) {
+                for (String g : r.genreList()) {
                     String clean = g.trim();
                     if (!clean.isEmpty() && clean.length() <= 32) {
                         set.add(clean);
-                        if (set.size() >= 12) break;
                     }
                 }
-                if (set.size() >= 12) break;
             }
         }
         return new ArrayList<>(set);
@@ -210,11 +394,142 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         r.description = safeStr(c.getString(12));
         r.openLibraryKey = safeStr(c.getString(13));
         r.addedAt = c.getLong(14);
+        if (c.getColumnCount() > 15) r.contentHash = safeStr(c.getString(15));
+        if (c.getColumnCount() > 16 && !c.isNull(16)) r.sourceSize = c.getLong(16);
+        if (c.getColumnCount() > 17) r.genresJson = safeStr(c.getString(17));
         return r;
     }
 
     private static String safeStr(String s) {
         return s == null ? "" : s;
+    }
+
+    private static volatile boolean sBackedUpThisProcess = false;
+    private static final Object BACKUP_LOCK = new Object();
+
+    private static void copyFileAtomic(File src, File dst) throws Exception {
+        File tmp = new File(dst.getParentFile(), dst.getName() + ".part");
+        if (tmp.exists()) tmp.delete();
+        boolean ok = false;
+        try (FileInputStream fis = new FileInputStream(src);
+             FileOutputStream fos = new FileOutputStream(tmp)) {
+            byte[] buf = new byte[16384];
+            int n;
+            while ((n = fis.read(buf)) > 0) {
+                fos.write(buf, 0, n);
+            }
+            fos.flush();
+            ok = true;
+        } finally {
+            if (!ok && tmp.exists()) tmp.delete();
+        }
+        if (dst.exists()) dst.delete();
+        if (!tmp.renameTo(dst)) {
+            if (tmp.exists()) tmp.delete();
+            throw new java.io.IOException("Atomic rename failed: " + tmp.getAbsolutePath() + " -> " + dst.getAbsolutePath());
+        }
+    }
+
+    private static boolean backupKindleLibraryDbOnce(Context ctx, File dbFile) {
+        if (ctx == null || dbFile == null || !dbFile.isFile()) return false;
+        if (sBackedUpThisProcess) return true;
+        synchronized (BACKUP_LOCK) {
+            if (sBackedUpThisProcess) return true;
+            try {
+                File backupDir = new File(ctx.getFilesDir(), "db_backups");
+                if (!backupDir.exists()) backupDir.mkdirs();
+                if (!backupDir.isDirectory()) {
+                    Log.e(TAG, "Backup directory is invalid: " + backupDir.getAbsolutePath());
+                    return false;
+                }
+                File[] existing = backupDir.listFiles((dir, name) ->
+                        name.startsWith("kindle_library_") && name.endsWith(".db"));
+                long now = System.currentTimeMillis();
+                if (existing != null && existing.length > 0) {
+                    Arrays.sort(existing, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                    if (now - existing[0].lastModified() < 5 * 60_000L
+                            && existing[0].isFile() && existing[0].length() > 0) {
+                        sBackedUpThisProcess = true;
+                        Log.i(TAG, "Verified recent kindle_library.db backup (< 5m): " + existing[0].getName());
+                        return true;
+                    }
+                }
+
+                File dest = new File(backupDir, "kindle_library_" + now + ".db");
+                File destPart = new File(backupDir, "kindle_library_" + now + ".db.part");
+                if (destPart.exists()) destPart.delete();
+
+                boolean vacuumOk = false;
+                SQLiteDatabase srcDb = null;
+                try {
+                    srcDb = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+                    String escaped = destPart.getAbsolutePath().replace("'", "''");
+                    srcDb.execSQL("VACUUM INTO '" + escaped + "'");
+                    vacuumOk = destPart.isFile() && destPart.length() > 0;
+                } catch (Throwable vt) {
+                    Log.w(TAG, "VACUUM INTO failed (" + vt.getMessage() + "), falling back to atomic DB+WAL/SHM copy");
+                    if (destPart.exists()) destPart.delete();
+                } finally {
+                    if (srcDb != null) {
+                        try { srcDb.close(); } catch (Throwable ignored) {}
+                    }
+                }
+
+                if (vacuumOk) {
+                    if (dest.exists()) dest.delete();
+                    if (!destPart.renameTo(dest)) {
+                        if (destPart.exists()) destPart.delete();
+                        Log.e(TAG, "Failed atomic rename of VACUUM INTO backup");
+                        return false;
+                    }
+                } else {
+                    copyFileAtomic(dbFile, dest);
+                    File walSrc = new File(dbFile.getAbsolutePath() + "-wal");
+                    if (walSrc.isFile()) {
+                        copyFileAtomic(walSrc, new File(dest.getAbsolutePath() + "-wal"));
+                    }
+                    File shmSrc = new File(dbFile.getAbsolutePath() + "-shm");
+                    if (shmSrc.isFile()) {
+                        copyFileAtomic(shmSrc, new File(dest.getAbsolutePath() + "-shm"));
+                    }
+                }
+
+                if (!dest.isFile() || dest.length() <= 0) {
+                    Log.e(TAG, "Backup verification failed (missing or empty): " + dest.getAbsolutePath());
+                    return false;
+                }
+
+                sBackedUpThisProcess = true;
+                Log.i(TAG, "Backed up kindle_library.db (" + (vacuumOk ? "VACUUM INTO" : "atomic+WAL")
+                        + ", " + dest.length() + " B) -> " + dest.getAbsolutePath());
+
+                File[] after = backupDir.listFiles((dir, name) ->
+                        name.startsWith("kindle_library_") && name.endsWith(".db"));
+                if (after != null && after.length > 3) {
+                    Arrays.sort(after, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                    for (int i = 3; i < after.length; i++) {
+                        File old = after[i];
+                        new File(old.getAbsolutePath() + "-wal").delete();
+                        new File(old.getAbsolutePath() + "-shm").delete();
+                        if (old.delete()) {
+                            Log.i(TAG, "Pruned old backup: " + old.getName());
+                        }
+                    }
+                }
+                return true;
+            } catch (Throwable t) {
+                Log.e(TAG, "Failed to backup kindle_library.db", t);
+                return false;
+            }
+        }
+    }
+
+    private static boolean isLockOrBusy(Throwable t) {
+        if (t instanceof SQLiteDatabaseLockedException) return true;
+        String msg = t.getMessage();
+        if (msg == null) return false;
+        String lower = msg.toLowerCase(Locale.ROOT);
+        return lower.contains("locked") || lower.contains("busy");
     }
 
     /**
@@ -230,103 +545,127 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             Log.w(TAG, "kindle_library.db not found yet at " + dbFile);
             return false;
         }
-        SQLiteDatabase db = null;
-        try {
-            db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
-            db.beginTransaction();
-            long now = System.currentTimeMillis();
-            String path = kfxFile.getAbsolutePath();
-            String coverPath = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "";
-            String title = !EpubMetadataExtractor.isBlank(meta.title) ? meta.title : kfxFile.getName();
-            String author = !EpubMetadataExtractor.isBlank(meta.author) ? meta.author : "Unknown Author";
-            String asin = "CR!" + bookKey.replace("FOLIO_", "") + "KFX";
-            String amznId = "AMZNID0/" + asin + "/0/";
-            int hasCover = coverPath.isEmpty() ? 0 : 1;
-
-            // Remove any prior row pointing to the exact same path to prevent duplicates
-            try {
-                db.delete("LocalContent", "FILE_PATH = ?", new String[] { path });
-            } catch (Throwable ignored) {}
-
-            // 1. KindleContent
-            java.util.Map<String, String> kcCols = tableColumns(db, "KindleContent");
-            if (!kcCols.isEmpty()) {
-                ContentValues kc = new ContentValues();
-                putIfPresent(kc, kcCols, "ID", amznId);
-                putIfPresent(kc, kcCols, "KEY", bookKey);
-                putIfPresent(kc, kcCols, "CONTENT_ID", bookKey);
-                putIfPresent(kc, kcCols, "ASIN", asin);
-                putIfPresent(kc, kcCols, "TITLE", title);
-                putIfPresent(kc, kcCols, "TITLE_SORT", title.toLowerCase(Locale.ROOT));
-                putIfPresent(kc, kcCols, "AUTHOR", author);
-                putIfPresent(kc, kcCols, "AUTHORS", author);
-                putIfPresent(kc, kcCols, "AUTHOR_SORT", author.toLowerCase(Locale.ROOT));
-                putIfPresent(kc, kcCols, "TYPE", "BT_EBOOK_PDOC");
-                putIfPresent(kc, kcCols, "CONTENT_TYPE", "application/x-kfx-ebook");
-                putIfPresent(kc, kcCols, "MIME_TYPE", "application/x-kfx-ebook");
-                putIfPresent(kc, kcCols, "STATE", "LOCAL");
-                putIfPresent(kc, kcCols, "ARCHIVABLE", 0);
-                putIfPresent(kc, kcCols, "HAS_READ_ALONG", 0);
-                putIfPresent(kc, kcCols, "HAS_LOADED_COVER", hasCover);
-                putIfPresent(kc, kcCols, "FILE_PATH", path);
-                putIfPresent(kc, kcCols, "COVER_URL", coverPath);
-                putIfPresent(kc, kcCols, "PUBLISHER", meta.publisher);
-                putIfPresent(kc, kcCols, "PUBLICATION_DATE", meta.pubDate);
-                putIfPresent(kc, kcCols, "LANGUAGE", meta.language);
-                putIfPresent(kc, kcCols, "FILE_SIZE", kfxFile.length());
-                putIfPresent(kc, kcCols, "LAST_ACCESS_TIME", now);
-                putIfPresent(kc, kcCols, "PURCHASE_DATE", now);
-                putIfPresent(kc, kcCols, "IS_LOCAL", 1);
-                putIfPresent(kc, kcCols, "DOWNLOAD_STATE", 1);
-                fillMissingNotNullDefaults(db, "KindleContent", kc);
-                db.insertWithOnConflict("KindleContent", null, kc, SQLiteDatabase.CONFLICT_REPLACE);
-            }
-
-            // 2. LocalContent
-            java.util.Map<String, String> lcCols = tableColumns(db, "LocalContent");
-            if (!lcCols.isEmpty()) {
-                ContentValues lc = new ContentValues();
-                putIfPresent(lc, lcCols, "KEY", amznId);
-                putIfPresent(lc, lcCols, "CONTENT_ID", amznId);
-                putIfPresent(lc, lcCols, "FILE_PATH", path);
-                putIfPresent(lc, lcCols, "GUID", asin);
-                putIfPresent(lc, lcCols, "COVER_PATH", coverPath);
-                putIfPresent(lc, lcCols, "FILE_SIZE", kfxFile.length());
-                putIfPresent(lc, lcCols, "LAST_MODIFIED", now);
-                putIfPresent(lc, lcCols, "OWNERSHIP_TYPE", "Unknown");
-                putIfPresent(lc, lcCols, "MIME_TYPE", "application/x-kfx-ebook");
-                fillMissingNotNullDefaults(db, "LocalContent", lc);
-                db.insertWithOnConflict("LocalContent", null, lc, SQLiteDatabase.CONFLICT_REPLACE);
-            }
-
-            // 3. UserContent
-            java.util.Map<String, String> ucCols = tableColumns(db, "UserContent");
-            if (!ucCols.isEmpty()) {
-                ContentValues uc = new ContentValues();
-                putIfPresent(uc, ucCols, "KEY", amznId);
-                putIfPresent(uc, ucCols, "USER_ID", "MASTER");
-                putIfPresent(uc, ucCols, "LAST_ACCESSED", now);
-                putIfPresent(uc, ucCols, "LAST_ACCESS_TIME", now);
-                putIfPresent(uc, ucCols, "IS_IN_CAROUSEL", 1);
-                putIfPresent(uc, ucCols, "CLIPPING_BALANCE", 0);
-                putIfPresent(uc, ucCols, "READING_PROGRESS", 0);
-                fillMissingNotNullDefaults(db, "UserContent", uc);
-                db.insertWithOnConflict("UserContent", null, uc, SQLiteDatabase.CONFLICT_REPLACE);
-            }
-
-            db.setTransactionSuccessful();
-            return true;
-        } catch (Throwable t) {
-            Log.e(TAG, "Failed to register book in kindle_library.db", t);
+        if (!backupKindleLibraryDbOnce(ctx, dbFile)) {
+            Log.e(TAG, "Aborting registerInKindleLibraryDb: kindle_library.db backup failed");
             return false;
-        } finally {
-            if (db != null) {
+        }
+
+        final int maxAttempts = 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            SQLiteDatabase db = null;
+            try {
+                db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+                db.beginTransaction();
+                long now = System.currentTimeMillis();
+                String path = kfxFile.getAbsolutePath();
+                String coverPath = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "";
+                String title = !EpubMetadataExtractor.isBlank(meta.title) ? meta.title : kfxFile.getName();
+                String author = !EpubMetadataExtractor.isBlank(meta.author) ? meta.author : "Unknown Author";
+                String asin = "CR!" + bookKey.replace("FOLIO_", "") + "KFX";
+                String amznId = "AMZNID0/" + asin + "/0/";
+                int hasCover = coverPath.isEmpty() ? 0 : 1;
+
+                // Remove any prior row pointing to the exact same path to prevent duplicates
                 try {
-                    if (db.inTransaction()) db.endTransaction();
-                    db.close();
-                } catch (Throwable ignored) {}
+                    db.delete("LocalContent", "FILE_PATH = ?", new String[] { path });
+                } catch (Throwable t) {
+                    if (isLockOrBusy(t)) throw t;
+                    Log.w(TAG, "LocalContent pre-delete warning", t);
+                }
+
+                // 1. KindleContent
+                java.util.Map<String, String> kcCols = tableColumns(db, "KindleContent");
+                if (!kcCols.isEmpty()) {
+                    ContentValues kc = new ContentValues();
+                    putIfPresent(kc, kcCols, "ID", amznId);
+                    putIfPresent(kc, kcCols, "KEY", bookKey);
+                    putIfPresent(kc, kcCols, "CONTENT_ID", bookKey);
+                    putIfPresent(kc, kcCols, "ASIN", asin);
+                    putIfPresent(kc, kcCols, "TITLE", title);
+                    putIfPresent(kc, kcCols, "TITLE_SORT", title.toLowerCase(Locale.ROOT));
+                    putIfPresent(kc, kcCols, "AUTHOR", author);
+                    putIfPresent(kc, kcCols, "AUTHORS", author);
+                    putIfPresent(kc, kcCols, "AUTHOR_SORT", author.toLowerCase(Locale.ROOT));
+                    putIfPresent(kc, kcCols, "TYPE", "BT_EBOOK_PDOC");
+                    putIfPresent(kc, kcCols, "CONTENT_TYPE", "application/x-kfx-ebook");
+                    putIfPresent(kc, kcCols, "MIME_TYPE", "application/x-kfx-ebook");
+                    putIfPresent(kc, kcCols, "STATE", "LOCAL");
+                    putIfPresent(kc, kcCols, "ARCHIVABLE", 0);
+                    putIfPresent(kc, kcCols, "HAS_READ_ALONG", 0);
+                    putIfPresent(kc, kcCols, "HAS_LOADED_COVER", hasCover);
+                    putIfPresent(kc, kcCols, "FILE_PATH", path);
+                    putIfPresent(kc, kcCols, "COVER_URL", coverPath);
+                    putIfPresent(kc, kcCols, "PUBLISHER", meta.publisher);
+                    putIfPresent(kc, kcCols, "PUBLICATION_DATE", meta.pubDate);
+                    putIfPresent(kc, kcCols, "LANGUAGE", meta.language);
+                    putIfPresent(kc, kcCols, "FILE_SIZE", kfxFile.length());
+                    putIfPresent(kc, kcCols, "LAST_ACCESS_TIME", now);
+                    putIfPresent(kc, kcCols, "PURCHASE_DATE", now);
+                    putIfPresent(kc, kcCols, "IS_LOCAL", 1);
+                    putIfPresent(kc, kcCols, "DOWNLOAD_STATE", 1);
+                    if (!fillMissingNotNullDefaults(db, "KindleContent", kc)) {
+                        return false;
+                    }
+                    db.insertWithOnConflict("KindleContent", null, kc, SQLiteDatabase.CONFLICT_REPLACE);
+                }
+
+                // 2. LocalContent
+                java.util.Map<String, String> lcCols = tableColumns(db, "LocalContent");
+                if (!lcCols.isEmpty()) {
+                    ContentValues lc = new ContentValues();
+                    putIfPresent(lc, lcCols, "KEY", amznId);
+                    putIfPresent(lc, lcCols, "CONTENT_ID", amznId);
+                    putIfPresent(lc, lcCols, "FILE_PATH", path);
+                    putIfPresent(lc, lcCols, "GUID", asin);
+                    putIfPresent(lc, lcCols, "COVER_PATH", coverPath);
+                    putIfPresent(lc, lcCols, "FILE_SIZE", kfxFile.length());
+                    putIfPresent(lc, lcCols, "LAST_MODIFIED", now);
+                    putIfPresent(lc, lcCols, "OWNERSHIP_TYPE", "Unknown");
+                    putIfPresent(lc, lcCols, "MIME_TYPE", "application/x-kfx-ebook");
+                    if (!fillMissingNotNullDefaults(db, "LocalContent", lc)) {
+                        return false;
+                    }
+                    db.insertWithOnConflict("LocalContent", null, lc, SQLiteDatabase.CONFLICT_REPLACE);
+                }
+
+                // 3. UserContent
+                java.util.Map<String, String> ucCols = tableColumns(db, "UserContent");
+                if (!ucCols.isEmpty()) {
+                    ContentValues uc = new ContentValues();
+                    putIfPresent(uc, ucCols, "KEY", amznId);
+                    putIfPresent(uc, ucCols, "USER_ID", "MASTER");
+                    putIfPresent(uc, ucCols, "LAST_ACCESSED", now);
+                    putIfPresent(uc, ucCols, "LAST_ACCESS_TIME", now);
+                    putIfPresent(uc, ucCols, "IS_IN_CAROUSEL", 1);
+                    putIfPresent(uc, ucCols, "CLIPPING_BALANCE", 0);
+                    putIfPresent(uc, ucCols, "READING_PROGRESS", 0);
+                    if (!fillMissingNotNullDefaults(db, "UserContent", uc)) {
+                        return false;
+                    }
+                    db.insertWithOnConflict("UserContent", null, uc, SQLiteDatabase.CONFLICT_REPLACE);
+                }
+
+                db.setTransactionSuccessful();
+                return true;
+            } catch (Throwable t) {
+                if (isLockOrBusy(t) && attempt < maxAttempts) {
+                    Log.w(TAG, "kindle_library.db locked/busy (attempt " + attempt + "/" + maxAttempts
+                            + "), retrying in 200ms: " + t.getMessage());
+                    try { Thread.sleep(200L); } catch (InterruptedException ignored) {}
+                    continue;
+                }
+                Log.e(TAG, "Failed to register book in kindle_library.db (attempt " + attempt + ")", t);
+                return false;
+            } finally {
+                if (db != null) {
+                    try {
+                        if (db.inTransaction()) db.endTransaction();
+                        db.close();
+                    } catch (Throwable ignored) {}
+                }
             }
         }
+        return false;
     }
 
     private static java.util.Map<String, String> tableColumns(SQLiteDatabase db, String table) {
@@ -348,8 +687,9 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         return cols;
     }
 
-    private static void fillMissingNotNullDefaults(SQLiteDatabase db, String table, ContentValues cv) {
+    private static boolean fillMissingNotNullDefaults(SQLiteDatabase db, String table, ContentValues cv) {
         Cursor c = null;
+        int forgedCount = 0;
         try {
             c = db.rawQuery("PRAGMA table_info(" + table + ")", null);
             int nameIdx = c.getColumnIndex("name");
@@ -363,6 +703,12 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                 int pk = pkIdx >= 0 ? c.getInt(pkIdx) : 0;
                 String dflt = (dfltIdx >= 0 && !c.isNull(dfltIdx)) ? c.getString(dfltIdx) : null;
                 if (n != null && nn == 1 && pk == 0 && dflt == null && !cv.containsKey(n)) {
+                    forgedCount++;
+                    Log.w(TAG, "fillMissingNotNullDefaults forging column " + table + "." + n + " (#" + forgedCount + ")");
+                    if (forgedCount > 3) {
+                        Log.e(TAG, "Schema drift detected in " + table + ": >3 NOT NULL columns would be forged; aborting write");
+                        return false;
+                    }
                     String tp = typeIdx >= 0 && c.getString(typeIdx) != null
                             ? c.getString(typeIdx).toUpperCase(Locale.ROOT) : "";
                     if (tp.contains("INT") || tp.contains("REAL") || tp.contains("NUM") || tp.contains("BOOL")) {
@@ -372,7 +718,10 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                     }
                 }
             }
-        } catch (Throwable ignored) {
+            return true;
+        } catch (Throwable t) {
+            Log.e(TAG, "fillMissingNotNullDefaults failed for " + table, t);
+            return false;
         } finally {
             if (c != null) c.close();
         }
@@ -399,16 +748,26 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
     }
 
     /**
-     * Removes legacy synthetic AMZNID0/CR!...KFX/0/ rows written prior to Round 158
-     * so books in /sdcard/kindle/ appear exactly once (indexed by Kindle's native scanner).
+     * Deletes a single book metadata row by book_key and returns true only when >=1 row was deleted.
      */
-    public void deleteBook(String bookKey) {
-        if (bookKey == null || bookKey.isEmpty()) return;
+    public boolean deleteBook(String bookKey) {
+        if (bookKey == null || bookKey.isEmpty()) return false;
         try {
-            getWritableDatabase().delete("books_metadata", "book_key = ?", new String[]{ bookKey });
-        } catch (Throwable ignored) {}
+            int deleted = getWritableDatabase().delete("books_metadata", "book_key = ?", new String[]{ bookKey });
+            return deleted > 0;
+        } catch (Throwable t) {
+            Log.e(TAG, "deleteBook failed for book_key=" + bookKey, t);
+            return false;
+        }
     }
 
+    /**
+     * Removes legacy synthetic AMZNID0/CR!...KFX/0/ rows written prior to Round 158
+     * so books in /sdcard/kindle/ appear exactly once (indexed by Kindle's native scanner).
+     * Verified against M30 kindle_library.db PRAGMA table_info: FILE_PATH lives on LocalContent
+     * (cid=1, not KindleContent or UserContent), while deletions key on KindleContent.ID,
+     * LocalContent.KEY, and UserContent.KEY.
+     */
     public static int cleanupLegacyDuplicateRows(Context ctx) {
         if (ctx == null) return 0;
         File dbFile = ctx.getDatabasePath("kindle_library.db");
@@ -418,20 +777,122 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         try {
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
             db.beginTransaction();
-            try { removed += db.delete("KindleContent", "ID LIKE 'AMZNID0/CR!%KFX/0/' AND FILE_PATH LIKE '/sdcard/kindle/%'", null); } catch (Throwable ignored) {}
-            try { removed += db.delete("LocalContent", "KEY LIKE 'AMZNID0/CR!%KFX/0/' AND FILE_PATH LIKE '/sdcard/kindle/%'", null); } catch (Throwable ignored) {}
-            try { db.delete("UserContent", "KEY LIKE 'AMZNID0/CR!%KFX/0/'", null); } catch (Throwable ignored) {}
+
+            List<String> keysList = new ArrayList<>();
+            Cursor lcCur = null;
+            try {
+                lcCur = db.rawQuery(
+                        "SELECT KEY FROM LocalContent WHERE KEY LIKE 'AMZNID0/CR!%KFX/0/' AND FILE_PATH LIKE '/sdcard/kindle/%'",
+                        null);
+                while (lcCur.moveToNext()) {
+                    String k = lcCur.getString(0);
+                    if (k != null && !k.isEmpty()) keysList.add(k);
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "cleanupLegacyDuplicateRows LocalContent query failed", t);
+            } finally {
+                if (lcCur != null) lcCur.close();
+            }
+
+            if (!keysList.isEmpty()) {
+                final int chunkSize = 450;
+                for (int start = 0; start < keysList.size(); start += chunkSize) {
+                    int end = Math.min(start + chunkSize, keysList.size());
+                    List<String> sub = keysList.subList(start, end);
+                    StringBuilder placeholders = new StringBuilder();
+                    for (int i = 0; i < sub.size(); i++) {
+                        if (i > 0) placeholders.append(',');
+                        placeholders.append('?');
+                    }
+                    String[] args = sub.toArray(new String[0]);
+                    try {
+                        removed += db.delete("KindleContent",
+                                "ID IN (" + placeholders + ")", args);
+                    } catch (Throwable t) {
+                        Log.w(TAG, "cleanupLegacyDuplicateRows KindleContent delete failed", t);
+                    }
+                    try {
+                        removed += db.delete("LocalContent",
+                                "KEY IN (" + placeholders + ")", args);
+                    } catch (Throwable t) {
+                        Log.w(TAG, "cleanupLegacyDuplicateRows LocalContent delete failed", t);
+                    }
+                    try {
+                        removed += db.delete("UserContent",
+                                "KEY IN (" + placeholders + ")", args);
+                    } catch (Throwable t) {
+                        Log.w(TAG, "cleanupLegacyDuplicateRows UserContent delete failed", t);
+                    }
+                }
+            }
             db.setTransactionSuccessful();
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
+            Log.e(TAG, "cleanupLegacyDuplicateRows failed", t);
         } finally {
             if (db != null) {
                 try {
                     if (db.inTransaction()) db.endTransaction();
                     db.close();
-                } catch (Throwable ignored) {}
+                } catch (Throwable t) {
+                    Log.w(TAG, "cleanupLegacyDuplicateRows close failed", t);
+                }
             }
         }
         return removed;
+    }
+
+    public static String computeContentHash(File file) {
+        if (file == null || !file.isFile()) return "";
+        try (FileInputStream fis = new FileInputStream(file)) {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] buf = new byte[16384];
+            int n;
+            while ((n = fis.read(buf)) > 0) {
+                md.update(buf, 0, n);
+            }
+            byte[] h = md.digest();
+            StringBuilder sb = new StringBuilder(64);
+            for (byte b : h) {
+                sb.append(String.format(Locale.ROOT, "%02x", b));
+            }
+            return sb.toString();
+        } catch (Throwable t) {
+            Log.w(TAG, "computeContentHash failed for " + file.getName(), t);
+            return "";
+        }
+    }
+
+    public static String computeBookKeyFromHash(String contentHash) {
+        if (contentHash != null && contentHash.length() >= 12) {
+            return "FOLIO_" + contentHash.substring(0, 12).toUpperCase(Locale.ROOT);
+        }
+        return "FOLIO_" + Long.toHexString(System.currentTimeMillis()).toUpperCase(Locale.ROOT);
+    }
+
+    public static String extractBookKeyFromFilename(String filename) {
+        if (filename == null) return null;
+        String base = filename;
+        if (base.toLowerCase(Locale.ROOT).endsWith(".kfx")) {
+            base = base.substring(0, base.length() - 4);
+        }
+        int idx = base.lastIndexOf("_FOLIO_");
+        if (idx >= 0) {
+            String suffix = base.substring(idx + 1);
+            if (suffix.startsWith("FOLIO_") && suffix.length() >= 12) {
+                String hex = suffix.substring(6);
+                if (hex.length() >= 6 && hex.length() <= 32) {
+                    for (int i = 0; i < hex.length(); i++) {
+                        char c = hex.charAt(i);
+                        boolean isHex = (c >= '0' && c <= '9')
+                                || (c >= 'a' && c <= 'f')
+                                || (c >= 'A' && c <= 'F');
+                        if (!isHex) return null;
+                    }
+                    return "FOLIO_" + hex.toUpperCase(Locale.ROOT);
+                }
+            }
+        }
+        return null;
     }
 
     public static String computeBookKey(String title, long sizeBytes) {

@@ -100,7 +100,9 @@ public class g extends b {
                 }
             }
             return true;
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
+            android.util.Log.w("AzathLiveIngest",
+                    "ingestKfxLive failed: " + t.getClass().getName() + ": " + t.getMessage(), t);
             return false;
         }
     }

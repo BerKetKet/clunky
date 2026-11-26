@@ -1,10 +1,12 @@
 package com.amazon.kindle.epub.ingest;
 
+import com.amazon.kindle.epub.catalog.FolioTheme;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -13,7 +15,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.StrictMode;
 import android.provider.OpenableColumns;
 import android.util.Log;
 import android.util.TypedValue;
@@ -33,6 +34,12 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.util.Locale;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Cleanly intercepts external EPUB open intents (file:// or content:// from ANY
@@ -43,6 +50,8 @@ import java.util.Locale;
 public class ExternalEpubActivity extends Activity {
 
     private static final String TAG = "FolioExternalEpub";
+    private static final long MAX_EPUB_BYTES = 250L * 1024L * 1024L;
+    private static final long KFX_CONV_TIMEOUT_SEC = 120L;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private AlertDialog activeDialog;
 
@@ -66,22 +75,36 @@ public class ExternalEpubActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Uri uri = extractUri(getIntent());
-        if (uri == null) {
-            Toast.makeText(this, "No EPUB file provided", Toast.LENGTH_SHORT).show();
+        if (uri == null || !isSupportedScheme(uri)) {
+            Toast.makeText(this, "Unsupported or missing EPUB URI", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+        if (isBlockedPrivateFileUri(this, uri)) {
+            Log.w(TAG, "Blocked file:// URI targeting private app storage: " + uri);
+            Toast.makeText(this, "Blocked: cannot open app-private storage file", Toast.LENGTH_LONG).show();
             finish();
             return;
         }
         startStagingAndPrompt(uri);
     }
 
+    private static boolean isSupportedScheme(Uri uri) {
+        if (uri == null) return false;
+        String scheme = uri.getScheme();
+        return "content".equalsIgnoreCase(scheme) || "file".equalsIgnoreCase(scheme);
+    }
+
     private void startStagingAndPrompt(final Uri uri) {
         showProgressDialog("Inspecting EPUB...", "Reading book metadata from storage");
         new Thread(() -> {
+            File stagedEpub = null;
+            boolean handedOff = false;
             try {
                 final String displayName = resolveDisplayName(this, uri);
-                File stagingDir = new File(getCacheDir(), "folio_staging");
+                File stagingDir = new File(getCacheDir(), "epub_staging");
                 if (!stagingDir.exists()) stagingDir.mkdirs();
-                final File stagedEpub = new File(stagingDir, "incoming_" + System.currentTimeMillis() + ".epub");
+                stagedEpub = new File(stagingDir, "incoming_" + System.currentTimeMillis() + "_" + System.nanoTime() + ".epub");
 
                 copyUriToFile(this, uri, stagedEpub);
                 if (!stagedEpub.exists() || stagedEpub.length() < 64) {
@@ -90,32 +113,55 @@ public class ExternalEpubActivity extends Activity {
 
                 final EpubMetadataExtractor.BookMeta meta =
                         EpubMetadataExtractor.extract(stagedEpub, displayName);
-                final String bookKey = FolioMetadataDb.computeBookKey(meta.title, stagedEpub.length());
+                final String contentHash = FolioMetadataDb.computeContentHash(stagedEpub);
+                final String bookKey = !contentHash.isEmpty()
+                        ? FolioMetadataDb.computeBookKeyFromHash(contentHash)
+                        : FolioMetadataDb.computeBookKey(meta.title, stagedEpub.length());
 
                 FolioMetadataDb.BookRecord existing = null;
+                FolioMetadataDb.BookRecord possibleDup = null;
                 FolioMetadataDb db = new FolioMetadataDb(this);
                 try {
-                    existing = db.findExisting(bookKey, meta.title, meta.author);
+                    existing = db.findExisting(bookKey, contentHash);
+                    if (existing == null) {
+                        possibleDup = db.findPossibleDuplicate(meta.title, meta.author);
+                    }
                 } finally {
                     db.close();
                 }
 
+                final File finalStaged = stagedEpub;
                 final FolioMetadataDb.BookRecord finalExisting = existing;
-                mainHandler.post(() -> showChoiceDialog(stagedEpub, displayName, meta, finalExisting));
+                final FolioMetadataDb.BookRecord finalPossibleDup = possibleDup;
+                handedOff = true;
+                mainHandler.post(() -> {
+                    if (com.amazon.kindle.epub.catalog.FolioTheme.isContextDead(this)) {
+                        if (finalStaged.exists()) finalStaged.delete();
+                        return;
+                    }
+                    showChoiceDialog(finalStaged, displayName, meta, bookKey, contentHash, finalExisting, finalPossibleDup);
+                });
             } catch (Throwable t) {
                 Log.e(TAG, "Failed to inspect incoming EPUB", t);
                 mainHandler.post(() -> {
+                    if (com.amazon.kindle.epub.catalog.FolioTheme.isContextDead(this)) return;
                     dismissActiveDialog();
                     Toast.makeText(this, "Could not open EPUB: " + t.getMessage(), Toast.LENGTH_LONG).show();
                     finish();
                 });
+            } finally {
+                if (!handedOff && stagedEpub != null && stagedEpub.exists()) {
+                    stagedEpub.delete();
+                }
             }
         }, "folio-epub-stage").start();
     }
 
     private void showChoiceDialog(final File stagedEpub, final String displayName,
                                   final EpubMetadataExtractor.BookMeta meta,
-                                  final FolioMetadataDb.BookRecord existing) {
+                                  final String bookKey, final String contentHash,
+                                  final FolioMetadataDb.BookRecord existing,
+                                  final FolioMetadataDb.BookRecord possibleDup) {
         dismissActiveDialog();
         if (isFinishing()) return;
 
@@ -123,18 +169,20 @@ public class ExternalEpubActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(20);
         root.setPadding(pad, pad, pad, dp(16));
-        root.setBackgroundColor(Color.parseColor("#15171A"));
+        root.setBackgroundColor(FolioTheme.bgModal(this));
 
         TextView badge = new TextView(this);
-        badge.setText(existing != null ? "ALREADY IN AZATH LIBRARY" : "AZATH EPUB IMPORT");
-        badge.setTextColor(Color.parseColor(existing != null ? "#D4C9B8" : "#D4C9B8"));
+        badge.setText(existing != null
+                ? "ALREADY IN AZATH LIBRARY"
+                : (possibleDup != null ? "POSSIBLE DUPLICATE IN LIBRARY" : "AZATH EPUB IMPORT"));
+        badge.setTextColor(FolioTheme.accent(this));
         badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         badge.setTypeface(Typeface.DEFAULT_BOLD);
         root.addView(badge);
 
         TextView titleView = new TextView(this);
         titleView.setText(meta.title);
-        titleView.setTextColor(Color.parseColor("#ECE8E0"));
+        titleView.setTextColor(FolioTheme.textPrimary(this));
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
         titleView.setTypeface(Typeface.DEFAULT_BOLD);
         titleView.setPadding(0, dp(6), 0, dp(4));
@@ -147,7 +195,7 @@ public class ExternalEpubActivity extends Activity {
         }
         TextView authorView = new TextView(this);
         authorView.setText(sub.toString());
-        authorView.setTextColor(Color.parseColor("#BDB8AE"));
+        authorView.setTextColor(FolioTheme.textSecondary(this));
         authorView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         authorView.setPadding(0, 0, 0, dp(12));
         root.addView(authorView);
@@ -155,16 +203,19 @@ public class ExternalEpubActivity extends Activity {
         TextView desc = new TextView(this);
         if (existing != null) {
             desc.setText("This book is already saved in Azath's app storage. Open your existing copy instantly, or re-import and replace it.");
+        } else if (possibleDup != null) {
+            desc.setText("Advisory: another file with the same title and author (\"" + possibleDup.title
+                    + "\") is already in your library. Importing will keep both as separate editions.");
         } else {
             desc.setText("Add to your Azath library (saves converted book & metadata in app storage) or open once without saving.");
         }
-        desc.setTextColor(Color.parseColor("#8A857D"));
+        desc.setTextColor(FolioTheme.textMuted(this));
         desc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         desc.setPadding(0, 0, 0, dp(18));
         root.addView(desc);
 
         if (existing != null) {
-            TextView btnOpenExisting = makeButton("Open Existing Copy", "#D4C9B8", "#0E0F11");
+            TextView btnOpenExisting = makeButton("Open Existing Copy", FolioTheme.accent(this), FolioTheme.bgCanvas(this));
             btnOpenExisting.setOnClickListener(v -> {
                 stagedEpub.delete();
                 dismissActiveDialog();
@@ -177,20 +228,20 @@ public class ExternalEpubActivity extends Activity {
             sp0.setLayoutParams(new LinearLayout.LayoutParams(1, dp(10)));
             root.addView(sp0);
 
-            TextView btnReimport = makeButton("Re-Import & Replace", "#25282D", "#ECE8E0");
-            btnReimport.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
+            TextView btnReimport = makeButton("Re-Import & Replace", FolioTheme.bgControl(this), FolioTheme.textPrimary(this));
+            btnReimport.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, bookKey, contentHash, true));
             root.addView(btnReimport);
         } else {
-            TextView btnAdd = makeButton("Add to Library & Read", "#D4C9B8", "#0E0F11");
-            btnAdd.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, true));
+            TextView btnAdd = makeButton("Add to Library & Read", FolioTheme.accent(this), FolioTheme.bgCanvas(this));
+            btnAdd.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, bookKey, contentHash, true));
             root.addView(btnAdd);
 
             View spacer = new View(this);
             spacer.setLayoutParams(new LinearLayout.LayoutParams(1, dp(10)));
             root.addView(spacer);
 
-            TextView btnOnce = makeButton("Open Once (Don't Add)", "#25282D", "#ECE8E0");
-            btnOnce.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, false));
+            TextView btnOnce = makeButton("Open Once (Don't Add)", FolioTheme.bgControl(this), FolioTheme.textPrimary(this));
+            btnOnce.setOnClickListener(v -> processAndOpen(stagedEpub, displayName, meta, bookKey, contentHash, false));
             root.addView(btnOnce);
         }
 
@@ -201,7 +252,7 @@ public class ExternalEpubActivity extends Activity {
         TextView btnCancel = new TextView(this);
         btnCancel.setText("Cancel");
         btnCancel.setGravity(Gravity.CENTER);
-        btnCancel.setTextColor(Color.parseColor("#8A857D"));
+        btnCancel.setTextColor(FolioTheme.textMuted(this));
         btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         btnCancel.setPadding(0, dp(10), 0, dp(6));
         btnCancel.setOnClickListener(v -> {
@@ -224,54 +275,88 @@ public class ExternalEpubActivity extends Activity {
     }
 
     private void processAndOpen(final File stagedEpub, final String displayName,
-                                final EpubMetadataExtractor.BookMeta meta, final boolean addToLibrary) {
+                                final EpubMetadataExtractor.BookMeta meta,
+                                final String bookKey, final String contentHash,
+                                final boolean addToLibrary) {
+        final AtomicBoolean cancelFlag = new AtomicBoolean(false);
         showProgressDialog(
                 addToLibrary ? "Adding to Azath Library..." : "Preparing Book...",
                 addToLibrary ? "Converting to KFX & enriching book metadata"
-                             : "Converting EPUB to native KFX");
+                             : "Converting EPUB to native KFX",
+                () -> {
+                    cancelFlag.set(true);
+                    if (stagedEpub != null && stagedEpub.exists()) {
+                        stagedEpub.delete();
+                    }
+                    finish();
+                });
 
         new Thread(() -> {
+            AzathLibrarySync.SYNC_LOCK.lock();
             try {
-                final String bookKey = FolioMetadataDb.computeBookKey(meta.title, stagedEpub.length());
-                final String safeBase = sanitizeFilename(meta.title) + "_" + bookKey;
+                final String safeBase = AzathLibrarySync.sanitizeFilenameBase(meta.title, bookKey);
 
                 File sdKindle = new File("/sdcard/kindle");
                 if (addToLibrary && !sdKindle.exists()) sdKindle.mkdirs();
                 File targetDir = addToLibrary
-                        ? ((sdKindle.exists() && sdKindle.canWrite()) ? sdKindle : new File(getFilesDir(), "folio_library"))
+                        ? ((sdKindle.isDirectory() && sdKindle.canWrite()) ? sdKindle : new File(getFilesDir(), "folio_library"))
                         : new File(getCacheDir(), "folio_once");
                 if (!targetDir.exists()) targetDir.mkdirs();
 
                 File outKfx = new File(targetDir, safeBase + ".kfx");
                 File outCover = new File(outKfx.getAbsolutePath() + ".cover.jpg");
 
-                boolean ok = convertEpubToKfx(this, stagedEpub, outKfx);
+                boolean ok = convertEpubToKfx(this, stagedEpub, outKfx, KFX_CONV_TIMEOUT_SEC, cancelFlag);
+                if (cancelFlag.get()) {
+                    File partOut = new File(outKfx.getParentFile(), outKfx.getName() + ".part");
+                    File partCover = new File(partOut.getAbsolutePath() + ".cover.jpg");
+                    if (partOut.exists()) partOut.delete();
+                    if (partCover.exists()) partCover.delete();
+                    if (stagedEpub.exists()) stagedEpub.delete();
+                    return;
+                }
                 if (!ok || !outKfx.exists() || outKfx.length() < 128) {
                     throw new IllegalStateException("KFX conversion failed");
                 }
 
+                boolean registeredOk = true;
                 if (addToLibrary) {
-                    MetadataEnricher.enrichInPlace(meta);
+                    long sourceSize = stagedEpub.length();
                     FolioMetadataDb metaDb = new FolioMetadataDb(this);
                     try {
-                        metaDb.upsertBook(bookKey, outKfx, outCover, displayName, meta);
+                        metaDb.upsertBook(bookKey, outKfx, outCover, displayName, meta, contentHash, sourceSize);
                     } finally {
                         metaDb.close();
                     }
                     if (!outKfx.getAbsolutePath().startsWith("/sdcard/kindle")) {
-                        FolioMetadataDb.registerInKindleLibraryDb(this, bookKey, outKfx, outCover, meta);
+                        registeredOk = FolioMetadataDb.registerInKindleLibraryDb(this, bookKey, outKfx, outCover, meta);
                     }
-                    dp.g.ingestKfxLive(outKfx);
+                    boolean liveOk = false;
+                    try {
+                        liveOk = dp.g.ingestKfxLive(outKfx);
+                    } catch (Throwable liveErr) {
+                        Log.w(TAG, "dp.g.ingestKfxLive threw for " + outKfx.getName() + ": " + liveErr.getMessage(), liveErr);
+                    }
+                    if (!liveOk) {
+                        Log.w(TAG, "dp.g.ingestKfxLive returned false for " + outKfx.getName());
+                    }
                     com.amazon.kindle.epub.catalog.FolioTheme.triggerLibraryRescan(this, outKfx);
                     try { android.media.MediaScannerConnection.scanFile(this, new String[]{ outKfx.getAbsolutePath() }, null, null); } catch (Throwable ignored) {}
+                    MetadataEnricher.enqueueAsync(this, bookKey, outKfx, outCover, displayName, meta, contentHash, sourceSize);
                 }
 
                 stagedEpub.delete();
 
+                final boolean finalRegisteredOk = registeredOk;
                 mainHandler.post(() -> {
+                    if (com.amazon.kindle.epub.catalog.FolioTheme.isContextDead(this)) return;
                     dismissActiveDialog();
                     if (addToLibrary) {
-                        Toast.makeText(this, "Added \"" + meta.title + "\" to Azath Library", Toast.LENGTH_SHORT).show();
+                        if (finalRegisteredOk) {
+                            Toast.makeText(this, "Added \"" + meta.title + "\" to Azath Library", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(this, "Converted \"" + meta.title + "\", but Library DB registration failed", Toast.LENGTH_LONG).show();
+                        }
                     }
                     launchKfxReader(this, outKfx);
                     finish();
@@ -280,58 +365,183 @@ public class ExternalEpubActivity extends Activity {
                 Log.e(TAG, "Failed to process external EPUB", t);
                 stagedEpub.delete();
                 mainHandler.post(() -> {
+                    if (com.amazon.kindle.epub.catalog.FolioTheme.isContextDead(this)) return;
                     dismissActiveDialog();
                     Toast.makeText(this, "Import error: " + t.getMessage(), Toast.LENGTH_LONG).show();
                     finish();
                 });
+            } finally {
+                AzathLibrarySync.SYNC_LOCK.unlock();
             }
         }, "folio-epub-convert").start();
     }
 
     public static boolean convertEpubToKfx(Context ctx, File epubIn, File kfxOut) {
+        return convertEpubToKfx(ctx, epubIn, kfxOut, KFX_CONV_TIMEOUT_SEC, null);
+    }
+
+    public static boolean convertEpubToKfx(Context ctx, File epubIn, File kfxOut,
+                                           long timeoutSec, AtomicBoolean cancelFlag) {
+        if (kfxOut == null) return false;
+        File parent = kfxOut.getParentFile();
+        if (parent != null && !parent.exists()) parent.mkdirs();
+        final File partOut = new File(parent, kfxOut.getName() + ".part");
+        final File partCover = new File(partOut.getAbsolutePath() + ".cover.jpg");
+        final File finalCover = new File(kfxOut.getAbsolutePath() + ".cover.jpg");
+        if (partOut.exists()) partOut.delete();
+        if (partCover.exists()) partCover.delete();
+
+        boolean ok = false;
+        ExecutorService inProcExec = null;
         try {
-            if (com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubIn, kfxOut)) {
-                return true;
+            inProcExec = Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "azath-inproc-kfx");
+                t.setDaemon(true);
+                return t;
+            });
+            Future<Boolean> fut = inProcExec.submit((Callable<Boolean>) () ->
+                    com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubIn, partOut, timeoutSec, cancelFlag));
+            long deadline = System.currentTimeMillis() + Math.max(1L, timeoutSec) * 1000L;
+            while (System.currentTimeMillis() < deadline) {
+                if (cancelFlag != null && cancelFlag.get()) {
+                    fut.cancel(true);
+                    break;
+                }
+                try {
+                    Boolean res = fut.get(250, TimeUnit.MILLISECONDS);
+                    ok = Boolean.TRUE.equals(res) && isValidKfxPart(partOut);
+                    break;
+                } catch (java.util.concurrent.TimeoutException te) {
+                    // keep polling until deadline or cancelFlag
+                }
+            }
+            if (!fut.isDone()) {
+                fut.cancel(true);
+                Log.w(TAG, "EpubTranscoder.transcodeToKfx timed out or cancelled after " + timeoutSec + "s");
             }
         } catch (Throwable t) {
             Log.w(TAG, "EpubTranscoder direct call failed: " + t.getMessage());
-        }
-
-        File bin = new File(ctx.getApplicationInfo().nativeLibraryDir, "libkfxconv.so");
-        if (!bin.exists()) {
-            bin = new File("/data/local/tmp/kfx-conv");
-        }
-        if (!bin.exists()) {
-            Log.e(TAG, "libkfxconv.so missing at " + bin.getAbsolutePath());
-            return false;
-        }
-        String[][] argVariants = new String[][] {
-            { bin.getAbsolutePath(), epubIn.getAbsolutePath(), "-o", kfxOut.getAbsolutePath() },
-            { bin.getAbsolutePath(), epubIn.getAbsolutePath(), kfxOut.getAbsolutePath() }
-        };
-        for (String[] cmd : argVariants) {
-            try {
-                if (kfxOut.exists()) kfxOut.delete();
-                ProcessBuilder pb = new ProcessBuilder(cmd);
-                pb.redirectErrorStream(true);
-                Process proc = pb.start();
-                BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-                StringBuilder outLog = new StringBuilder();
-                String line;
-                while ((line = br.readLine()) != null) {
-                    outLog.append(line).append('\n');
-                }
-                int code = proc.waitFor();
-                Log.i(TAG, "libkfxconv exit=" + code + " out=" + kfxOut.length() + "B");
-                if (code == 0 && kfxOut.exists() && kfxOut.length() > 128) {
-                    return true;
-                }
-                Log.w(TAG, "libkfxconv output: " + outLog);
-            } catch (Throwable t) {
-                Log.e(TAG, "libkfxconv exec error", t);
+        } finally {
+            if (inProcExec != null) {
+                try { inProcExec.shutdownNow(); } catch (Throwable ignored) {}
             }
         }
-        return false;
+
+        try {
+            if (!ok && (cancelFlag == null || !cancelFlag.get())) {
+                if (partOut.exists()) partOut.delete();
+                File bin = new File(ctx.getApplicationInfo().nativeLibraryDir, "libkfxconv.so");
+                if (!bin.exists() && isDebuggable(ctx)) {
+                    bin = new File("/data/local/tmp/kfx-conv");
+                }
+                if (!bin.exists()) {
+                    Log.e(TAG, "libkfxconv.so missing at " + bin.getAbsolutePath());
+                    return false;
+                }
+                String[][] argVariants = new String[][] {
+                    { bin.getAbsolutePath(), epubIn.getAbsolutePath(), "-o", partOut.getAbsolutePath() },
+                    { bin.getAbsolutePath(), epubIn.getAbsolutePath(), partOut.getAbsolutePath() }
+                };
+                for (String[] cmd : argVariants) {
+                    if (cancelFlag != null && cancelFlag.get()) break;
+                    if (partOut.exists()) partOut.delete();
+                    StringBuilder outLog = new StringBuilder();
+                    int code = runProcessWithTimeout(cmd, timeoutSec, cancelFlag, outLog);
+                    Log.i(TAG, "libkfxconv exit=" + code + " partOut=" + partOut.length() + "B");
+                    if (code == 0 && isValidKfxPart(partOut)) {
+                        ok = true;
+                        break;
+                    }
+                    Log.w(TAG, "libkfxconv output: " + outLog);
+                }
+            }
+
+            if (ok && (cancelFlag == null || !cancelFlag.get())) {
+                if (kfxOut.exists()) kfxOut.delete();
+                if (!partOut.renameTo(kfxOut)) {
+                    Log.e(TAG, "Atomic rename failed: " + partOut.getAbsolutePath() + " -> " + kfxOut.getAbsolutePath());
+                    return false;
+                }
+                if (partCover.exists() && partCover.length() > 0) {
+                    if (finalCover.exists()) finalCover.delete();
+                    partCover.renameTo(finalCover);
+                }
+                return true;
+            }
+            return false;
+        } finally {
+            if (!ok || (cancelFlag != null && cancelFlag.get())) {
+                if (partOut.exists()) partOut.delete();
+                if (partCover.exists()) partCover.delete();
+            }
+        }
+    }
+
+    /**
+     * Runs an external process with stdout/stderr drained on a separate daemon thread BEFORE waitFor,
+     * enforcing timeoutSec and optional cancelFlag with destroyForcibly() cleanup.
+     */
+    public static int runProcessWithTimeout(String[] cmd, long timeoutSec,
+                                            AtomicBoolean cancelFlag, StringBuilder outLog) {
+        Process proc = null;
+        try {
+            ProcessBuilder pb = new ProcessBuilder(cmd);
+            pb.redirectErrorStream(true);
+            proc = pb.start();
+            final InputStream pis = proc.getInputStream();
+            Thread drainer = new Thread(() -> {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(pis))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        if (outLog != null && outLog.length() < 16384) {
+                            outLog.append(line).append('\n');
+                        }
+                    }
+                } catch (Throwable ignored) {}
+            }, "azath-proc-drain");
+            drainer.setDaemon(true);
+            drainer.start();
+
+            long deadline = System.currentTimeMillis() + Math.max(1L, timeoutSec) * 1000L;
+            boolean finished = false;
+            while (System.currentTimeMillis() < deadline) {
+                if ((cancelFlag != null && cancelFlag.get()) || Thread.currentThread().isInterrupted()) {
+                    proc.destroyForcibly();
+                    try { proc.waitFor(2, TimeUnit.SECONDS); } catch (Throwable ignored) {}
+                    return -2;
+                }
+                if (proc.waitFor(200, TimeUnit.MILLISECONDS)) {
+                    finished = true;
+                    break;
+                }
+            }
+            if (!finished) {
+                proc.destroyForcibly();
+                try { proc.waitFor(2, TimeUnit.SECONDS); } catch (Throwable ignored) {}
+                Log.w(TAG, "Process timed out after " + timeoutSec + "s; destroyed forcibly");
+                return -1;
+            }
+            try { drainer.join(500); } catch (Throwable ignored) {}
+            return proc.exitValue();
+        } catch (Throwable t) {
+            if (proc != null) {
+                try { proc.destroyForcibly(); } catch (Throwable ignored) {}
+            }
+            Log.e(TAG, "runProcessWithTimeout error", t);
+            return -1;
+        }
+    }
+
+    public static boolean isValidKfxPart(File f) {
+        if (f == null || !f.isFile() || f.length() < 128) return false;
+        try (FileInputStream fis = new FileInputStream(f)) {
+            byte[] hdr = new byte[4];
+            int n = fis.read(hdr);
+            if (n < 4) return false;
+            return hdr[0] == 'C' && hdr[1] == 'O' && hdr[2] == 'N' && hdr[3] == 'T';
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     public static File resolveExistingKfxFile(Context ctx, File rawFile) {
@@ -376,9 +586,6 @@ public class ExternalEpubActivity extends Activity {
         }
         kfxFile = resolved;
         com.amazon.kindle.epub.catalog.FolioTheme.markFloatingCoverActive();
-        try {
-            android.os.StrictMode.class.getMethod("disableDeathOnFileUriExposure").invoke(null);
-        } catch (Throwable ignored) {}
 
         try {
             Intent reader = new Intent(Intent.ACTION_VIEW);
@@ -405,6 +612,10 @@ public class ExternalEpubActivity extends Activity {
     }
 
     private void showProgressDialog(String title, String subtitle) {
+        showProgressDialog(title, subtitle, null);
+    }
+
+    private void showProgressDialog(String title, String subtitle, final Runnable onCancel) {
         dismissActiveDialog();
         if (isFinishing()) return;
 
@@ -412,7 +623,7 @@ public class ExternalEpubActivity extends Activity {
         box.setOrientation(LinearLayout.HORIZONTAL);
         box.setGravity(Gravity.CENTER_VERTICAL);
         box.setPadding(dp(20), dp(20), dp(20), dp(20));
-        box.setBackgroundColor(Color.parseColor("#15171A"));
+        box.setBackgroundColor(FolioTheme.bgModal(this));
 
         ProgressBar pb = new ProgressBar(this);
         pb.setIndeterminate(true);
@@ -424,23 +635,27 @@ public class ExternalEpubActivity extends Activity {
 
         TextView tvTitle = new TextView(this);
         tvTitle.setText(title);
-        tvTitle.setTextColor(Color.parseColor("#ECE8E0"));
+        tvTitle.setTextColor(FolioTheme.textPrimary(this));
         tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
         textCol.addView(tvTitle);
 
         TextView tvSub = new TextView(this);
         tvSub.setText(subtitle);
-        tvSub.setTextColor(Color.parseColor("#8A857D"));
+        tvSub.setTextColor(FolioTheme.textMuted(this));
         tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         textCol.addView(tvSub);
 
         box.addView(textCol);
 
-        activeDialog = new AlertDialog.Builder(this)
+        AlertDialog.Builder b = new AlertDialog.Builder(this)
                 .setView(box)
-                .setCancelable(false)
-                .create();
+                .setCancelable(onCancel != null);
+        if (onCancel != null) {
+            b.setNegativeButton("Cancel", (d, w) -> onCancel.run());
+            b.setOnCancelListener(d -> onCancel.run());
+        }
+        activeDialog = b.create();
         activeDialog.show();
         com.amazon.kindle.epub.catalog.FolioTheme.applyToDialog(this, activeDialog);
     }
@@ -458,16 +673,16 @@ public class ExternalEpubActivity extends Activity {
         super.onDestroy();
     }
 
-    private TextView makeButton(String label, String bgHex, String fgHex) {
+    private TextView makeButton(String label, int bgColor, int fgColor) {
         TextView btn = new TextView(this);
         btn.setText(label);
-        btn.setTextColor(Color.parseColor(fgHex));
+        btn.setTextColor(fgColor);
         btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         btn.setTypeface(Typeface.DEFAULT_BOLD);
         btn.setGravity(Gravity.CENTER);
         btn.setPadding(dp(16), dp(13), dp(16), dp(13));
         GradientDrawable gd = new GradientDrawable();
-        gd.setColor(Color.parseColor(bgHex));
+        gd.setColor(bgColor);
         gd.setCornerRadius(dp(10));
         btn.setBackground(gd);
         return btn;
@@ -519,26 +734,131 @@ public class ExternalEpubActivity extends Activity {
         return "external_book.epub";
     }
 
+    private static boolean isDebuggable(Context ctx) {
+        if (ctx == null) return false;
+        try {
+            ApplicationInfo ai = ctx.getApplicationInfo();
+            return ai != null && (ai.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    public static boolean isPathInsideOrEqual(String candidatePath, String rootPath) {
+        if (candidatePath == null || rootPath == null || rootPath.isEmpty()) return false;
+        String normRoot = (rootPath.endsWith(File.separator) && rootPath.length() > 1)
+                ? rootPath.substring(0, rootPath.length() - 1)
+                : rootPath;
+        return candidatePath.equals(normRoot) || candidatePath.startsWith(normRoot + File.separator);
+    }
+
+    public static boolean isBlockedPrivateFile(Context ctx, File src) {
+        if (ctx == null || src == null) return false;
+        try {
+            String canon = src.getCanonicalFile().getPath();
+            String abs = src.getAbsolutePath();
+            java.util.List<File> roots = new java.util.ArrayList<>();
+            try { if (ctx.getDataDir() != null) roots.add(ctx.getDataDir()); } catch (Throwable ignored) {}
+            try {
+                File f = ctx.getFilesDir();
+                if (f != null && f.getParentFile() != null) roots.add(f.getParentFile());
+            } catch (Throwable ignored) {}
+            try {
+                File c = ctx.getCacheDir();
+                if (c != null && c.getParentFile() != null) roots.add(c.getParentFile());
+            } catch (Throwable ignored) {}
+            String pkg = ctx.getPackageName();
+            if (pkg != null && !pkg.isEmpty()) {
+                roots.add(new File("/data/data/" + pkg));
+                roots.add(new File("/data/user/0/" + pkg));
+            }
+            for (File r : roots) {
+                if (r == null) continue;
+                String rAbs = r.getAbsolutePath();
+                String rCanon;
+                try {
+                    rCanon = r.getCanonicalFile().getPath();
+                } catch (Throwable t) {
+                    rCanon = rAbs;
+                }
+                if (isPathInsideOrEqual(canon, rCanon) || isPathInsideOrEqual(abs, rAbs)
+                        || isPathInsideOrEqual(canon, rAbs) || isPathInsideOrEqual(abs, rCanon)) {
+                    return true;
+                }
+            }
+        } catch (Throwable t) {
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean isBlockedPrivateFileUri(Context ctx, Uri uri) {
+        if (uri == null || !"file".equalsIgnoreCase(uri.getScheme())) return false;
+        String rawPath = uri.getPath();
+        if (rawPath == null || rawPath.isEmpty()) return true;
+        return isBlockedPrivateFile(ctx, new File(rawPath));
+    }
+
     private static void copyUriToFile(Context ctx, Uri uri, File dest) throws Exception {
+        if (!isSupportedScheme(uri)) {
+            throw new IllegalArgumentException("Unsupported URI scheme: " + uri.getScheme());
+        }
         InputStream in = null;
         OutputStream out = null;
+        boolean ok = false;
         try {
-            if ("file".equalsIgnoreCase(uri.getScheme()) && uri.getPath() != null) {
-                in = new FileInputStream(new File(uri.getPath()));
+            if ("file".equalsIgnoreCase(uri.getScheme())) {
+                String rawPath = uri.getPath();
+                if (rawPath == null || rawPath.isEmpty() || rawPath.contains("..")) {
+                    throw new IllegalArgumentException("Invalid file URI path");
+                }
+                File src = new File(rawPath).getCanonicalFile();
+                if (isBlockedPrivateFile(ctx, src)) {
+                    throw new SecurityException("Access to private app storage is not permitted");
+                }
+                if (!src.isFile() || !src.canRead()) {
+                    throw new IllegalStateException("File not readable: " + src.getAbsolutePath());
+                }
+                if (src.length() > MAX_EPUB_BYTES) {
+                    throw new IllegalStateException("EPUB exceeds 250 MB limit");
+                }
+                in = new FileInputStream(src);
             } else {
+                Cursor c = null;
+                try {
+                    c = ctx.getContentResolver().query(uri,
+                            new String[] { OpenableColumns.SIZE }, null, null, null);
+                    if (c != null && c.moveToFirst() && !c.isNull(0)) {
+                        long reported = c.getLong(0);
+                        if (reported > MAX_EPUB_BYTES) {
+                            throw new IllegalStateException("EPUB exceeds 250 MB limit");
+                        }
+                    }
+                } finally {
+                    if (c != null) try { c.close(); } catch (Throwable ignored) {}
+                }
                 in = ctx.getContentResolver().openInputStream(uri);
             }
             if (in == null) throw new IllegalStateException("Cannot open URI stream: " + uri);
             out = new FileOutputStream(dest);
             byte[] buf = new byte[16384];
+            long total = 0L;
             int n;
             while ((n = in.read(buf)) > 0) {
+                total += n;
+                if (total > MAX_EPUB_BYTES) {
+                    throw new IllegalStateException("EPUB exceeds 250 MB limit");
+                }
                 out.write(buf, 0, n);
             }
             out.flush();
+            ok = true;
         } finally {
             if (in != null) try { in.close(); } catch (Throwable ignored) {}
             if (out != null) try { out.close(); } catch (Throwable ignored) {}
+            if (!ok && dest != null && dest.exists()) {
+                dest.delete();
+            }
         }
     }
 

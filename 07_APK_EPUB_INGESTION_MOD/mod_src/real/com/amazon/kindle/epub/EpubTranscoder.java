@@ -39,6 +39,9 @@ import java.util.zip.ZipInputStream;
 public final class EpubTranscoder {
     private static final Charset UTF8 = Charset.forName("UTF-8");
     public static volatile String lastCoverPath = null;
+    public static final int MAX_ZIP_ENTRIES = 10000;
+    public static final long MAX_ZIP_ENTRY_BYTES = 32L * 1024L * 1024L;
+    public static final long MAX_ZIP_TOTAL_BYTES = 150L * 1024L * 1024L;
 
     private static final class ChapterToc {
         final String label;
@@ -109,9 +112,11 @@ public final class EpubTranscoder {
     }
 
     public static File getKfxConvBinary() {
+        boolean isDebuggable = false;
         try {
             Application app = ActivityThread.currentApplication();
             if (app != null && app.getApplicationInfo() != null) {
+                isDebuggable = (app.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
                 String libDir = app.getApplicationInfo().nativeLibraryDir;
                 if (libDir != null) {
                     File lib = new File(libDir, "libkfxconv.so");
@@ -140,13 +145,15 @@ public final class EpubTranscoder {
                 return pkgLib;
             }
         }
-        File tmpBin = new File("/data/local/tmp/kfx-conv");
-        if (tmpBin.exists()) {
-            if (!tmpBin.canExecute()) {
-                tmpBin.setExecutable(true, false);
-            }
-            if (tmpBin.canExecute()) {
-                return tmpBin;
+        if (isDebuggable) {
+            File tmpBin = new File("/data/local/tmp/kfx-conv");
+            if (tmpBin.exists()) {
+                if (!tmpBin.canExecute()) {
+                    tmpBin.setExecutable(true, false);
+                }
+                if (tmpBin.canExecute()) {
+                    return tmpBin;
+                }
             }
         }
         return null;
@@ -170,12 +177,18 @@ public final class EpubTranscoder {
     }
 
     public static boolean transcodeToKfx(File inEpub, File outKfx) {
+        return transcodeToKfx(inEpub, outKfx, 120L, null);
+    }
+
+    public static boolean transcodeToKfx(File inEpub, File outKfx, long timeoutSec,
+                                         java.util.concurrent.atomic.AtomicBoolean cancelFlag) {
         File bin = getKfxConvBinary();
         if (bin == null) {
             android.util.Log.w("EpubTranscoder", "kfx-conv binary not found; falling back to KF8");
             return false;
         }
         long startTime = System.currentTimeMillis();
+        Process proc = null;
         try {
             if (outKfx.exists()) {
                 outKfx.delete();
@@ -188,12 +201,46 @@ public final class EpubTranscoder {
                 "-c", "EBOK"
             );
             pb.redirectErrorStream(true);
-            Process proc = pb.start();
-            java.io.InputStream is = proc.getInputStream();
-            byte[] buf = new byte[1024];
-            while (is.read(buf) != -1) {}
-            is.close();
-            int exitCode = proc.waitFor();
+            proc = pb.start();
+            final java.io.InputStream is = proc.getInputStream();
+            Thread drainer = new Thread(new Runnable() {
+                @Override public void run() {
+                    byte[] buf = new byte[4096];
+                    try {
+                        while (is.read(buf) != -1) {}
+                    } catch (Throwable ignored) {
+                    } finally {
+                        try { is.close(); } catch (Throwable ignored) {}
+                    }
+                }
+            }, "azath-kfxconv-drain");
+            drainer.setDaemon(true);
+            drainer.start();
+
+            long deadline = System.currentTimeMillis() + Math.max(1L, timeoutSec) * 1000L;
+            boolean finished = false;
+            while (System.currentTimeMillis() < deadline) {
+                if ((cancelFlag != null && cancelFlag.get()) || Thread.currentThread().isInterrupted()) {
+                    proc.destroyForcibly();
+                    try { proc.waitFor(2, java.util.concurrent.TimeUnit.SECONDS); } catch (Throwable ignored) {}
+                    if (outKfx.exists()) outKfx.delete();
+                    android.util.Log.w("EpubTranscoder", "transcodeToKfx cancelled");
+                    return false;
+                }
+                if (proc.waitFor(250, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                    finished = true;
+                    break;
+                }
+            }
+            if (!finished) {
+                proc.destroyForcibly();
+                try { proc.waitFor(2, java.util.concurrent.TimeUnit.SECONDS); } catch (Throwable ignored) {}
+                if (outKfx.exists()) outKfx.delete();
+                android.util.Log.w("EpubTranscoder", "transcodeToKfx timed out after " + timeoutSec + "s");
+                return false;
+            }
+            try { drainer.join(500); } catch (Throwable ignored) {}
+            int exitCode = proc.exitValue();
             long elapsed = System.currentTimeMillis() - startTime;
             if (exitCode == 0 && verifyKfxMagic(outKfx)) {
                 android.util.Log.i("EpubTranscoder", "Successfully converted " + inEpub.getName() + " to KFX on-device in " + elapsed + "ms (" + outKfx.length() + " bytes)");
@@ -205,6 +252,9 @@ public final class EpubTranscoder {
                 }
             }
         } catch (Throwable t) {
+            if (proc != null) {
+                try { proc.destroyForcibly(); } catch (Throwable ignored) {}
+            }
             android.util.Log.w("EpubTranscoder", "transcodeToKfx exception: " + t.getMessage(), t);
             if (outKfx.exists() && !verifyKfxMagic(outKfx)) {
                 outKfx.delete();
@@ -300,18 +350,64 @@ public final class EpubTranscoder {
         }
     }
 
+    public static boolean isSafeZipEntryName(String rawName) {
+        if (rawName == null || rawName.isEmpty()) return false;
+        for (int i = 0; i < rawName.length(); i++) {
+            char c = rawName.charAt(i);
+            if (c < 0x20 || c == 0x7F) return false;
+        }
+        String norm = rawName.replace('\\', '/');
+        String lower = norm.toLowerCase(Locale.US);
+        if (lower.contains("%2e%2e")) return false;
+        for (String seg : norm.split("/")) {
+            if ("..".equals(seg)) return false;
+        }
+        return true;
+    }
+
     public static void transcode(File inFile, File outFile, boolean kf8Mode) throws Exception {
         Map<String, byte[]> zipEntries = new LinkedHashMap<String, byte[]>();
         ZipInputStream zis = new ZipInputStream(new FileInputStream(inFile));
         try {
             byte[] buf = new byte[8192];
             ZipEntry entry;
+            int entryCount = 0;
+            long totalBytes = 0L;
             while ((entry = zis.getNextEntry()) != null) {
+                if (Thread.currentThread().isInterrupted()) {
+                    throw new InterruptedException("EPUB transcode cancelled/interrupted");
+                }
+                entryCount++;
+                if (entryCount > MAX_ZIP_ENTRIES) {
+                    throw new java.io.IOException("EPUB exceeds max ZIP entry count (" + MAX_ZIP_ENTRIES + ")");
+                }
+                String rawEntryName = entry.getName();
+                if (!isSafeZipEntryName(rawEntryName)) {
+                    throw new SecurityException("Unsafe ZIP entry path rejected: " + rawEntryName);
+                }
                 if (entry.isDirectory()) continue;
-                String name = normalizeZipPath(entry.getName());
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                long declaredSize = entry.getSize();
+                if (declaredSize > MAX_ZIP_ENTRY_BYTES) {
+                    throw new java.io.IOException("ZIP entry exceeds 32 MB cap: " + rawEntryName);
+                }
+                String name = normalizeZipPath(rawEntryName);
+                if (name.isEmpty()) continue;
+                int initCap = (declaredSize > 0 && declaredSize <= MAX_ZIP_ENTRY_BYTES) ? (int) declaredSize : 4096;
+                ByteArrayOutputStream baos = new ByteArrayOutputStream(initCap);
+                long entryBytes = 0L;
                 int n;
                 while ((n = zis.read(buf)) > 0) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        throw new InterruptedException("EPUB transcode cancelled/interrupted");
+                    }
+                    entryBytes += n;
+                    if (entryBytes > MAX_ZIP_ENTRY_BYTES) {
+                        throw new java.io.IOException("ZIP entry exceeds 32 MB uncompressed limit: " + name);
+                    }
+                    totalBytes += n;
+                    if (totalBytes > MAX_ZIP_TOTAL_BYTES) {
+                        throw new java.io.IOException("EPUB exceeds 150 MB total uncompressed limit");
+                    }
                     baos.write(buf, 0, n);
                 }
                 zipEntries.put(name, baos.toByteArray());
@@ -1340,7 +1436,23 @@ public final class EpubTranscoder {
         boolean isJpeg = ((raw[0] & 0xFF) == 0xFF && (raw[1] & 0xFF) == 0xD8);
         if (isJpeg && (!isCover || raw.length <= 350000)) return raw;
         try {
-            Bitmap bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length);
+            BitmapFactory.Options boundsOpts = new BitmapFactory.Options();
+            boundsOpts.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(raw, 0, raw.length, boundsOpts);
+            int maxW = isCover ? 1080 : 1440;
+            int maxH = isCover ? 1600 : 2160;
+            int sample = 1;
+            if (boundsOpts.outWidth > 0 && boundsOpts.outHeight > 0) {
+                int halfW = boundsOpts.outWidth / 2;
+                int halfH = boundsOpts.outHeight / 2;
+                while ((halfW / sample) >= maxW && (halfH / sample) >= maxH) {
+                    sample *= 2;
+                }
+            }
+            BitmapFactory.Options decodeOpts = new BitmapFactory.Options();
+            decodeOpts.inSampleSize = sample;
+            decodeOpts.inPreferredConfig = Bitmap.Config.RGB_565;
+            Bitmap bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length, decodeOpts);
             if (bmp != null) {
                 int w = bmp.getWidth(), h = bmp.getHeight();
                 if (isCover && (w > 1080 || h > 1600)) {
@@ -1508,6 +1620,9 @@ public final class EpubTranscoder {
 
     private static String normalizeZipPath(String p) {
         if (p == null) return "";
+        if (!isSafeZipEntryName(p)) {
+            throw new SecurityException("Unsafe ZIP path rejected: " + p);
+        }
         p = p.replace('\\', '/');
         while (p.startsWith("/")) p = p.substring(1);
         return p;

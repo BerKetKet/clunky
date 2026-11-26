@@ -1415,6 +1415,7 @@ public final class OpenCatalogView {
 
                     Throwable lastErr = null;
                     boolean downloaded = false;
+                    final long maxDownloadBytes = 250L * 1024L * 1024L;
                     File tmpFile = new File(outDir, epubFile.getName() + ".part");
                     for (String candUrl : candidateUrls) {
                         InputStream is = null;
@@ -1428,13 +1429,16 @@ public final class OpenCatalogView {
                             byte[] hdr = new byte[4];
                             int hdrLen = 0;
                             while ((n = is.read(buf)) > 0) {
+                                total += n;
+                                if (total > maxDownloadBytes) {
+                                    throw new java.io.IOException("OPDS download exceeds 250 MB limit");
+                                }
                                 if (hdrLen < 4) {
                                     int take = Math.min(4 - hdrLen, n);
                                     System.arraycopy(buf, 0, hdr, hdrLen, take);
                                     hdrLen += take;
                                 }
                                 fos.write(buf, 0, n);
-                                total += n;
                             }
                             fos.flush();
                             fos.close();

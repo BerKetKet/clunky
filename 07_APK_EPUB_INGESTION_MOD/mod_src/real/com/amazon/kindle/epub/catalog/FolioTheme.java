@@ -55,13 +55,32 @@ public final class FolioTheme {
     public static final int LIGHT_ACCENT_BORDER = 0xFFAFA695;
     public static final int LIGHT_ACCENT_SOFT_TEXT = 0xFF25282E;
 
-    private static boolean fontsLoaded = false;
-    private static Typeface serifReg = null;
-    private static Typeface serifBold = null;
-    private static Typeface sansReg = null;
-    private static Typeface sansBold = null;
+    private static volatile boolean fontsLoaded = false;
+    private static volatile Typeface serifReg = null;
+    private static volatile Typeface serifBold = null;
+    private static volatile Typeface sansReg = null;
+    private static volatile Typeface sansBold = null;
 
     private FolioTheme() {}
+
+    /**
+     * Returns true if ctx is null or its underlying Activity is finishing or destroyed.
+     */
+    public static boolean isContextDead(Context ctx) {
+        if (ctx == null) return true;
+        Context cur = ctx;
+        while (cur instanceof android.content.ContextWrapper) {
+            if (cur instanceof android.app.Activity) break;
+            Context base = ((android.content.ContextWrapper) cur).getBaseContext();
+            if (base == null || base == cur) break;
+            cur = base;
+        }
+        if (cur instanceof android.app.Activity) {
+            android.app.Activity act = (android.app.Activity) cur;
+            return act.isFinishing() || act.isDestroyed();
+        }
+        return false;
+    }
 
     public static String getThemeMode(Context ctx) {
         if (ctx == null) return "granite";
@@ -157,7 +176,8 @@ public final class FolioTheme {
         if (fontsLoaded || ctx == null) return;
         fontsLoaded = true;
         try {
-            AssetManager am = ctx.getAssets();
+            Context appCtx = ctx.getApplicationContext() != null ? ctx.getApplicationContext() : ctx;
+            AssetManager am = appCtx.getAssets();
             try {
                 String[] azFiles = am.list("azath_fonts");
                 if (azFiles != null) {

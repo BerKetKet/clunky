@@ -92,11 +92,17 @@ public final class FolioIcons {
         String path = assetFileForIcon(iconId);
         if (path == null) return null;
         Bitmap bmp = null;
+        InputStream is = null;
         try {
-            InputStream is = ctx.getAssets().open(path);
+            Context appCtx = ctx.getApplicationContext() != null ? ctx.getApplicationContext() : ctx;
+            is = appCtx.getAssets().open(path);
             bmp = BitmapFactory.decodeStream(is);
-            is.close();
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        } finally {
+            if (is != null) {
+                try { is.close(); } catch (Throwable ignored) {}
+            }
+        }
         synchronized (ASSET_CACHE) {
             ASSET_CACHE.put(iconId, bmp);
         }

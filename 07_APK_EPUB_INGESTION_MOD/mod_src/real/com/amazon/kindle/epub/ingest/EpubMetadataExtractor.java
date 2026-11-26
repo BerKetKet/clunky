@@ -3,6 +3,8 @@ package com.amazon.kindle.epub.ingest;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -13,6 +15,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -45,6 +49,13 @@ public final class EpubMetadataExtractor {
         }
     }
 
+    public static final int MAX_OPF_BYTES = 2 * 1024 * 1024;
+    public static final int MAX_DESCRIPTION_CHARS = 4000;
+    private static final Pattern ISO_DATETIME_PREFIX =
+            Pattern.compile("^(\\d{4}-\\d{2}-\\d{2})(?:[T ]\\d{2}:\\d{2}.*)?$");
+    private static final Pattern YEAR_4_PATTERN =
+            Pattern.compile("(?:^|\\D)((?:1\\d|20)\\d{2})(?:\\D|$)");
+
     private EpubMetadataExtractor() {}
 
     public static BookMeta extract(File epubFile, String fallbackDisplayName) {
@@ -60,7 +71,10 @@ public final class EpubMetadataExtractor {
                         opfEntry = findEntryIgnoreCase(zip, opfPath);
                     }
                     if (opfEntry != null) {
-                        parseOpf(zip.getInputStream(opfEntry), meta);
+                        byte[] opfBytes = readEntryBounded(zip, opfEntry, MAX_OPF_BYTES);
+                        if (opfBytes != null) {
+                            parseOpfBytes(opfBytes, meta);
+                        }
                     }
                 }
             } catch (Throwable ignored) {
@@ -83,44 +97,100 @@ public final class EpubMetadataExtractor {
         return meta;
     }
 
+    private static byte[] readEntryBounded(ZipFile zip, ZipEntry entry, int maxBytes) {
+        if (zip == null || entry == null || entry.isDirectory()) return null;
+        long declared = entry.getSize();
+        if (declared > maxBytes) {
+            return null;
+        }
+        InputStream is = null;
+        try {
+            is = zip.getInputStream(entry);
+            if (is == null) return null;
+            int initCap = (declared > 0 && declared <= maxBytes) ? (int) declared : 4096;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream(initCap);
+            byte[] buf = new byte[8192];
+            int total = 0;
+            int n;
+            while ((n = is.read(buf)) > 0) {
+                total += n;
+                if (total > maxBytes) {
+                    return null;
+                }
+                baos.write(buf, 0, n);
+            }
+            return baos.toByteArray();
+        } catch (Throwable ignored) {
+            return null;
+        } finally {
+            if (is != null) {
+                try { is.close(); } catch (Throwable ignored) {}
+            }
+        }
+    }
+
     private static String findOpfPath(ZipFile zip) {
         ZipEntry container = zip.getEntry("META-INF/container.xml");
+        if (container == null) {
+            container = findEntryIgnoreCase(zip, "META-INF/container.xml");
+        }
         if (container != null) {
-            InputStream is = null;
-            try {
-                is = zip.getInputStream(container);
-                XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
-                factory.setNamespaceAware(false);
-                XmlPullParser parser = factory.newPullParser();
-                parser.setInput(new InputStreamReader(is, StandardCharsets.UTF_8));
-                int event = parser.getEventType();
-                while (event != XmlPullParser.END_DOCUMENT) {
-                    if (event == XmlPullParser.START_TAG) {
-                        String name = localName(parser.getName());
-                        if ("rootfile".equalsIgnoreCase(name)) {
-                            String fullPath = parser.getAttributeValue(null, "full-path");
-                            if (!isBlank(fullPath)) {
-                                return fullPath.trim();
-                            }
-                        }
-                    }
-                    event = parser.next();
+            byte[] bytes = readEntryBounded(zip, container, MAX_OPF_BYTES);
+            if (bytes != null) {
+                String detected = parseContainerOpfPath(bytes, true);
+                if (detected == null) {
+                    detected = parseContainerOpfPath(bytes, false);
                 }
-            } catch (Throwable ignored) {
-            } finally {
-                if (is != null) {
-                    try { is.close(); } catch (Throwable ignored) {}
+                if (!isBlank(detected)) {
+                    return detected;
                 }
             }
         }
-        // Fallback: first .opf entry in ZIP
+        // Fallback: first .opf entry in ZIP within size limit
         Enumeration<? extends ZipEntry> entries = zip.entries();
         while (entries.hasMoreElements()) {
             ZipEntry e = entries.nextElement();
-            if (!e.isDirectory() && e.getName().toLowerCase(Locale.ROOT).endsWith(".opf")) {
+            if (!e.isDirectory() && e.getName().toLowerCase(Locale.ROOT).endsWith(".opf")
+                    && e.getSize() <= MAX_OPF_BYTES) {
                 return e.getName();
             }
         }
+        return null;
+    }
+
+    private static String parseContainerOpfPath(byte[] xmlBytes, boolean autoDetectEncoding) {
+        try {
+            XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+            factory.setNamespaceAware(false);
+            XmlPullParser parser = factory.newPullParser();
+            ByteArrayInputStream bais = new ByteArrayInputStream(xmlBytes);
+            if (autoDetectEncoding) {
+                parser.setInput(bais, null);
+            } else {
+                parser.setInput(new InputStreamReader(bais, StandardCharsets.UTF_8));
+            }
+            int event = parser.getEventType();
+            while (event != XmlPullParser.END_DOCUMENT) {
+                if (event == XmlPullParser.START_TAG) {
+                    String name = localName(parser.getName());
+                    if ("rootfile".equalsIgnoreCase(name)) {
+                        String fullPath = parser.getAttributeValue(null, "full-path");
+                        if (isBlank(fullPath)) {
+                            for (int i = 0; i < parser.getAttributeCount(); i++) {
+                                if ("full-path".equalsIgnoreCase(localName(parser.getAttributeName(i)))) {
+                                    fullPath = parser.getAttributeValue(i);
+                                    break;
+                                }
+                            }
+                        }
+                        if (!isBlank(fullPath)) {
+                            return fullPath.trim();
+                        }
+                    }
+                }
+                event = parser.next();
+            }
+        } catch (Throwable ignored) {}
         return null;
     }
 
@@ -136,13 +206,24 @@ public final class EpubMetadataExtractor {
         return null;
     }
 
-    private static void parseOpf(InputStream is, BookMeta meta) {
+    private static void parseOpfBytes(byte[] xmlBytes, BookMeta meta) {
+        if (!tryParseOpf(xmlBytes, meta, true)) {
+            tryParseOpf(xmlBytes, meta, false);
+        }
+    }
+
+    private static boolean tryParseOpf(byte[] xmlBytes, BookMeta meta, boolean autoDetectEncoding) {
         Set<String> genreSet = new LinkedHashSet<>();
         try {
             XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
             factory.setNamespaceAware(false);
             XmlPullParser parser = factory.newPullParser();
-            parser.setInput(new InputStreamReader(is, StandardCharsets.UTF_8));
+            ByteArrayInputStream bais = new ByteArrayInputStream(xmlBytes);
+            if (autoDetectEncoding) {
+                parser.setInput(bais, null);
+            } else {
+                parser.setInput(new InputStreamReader(bais, StandardCharsets.UTF_8));
+            }
 
             int event = parser.getEventType();
             boolean inMetadata = false;
@@ -168,16 +249,13 @@ public final class EpubMetadataExtractor {
                         break;
                     }
                     if (inMetadata && name.equals(currentTag)) {
-                        String val = cleanSpace(textBuf.toString());
+                        String val = cleanSpace(decodeXmlEntities(textBuf.toString()));
                         if (!isBlank(val)) {
                             if ("title".equals(name) && isBlank(meta.title)) {
                                 meta.title = val;
                             } else if ("creator".equals(name)) {
-                                if (isBlank(meta.author)) {
-                                    meta.author = val;
-                                } else if (!meta.author.contains(val)) {
-                                    meta.author = meta.author + "; " + val;
-                                }
+                                String normAuthor = normalizeAuthor(val);
+                                meta.author = appendDistinctAuthor(meta.author, normAuthor);
                             } else if ("publisher".equals(name) && isBlank(meta.publisher)) {
                                 meta.publisher = val;
                             } else if ("date".equals(name) && isBlank(meta.pubDate)) {
@@ -189,11 +267,13 @@ public final class EpubMetadataExtractor {
                                     genreSet.add(val);
                                 }
                             } else if ("description".equals(name) && isBlank(meta.description)) {
-                                meta.description = stripHtml(val);
-                            } else if ("identifier".equals(name) && isBlank(meta.isbn)) {
-                                String digits = extractIsbn(val);
-                                if (!isBlank(digits)) {
-                                    meta.isbn = digits;
+                                meta.description = truncateDescription(stripHtml(val));
+                            } else if ("identifier".equals(name)) {
+                                String isbn = normalizeIsbn(val);
+                                if (!isBlank(isbn)) {
+                                    if (isbn.length() == 13 || isBlank(meta.isbn)) {
+                                        meta.isbn = isbn;
+                                    }
                                 }
                             }
                         }
@@ -203,11 +283,16 @@ public final class EpubMetadataExtractor {
                 }
                 event = parser.next();
             }
+            Set<String> seenLower = new LinkedHashSet<>();
+            for (String g : genreSet) {
+                if (seenLower.add(g.toLowerCase(Locale.ROOT))) {
+                    meta.genres.add(g);
+                }
+            }
+            return true;
         } catch (Throwable ignored) {
-        } finally {
-            try { is.close(); } catch (Throwable ignored) {}
+            return false;
         }
-        meta.genres.addAll(genreSet);
     }
 
     private static String localName(String qName) {
@@ -216,27 +301,97 @@ public final class EpubMetadataExtractor {
         return idx >= 0 ? qName.substring(idx + 1) : qName;
     }
 
-    private static String extractIsbn(String raw) {
+    /**
+     * Pure, Android-free ISBN normalizer & checksum validator (ISBN-13 978/979 and ISBN-10).
+     * Rejects UUIDs, Calibre IDs, URLs, and invalid checksums.
+     */
+    public static String normalizeIsbn(String raw) {
         if (raw == null) return "";
-        String cleaned = raw.replace("urn:isbn:", "").replace("ISBN:", "").replace("isbn:", "")
-                .replace("-", "").replace(" ", "").trim();
-        if (cleaned.length() == 10 || cleaned.length() == 13) {
-            boolean ok = true;
-            for (int i = 0; i < cleaned.length(); i++) {
-                char c = cleaned.charAt(i);
-                if (!Character.isDigit(c) && !(i == 9 && (c == 'X' || c == 'x'))) {
-                    ok = false;
-                    break;
-                }
+        String s = raw.trim();
+        String lower = s.toLowerCase(Locale.ROOT);
+        if (lower.contains("http://") || lower.contains("https://")
+                || lower.contains("uuid") || lower.contains("calibre")) {
+            return "";
+        }
+        s = s.replaceAll("(?i)^urn:isbn:", "")
+                .replaceAll("(?i)^isbn[:\\s-]*", "")
+                .replaceAll("[\\s-]+", "")
+                .toUpperCase(Locale.ROOT);
+        if (s.length() == 13) {
+            if (!s.startsWith("978") && !s.startsWith("979")) return "";
+            int sum = 0;
+            for (int i = 0; i < 13; i++) {
+                char c = s.charAt(i);
+                if (c < '0' || c > '9') return "";
+                int d = c - '0';
+                sum += (i % 2 == 0) ? d : (d * 3);
             }
-            if (ok) return cleaned;
+            return (sum % 10 == 0) ? s : "";
+        }
+        if (s.length() == 10) {
+            int sum = 0;
+            for (int i = 0; i < 10; i++) {
+                char c = s.charAt(i);
+                int val;
+                if (i == 9 && c == 'X') {
+                    val = 10;
+                } else if (c >= '0' && c <= '9') {
+                    val = c - '0';
+                } else {
+                    return "";
+                }
+                sum += (10 - i) * val;
+            }
+            return (sum % 11 == 0) ? s : "";
         }
         return "";
     }
 
+    public static String decodeXmlEntities(String s) {
+        if (s == null || s.indexOf('&') < 0) return s == null ? "" : s;
+        StringBuilder sb = new StringBuilder(s.length());
+        int i = 0;
+        while (i < s.length()) {
+            char c = s.charAt(i);
+            if (c == '&') {
+                int semi = s.indexOf(';', i + 1);
+                if (semi > i + 1 && semi - i <= 10) {
+                    String ent = s.substring(i + 1, semi);
+                    if ("amp".equals(ent)) { sb.append('&'); i = semi + 1; continue; }
+                    if ("lt".equals(ent)) { sb.append('<'); i = semi + 1; continue; }
+                    if ("gt".equals(ent)) { sb.append('>'); i = semi + 1; continue; }
+                    if ("quot".equals(ent)) { sb.append('"'); i = semi + 1; continue; }
+                    if ("apos".equals(ent)) { sb.append('\''); i = semi + 1; continue; }
+                    if (ent.startsWith("#x") || ent.startsWith("#X")) {
+                        try {
+                            int cp = Integer.parseInt(ent.substring(2), 16);
+                            if (cp > 0 && cp <= 0x10FFFF) {
+                                sb.append(Character.toChars(cp));
+                                i = semi + 1;
+                                continue;
+                            }
+                        } catch (Throwable ignored) {}
+                    } else if (ent.startsWith("#")) {
+                        try {
+                            int cp = Integer.parseInt(ent.substring(1), 10);
+                            if (cp > 0 && cp <= 0x10FFFF) {
+                                sb.append(Character.toChars(cp));
+                                i = semi + 1;
+                                continue;
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+                }
+            }
+            sb.append(c);
+            i++;
+        }
+        return sb.toString();
+    }
+
     private static String stripHtml(String s) {
         if (s == null) return "";
-        String plain = s.replaceAll("<[^>]+>", " ");
+        String plain = decodeXmlEntities(s).replaceAll("<[^>]+>", " ");
         return cleanSpace(plain);
     }
 
@@ -257,15 +412,111 @@ public final class EpubMetadataExtractor {
         return name.isEmpty() ? "Untitled" : name;
     }
 
+    private static boolean isAuthorSuffix(String part) {
+        if (part == null) return false;
+        String k = part.trim().replace(".", "").toLowerCase(Locale.ROOT);
+        return "jr".equals(k) || "sr".equals(k) || "ii".equals(k)
+                || "iii".equals(k) || "iv".equals(k) || "phd".equals(k) || "md".equals(k);
+    }
+
+    /**
+     * Pure, Android-free author list deduplicator using case-insensitive exact entry equality per "; "-separated author.
+     */
+    public static String appendDistinctAuthor(String existingAuthors, String candidateAuthor) {
+        java.util.List<String> ordered = new java.util.ArrayList<>();
+        Set<String> seenLower = new LinkedHashSet<>();
+        for (String chunk : new String[] { existingAuthors, candidateAuthor }) {
+            if (chunk == null) continue;
+            for (String part : chunk.split(";")) {
+                String trimmed = cleanSpace(part);
+                if (!trimmed.isEmpty() && seenLower.add(trimmed.toLowerCase(Locale.ROOT))) {
+                    ordered.add(trimmed);
+                }
+            }
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < ordered.size(); i++) {
+            if (i > 0) sb.append("; ");
+            sb.append(ordered.get(i));
+        }
+        return sb.toString();
+    }
+
+    public static String truncateDescription(String desc) {
+        if (desc == null) return "";
+        if (desc.length() <= MAX_DESCRIPTION_CHARS) return desc;
+        return desc.substring(0, MAX_DESCRIPTION_CHARS);
+    }
+
+    /**
+     * Pure, Android-free author normalizer: converts "Last, First" -> "First Last"
+     * without mangling suffixes (Jr., Sr., III) or multi-author strings.
+     */
+    public static String normalizeAuthor(String raw) {
+        if (raw == null) return "";
+        String trimmed = cleanSpace(raw);
+        if (trimmed.isEmpty()) return "";
+        if (trimmed.contains(";")) {
+            String[] parts = trimmed.split(";");
+            String out = "";
+            for (String p : parts) {
+                String norm = normalizeSingleAuthor(p);
+                out = appendDistinctAuthor(out, norm);
+            }
+            return out;
+        }
+        return normalizeSingleAuthor(trimmed);
+    }
+
+    private static String normalizeSingleAuthor(String raw) {
+        if (raw == null) return "";
+        String s = cleanSpace(raw);
+        if (s.isEmpty()) return "";
+        if (s.contains(" & ") || s.toLowerCase(Locale.ROOT).contains(" and ")) {
+            return s;
+        }
+        String[] commaParts = s.split(",");
+        if (commaParts.length == 2) {
+            String left = commaParts[0].trim();
+            String right = commaParts[1].trim();
+            if (!left.isEmpty() && !right.isEmpty() && !isAuthorSuffix(right)) {
+                return right + " " + left;
+            }
+            return s;
+        }
+        if (commaParts.length == 3 && isAuthorSuffix(commaParts[2])) {
+            String last = commaParts[0].trim();
+            String first = commaParts[1].trim();
+            String suffix = commaParts[2].trim();
+            if (!last.isEmpty() && !first.isEmpty()) {
+                return first + " " + last + " " + suffix;
+            }
+        }
+        return s;
+    }
+
     public static String normalizePubDate(String raw) {
         if (raw == null) return "";
         String s = raw.trim();
-        // Trim ISO timestamps like "2000-07-15 00:00:00+01:00" or "2014-06-06T00:00:00Z"
-        int tIdx = s.indexOf('T');
-        if (tIdx >= 4) s = s.substring(0, tIdx);
-        int spIdx = s.indexOf(' ');
-        if (spIdx >= 4) s = s.substring(0, spIdx);
-        return s.trim();
+        if (s.isEmpty()) return "";
+        Matcher iso = ISO_DATETIME_PREFIX.matcher(s);
+        if (iso.matches()) {
+            String datePart = iso.group(1);
+            int yr = Integer.parseInt(datePart.substring(0, 4));
+            if (yr >= 1000 && yr <= 2099) {
+                return datePart;
+            }
+            return "";
+        }
+        Matcher ym = YEAR_4_PATTERN.matcher(s);
+        if (ym.find()) {
+            String yStr = ym.group(1);
+            int yr = Integer.parseInt(yStr);
+            if (yr >= 1000 && yr <= 2099) {
+                return yStr;
+            }
+        }
+        return "";
     }
 
     public static boolean isNoiseTag(String tag) {

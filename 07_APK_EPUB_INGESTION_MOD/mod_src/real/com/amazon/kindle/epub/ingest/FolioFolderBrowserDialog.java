@@ -33,6 +33,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Dark-themed multi-select EPUB folder importer with:
@@ -55,7 +59,14 @@ public final class FolioFolderBrowserDialog {
 
     public static void show(final Context ctx) {
         final Handler mainHandler = new Handler(Looper.getMainLooper());
-        final Set<String> importedSourceNames = loadImportedSources(ctx);
+        final ExecutorService scanExecutor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "azath-folder-scan");
+            t.setDaemon(true);
+            return t;
+        });
+        final AtomicInteger scanGeneration = new AtomicInteger(0);
+        final AtomicBoolean dialogDismissed = new AtomicBoolean(false);
+        final ImportedIndex importedIndex = new ImportedIndex();
         final List<File> allEpubsInDir = new ArrayList<>();
         final List<File> selectedFiles = new ArrayList<>();
         final boolean[] hideImported = new boolean[] { false };
@@ -286,6 +297,25 @@ public final class FolioFolderBrowserDialog {
         btnImport.setLayoutParams(impLp);
         root.addView(btnImport);
 
+        final TextView btnCancelImport = new TextView(ctx);
+        btnCancelImport.setText("Cancel Import");
+        btnCancelImport.setGravity(Gravity.CENTER);
+        btnCancelImport.setTextColor(FolioTheme.textPrimary(ctx));
+        btnCancelImport.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        btnCancelImport.setTypeface(Typeface.DEFAULT_BOLD);
+        btnCancelImport.setPadding(dp(ctx, 16), dp(ctx, 10), dp(ctx, 16), dp(ctx, 10));
+        GradientDrawable cancelBg = new GradientDrawable();
+        cancelBg.setColor(FolioTheme.bgControl(ctx));
+        cancelBg.setCornerRadius(dp(ctx, 10));
+        cancelBg.setStroke(dp(ctx, 1), FolioTheme.border(ctx));
+        btnCancelImport.setBackground(cancelBg);
+        LinearLayout.LayoutParams cancelLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        cancelLp.setMargins(0, dp(ctx, 6), 0, 0);
+        btnCancelImport.setLayoutParams(cancelLp);
+        btnCancelImport.setVisibility(View.GONE);
+        root.addView(btnCancelImport);
+
         final AlertDialog dialog = new AlertDialog.Builder(ctx)
                 .setView(root)
                 .setNegativeButton("Close", null)
@@ -379,7 +409,7 @@ public final class FolioFolderBrowserDialog {
             List<File> matched = new ArrayList<>();
             for (File f : allEpubsInDir) {
                 String lower = f.getName().toLowerCase(Locale.ROOT);
-                if (hideImported[0] && importedSourceNames.contains(lower)) continue;
+                if (hideImported[0] && importedIndex.isImported(f)) continue;
                 if (!q.isEmpty() && !lower.contains(q)) continue;
                 matched.add(f);
             }
@@ -400,7 +430,7 @@ public final class FolioFolderBrowserDialog {
 
             for (int i = 0; i < cap; i++) {
                 final File epub = matched.get(i);
-                final boolean already = importedSourceNames.contains(epub.getName().toLowerCase(Locale.ROOT));
+                final boolean already = importedIndex.isImported(epub);
 
                 LinearLayout row = new LinearLayout(ctx);
                 row.setOrientation(LinearLayout.HORIZONTAL);
@@ -481,39 +511,66 @@ public final class FolioFolderBrowserDialog {
         renderListRef[0] = renderList;
 
         final Runnable loadDir = () -> {
+            final int gen = scanGeneration.incrementAndGet();
             displayLimit[0] = 60;
             selectedFiles.clear();
             allEpubsInDir.clear();
             subDirsInDir.clear();
             updateImportLabel.run();
 
-            String dirPath = etPath.getText().toString().trim();
-            File dir = new File(dirPath);
-            if (!dir.exists() || !dir.isDirectory()) {
-                listContainer.removeAllViews();
-                statusTv.setText("Folder not found: " + dirPath);
-                return;
-            }
-            File[] children = dir.listFiles();
-            if (children == null) {
-                listContainer.removeAllViews();
-                statusTv.setText("Cannot read folder: " + dirPath);
-                return;
-            }
-            try {
-                ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
-                        .edit().putString("last_import_dir", dirPath).apply();
-            } catch (Throwable ignored) {}
-            for (File f : children) {
-                if (f.isDirectory() && !f.getName().startsWith(".")) {
-                    subDirsInDir.add(f);
-                } else if (f.isFile() && f.getName().toLowerCase(Locale.ROOT).endsWith(".epub")) {
-                    allEpubsInDir.add(f);
+            final String dirPath = etPath.getText().toString().trim();
+            listContainer.removeAllViews();
+            statusTv.setText("Scanning " + dirPath + "...");
+
+            scanExecutor.execute(() -> {
+                if (gen != scanGeneration.get()) return;
+                final ImportedIndex freshImported = loadImportedSources(ctx);
+                final File dir = new File(dirPath);
+                if (!dir.exists() || !dir.isDirectory()) {
+                    mainHandler.post(() -> {
+                        if (gen != scanGeneration.get() || dialogDismissed.get() || FolioTheme.isContextDead(ctx)) return;
+                        listContainer.removeAllViews();
+                        statusTv.setText("Folder not found: " + dirPath);
+                    });
+                    return;
                 }
-            }
-            subDirsInDir.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
-            allEpubsInDir.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
-            renderList.run();
+                File[] children = dir.listFiles();
+                if (children == null) {
+                    mainHandler.post(() -> {
+                        if (gen != scanGeneration.get() || dialogDismissed.get() || FolioTheme.isContextDead(ctx)) return;
+                        listContainer.removeAllViews();
+                        statusTv.setText("Cannot read folder: " + dirPath);
+                    });
+                    return;
+                }
+                try {
+                    ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
+                            .edit().putString("last_import_dir", dirPath).apply();
+                } catch (Throwable ignored) {}
+
+                final List<File> foundDirs = new ArrayList<>();
+                final List<File> foundEpubs = new ArrayList<>();
+                for (File f : children) {
+                    if (gen != scanGeneration.get()) return;
+                    if (f.isDirectory() && !f.getName().startsWith(".")) {
+                        foundDirs.add(f);
+                    } else if (f.isFile() && f.getName().toLowerCase(Locale.ROOT).endsWith(".epub")) {
+                        foundEpubs.add(f);
+                    }
+                }
+                foundDirs.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
+                foundEpubs.sort(Comparator.comparing(f -> f.getName().toLowerCase(Locale.ROOT)));
+
+                mainHandler.post(() -> {
+                    if (gen != scanGeneration.get() || dialogDismissed.get() || FolioTheme.isContextDead(ctx)) return;
+                    importedIndex.replaceWith(freshImported);
+                    subDirsInDir.clear();
+                    subDirsInDir.addAll(foundDirs);
+                    allEpubsInDir.clear();
+                    allEpubsInDir.addAll(foundEpubs);
+                    renderList.run();
+                });
+            });
         };
         loadDirRef[0] = loadDir;
 
@@ -541,7 +598,9 @@ public final class FolioFolderBrowserDialog {
                 String shortLbl = qd.replace("/sdcard/", "");
                 if (shortLbl.isEmpty()) shortLbl = qd;
                 chip.setText((isPin ? "★ " : "") + shortLbl);
-                chip.setTextColor(Color.parseColor(isCur ? "#15171A" : (isPin ? "#D4C9B8" : "#BDB8AE")));
+                chip.setTextColor(isCur
+                        ? FolioTheme.bgModal(ctx)
+                        : (isPin ? FolioTheme.accent(ctx) : FolioTheme.textSecondary(ctx)));
                 chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
                 chip.setTypeface(isCur || isPin ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
                 chip.setPadding(dp(ctx, 10), dp(ctx, 5), dp(ctx, 10), dp(ctx, 5));
@@ -620,7 +679,7 @@ public final class FolioFolderBrowserDialog {
                 int added = 0;
                 for (File f : currentVisible) {
                     if (added >= 25) break;
-                    if (!importedSourceNames.contains(f.getName().toLowerCase(Locale.ROOT))) {
+                    if (!importedIndex.isImported(f)) {
                         if (!selectedFiles.contains(f)) {
                             selectedFiles.add(f);
                             added++;
@@ -653,29 +712,46 @@ public final class FolioFolderBrowserDialog {
                 return;
             }
             final List<File> batch = new ArrayList<>(selectedFiles);
+            final AtomicBoolean cancelled = new AtomicBoolean(false);
             btnImport.setEnabled(false);
             btnImport.setText("Importing 0/" + batch.size() + "...");
+            btnCancelImport.setEnabled(true);
+            btnCancelImport.setText("Cancel Import");
+            btnCancelImport.setVisibility(View.VISIBLE);
+            btnCancelImport.setOnClickListener(cv -> {
+                cancelled.set(true);
+                btnCancelImport.setEnabled(false);
+                btnCancelImport.setText("Cancelling after current book...");
+            });
 
             new Thread(() -> {
                 int okCount = 0;
                 File lastImportedKfx = null;
                 File sdKindle = new File("/sdcard/kindle");
                 if (!sdKindle.exists()) sdKindle.mkdirs();
-                File targetDir = (sdKindle.exists() && sdKindle.canWrite())
+                File targetDir = (sdKindle.isDirectory() && sdKindle.canWrite())
                         ? sdKindle : new File(ctx.getFilesDir(), "folio_library");
                 if (!targetDir.exists()) targetDir.mkdirs();
 
                 for (int i = 0; i < batch.size(); i++) {
+                    if (cancelled.get()) {
+                        Log.i(TAG, "Batch import cancelled by user after " + okCount + " of " + batch.size());
+                        break;
+                    }
                     final int idx = i + 1;
                     final File epub = batch.get(i);
-                    mainHandler.post(() -> btnImport.setText("Importing " + idx + "/" + batch.size() + "..."));
+                    mainHandler.post(() -> {
+                        if (!dialogDismissed.get() && !FolioTheme.isContextDead(ctx)) {
+                            btnImport.setText("Importing " + idx + "/" + batch.size() + "...");
+                        }
+                    });
                     try {
                         AzathLibrarySync.IngestResult ir = AzathLibrarySync.ingestEpub(ctx, epub, epub.getName(), false);
                         if (ir == null || !ir.ok) {
                             Log.w(TAG, "Conversion failed for " + epub.getName() + ": " + (ir != null ? ir.error : "null"));
                             continue;
                         }
-                        importedSourceNames.add(epub.getName().toLowerCase(Locale.ROOT));
+                        importedIndex.markImported(epub);
                         if (ir.kfxFile != null && ir.kfxFile.exists()) lastImportedKfx = ir.kfxFile;
                         okCount++;
                     } catch (Throwable t) {
@@ -685,17 +761,29 @@ public final class FolioFolderBrowserDialog {
 
                 try { AzathLibrarySync.reconcileLibrary(ctx); } catch (Throwable ignored) {}
                 final int finalOk = okCount;
+                final boolean wasCancelled = cancelled.get();
                 final File finalLastKfx = lastImportedKfx;
                 mainHandler.post(() -> {
+                    if (FolioTheme.isContextDead(ctx)) return;
+                    btnCancelImport.setVisibility(View.GONE);
                     btnImport.setEnabled(true);
                     selectedFiles.clear();
                     updateImportLabel.run();
                     renderList.run();
+                    if (dialogDismissed.get()) {
+                        Toast.makeText(ctx.getApplicationContext(),
+                                "Imported " + finalOk + " of " + batch.size() + " EPUB(s)",
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
                     if (finalOk > 0) {
+                        String statusLine = "Converted " + finalOk + " of " + batch.size()
+                                + " EPUB" + (batch.size() == 1 ? "" : "s")
+                                + (wasCancelled ? " (cancelled)" : "")
+                                + " into /sdcard/kindle/. Open now to read and index it immediately in your Library.";
                         AlertDialog.Builder b = new AlertDialog.Builder(ctx)
-                                .setTitle("Imported to Azath Library")
-                                .setMessage("Converted " + finalOk + " of " + batch.size() + " EPUB" + (batch.size() == 1 ? "" : "s")
-                                        + " into /sdcard/kindle/. Open now to read and index it immediately in your Library.")
+                                .setTitle(wasCancelled ? "Imported " + finalOk + " of " + batch.size() + " (cancelled)" : "Imported to Azath Library")
+                                .setMessage(statusLine)
                                 .setNegativeButton("Done", null);
                         if (finalLastKfx != null && finalLastKfx.exists()) {
                             b.setPositiveButton(finalOk == 1 ? "Open Book" : "Open Latest Book", (d2, w2) -> {
@@ -707,14 +795,20 @@ public final class FolioFolderBrowserDialog {
                         FolioTheme.applyToDialog(ctx, doneDlg);
                     } else {
                         Toast.makeText(ctx,
-                                "Imported 0 of " + batch.size() + " EPUBs",
+                                wasCancelled ? "Imported 0 of " + batch.size() + " (cancelled)" : "Imported 0 of " + batch.size() + " EPUBs",
                                 Toast.LENGTH_LONG).show();
                     }
                 });
             }, "folio-batch-import").start();
         });
 
+        dialog.setOnDismissListener(d -> {
+            dialogDismissed.set(true);
+            scanGeneration.incrementAndGet();
+            scanExecutor.shutdownNow();
+        });
         loadDir.run();
+        if (FolioTheme.isContextDead(ctx)) return;
         FolioTheme.applyToTree(ctx, root);
         dialog.show();
         FolioTheme.styleDialog(ctx, dialog);
@@ -728,19 +822,50 @@ public final class FolioFolderBrowserDialog {
         return bg;
     }
 
-    private static Set<String> loadImportedSources(Context ctx) {
-        Set<String> set = new HashSet<>();
+    private static final class ImportedIndex {
+        final Set<String> sizedKeys = new HashSet<>();
+        final Set<String> legacyNamesOnly = new HashSet<>();
+
+        boolean isImported(File f) {
+            if (f == null) return false;
+            String lower = f.getName().toLowerCase(Locale.ROOT);
+            if (sizedKeys.contains(lower + "|" + f.length())) return true;
+            return legacyNamesOnly.contains(lower);
+        }
+
+        void markImported(File f) {
+            if (f == null) return;
+            sizedKeys.add(f.getName().toLowerCase(Locale.ROOT) + "|" + f.length());
+        }
+
+        void replaceWith(ImportedIndex other) {
+            sizedKeys.clear();
+            legacyNamesOnly.clear();
+            if (other != null) {
+                sizedKeys.addAll(other.sizedKeys);
+                legacyNamesOnly.addAll(other.legacyNamesOnly);
+            }
+        }
+    }
+
+    private static ImportedIndex loadImportedSources(Context ctx) {
+        ImportedIndex idx = new ImportedIndex();
         FolioMetadataDb db = new FolioMetadataDb(ctx);
         try {
             for (FolioMetadataDb.BookRecord r : db.getAllBooks()) {
                 if (r.sourceName != null && !r.sourceName.isEmpty()) {
-                    set.add(r.sourceName.toLowerCase(Locale.ROOT));
+                    String lower = r.sourceName.toLowerCase(Locale.ROOT);
+                    if (r.sourceSize > 0) {
+                        idx.sizedKeys.add(lower + "|" + r.sourceSize);
+                    } else {
+                        idx.legacyNamesOnly.add(lower);
+                    }
                 }
             }
         } finally {
             db.close();
         }
-        return set;
+        return idx;
     }
 
     private static java.util.LinkedHashSet<String> loadPinnedDirs(Context ctx) {
