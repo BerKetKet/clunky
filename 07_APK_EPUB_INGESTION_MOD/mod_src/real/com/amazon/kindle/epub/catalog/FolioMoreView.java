@@ -418,6 +418,10 @@ public final class FolioMoreView {
                 "Largest KFX files, saved backups & cache", true, new View.OnClickListener() {
                     @Override public void onClick(View v) { showStorageDuplicatesDialog(ctx); }
                 }));
+        sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.REFRESH, "Force Reconcile",
+                "Preview & prune missing DB rows and orphan cache", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) { showForceReconcileDialog(ctx, refreshStats); }
+                }));
         sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.LINK, "Web Browser URL",
                 "Homepage & Simplified View ("
                         + com.amazon.kindle.epub.ingest.FolioWebBrowserDialog.getHomeHostLabel(ctx) + ")",
@@ -3819,6 +3823,131 @@ public final class FolioMoreView {
                     }
                 })
                 .show();
+    }
+
+    private static void showForceReconcileDialog(final Context ctx, final Runnable onDone) {
+        Toast.makeText(ctx, "Scanning library & cache...", Toast.LENGTH_SHORT).show();
+        final Handler h = new Handler(Looper.getMainLooper());
+        new Thread(new Runnable() {
+            @Override public void run() {
+                final com.amazon.kindle.epub.ingest.AzathLibrarySync.ReconcilePreview prev =
+                        com.amazon.kindle.epub.ingest.AzathLibrarySync.previewReconcile(ctx);
+                h.post(new Runnable() {
+                    @Override public void run() {
+                        if (FolioTheme.isContextDead(ctx)) return;
+                        final float d = ctx.getResources().getDisplayMetrics().density;
+                        LinearLayout box = new LinearLayout(ctx);
+                        box.setOrientation(LinearLayout.VERTICAL);
+                        box.setBackgroundColor(FolioTheme.bgSurface(ctx));
+                        box.setPadding(dp(d, 20), dp(d, 18), dp(d, 20), dp(d, 12));
+
+                        TextView hdr = new TextView(ctx);
+                        hdr.setText("Force Reconcile Preview");
+                        hdr.setTextColor(FolioTheme.textPrimary(ctx));
+                        hdr.setTextSize(17);
+                        hdr.setTypeface(Typeface.DEFAULT_BOLD);
+                        hdr.setPadding(0, 0, 0, dp(d, 6));
+                        box.addView(hdr);
+
+                        int dbDelCount = prev.dbDeleteDetails.size();
+                        int cacheDelCount = prev.cacheDeletePaths.size();
+                        int totalDel = dbDelCount + cacheDelCount;
+
+                        StringBuilder body = new StringBuilder();
+                        body.append("Active KFX on disk: ").append(prev.activeKfxCount).append("\n");
+                        body.append("/sdcard/kindle healthy: ").append(prev.sdKindleHealthy ? "Yes" : "No").append("\n");
+                        body.append("Private folio_library healthy: ").append(prev.privateDirHealthy ? "Yes" : "No").append("\n\n");
+
+                        if (prev.forcedPlan.skipDestructive) {
+                            body.append("Blocked: ").append(prev.forcedPlan.warningReason).append("\n");
+                        } else if (totalDel == 0) {
+                            body.append("Library & cache are clean:\n");
+                            body.append("• Missing DB rows to delete: 0\n");
+                            body.append("• Orphan epub_cache files to delete: 0\n");
+                            if (!prev.forcedPlan.backfillPaths.isEmpty()) {
+                                body.append("• Unindexed KFX files to backfill: ").append(prev.forcedPlan.backfillPaths.size()).append("\n");
+                            }
+                        } else {
+                            if (prev.circuitBreakerWouldTrip) {
+                                body.append("Circuit breaker tripped for automatic reconcile; manual confirmation required.\n\n");
+                            }
+                            body.append("DB rows to delete (").append(dbDelCount).append("):\n");
+                            if (dbDelCount == 0) {
+                                body.append("  (none)\n");
+                            } else {
+                                for (String line : prev.dbDeleteDetails) {
+                                    body.append("  • ").append(line).append("\n");
+                                }
+                            }
+                            body.append("\nOrphan epub_cache files to delete (").append(cacheDelCount).append("):\n");
+                            if (cacheDelCount == 0) {
+                                body.append("  (none)\n");
+                            } else {
+                                for (String path : prev.cacheDeletePaths) {
+                                    body.append("  • ").append(path).append("\n");
+                                }
+                            }
+                        }
+
+                        ScrollView sv = new ScrollView(ctx);
+                        sv.setLayoutParams(new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, 260)));
+                        TextView msg = new TextView(ctx);
+                        msg.setText(body.toString());
+                        msg.setTextColor(FolioTheme.textMuted(ctx));
+                        msg.setTextSize(12.5f);
+                        msg.setPadding(0, dp(d, 4), 0, dp(d, 4));
+                        sv.addView(msg);
+                        box.addView(sv);
+
+                        AlertDialog.Builder b = new AlertDialog.Builder(ctx)
+                                .setView(box)
+                                .setNegativeButton("Cancel", null);
+                        if (!prev.forcedPlan.skipDestructive && totalDel > 0) {
+                            b.setPositiveButton("Confirm Delete (" + totalDel + ")", new DialogInterface.OnClickListener() {
+                                @Override public void onClick(DialogInterface dialog, int which) {
+                                    new Thread(new Runnable() {
+                                        @Override public void run() {
+                                            final int changes = com.amazon.kindle.epub.ingest.AzathLibrarySync.reconcileLibrary(ctx, true);
+                                            h.post(new Runnable() {
+                                                @Override public void run() {
+                                                    if (FolioTheme.isContextDead(ctx)) return;
+                                                    Toast.makeText(ctx,
+                                                            "Force Reconcile completed (" + changes + " change(s))",
+                                                            Toast.LENGTH_LONG).show();
+                                                    if (onDone != null) onDone.run();
+                                                }
+                                            });
+                                        }
+                                    }, "azath-force-reconcile").start();
+                                }
+                            });
+                        } else if (!prev.forcedPlan.skipDestructive && !prev.forcedPlan.backfillPaths.isEmpty()) {
+                            b.setPositiveButton("Backfill (" + prev.forcedPlan.backfillPaths.size() + ")", new DialogInterface.OnClickListener() {
+                                @Override public void onClick(DialogInterface dialog, int which) {
+                                    new Thread(new Runnable() {
+                                        @Override public void run() {
+                                            final int changes = com.amazon.kindle.epub.ingest.AzathLibrarySync.reconcileLibrary(ctx, true);
+                                            h.post(new Runnable() {
+                                                @Override public void run() {
+                                                    if (FolioTheme.isContextDead(ctx)) return;
+                                                    Toast.makeText(ctx,
+                                                            "Reconcile completed (" + changes + " change(s))",
+                                                            Toast.LENGTH_SHORT).show();
+                                                    if (onDone != null) onDone.run();
+                                                }
+                                            });
+                                        }
+                                    }, "azath-force-reconcile").start();
+                                }
+                            });
+                        }
+                        AlertDialog dlg = b.show();
+                        FolioTheme.applyToDialog(ctx, dlg);
+                    }
+                });
+            }
+        }, "azath-preview-reconcile").start();
     }
 
     private static void showStorageDuplicatesDialog(final Context ctx) {

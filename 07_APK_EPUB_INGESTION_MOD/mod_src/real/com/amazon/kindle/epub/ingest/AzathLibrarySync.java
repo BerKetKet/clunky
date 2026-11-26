@@ -268,6 +268,35 @@ public final class AzathLibrarySync {
         return false;
     }
 
+    public static boolean isPrivateLibraryDirHealthy(File privDir) {
+        if (privDir == null) return false;
+        if (!privDir.exists()) return true; // healthy-empty before first private-dir write
+        return privDir.isDirectory() && privDir.canRead() && privDir.listFiles() != null;
+    }
+
+    public static final class ReconcilePreview {
+        public final ReconcilePlan forcedPlan;
+        public final boolean circuitBreakerWouldTrip;
+        public final boolean sdKindleHealthy;
+        public final boolean privateDirHealthy;
+        public final int activeKfxCount;
+        public final List<String> dbDeleteDetails;
+        public final List<String> cacheDeletePaths;
+
+        public ReconcilePreview(ReconcilePlan forcedPlan, boolean circuitBreakerWouldTrip,
+                                boolean sdKindleHealthy, boolean privateDirHealthy,
+                                int activeKfxCount, List<String> dbDeleteDetails,
+                                List<String> cacheDeletePaths) {
+            this.forcedPlan = forcedPlan;
+            this.circuitBreakerWouldTrip = circuitBreakerWouldTrip;
+            this.sdKindleHealthy = sdKindleHealthy;
+            this.privateDirHealthy = privateDirHealthy;
+            this.activeKfxCount = activeKfxCount;
+            this.dbDeleteDetails = dbDeleteDetails != null ? dbDeleteDetails : Collections.<String>emptyList();
+            this.cacheDeletePaths = cacheDeletePaths != null ? cacheDeletePaths : Collections.<String>emptyList();
+        }
+    }
+
     /**
      * Pure, Android-free reconcile planner for JVM unit testing and runtime execution.
      */
@@ -275,6 +304,14 @@ public final class AzathLibrarySync {
             ScanResult scan,
             List<BookEntry> existingRecords,
             List<String> cacheEntryNames) {
+        return planReconcile(scan, existingRecords, cacheEntryNames, false);
+    }
+
+    public static ReconcilePlan planReconcile(
+            ScanResult scan,
+            List<BookEntry> existingRecords,
+            List<String> cacheEntryNames,
+            boolean force) {
         List<BookEntry> recs = existingRecords != null ? existingRecords : Collections.<BookEntry>emptyList();
         boolean sdKindleInUse = false;
         for (BookEntry r : recs) {
@@ -308,13 +345,17 @@ public final class AzathLibrarySync {
         }
 
         int totalRows = recs.size();
-        boolean circuitTripped = candidateDeletes.size() > 10
+        boolean rawBreaker = candidateDeletes.size() > 10
                 || (totalRows > 0 && candidateDeletes.size() * 2 > totalRows);
+        boolean circuitTripped = !force && rawBreaker;
         String warn = null;
         if (circuitTripped) {
             warn = "Circuit breaker tripped: would delete " + candidateDeletes.size()
                     + " of " + totalRows + " DB rows; aborting all deletes";
             candidateDeletes = Collections.<String>emptyList();
+        } else if (force && rawBreaker) {
+            warn = "Circuit breaker bypassed (force=true): scheduling " + candidateDeletes.size()
+                    + " of " + totalRows + " missing DB row deletes";
         }
 
         List<String> backfill = new ArrayList<>();
@@ -338,6 +379,98 @@ public final class AzathLibrarySync {
         return new ReconcilePlan(false, circuitTripped, warn, candidateDeletes, backfill, cachePrune);
     }
 
+    public static ReconcilePreview previewReconcile(Context ctx) {
+        if (ctx == null) {
+            return new ReconcilePreview(
+                    new ReconcilePlan(true, false, "Context is null",
+                            Collections.<String>emptyList(), Collections.<String>emptyList(), Collections.<String>emptyList()),
+                    false, false, false, 0, Collections.<String>emptyList(), Collections.<String>emptyList());
+        }
+        SYNC_LOCK.lock();
+        try {
+            long now = System.currentTimeMillis();
+            Set<String> activeNames = new HashSet<>();
+            Set<String> activePaths = new HashSet<>();
+            File sdDir = new File("/sdcard/kindle");
+            File privDir = new File(ctx.getFilesDir(), "folio_library");
+
+            File[] sdFiles = (sdDir.isDirectory() && sdDir.canRead()) ? sdDir.listFiles() : null;
+            boolean sdHealthy = sdDir.isDirectory() && sdDir.canRead() && sdFiles != null;
+            if (sdHealthy) {
+                for (File f : sdFiles) {
+                    String lower = f.getName().toLowerCase(Locale.US);
+                    if (f.isFile() && lower.endsWith(".kfx") && f.length() >= 128) {
+                        if (now - f.lastModified() >= RECENT_KFX_WINDOW_MS) {
+                            activePaths.add(f.getAbsolutePath());
+                        }
+                        activeNames.add(lower);
+                    }
+                }
+            }
+
+            boolean privHealthy = isPrivateLibraryDirHealthy(privDir);
+            File[] privFiles = (privDir.isDirectory() && privDir.canRead()) ? privDir.listFiles() : null;
+            if (privHealthy && privFiles != null) {
+                for (File f : privFiles) {
+                    String lower = f.getName().toLowerCase(Locale.US);
+                    if (f.isFile() && lower.endsWith(".kfx") && f.length() >= 128) {
+                        if (now - f.lastModified() >= RECENT_KFX_WINDOW_MS) {
+                            activePaths.add(f.getAbsolutePath());
+                        }
+                        activeNames.add(lower);
+                    }
+                }
+            }
+
+            ScanResult scan = new ScanResult(sdHealthy, privHealthy, activePaths, activeNames);
+            File epubCache = new File(ctx.getFilesDir(), "epub_cache");
+            List<String> cacheNames = new ArrayList<>();
+            if (epubCache.isDirectory()) {
+                File[] cached = epubCache.listFiles();
+                if (cached != null) {
+                    for (File cf : cached) cacheNames.add(cf.getName());
+                }
+            }
+
+            FolioMetadataDb db = new FolioMetadataDb(ctx);
+            ReconcilePlan safePlan;
+            ReconcilePlan forcedPlan;
+            List<String> deleteDetails = new ArrayList<>();
+            try {
+                List<FolioMetadataDb.BookRecord> recs = db.getAllBooks();
+                List<BookEntry> entries = new ArrayList<>(recs.size());
+                java.util.Map<String, FolioMetadataDb.BookRecord> byKey = new java.util.HashMap<>();
+                for (FolioMetadataDb.BookRecord r : recs) {
+                    File resolved = (r.kfxPath != null && !r.kfxPath.isEmpty())
+                            ? ExternalEpubActivity.resolveExistingKfxFile(ctx, new File(r.kfxPath))
+                            : null;
+                    boolean onDisk = resolved != null && resolved.exists() && resolved.length() >= 128;
+                    entries.add(new BookEntry(r.bookKey, onDisk ? resolved.getAbsolutePath() : r.kfxPath, onDisk));
+                    if (r.bookKey != null) byKey.put(r.bookKey, r);
+                }
+                safePlan = planReconcile(scan, entries, cacheNames, false);
+                forcedPlan = planReconcile(scan, entries, cacheNames, true);
+                for (String key : forcedPlan.dbKeysToDelete) {
+                    FolioMetadataDb.BookRecord rec = byKey.get(key);
+                    String title = (rec != null && rec.title != null && !rec.title.isEmpty()) ? rec.title : "(untitled)";
+                    String path = (rec != null && rec.kfxPath != null) ? rec.kfxPath : "";
+                    deleteDetails.add(title + " [" + key + "] -> " + path);
+                }
+            } finally {
+                db.close();
+            }
+
+            List<String> cachePaths = new ArrayList<>();
+            for (String cn : forcedPlan.cacheNamesToPrune) {
+                cachePaths.add(new File(epubCache, cn).getAbsolutePath());
+            }
+            return new ReconcilePreview(forcedPlan, safePlan.circuitBreakerTripped,
+                    sdHealthy, privHealthy, activePaths.size(), deleteDetails, cachePaths);
+        } finally {
+            SYNC_LOCK.unlock();
+        }
+    }
+
     /**
      * Authoritative library accounting pass:
      *  1. Cleans legacy duplicate synthetic AMZNID0/CR!...KFX/0/ rows in kindle_library.db.
@@ -346,6 +479,10 @@ public final class AzathLibrarySync {
      *  4. Prunes ONLY orphan files in files/epub_cache/ that do not belong to any active Library book.
      */
     public static int reconcileLibrary(Context ctx) {
+        return reconcileLibrary(ctx, false);
+    }
+
+    public static int reconcileLibrary(Context ctx, boolean force) {
         if (ctx == null) return 0;
         int changes = 0;
         SYNC_LOCK.lock();
@@ -385,9 +522,12 @@ public final class AzathLibrarySync {
                 }
             }
 
+            boolean privHealthy = isPrivateLibraryDirHealthy(privDir);
             File[] privFiles = (privDir.isDirectory() && privDir.canRead()) ? privDir.listFiles() : null;
-            boolean privHealthy = privDir.isDirectory() && privDir.canRead() && privFiles != null;
-            if (privHealthy) {
+            if (!privHealthy) {
+                Log.w(TAG, "Scan unhealthy for private library dir (exists=" + privDir.exists()
+                        + " isDir=" + privDir.isDirectory() + " canRead=" + privDir.canRead() + ")");
+            } else if (privFiles != null) {
                 for (File f : privFiles) {
                     String lower = f.getName().toLowerCase(Locale.US);
                     if (f.isFile() && lower.endsWith(".part")) {
@@ -434,7 +574,7 @@ public final class AzathLibrarySync {
                     entries.add(new BookEntry(r.bookKey, onDisk ? resolved.getAbsolutePath() : r.kfxPath, onDisk));
                 }
 
-                plan = planReconcile(scan, entries, cacheNames);
+                plan = planReconcile(scan, entries, cacheNames, force);
                 if (plan.warningReason != null) {
                     Log.w(TAG, plan.warningReason);
                 }

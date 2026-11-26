@@ -103,6 +103,32 @@ public final class AzathUnitTests {
                 healthyScan, thirtyRows, Collections.<String>emptyList());
         check("planReconcile circuit breaker >10 tripped", p4.circuitBreakerTripped);
         check("planReconcile circuit breaker >10 0 deletes", p4.dbKeysToDelete.isEmpty());
+
+        // 5. Task 3: missing folio_library (!exists) treated as healthy-empty allowing epub_cache prune
+        java.io.File nonExistentPriv = new java.io.File("/tmp/azath_unit_nonexistent_folio_library_dir_12345");
+        check("missing folio_library treated as healthy-empty",
+                AzathLibrarySync.isPrivateLibraryDirHealthy(nonExistentPriv));
+        AzathLibrarySync.ScanResult healthyWithEmptyPriv = new AzathLibrarySync.ScanResult(
+                true,
+                AzathLibrarySync.isPrivateLibraryDirHealthy(nonExistentPriv),
+                paths,
+                names);
+        AzathLibrarySync.ReconcilePlan p5 = AzathLibrarySync.planReconcile(
+                healthyWithEmptyPriv,
+                recs.subList(0, 4),
+                Arrays.asList("b1.epub.kfx", "stale_orphan.epub.kfx"));
+        check("missing folio_library still allows epub_cache prune",
+                p5.cacheNamesToPrune.equals(Collections.singletonList("stale_orphan.epub.kfx")));
+
+        // 6. Task 3: force=true bypasses circuit breaker while force=false still aborts
+        AzathLibrarySync.ReconcilePlan p6NoForce = AzathLibrarySync.planReconcile(
+                healthyScan, thirtyRows, Arrays.asList("orphan_cb.epub.kfx"), false);
+        check("force=false circuit breaker aborts deletes", p6NoForce.circuitBreakerTripped && p6NoForce.dbKeysToDelete.isEmpty());
+        check("force=false circuit breaker skips cache prune", p6NoForce.cacheNamesToPrune.isEmpty());
+        AzathLibrarySync.ReconcilePlan p6Force = AzathLibrarySync.planReconcile(
+                healthyScan, thirtyRows, Arrays.asList("orphan_cb.epub.kfx"), true);
+        check("force=true bypasses circuit breaker", !p6Force.circuitBreakerTripped && p6Force.dbKeysToDelete.size() == 11);
+        check("force=true allows cache prune", p6Force.cacheNamesToPrune.equals(Collections.singletonList("orphan_cb.epub.kfx")));
     }
 
     private static void testCacheBoundaryMatching() {
