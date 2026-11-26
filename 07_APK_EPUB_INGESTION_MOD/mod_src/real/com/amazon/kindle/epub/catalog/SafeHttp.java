@@ -68,13 +68,20 @@ public final class SafeHttp {
         }
     }
 
+    public static final int MAX_GET_BYTES = 2 * 1024 * 1024;
+
     public static byte[] getBytes(String urlStr) throws Exception {
         InputStream is = openStream(urlStr);
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             byte[] buf = new byte[8192];
+            long total = 0;
             int n;
             while ((n = is.read(buf)) > 0) {
+                total += n;
+                if (total > MAX_GET_BYTES) {
+                    throw new IOException("Response exceeds " + MAX_GET_BYTES + " bytes limit");
+                }
                 baos.write(buf, 0, n);
             }
             return baos.toByteArray();
@@ -85,6 +92,28 @@ public final class SafeHttp {
 
     public static InputStream openStream(String urlStr) throws Exception {
         return openStreamInternal(urlStr, 0);
+    }
+
+    private static InputStream openConnectedStream(final HttpURLConnection conn) throws IOException {
+        try {
+            final InputStream raw = conn.getInputStream();
+            return new java.io.FilterInputStream(raw) {
+                @Override
+                public void close() throws IOException {
+                    try {
+                        super.close();
+                    } finally {
+                        try { conn.disconnect(); } catch (Throwable ignored) {}
+                    }
+                }
+            };
+        } catch (IOException ioe) {
+            try { conn.disconnect(); } catch (Throwable ignored) {}
+            throw ioe;
+        } catch (RuntimeException re) {
+            try { conn.disconnect(); } catch (Throwable ignored) {}
+            throw re;
+        }
     }
 
     private static InputStream openStreamInternal(String urlStr, int depth) throws Exception {
@@ -105,7 +134,7 @@ public final class SafeHttp {
                     return openStreamInternal(next.toString(), depth + 1);
                 }
             }
-            return conn.getInputStream();
+            return openConnectedStream(conn);
         } catch (UnknownHostException uhe) {
             String ip = resolveViaDoH(host);
             if (ip == null || ip.isEmpty()) {
@@ -121,7 +150,7 @@ public final class SafeHttp {
                     return openStreamInternal(next.toString(), depth + 1);
                 }
             }
-            return conn.getInputStream();
+            return openConnectedStream(conn);
         }
     }
 

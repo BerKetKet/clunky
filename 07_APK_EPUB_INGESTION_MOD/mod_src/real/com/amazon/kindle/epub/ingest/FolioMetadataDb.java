@@ -16,13 +16,18 @@ import java.io.FileOutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.GregorianCalendar;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Persistent local metadata store (folio_metadata.db) recording rich EPUB
@@ -532,10 +537,106 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         return lower.contains("locked") || lower.contains("busy");
     }
 
+    private static final Pattern ISO_DATE_PREFIX =
+            Pattern.compile("^(\\d{4})-(\\d{2})-(\\d{2})(?:$|[T\\s].*)");
+    private static final Pattern YEAR_ONLY = Pattern.compile("^(\\d{4})$");
+
+    /**
+     * Pure, Android-free publication date parser returning UTC epoch milliseconds
+     * for ISO YYYY-MM-DD (including ISO timestamps) or 4-digit YYYY, or null if unparseable.
+     */
+    public static Long parsePubDateToEpochMs(String raw) {
+        if (raw == null) return null;
+        String s = raw.trim();
+        if (s.isEmpty()) return null;
+        try {
+            Matcher mIso = ISO_DATE_PREFIX.matcher(s);
+            int year;
+            int month;
+            int day;
+            if (mIso.matches()) {
+                year = Integer.parseInt(mIso.group(1));
+                month = Integer.parseInt(mIso.group(2));
+                day = Integer.parseInt(mIso.group(3));
+            } else {
+                Matcher mYear = YEAR_ONLY.matcher(s);
+                if (!mYear.matches()) return null;
+                year = Integer.parseInt(mYear.group(1));
+                month = 1;
+                day = 1;
+            }
+            if (year < 1000 || year > 2099) return null;
+            Calendar cal = new GregorianCalendar(TimeZone.getTimeZone("UTC"), Locale.US);
+            cal.setLenient(false);
+            cal.clear();
+            cal.set(year, month - 1, day, 0, 0, 0);
+            return Long.valueOf(cal.getTimeInMillis());
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    public static String toSortableText(String raw) {
+        return raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static long computeOrderPosition(
+            SQLiteDatabase db,
+            java.util.Map<String, String> cols,
+            String excludeId,
+            String sortCol,
+            String orderCol,
+            String sortKey,
+            boolean reversed) {
+        if (db == null || cols == null || sortKey == null || sortKey.isEmpty()) return -1L;
+        String actualSort = cols.get(sortCol.toUpperCase(Locale.ROOT));
+        String actualOrder = cols.get(orderCol.toUpperCase(Locale.ROOT));
+        if (actualSort == null || actualOrder == null) return -1L;
+
+        long prevOrder = -1L;
+        long nextOrder = -1L;
+        Cursor c = null;
+        try {
+            c = db.rawQuery(
+                    "SELECT " + actualSort + ", " + actualOrder + " FROM KindleContent "
+                            + "WHERE ID != ? AND " + actualOrder + " > 0 AND " + actualSort + " IS NOT NULL "
+                            + "ORDER BY " + actualOrder + " ASC",
+                    new String[] { excludeId });
+            while (c.moveToNext()) {
+                String rowSort = toSortableText(c.getString(0));
+                long rowOrder = c.getLong(1);
+                if (rowSort.isEmpty() || rowOrder <= 0L) continue;
+                int cmp = rowSort.compareTo(sortKey);
+                if (reversed) cmp = -cmp;
+                if (cmp <= 0) {
+                    prevOrder = rowOrder;
+                } else {
+                    nextOrder = rowOrder;
+                    break;
+                }
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "computeOrderPosition(" + orderCol + ") warning: " + t.getMessage());
+            return -1L;
+        } finally {
+            if (c != null) c.close();
+        }
+
+        if (prevOrder > 0L && nextOrder > prevOrder + 1L) {
+            return prevOrder + ((nextOrder - prevOrder) / 2L);
+        }
+        if (prevOrder > 0L && nextOrder == -1L && prevOrder < Long.MAX_VALUE - 1L) {
+            return prevOrder + ((Long.MAX_VALUE - prevOrder) / 2L);
+        }
+        if (prevOrder == -1L && nextOrder > 1L) {
+            return nextOrder / 2L;
+        }
+        return -1L;
+    }
+
     /**
      * Schema-adaptive transactional registration into kindle_library.db aligned
-     * with Kindle v8.159 NOT NULL columns so imported books appear immediately
-     * in Library and Continue Reading with real covers.
+     * with real M30 PRAGMA table_info(KindleContent/LocalContent/UserContent) columns.
      */
     public static boolean registerInKindleLibraryDb(
             Context ctx, String bookKey, File kfxFile, File coverFile,
@@ -559,8 +660,10 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                 long now = System.currentTimeMillis();
                 String path = kfxFile.getAbsolutePath();
                 String coverPath = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "";
-                String title = !EpubMetadataExtractor.isBlank(meta.title) ? meta.title : kfxFile.getName();
-                String author = !EpubMetadataExtractor.isBlank(meta.author) ? meta.author : "Unknown Author";
+                String title = !EpubMetadataExtractor.isBlank(meta.title) ? meta.title.trim() : kfxFile.getName();
+                String author = !EpubMetadataExtractor.isBlank(meta.author) ? meta.author.trim() : "Unknown Author";
+                String sortableTitle = toSortableText(title);
+                String sortableAuthor = toSortableText(author);
                 String asin = "CR!" + bookKey.replace("FOLIO_", "") + "KFX";
                 String amznId = "AMZNID0/" + asin + "/0/";
                 int hasCover = coverPath.isEmpty() ? 0 : 1;
@@ -573,36 +676,55 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                     Log.w(TAG, "LocalContent pre-delete warning", t);
                 }
 
-                // 1. KindleContent
+                // 1. KindleContent (aligned to real M30 PRAGMA table_info columns)
                 java.util.Map<String, String> kcCols = tableColumns(db, "KindleContent");
                 if (!kcCols.isEmpty()) {
+                    Long pubDateEpochMs = parsePubDateToEpochMs(meta != null ? meta.pubDate : null);
+                    long titleOrder = computeOrderPosition(db, kcCols, amznId, "SORTABLE_TITLE", "TITLE_ORDER", sortableTitle, false);
+                    long authorOrder = computeOrderPosition(db, kcCols, amznId, "SORTABLE_AUTHOR", "AUTHOR_ORDER", sortableAuthor, false);
+                    long authorOrderRev = computeOrderPosition(db, kcCols, amznId, "SORTABLE_AUTHOR", "AUTHOR_ORDER_REVERSED", sortableAuthor, true);
+
                     ContentValues kc = new ContentValues();
                     putIfPresent(kc, kcCols, "ID", amznId);
-                    putIfPresent(kc, kcCols, "KEY", bookKey);
-                    putIfPresent(kc, kcCols, "CONTENT_ID", bookKey);
-                    putIfPresent(kc, kcCols, "ASIN", asin);
-                    putIfPresent(kc, kcCols, "TITLE", title);
-                    putIfPresent(kc, kcCols, "TITLE_SORT", title.toLowerCase(Locale.ROOT));
-                    putIfPresent(kc, kcCols, "AUTHOR", author);
-                    putIfPresent(kc, kcCols, "AUTHORS", author);
-                    putIfPresent(kc, kcCols, "AUTHOR_SORT", author.toLowerCase(Locale.ROOT));
-                    putIfPresent(kc, kcCols, "TYPE", "BT_EBOOK_PDOC");
-                    putIfPresent(kc, kcCols, "CONTENT_TYPE", "application/x-kfx-ebook");
-                    putIfPresent(kc, kcCols, "MIME_TYPE", "application/x-kfx-ebook");
                     putIfPresent(kc, kcCols, "STATE", "LOCAL");
                     putIfPresent(kc, kcCols, "ARCHIVABLE", 0);
                     putIfPresent(kc, kcCols, "HAS_READ_ALONG", 0);
+                    putIfPresent(kc, kcCols, "TYPE", "BT_EBOOK_PDOC");
+                    putIfPresent(kc, kcCols, "KEPT", 0);
+                    putIfPresent(kc, kcCols, "CONTENT_TYPE", "application/x-kfx-ebook");
+                    putIfPresent(kc, kcCols, "TITLE", title);
+                    putIfPresent(kc, kcCols, "AUTHOR", author);
+                    if (pubDateEpochMs != null) {
+                        putIfPresent(kc, kcCols, "PUBLICATION_DATE", pubDateEpochMs.longValue());
+                    }
+                    if (meta != null && !EpubMetadataExtractor.isBlank(meta.publisher)) {
+                        putIfPresent(kc, kcCols, "PUBLISHER", meta.publisher.trim());
+                    }
+                    putIfPresent(kc, kcCols, "HAS_XRAY", 0);
+                    if (meta != null && !EpubMetadataExtractor.isBlank(meta.language)) {
+                        putIfPresent(kc, kcCols, "LANGUAGE", meta.language.trim());
+                    }
+                    putIfPresent(kc, kcCols, "SORTABLE_TITLE", sortableTitle);
+                    putIfPresent(kc, kcCols, "SORTABLE_AUTHOR", sortableAuthor);
+                    putIfPresent(kc, kcCols, "DICTIONARY_TYPE", "NONE");
+                    putIfPresent(kc, kcCols, "DELIVERY_DATE", now);
+                    if (titleOrder > 0L) {
+                        putIfPresent(kc, kcCols, "TITLE_ORDER", titleOrder);
+                    }
+                    if (authorOrder > 0L) {
+                        putIfPresent(kc, kcCols, "AUTHOR_ORDER", authorOrder);
+                    }
+                    if (authorOrderRev > 0L) {
+                        putIfPresent(kc, kcCols, "AUTHOR_ORDER_REVERSED", authorOrderRev);
+                    }
+                    putIfPresent(kc, kcCols, "IS_COMIC", 0);
+                    putIfPresent(kc, kcCols, "READ_STATE", "UNREAD");
+                    putIfPresent(kc, kcCols, "READ_STATE_ORIGIN", "OTHER");
+                    putIfPresent(kc, kcCols, "IS_FALKOR_EPISODE", 0);
                     putIfPresent(kc, kcCols, "HAS_LOADED_COVER", hasCover);
-                    putIfPresent(kc, kcCols, "FILE_PATH", path);
-                    putIfPresent(kc, kcCols, "COVER_URL", coverPath);
-                    putIfPresent(kc, kcCols, "PUBLISHER", meta.publisher);
-                    putIfPresent(kc, kcCols, "PUBLICATION_DATE", meta.pubDate);
-                    putIfPresent(kc, kcCols, "LANGUAGE", meta.language);
-                    putIfPresent(kc, kcCols, "FILE_SIZE", kfxFile.length());
-                    putIfPresent(kc, kcCols, "LAST_ACCESS_TIME", now);
-                    putIfPresent(kc, kcCols, "PURCHASE_DATE", now);
-                    putIfPresent(kc, kcCols, "IS_LOCAL", 1);
-                    putIfPresent(kc, kcCols, "DOWNLOAD_STATE", 1);
+                    putIfPresent(kc, kcCols, "IS_HIDDEN", 0);
+                    putIfPresent(kc, kcCols, "IS_HIDDEN_BY_USER", 0);
+                    putIfPresent(kc, kcCols, "IS_WEBCOMIC", 0);
                     if (!fillMissingNotNullDefaults(db, "KindleContent", kc)) {
                         return false;
                     }
@@ -614,14 +736,11 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                 if (!lcCols.isEmpty()) {
                     ContentValues lc = new ContentValues();
                     putIfPresent(lc, lcCols, "KEY", amznId);
-                    putIfPresent(lc, lcCols, "CONTENT_ID", amznId);
                     putIfPresent(lc, lcCols, "FILE_PATH", path);
                     putIfPresent(lc, lcCols, "GUID", asin);
-                    putIfPresent(lc, lcCols, "COVER_PATH", coverPath);
                     putIfPresent(lc, lcCols, "FILE_SIZE", kfxFile.length());
                     putIfPresent(lc, lcCols, "LAST_MODIFIED", now);
                     putIfPresent(lc, lcCols, "OWNERSHIP_TYPE", "Unknown");
-                    putIfPresent(lc, lcCols, "MIME_TYPE", "application/x-kfx-ebook");
                     if (!fillMissingNotNullDefaults(db, "LocalContent", lc)) {
                         return false;
                     }
@@ -635,7 +754,6 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                     putIfPresent(uc, ucCols, "KEY", amznId);
                     putIfPresent(uc, ucCols, "USER_ID", "MASTER");
                     putIfPresent(uc, ucCols, "LAST_ACCESSED", now);
-                    putIfPresent(uc, ucCols, "LAST_ACCESS_TIME", now);
                     putIfPresent(uc, ucCols, "IS_IN_CAROUSEL", 1);
                     putIfPresent(uc, ucCols, "CLIPPING_BALANCE", 0);
                     putIfPresent(uc, ucCols, "READING_PROGRESS", 0);

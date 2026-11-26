@@ -277,6 +277,11 @@ public final class AzathLibrarySync {
         return privDir.isDirectory() && privDir.canRead() && privDir.listFiles() != null;
     }
 
+    public static boolean isPartArtifactName(String lowerName) {
+        if (lowerName == null || lowerName.isEmpty()) return false;
+        return lowerName.endsWith(".part") || lowerName.contains(".kfx.part.");
+    }
+
     public static final class ReconcilePreview {
         public final ReconcilePlan forcedPlan;
         public final boolean circuitBreakerWouldTrip;
@@ -506,11 +511,9 @@ public final class AzathLibrarySync {
             } else {
                 for (File f : sdFiles) {
                     String lower = f.getName().toLowerCase(Locale.US);
-                    if (f.isFile() && lower.endsWith(".part")) {
-                        if (now - f.lastModified() > STALE_PART_AGE_MS && f.delete()) {
-                            Log.i(TAG, "Deleted stale .part file: " + f.getAbsolutePath());
-                            changes++;
-                        }
+                    int staleHandled = handleStalePartEntry(f, lower, now);
+                    if (staleHandled >= 0) {
+                        changes += staleHandled;
                         continue;
                     }
                     if (f.isFile() && lower.endsWith(".kfx") && f.length() >= 128) {
@@ -533,11 +536,9 @@ public final class AzathLibrarySync {
             } else if (privFiles != null) {
                 for (File f : privFiles) {
                     String lower = f.getName().toLowerCase(Locale.US);
-                    if (f.isFile() && lower.endsWith(".part")) {
-                        if (now - f.lastModified() > STALE_PART_AGE_MS && f.delete()) {
-                            Log.i(TAG, "Deleted stale .part file: " + f.getAbsolutePath());
-                            changes++;
-                        }
+                    int staleHandled = handleStalePartEntry(f, lower, now);
+                    if (staleHandled >= 0) {
+                        changes += staleHandled;
                         continue;
                     }
                     if (f.isFile() && lower.endsWith(".kfx") && f.length() >= 128) {
@@ -664,6 +665,21 @@ public final class AzathLibrarySync {
             }
         }
         return removed;
+    }
+
+    /** Returns -1 if not a stale/part entry; 1 if deleted; 0 if retained. */
+    private static int handleStalePartEntry(File f, String lower, long now) {
+        boolean isStaleCandidate = (f.isFile() && isPartArtifactName(lower))
+                || (f.isDirectory() && lower.endsWith(".part.sdr"));
+        if (!isStaleCandidate) return -1;
+        if (now - f.lastModified() > STALE_PART_AGE_MS) {
+            deleteRecursive(f);
+            if (!f.exists()) {
+                Log.i(TAG, "Deleted stale .part artifact: " + f.getAbsolutePath());
+                return 1;
+            }
+        }
+        return 0;
     }
 
     private static void deleteRecursive(File f) {

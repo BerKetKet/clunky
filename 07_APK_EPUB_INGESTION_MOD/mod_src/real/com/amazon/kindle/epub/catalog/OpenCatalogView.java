@@ -835,17 +835,39 @@ public final class OpenCatalogView {
                     targetPath = LocalLibraryReader.resolveLocalFile(targetPath, lb.title);
                 }
                 if (targetPath != null && !targetPath.isEmpty() && new File(targetPath).exists()) {
-                    Intent openIntent = new Intent(Intent.ACTION_VIEW);
-                    openIntent.setClassName(ctx.getPackageName(), "com.amazon.kindle.ThirdPartyUpgradePage");
-                    String mime = "application/epub+zip";
-                    if (targetPath.toLowerCase(Locale.US).endsWith(".pdf")) {
-                        mime = "application/pdf";
-                    } else if (targetPath.toLowerCase(Locale.US).endsWith(".kfx")) {
-                        mime = "application/x-kfx";
+                    final File targetFile = new File(targetPath);
+                    final String lowerTarget = targetPath.toLowerCase(Locale.US);
+                    if (lowerTarget.endsWith(".kfx")) {
+                        com.amazon.kindle.epub.ingest.ExternalEpubActivity.launchKfxReader(ctx, targetFile);
+                    } else if (com.amazon.kindle.epub.ingest.ExternalEpubActivity.isBlockedPrivateFile(ctx, targetFile)) {
+                        if (lowerTarget.endsWith(".epub")) {
+                            Toast.makeText(ctx, "Preparing " + lb.title + "...", Toast.LENGTH_SHORT).show();
+                            new Thread(new Runnable() {
+                                @Override public void run() {
+                                    final com.amazon.kindle.epub.ingest.AzathLibrarySync.IngestResult ir =
+                                            com.amazon.kindle.epub.ingest.AzathLibrarySync.ingestEpub(ctx, targetFile, lb.title, false);
+                                    mainHandler.post(new Runnable() {
+                                        @Override public void run() {
+                                            if (ir != null && ir.ok && ir.kfxFile != null && ir.kfxFile.exists()) {
+                                                com.amazon.kindle.epub.ingest.ExternalEpubActivity.launchKfxReader(ctx, ir.kfxFile);
+                                            } else {
+                                                Toast.makeText(ctx, "Could not open private EPUB", Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+                                    });
+                                }
+                            }, "folio-open-priv-epub").start();
+                        } else {
+                            Toast.makeText(ctx, "Blocked: cannot launch private storage URI", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        Intent openIntent = new Intent(Intent.ACTION_VIEW);
+                        openIntent.setClassName(ctx.getPackageName(), "com.amazon.kindle.ThirdPartyUpgradePage");
+                        String mime = lowerTarget.endsWith(".pdf") ? "application/pdf" : "application/epub+zip";
+                        openIntent.setDataAndType(Uri.fromFile(targetFile), mime);
+                        openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        ctx.startActivity(openIntent);
                     }
-                    openIntent.setDataAndType(Uri.fromFile(new File(targetPath)), mime);
-                    openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    ctx.startActivity(openIntent);
                 } else {
                     Intent readerIntent = new Intent();
                     readerIntent.setClassName(ctx.getPackageName(), "com.amazon.kcp.reader.StandAloneBookReaderActivity");
@@ -1397,8 +1419,8 @@ public final class OpenCatalogView {
             @Override
             public void run() {
                 try {
-                    File outDir = new File("/sdcard/kindle");
-                    outDir.mkdirs();
+                    File outDir = new File(ctx.getCacheDir(), "opds_dl");
+                    if (!outDir.exists()) outDir.mkdirs();
                     String safeName = book.title.replaceAll("[^A-Za-z0-9._-]", "_");
                     if (safeName.length() > 50) safeName = safeName.substring(0, 50);
                     final File epubFile = new File(outDir, safeName + "_" + book.id + ".epub");
@@ -1471,79 +1493,31 @@ public final class OpenCatalogView {
 
                     com.amazon.kindle.epub.ingest.AzathLibrarySync.IngestResult ir =
                             com.amazon.kindle.epub.ingest.AzathLibrarySync.ingestEpub(ctx, epubFile, book.title, true);
-                    final File kfxFile = (ir != null && ir.ok && ir.kfxFile != null)
-                            ? ir.kfxFile : new File(outDir, safeName + "_" + book.id + ".kfx");
-                    boolean kfxOk = (ir != null && ir.ok)
-                            || com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(epubFile, kfxFile);
-                    if (kfxOk) {
-                        registerDownloadedBook(ctx, book.title, book.author, kfxFile);
+                    if (ir == null || !ir.ok || ir.kfxFile == null || !ir.kfxFile.exists()) {
+                        if (epubFile.exists()) epubFile.delete();
+                        String err = (ir != null && ir.error != null) ? ir.error : "Ingest failed";
+                        throw new java.io.IOException(err);
                     }
+                    final File kfxToOpen = ir.kfxFile;
 
                     mainHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            try {
-                                android.os.StrictMode.class.getMethod("disableDeathOnFileUriExposure").invoke(null);
-                            } catch (Throwable ignored) {}
+                            if (FolioTheme.isContextDead(ctx)) return;
                             Toast.makeText(ctx, "Opening in Azath...", Toast.LENGTH_SHORT).show();
-                            Intent openIntent = new Intent(Intent.ACTION_VIEW);
-                            openIntent.setClassName(ctx.getPackageName(), "com.amazon.kindle.ThirdPartyUpgradePage");
-                            File target = kfxFile.exists() ? kfxFile : epubFile;
-                            String mime = kfxFile.exists() ? "application/x-kfx" : "application/epub+zip";
-                            openIntent.setDataAndType(Uri.fromFile(target), mime);
-                            openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            ctx.startActivity(openIntent);
+                            com.amazon.kindle.epub.ingest.ExternalEpubActivity.launchKfxReader(ctx, kfxToOpen);
                         }
                     });
                 } catch (final Throwable t) {
                     mainHandler.post(new Runnable() {
                         @Override
                         public void run() {
+                            if (FolioTheme.isContextDead(ctx)) return;
                             Toast.makeText(ctx, "Download failed: " + t.getMessage(), Toast.LENGTH_LONG).show();
                         }
                     });
                 }
             }
         }).start();
-    }
-
-    public static void registerDownloadedBook(Context ctx, String title, String author, File kfxFile) {
-        try {
-            File dbFile = new File(ctx.getApplicationInfo().dataDir, "databases/kindle_library.db");
-            if (!dbFile.exists()) return;
-            SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
-            String asin = "CR!" + Math.abs(title.hashCode()) + "KFX";
-            String key = "AMZNID0/" + asin + "/0/";
-            long now = System.currentTimeMillis();
-            long size = kfxFile.exists() ? kfxFile.length() : 1048576;
-
-            db.beginTransaction();
-            try {
-                db.execSQL(
-                    "INSERT OR REPLACE INTO KindleContent (" +
-                    "ID, STATE, ARCHIVABLE, HAS_READ_ALONG, TYPE, KEPT, CONTENT_TYPE, TITLE, AUTHOR, HAS_XRAY, DICTIONARY_TYPE, TITLE_ORDER, AUTHOR_ORDER, AUTHOR_ORDER_REVERSED, READ_STATE, READ_STATE_ORIGIN, HAS_LOADED_COVER, IS_HIDDEN, IS_HIDDEN_BY_USER" +
-                    ") VALUES (?, 'LOCAL', 0, 0, 'BT_EBOOK', 0, 'application/x-kfx-ebook', ?, ?, 0, 'NONE', -1, -1, -1, 'UNREAD', 'OTHER', 1, 0, 0)",
-                    new Object[]{key, title, author}
-                );
-                db.execSQL(
-                    "INSERT OR REPLACE INTO LocalContent (" +
-                    "KEY, FILE_PATH, GUID, LAST_MODIFIED, OWNERSHIP_TYPE, FILE_SIZE" +
-                    ") VALUES (?, ?, ?, ?, 'Unknown', ?)",
-                    new Object[]{key, kfxFile.getAbsolutePath(), asin, now, size}
-                );
-                db.execSQL(
-                    "INSERT OR REPLACE INTO UserContent (" +
-                    "KEY, USER_ID, LAST_ACCESSED, LPR, MRPR, FPR, MLT_LASTUPDATED, READING_PROGRESS, IS_IN_CAROUSEL, CLIPPING_BALANCE, HAS_UNMIGRATED_ANNOTATION" +
-                    ") VALUES (?, 'MASTER', ?, 0, 0, 0, -1, 0, 1, 0, 0)",
-                    new Object[]{key, now}
-                );
-                db.setTransactionSuccessful();
-            } finally {
-                db.endTransaction();
-                db.close();
-            }
-        } catch (Throwable t) {
-            android.util.Log.w("OpenCatalogView", "registerDownloadedBook failed: " + t.getMessage());
-        }
     }
 }

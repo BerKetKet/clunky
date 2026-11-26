@@ -1,6 +1,8 @@
 package com.amazon.kindle.epub.tests;
 
+import com.amazon.kindle.epub.CoverOverlayView;
 import com.amazon.kindle.epub.EpubTranscoder;
+import com.amazon.kindle.epub.catalog.SafeHttp;
 import com.amazon.kindle.epub.ingest.AzathLibrarySync;
 import com.amazon.kindle.epub.ingest.EpubMetadataExtractor;
 import com.amazon.kindle.epub.ingest.ExternalEpubActivity;
@@ -9,8 +11,15 @@ import com.amazon.kindle.epub.ingest.FolioMetadataDb;
 import com.amazon.kindle.epub.ingest.FolioWebBrowserDialog;
 import com.amazon.kindle.epub.ingest.MetadataEnricher;
 
+import com.sun.net.httpserver.HttpServer;
+
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.RandomAccessFile;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,6 +27,13 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * Pure-JVM unit tests for Round 163-165 Android-free helpers:
@@ -60,6 +76,7 @@ public final class AzathUnitTests {
         testExtractBookKeyFromFilename();
         testKfxMagicAndPathGuards();
         testSecurityHelpers();
+        testRound167Helpers();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -343,5 +360,239 @@ public final class AzathUnitTests {
                 !FolioMetadataBackup.isValidBackupBookPath("/sdcard/kindle/note.txt"));
         check("Backup goal clamped <= 1000", FolioMetadataBackup.clampReadingGoal(50000) == 1000);
         check("Backup rating clamped <= 5", FolioMetadataBackup.clampStarRating(99) == 5);
+    }
+
+    private static void testRound167Helpers() {
+        // Task 4: parsePubDateToEpochMs + toSortableText
+        Long dIso = FolioMetadataDb.parsePubDateToEpochMs("2022-03-15");
+        check("parsePubDateToEpochMs YYYY-MM-DD exact UTC", dIso != null && dIso == 1647302400000L);
+        Long dTs = FolioMetadataDb.parsePubDateToEpochMs("2021-10-21T14:30:00Z");
+        check("parsePubDateToEpochMs ISO timestamp UTC day", dTs != null && dTs == 1634774400000L);
+        Long dYr = FolioMetadataDb.parsePubDateToEpochMs("1981");
+        check("parsePubDateToEpochMs YYYY exact UTC",
+                dYr != null && dYr == java.time.Instant.parse("1981-01-01T00:00:00Z").toEpochMilli());
+        check("parsePubDateToEpochMs null -> null", FolioMetadataDb.parsePubDateToEpochMs(null) == null);
+        check("parsePubDateToEpochMs empty -> null", FolioMetadataDb.parsePubDateToEpochMs("   ") == null);
+        check("parsePubDateToEpochMs text -> null", FolioMetadataDb.parsePubDateToEpochMs("19th century") == null);
+        check("parsePubDateToEpochMs bad month -> null", FolioMetadataDb.parsePubDateToEpochMs("2022-13-40") == null);
+        check("parsePubDateToEpochMs out-of-range year -> null", FolioMetadataDb.parsePubDateToEpochMs("3000") == null);
+        checkEq("toSortableText trims & lowercases", "george eliot", FolioMetadataDb.toSortableText("  George Eliot "));
+        checkEq("toSortableText null -> empty", "", FolioMetadataDb.toSortableText(null));
+
+        // Task 2: Attempt-isolated .part naming + shared deadline math
+        File baseKfx = new File("/sdcard/kindle/Book_FOLIO_1234.kfx");
+        File pInproc = ExternalEpubActivity.buildAttemptPartFile(baseKfx, "inproc");
+        File pNative1 = ExternalEpubActivity.buildAttemptPartFile(baseKfx, "native1");
+        check("Attempt .part files are unique per attempt", !pInproc.getName().equals(pNative1.getName()));
+        check("Attempt inproc .part name", pInproc.getName().equals("Book_FOLIO_1234.kfx.part.inproc"));
+        check("isPartArtifactName recognizes attempt .part.<tag>", AzathLibrarySync.isPartArtifactName("book.kfx.part.inproc"));
+        check("isPartArtifactName recognizes .part.cover.jpg", AzathLibrarySync.isPartArtifactName("book.kfx.part.cover.jpg"));
+        check("isPartArtifactName rejects final .kfx", !AzathLibrarySync.isPartArtifactName("book.kfx"));
+
+        long deadline = ExternalEpubActivity.computeDeadlineNanos(1_000_000_000L, 10L);
+        check("computeDeadlineNanos adds timeout ns", deadline == 11_000_000_000L);
+        check("remainingTimeoutMs mid-budget", ExternalEpubActivity.remainingTimeoutMs(6_000_000_000L, deadline) == 5000L);
+        check("remainingTimeoutMs expired -> 0", ExternalEpubActivity.remainingTimeoutMs(12_000_000_000L, deadline) == 0L);
+        check("shouldRunFallback true when primary failed cleanly within budget",
+                ExternalEpubActivity.shouldRunFallback(false, false, false, 6_000_000_000L, deadline));
+        check("shouldRunFallback false when primary succeeded",
+                !ExternalEpubActivity.shouldRunFallback(true, false, false, 6_000_000_000L, deadline));
+        check("shouldRunFallback false on primary timeout",
+                !ExternalEpubActivity.shouldRunFallback(false, true, false, 6_000_000_000L, deadline));
+        check("shouldRunFallback false on cancel",
+                !ExternalEpubActivity.shouldRunFallback(false, false, true, 6_000_000_000L, deadline));
+        check("shouldRunFallback false after deadline",
+                !ExternalEpubActivity.shouldRunFallback(false, false, false, 12_000_000_000L, deadline));
+
+        // Task 3: Cancelable lock wait loop
+        ReentrantLock freeLock = new ReentrantLock();
+        AtomicInteger freeWaits = new AtomicInteger(0);
+        boolean gotFree = ExternalEpubActivity.acquireLockCancelable(
+                freeLock, new AtomicBoolean(false), freeWaits::incrementAndGet, 20L);
+        check("acquireLockCancelable immediate acquire when unlocked", gotFree && freeWaits.get() == 0);
+        if (gotFree && freeLock.isHeldByCurrentThread()) freeLock.unlock();
+
+        final ReentrantLock contendedLock = new ReentrantLock();
+        final CountDownLatch lockedLatch = new CountDownLatch(1);
+        final CountDownLatch releaseWaiter = new CountDownLatch(1);
+        Thread holder1 = new Thread(() -> {
+            contendedLock.lock();
+            lockedLatch.countDown();
+            try { releaseWaiter.await(3, TimeUnit.SECONDS); } catch (InterruptedException ignored) {}
+            contendedLock.unlock();
+        });
+        holder1.start();
+        try {
+            lockedLatch.await(2, TimeUnit.SECONDS);
+            final AtomicBoolean cancelFlag = new AtomicBoolean(false);
+            final AtomicInteger waitCalls = new AtomicInteger(0);
+            boolean acquiredWhileCancelled = ExternalEpubActivity.acquireLockCancelable(
+                    contendedLock, cancelFlag, () -> {
+                        waitCalls.incrementAndGet();
+                        cancelFlag.set(true);
+                    }, 20L);
+            check("acquireLockCancelable aborts on cancel while waiting",
+                    !acquiredWhileCancelled && waitCalls.get() >= 1 && !contendedLock.isHeldByCurrentThread());
+        } catch (InterruptedException ie) {
+            check("Contended cancel test interrupted", false);
+        } finally {
+            releaseWaiter.countDown();
+            try { holder1.join(2000L); } catch (InterruptedException ignored) {}
+        }
+
+        final ReentrantLock releaseLock = new ReentrantLock();
+        final CountDownLatch lockedLatch2 = new CountDownLatch(1);
+        final CountDownLatch waitingSeen = new CountDownLatch(1);
+        Thread holder2 = new Thread(() -> {
+            releaseLock.lock();
+            lockedLatch2.countDown();
+            try { waitingSeen.await(2, TimeUnit.SECONDS); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(30L); } catch (InterruptedException ignored) {}
+            releaseLock.unlock();
+        });
+        holder2.start();
+        try {
+            lockedLatch2.await(2, TimeUnit.SECONDS);
+            final AtomicInteger waits2 = new AtomicInteger(0);
+            boolean acquiredAfterRelease = ExternalEpubActivity.acquireLockCancelable(
+                    releaseLock, new AtomicBoolean(false), () -> {
+                        waits2.incrementAndGet();
+                        waitingSeen.countDown();
+                    }, 20L);
+            check("acquireLockCancelable acquires once contention clears", acquiredAfterRelease && waits2.get() >= 1);
+            if (acquiredAfterRelease && releaseLock.isHeldByCurrentThread()) releaseLock.unlock();
+        } catch (InterruptedException ie) {
+            check("Contended release test interrupted", false);
+        } finally {
+            waitingSeen.countDown();
+            try { holder2.join(2000L); } catch (InterruptedException ignored) {}
+        }
+
+        // Task 1: Raised caps + streaming spill EPUB transcode (>256KB binary entry)
+        check("EpubTranscoder entry cap is 128MB", EpubTranscoder.MAX_ZIP_ENTRY_BYTES == 128L * 1024L * 1024L);
+        check("EpubTranscoder total cap is 512MB", EpubTranscoder.MAX_ZIP_TOTAL_BYTES == 512L * 1024L * 1024L);
+        try {
+            File tmpEpub = File.createTempFile("azath_spill_", ".epub");
+            File tmpOut = File.createTempFile("azath_spill_", ".mobi");
+            tmpOut.delete();
+            try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(tmpEpub))) {
+                zos.putNextEntry(new ZipEntry("mimetype"));
+                zos.write("application/epub+zip".getBytes(StandardCharsets.US_ASCII));
+                zos.closeEntry();
+
+                zos.putNextEntry(new ZipEntry("META-INF/container.xml"));
+                zos.write(("<?xml version=\"1.0\"?><container version=\"1.0\" xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\">"
+                        + "<rootfiles><rootfile full-path=\"OEBPS/content.opf\" media-type=\"application/oebps-package+xml\"/></rootfiles></container>").getBytes(StandardCharsets.UTF_8));
+                zos.closeEntry();
+
+                zos.putNextEntry(new ZipEntry("OEBPS/content.opf"));
+                zos.write(("<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                        + "<package xmlns=\"http://www.idpf.org/2007/opf\" version=\"2.0\" unique-identifier=\"uid\">"
+                        + "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\">"
+                        + "<dc:title>Spill Test Book</dc:title><dc:creator>Test</dc:creator>"
+                        + "<meta name=\"cover\" content=\"cover-img\"/></metadata>"
+                        + "<manifest>"
+                        + "<item id=\"ch1\" href=\"ch1.xhtml\" media-type=\"application/xhtml+xml\"/>"
+                        + "<item id=\"cover-img\" href=\"big.png\" media-type=\"image/png\"/>"
+                        + "</manifest><spine><itemref idref=\"ch1\"/></spine></package>").getBytes(StandardCharsets.UTF_8));
+                zos.closeEntry();
+
+                zos.putNextEntry(new ZipEntry("OEBPS/ch1.xhtml"));
+                zos.write(("<html xmlns=\"http://www.w3.org/1999/xhtml\"><body><h1>Chapter 1</h1><p>Spill streaming test prose.</p></body></html>").getBytes(StandardCharsets.UTF_8));
+                zos.closeEntry();
+
+                zos.putNextEntry(new ZipEntry("OEBPS/big.png"));
+                byte[] bigImg = new byte[400 * 1024];
+                Arrays.fill(bigImg, (byte) 0x7A);
+                bigImg[0] = (byte) 0x89; bigImg[1] = 'P'; bigImg[2] = 'N'; bigImg[3] = 'G';
+                zos.write(bigImg);
+                zos.closeEntry();
+            }
+            EpubTranscoder.transcode(tmpEpub, tmpOut, true);
+            byte[] magic = new byte[8];
+            try (RandomAccessFile raf = new RandomAccessFile(tmpOut, "r")) {
+                raf.seek(60);
+                raf.readFully(magic);
+            }
+            check("Streaming spill EPUB produced valid BOOKMOBI",
+                    tmpOut.exists() && tmpOut.length() > 100_000 && "BOOKMOBI".equals(new String(magic, StandardCharsets.US_ASCII)));
+            tmpEpub.delete();
+            tmpOut.delete();
+        } catch (Throwable t) {
+            check("Streaming spill EPUB transcode threw: " + t, false);
+        }
+
+        // Task 9.1: CoverOverlayView 2048px sample sizing
+        check("Cover sample 1200x800 -> 1", CoverOverlayView.computeSampleSize(1200, 800, 2048) == 1);
+        check("Cover sample 2048x1024 -> 1", CoverOverlayView.computeSampleSize(2048, 1024, 2048) == 1);
+        check("Cover sample 4096x2000 -> 2", CoverOverlayView.computeSampleSize(4096, 2000, 2048) == 2);
+        check("Cover sample 5000x3000 -> 4", CoverOverlayView.computeSampleSize(5000, 3000, 2048) == 4);
+
+        // Task 8b + Task 9.2: MetadataEnricher 429/503 Retry-After + SafeHttp 2MB cap & close wrapper
+        check("Retry-After header 2s -> 2000ms", MetadataEnricher.parseRetryAfterMs("2", 0) == 2000L);
+        check("Retry-After header clamped 999s -> 30000ms", MetadataEnricher.parseRetryAfterMs("999", 0) == 30000L);
+        check("Retry-After non-numeric falls back to 1000<<1", MetadataEnricher.parseRetryAfterMs("bad", 1) == 2000L);
+        check("SafeHttp MAX_GET_BYTES == 2MB", SafeHttp.MAX_GET_BYTES == 2 * 1024 * 1024);
+
+        try {
+            HttpServer srv = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            final AtomicInteger hits429 = new AtomicInteger(0);
+            final AtomicInteger hits503 = new AtomicInteger(0);
+            srv.createContext("/r429", ex -> {
+                if (hits429.incrementAndGet() == 1) {
+                    ex.getResponseHeaders().add("Retry-After", "1");
+                    byte[] b = "rate-limit".getBytes(StandardCharsets.UTF_8);
+                    ex.sendResponseHeaders(429, b.length);
+                    try (OutputStream os = ex.getResponseBody()) { os.write(b); }
+                } else {
+                    byte[] b = "{\"docs\":[{\"key\":\"/works/OL1W\"}]}".getBytes(StandardCharsets.UTF_8);
+                    ex.sendResponseHeaders(200, b.length);
+                    try (OutputStream os = ex.getResponseBody()) { os.write(b); }
+                }
+            });
+            srv.createContext("/r503", ex -> {
+                hits503.incrementAndGet();
+                byte[] b = "unavailable".getBytes(StandardCharsets.UTF_8);
+                ex.sendResponseHeaders(503, b.length);
+                try (OutputStream os = ex.getResponseBody()) { os.write(b); }
+            });
+            srv.createContext("/ok", ex -> {
+                byte[] b = new byte[1024];
+                Arrays.fill(b, (byte) 'K');
+                ex.sendResponseHeaders(200, b.length);
+                try (OutputStream os = ex.getResponseBody()) { os.write(b); }
+            });
+            srv.createContext("/over2mb", ex -> {
+                byte[] b = new byte[SafeHttp.MAX_GET_BYTES + 1024];
+                ex.sendResponseHeaders(200, b.length);
+                try (OutputStream os = ex.getResponseBody()) { os.write(b); }
+            });
+            srv.start();
+            try {
+                int port = srv.getAddress().getPort();
+                String r1 = MetadataEnricher.queryDocsRawJsonUrl("http://127.0.0.1:" + port + "/r429", "AzathTest/1.0");
+                check("HTTP 429 + Retry-After retries and succeeds", r1 != null && r1.contains("OL1W") && hits429.get() == 2);
+                String r2 = MetadataEnricher.queryDocsRawJsonUrl("http://127.0.0.1:" + port + "/r503", "AzathTest/1.0");
+                check("HTTP 503 x3 returns null cleanly", r2 == null && hits503.get() == 3);
+
+                byte[] small = SafeHttp.getBytes("http://127.0.0.1:" + port + "/ok");
+                check("SafeHttp.getBytes <= 2MB returns full payload", small.length == 1024);
+                boolean blocked = false;
+                try {
+                    SafeHttp.getBytes("http://127.0.0.1:" + port + "/over2mb");
+                } catch (java.io.IOException ioe) {
+                    blocked = ioe.getMessage() != null && ioe.getMessage().contains("exceeds");
+                }
+                check("SafeHttp.getBytes > 2MB throws IOException", blocked);
+                try (InputStream is = SafeHttp.openStream("http://127.0.0.1:" + port + "/ok")) {
+                    check("SafeHttp.openStream returns FilterInputStream wrapper",
+                            is.getClass().getName().startsWith(SafeHttp.class.getName()) && is.read() == 'K');
+                }
+            } finally {
+                srv.stop(0);
+            }
+        } catch (Throwable t) {
+            check("Mock HttpServer suite threw: " + t, false);
+        }
     }
 }
