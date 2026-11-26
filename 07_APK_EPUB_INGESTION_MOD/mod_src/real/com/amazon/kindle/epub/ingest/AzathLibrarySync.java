@@ -28,7 +28,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public final class AzathLibrarySync {
     private static final String TAG = "AzathLibrarySync";
     private static final AtomicBoolean sLaunchReconciled = new AtomicBoolean(false);
-    private static final ReentrantLock SYNC_LOCK = new ReentrantLock();
+    public static final ReentrantLock SYNC_LOCK = new ReentrantLock();
     private static final long RECENT_KFX_WINDOW_MS = 30_000L;
     private static final long STALE_PART_AGE_MS = 3_600_000L;
 
@@ -636,20 +636,9 @@ public final class AzathLibrarySync {
                 }
             }
 
-            // Sweep stale epub_staging/* files older than 1 hour
-            File epubStaging = new File(ctx.getCacheDir(), "epub_staging");
-            if (epubStaging.isDirectory()) {
-                File[] stagedFiles = epubStaging.listFiles();
-                if (stagedFiles != null) {
-                    for (File sf : stagedFiles) {
-                        if (now - sf.lastModified() > STALE_PART_AGE_MS) {
-                            deleteRecursive(sf);
-                            Log.i(TAG, "Deleted stale epub_staging entry: " + sf.getAbsolutePath());
-                            changes++;
-                        }
-                    }
-                }
-            }
+            // Sweep stale cache/epub_staging/* and cache/folio_once/* files older than 1 hour
+            changes += sweepStaleCacheDir(new File(ctx.getCacheDir(), "epub_staging"), now, "epub_staging");
+            changes += sweepStaleCacheDir(new File(ctx.getCacheDir(), "folio_once"), now, "folio_once");
 
             Log.i(TAG, "reconcileLibrary complete: activeKfx=" + activePaths.size() + " changes=" + changes);
         } catch (Throwable t) {
@@ -658,6 +647,23 @@ public final class AzathLibrarySync {
             SYNC_LOCK.unlock();
         }
         return changes;
+    }
+
+    private static int sweepStaleCacheDir(File dir, long nowMs, String label) {
+        if (dir == null || !dir.isDirectory()) return 0;
+        File[] files = dir.listFiles();
+        if (files == null) return 0;
+        int removed = 0;
+        for (File sf : files) {
+            if (nowMs - sf.lastModified() > STALE_PART_AGE_MS) {
+                deleteRecursive(sf);
+                if (!sf.exists()) {
+                    Log.i(TAG, "Deleted stale " + label + " entry: " + sf.getAbsolutePath());
+                    removed++;
+                }
+            }
+        }
+        return removed;
     }
 
     private static void deleteRecursive(File f) {

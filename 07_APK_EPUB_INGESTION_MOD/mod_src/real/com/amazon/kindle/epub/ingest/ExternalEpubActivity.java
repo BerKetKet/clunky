@@ -292,6 +292,7 @@ public class ExternalEpubActivity extends Activity {
                 });
 
         new Thread(() -> {
+            AzathLibrarySync.SYNC_LOCK.lock();
             try {
                 final String safeBase = AzathLibrarySync.sanitizeFilenameBase(meta.title, bookKey);
 
@@ -330,7 +331,12 @@ public class ExternalEpubActivity extends Activity {
                     if (!outKfx.getAbsolutePath().startsWith("/sdcard/kindle")) {
                         registeredOk = FolioMetadataDb.registerInKindleLibraryDb(this, bookKey, outKfx, outCover, meta);
                     }
-                    boolean liveOk = dp.g.ingestKfxLive(outKfx);
+                    boolean liveOk = false;
+                    try {
+                        liveOk = dp.g.ingestKfxLive(outKfx);
+                    } catch (Throwable liveErr) {
+                        Log.w(TAG, "dp.g.ingestKfxLive threw for " + outKfx.getName() + ": " + liveErr.getMessage(), liveErr);
+                    }
                     if (!liveOk) {
                         Log.w(TAG, "dp.g.ingestKfxLive returned false for " + outKfx.getName());
                     }
@@ -364,6 +370,8 @@ public class ExternalEpubActivity extends Activity {
                     Toast.makeText(this, "Import error: " + t.getMessage(), Toast.LENGTH_LONG).show();
                     finish();
                 });
+            } finally {
+                AzathLibrarySync.SYNC_LOCK.unlock();
             }
         }, "folio-epub-convert").start();
     }
@@ -524,13 +532,13 @@ public class ExternalEpubActivity extends Activity {
         }
     }
 
-    private static boolean isValidKfxPart(File f) {
-        if (f == null || !f.exists() || f.length() < 128) return false;
+    public static boolean isValidKfxPart(File f) {
+        if (f == null || !f.isFile() || f.length() < 128) return false;
         try (FileInputStream fis = new FileInputStream(f)) {
             byte[] hdr = new byte[4];
             int n = fis.read(hdr);
             if (n < 4) return false;
-            return (hdr[0] | hdr[1] | hdr[2] | hdr[3]) != 0;
+            return hdr[0] == 'C' && hdr[1] == 'O' && hdr[2] == 'N' && hdr[3] == 'T';
         } catch (Throwable t) {
             return false;
         }
