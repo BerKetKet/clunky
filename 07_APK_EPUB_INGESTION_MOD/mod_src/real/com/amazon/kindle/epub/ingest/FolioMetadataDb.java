@@ -878,8 +878,18 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         int idx = base.lastIndexOf("_FOLIO_");
         if (idx >= 0) {
             String suffix = base.substring(idx + 1);
-            if (suffix.startsWith("FOLIO_") && suffix.length() >= 10) {
-                return suffix;
+            if (suffix.startsWith("FOLIO_") && suffix.length() >= 12) {
+                String hex = suffix.substring(6);
+                if (hex.length() >= 6 && hex.length() <= 32) {
+                    for (int i = 0; i < hex.length(); i++) {
+                        char c = hex.charAt(i);
+                        boolean isHex = (c >= '0' && c <= '9')
+                                || (c >= 'a' && c <= 'f')
+                                || (c >= 'A' && c <= 'F');
+                        if (!isHex) return null;
+                    }
+                    return "FOLIO_" + hex.toUpperCase(Locale.ROOT);
+                }
             }
         }
         return null;

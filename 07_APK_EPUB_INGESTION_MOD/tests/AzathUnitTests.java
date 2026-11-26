@@ -1,8 +1,16 @@
 package com.amazon.kindle.epub.tests;
 
+import com.amazon.kindle.epub.EpubTranscoder;
 import com.amazon.kindle.epub.ingest.AzathLibrarySync;
 import com.amazon.kindle.epub.ingest.EpubMetadataExtractor;
+import com.amazon.kindle.epub.ingest.ExternalEpubActivity;
+import com.amazon.kindle.epub.ingest.FolioMetadataBackup;
+import com.amazon.kindle.epub.ingest.FolioMetadataDb;
+import com.amazon.kindle.epub.ingest.FolioWebBrowserDialog;
 import com.amazon.kindle.epub.ingest.MetadataEnricher;
+
+import java.io.File;
+import java.io.FileOutputStream;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,11 +54,16 @@ public final class AzathUnitTests {
         testIsAcceptableMatch();
         testNormalizeIsbn();
         testNormalizeAuthor();
+        testAuthorDeduplication();
         testNormalizePubDate();
         testSanitizeFilenameBase();
+        testExtractBookKeyFromFilename();
+        testKfxMagicAndPathGuards();
+        testSecurityHelpers();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
+            System.err.println("TOTAL FAILED: " + failed);
             System.exit(1);
         }
     }
@@ -202,10 +215,32 @@ public final class AzathUnitTests {
         checkEq("Plain First Last untouched", "Peter Watts", EpubMetadataExtractor.normalizeAuthor("Peter Watts"));
     }
 
+    private static void testAuthorDeduplication() {
+        // Exact case-insensitive equality per '; '-separated author; never substring .contains()
+        checkEq("Do not drop 'Li' when 'Alice' is present", "Alice; Li",
+                EpubMetadataExtractor.appendDistinctAuthor("Alice", "Li"));
+        checkEq("Deduplicate 'li' when 'Li; Alice' already present", "Li; Alice",
+                EpubMetadataExtractor.appendDistinctAuthor("Li; Alice", "li"));
+        checkEq("normalizeAuthor deduplicates duplicate semicolon entries case-insensitively",
+                "Aldous Huxley; Li; Alice",
+                EpubMetadataExtractor.normalizeAuthor("Huxley, Aldous; Li; Alice; li; huxley, aldous"));
+
+        StringBuilder descSb = new StringBuilder();
+        for (int i = 0; i < 4500; i++) descSb.append('x');
+        check("truncateDescription caps at 4000 chars",
+                EpubMetadataExtractor.truncateDescription(descSb.toString()).length() == 4000);
+    }
+
     private static void testNormalizePubDate() {
+        checkEq("Human readable date extracts year", "2010", EpubMetadataExtractor.normalizePubDate("July 5, 2010"));
         checkEq("ISO timestamp T", "2014-06-06", EpubMetadataExtractor.normalizePubDate("2014-06-06T00:00:00Z"));
         checkEq("ISO timestamp space", "2000-07-15", EpubMetadataExtractor.normalizePubDate("2000-07-15 00:00:00+01:00"));
-        checkEq("Year only", "1932", EpubMetadataExtractor.normalizePubDate("1932"));
+        checkEq("Year only", "2010", EpubMetadataExtractor.normalizePubDate("2010"));
+        checkEq("Historical year", "1932", EpubMetadataExtractor.normalizePubDate("1932"));
+        checkEq("Garbage string returns empty", "", EpubMetadataExtractor.normalizePubDate("unknown / undated"));
+        checkEq("Out-of-range year returns empty", "", EpubMetadataExtractor.normalizePubDate("99999"));
+        checkEq("Time-only ISO garbage returns empty", "", EpubMetadataExtractor.normalizePubDate("T12:00:00Z"));
+        checkEq("Blank returns empty", "", EpubMetadataExtractor.normalizePubDate("   "));
     }
 
     private static void testSanitizeFilenameBase() {
@@ -218,5 +253,95 @@ public final class AzathUnitTests {
         check("Long title capped <= 80 chars", sanitizedLong.length() <= 80 && sanitizedLong.endsWith("_FOLIO_ABCDEF123456"));
         checkEq("Emoji/blank fallback", "Book_FOLIO_1234",
                 AzathLibrarySync.sanitizeFilenameBase("📚✨", "FOLIO_1234"));
+    }
+
+    private static void testExtractBookKeyFromFilename() {
+        checkEq("Standard _FOLIO_<hex>.kfx", "FOLIO_DB72217519E6",
+                FolioMetadataDb.extractBookKeyFromFilename("Blindsight_FOLIO_DB72217519E6.kfx"));
+        checkEq("Multiple underscores before _FOLIO_", "FOLIO_16116B0F7724",
+                FolioMetadataDb.extractBookKeyFromFilename("A_Spy_in_the_House_of_Love_FOLIO_16116B0F7724.kfx"));
+        checkEq("Missing _FOLIO_ suffix -> null", null,
+                FolioMetadataDb.extractBookKeyFromFilename("hesiod.kfx"));
+        checkEq("Malformed non-hex suffix -> null", null,
+                FolioMetadataDb.extractBookKeyFromFilename("Bad_Book_FOLIO_ZZZZZZZZZZZZ.kfx"));
+        checkEq("Malformed short suffix -> null", null,
+                FolioMetadataDb.extractBookKeyFromFilename("Bad_Book_FOLIO_123.kfx"));
+        checkEq("Malformed trailing token after hex -> null", null,
+                FolioMetadataDb.extractBookKeyFromFilename("Bad_FOLIO_DB72217519E6_copy.kfx"));
+        checkEq("Null filename -> null", null,
+                FolioMetadataDb.extractBookKeyFromFilename(null));
+    }
+
+    private static void testKfxMagicAndPathGuards() {
+        try {
+            File tmpValid = File.createTempFile("azath_kfx_valid_", ".kfx.part");
+            try (FileOutputStream fos = new FileOutputStream(tmpValid)) {
+                byte[] b = new byte[256];
+                b[0] = 'C'; b[1] = 'O'; b[2] = 'N'; b[3] = 'T';
+                fos.write(b);
+            }
+            check("isValidKfxPart accepts 256B CONT header", ExternalEpubActivity.isValidKfxPart(tmpValid));
+
+            File tmpBadMagic = File.createTempFile("azath_kfx_bad_", ".kfx.part");
+            try (FileOutputStream fos = new FileOutputStream(tmpBadMagic)) {
+                byte[] b = new byte[256];
+                b[0] = (byte) 0xFF; b[1] = (byte) 0xFF; b[2] = 'X'; b[3] = 'Y';
+                fos.write(b);
+            }
+            check("isValidKfxPart rejects non-CONT header", !ExternalEpubActivity.isValidKfxPart(tmpBadMagic));
+
+            File tmpTooSmall = File.createTempFile("azath_kfx_tiny_", ".kfx.part");
+            try (FileOutputStream fos = new FileOutputStream(tmpTooSmall)) {
+                fos.write(new byte[] { 'C', 'O', 'N', 'T', 1, 2 });
+            }
+            check("isValidKfxPart rejects <128B CONT header", !ExternalEpubActivity.isValidKfxPart(tmpTooSmall));
+
+            tmpValid.delete();
+            tmpBadMagic.delete();
+            tmpTooSmall.delete();
+        } catch (Exception e) {
+            check("KFX temp file magic test threw unexpected exception: " + e, false);
+        }
+
+        check("Private path inside /data/data/<pkg> blocked",
+                ExternalEpubActivity.isPathInsideOrEqual("/data/data/com.azath.reader/databases/kindle_library.db", "/data/data/com.azath.reader"));
+        check("Private path exact root blocked",
+                ExternalEpubActivity.isPathInsideOrEqual("/data/user/0/com.azath.reader", "/data/user/0/com.azath.reader"));
+        check("Sibling pkg prefix NOT falsely blocked",
+                !ExternalEpubActivity.isPathInsideOrEqual("/data/user/0/com.azath.reader2/book.epub", "/data/user/0/com.azath.reader"));
+    }
+
+    private static void testSecurityHelpers() {
+        // Content-Disposition filename sanitization
+        checkEq("Content-Disposition traversal stripped", "passwd.epub",
+                FolioWebBrowserDialog.sanitizeDownloadFilename("attachment; filename=\"../../etc/passwd\"", null));
+        checkEq("Content-Disposition control/NUL stripped", "My_Book_1.epub",
+                FolioWebBrowserDialog.sanitizeDownloadFilename("attachment; filename=\"My Book\u0000\n 1.epub\"", null));
+        checkEq("Content-Disposition UTF-8 filename* parsed", "Blindsight.epub",
+                FolioWebBrowserDialog.sanitizeDownloadFilename("attachment; filename*=UTF-8''/evil/dir/Blindsight.epub", null));
+        StringBuilder longCd = new StringBuilder("attachment; filename=\"");
+        for (int i = 0; i < 140; i++) longCd.append('Z');
+        longCd.append(".epub\"");
+        String sanLongCd = FolioWebBrowserDialog.sanitizeDownloadFilename(longCd.toString(), null);
+        check("Content-Disposition capped <= 80 chars and ends .epub",
+                sanLongCd.length() <= 80 && sanLongCd.endsWith(".epub"));
+
+        // ZIP slip entry guard
+        check("Normal EPUB entry safe", EpubTranscoder.isSafeZipEntryName("OEBPS/Text/chapter_01.xhtml"));
+        check("Zip-slip .. segment rejected", !EpubTranscoder.isSafeZipEntryName("OEBPS/../../etc/passwd"));
+        check("Percent-encoded %2e%2e rejected", !EpubTranscoder.isSafeZipEntryName("%2e%2e/secret"));
+        check("NUL char in ZIP entry rejected", !EpubTranscoder.isSafeZipEntryName("OEBPS/ch1.xhtml\u0000.png"));
+
+        // Backup validation helpers
+        check("Valid /sdcard/kindle backup kfx path accepted",
+                FolioMetadataBackup.isValidBackupBookPath("/sdcard/kindle/Blindsight_FOLIO_DB72217519E6.kfx"));
+        check("Backup path with .. rejected",
+                !FolioMetadataBackup.isValidBackupBookPath("/sdcard/kindle/../../etc/evil.kfx"));
+        check("Backup path targeting databases rejected",
+                !FolioMetadataBackup.isValidBackupBookPath("/data/data/com.azath.reader/databases/kindle_library.db"));
+        check("Backup non-.kfx path rejected",
+                !FolioMetadataBackup.isValidBackupBookPath("/sdcard/kindle/note.txt"));
+        check("Backup goal clamped <= 1000", FolioMetadataBackup.clampReadingGoal(50000) == 1000);
+        check("Backup rating clamped <= 5", FolioMetadataBackup.clampStarRating(99) == 5);
     }
 }
