@@ -79,6 +79,7 @@ public final class AzathUnitTests {
         testRound167Helpers();
         testRound168Task1Helpers();
         testRound168Task2GenreCleanup();
+        testRound168Task3TimeoutAndSubtitle();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -743,5 +744,21 @@ public final class AzathUnitTests {
         java.util.Map<Long, List<String>> migrated2 = FolioMetadataDb.computeMigratedGenres(secondPassInput);
         check("Genre migration is idempotent across re-runs",
                 migrated1.equals(migrated2));
+    }
+
+    private static void testRound168Task3TimeoutAndSubtitle() {
+        checkEq("computeConversionTimeoutSec(0) -> 120", "120",
+                String.valueOf(ExternalEpubActivity.computeConversionTimeoutSec(0L)));
+        checkEq("computeConversionTimeoutSec(1MB) -> 120 clamp", "120",
+                String.valueOf(ExternalEpubActivity.computeConversionTimeoutSec(1024L * 1024L)));
+        checkEq("computeConversionTimeoutSec(40MB) -> 120", "120",
+                String.valueOf(ExternalEpubActivity.computeConversionTimeoutSec(40L * 1024L * 1024L)));
+        checkEq("computeConversionTimeoutSec(159MB) -> 299", "299",
+                String.valueOf(ExternalEpubActivity.computeConversionTimeoutSec(159L * 1024L * 1024L)));
+        checkEq("computeConversionTimeoutSec(500MB) -> 600 cap", "600",
+                String.valueOf(ExternalEpubActivity.computeConversionTimeoutSec(500L * 1024L * 1024L)));
+        checkEq("formatConversionSubtitle(159MB)",
+                "Converting 159 MB EPUB (up to ~5m)...",
+                ExternalEpubActivity.formatConversionSubtitle(159L * 1024L * 1024L, true));
     }
 }

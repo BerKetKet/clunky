@@ -318,9 +318,9 @@ public class ExternalEpubActivity extends Activity {
                                 final String bookKey, final String contentHash,
                                 final boolean addToLibrary) {
         final AtomicBoolean cancelFlag = new AtomicBoolean(false);
-        final String convSubtitle = addToLibrary
-                ? "Converting to KFX & enriching book metadata"
-                : "Converting EPUB to native KFX";
+        final long inputBytes = (stagedEpub != null && stagedEpub.isFile()) ? stagedEpub.length() : 0L;
+        final long convTimeoutSec = computeConversionTimeoutSec(inputBytes);
+        final String convSubtitle = formatConversionSubtitle(inputBytes, addToLibrary);
         showProgressDialog(
                 addToLibrary ? "Adding to Azath Library..." : "Preparing Book...",
                 convSubtitle,
@@ -358,7 +358,7 @@ public class ExternalEpubActivity extends Activity {
                 File outKfx = new File(targetDir, safeBase + ".kfx");
                 File outCover = new File(outKfx.getAbsolutePath() + ".cover.jpg");
 
-                boolean ok = convertEpubToKfx(this, stagedEpub, outKfx, KFX_CONV_TIMEOUT_SEC, cancelFlag);
+                boolean ok = convertEpubToKfx(this, stagedEpub, outKfx, convTimeoutSec, cancelFlag);
                 if (cancelFlag.get()) {
                     deleteAttemptArtifacts(buildAttemptPartFile(outKfx, "inproc"));
                     deleteAttemptArtifacts(buildAttemptPartFile(outKfx, "native1"));
@@ -430,8 +430,30 @@ public class ExternalEpubActivity extends Activity {
         }, "folio-epub-convert").start();
     }
 
+    public static long computeConversionTimeoutSec(long sizeBytes) {
+        if (sizeBytes <= 0L) return KFX_CONV_TIMEOUT_SEC;
+        double sizeMb = sizeBytes / (1024.0 * 1024.0);
+        long computed = (long) Math.ceil(60.0 + 1.5 * sizeMb);
+        if (computed < 120L) return 120L;
+        if (computed > 600L) return 600L;
+        return computed;
+    }
+
+    public static String formatConversionSubtitle(long sizeBytes, boolean addToLibrary) {
+        if (sizeBytes >= 1024L * 1024L) {
+            long timeoutSec = computeConversionTimeoutSec(sizeBytes);
+            long mb = Math.max(1L, Math.round(sizeBytes / (1024.0 * 1024.0)));
+            long approxMin = Math.max(1L, (timeoutSec + 30L) / 60L);
+            return "Converting " + mb + " MB EPUB (up to ~" + approxMin + "m)...";
+        }
+        return addToLibrary
+                ? "Converting to KFX & enriching book metadata"
+                : "Converting EPUB to native KFX";
+    }
+
     public static boolean convertEpubToKfx(Context ctx, File epubIn, File kfxOut) {
-        return convertEpubToKfx(ctx, epubIn, kfxOut, KFX_CONV_TIMEOUT_SEC, null);
+        long sizeBytes = (epubIn != null && epubIn.isFile()) ? epubIn.length() : 0L;
+        return convertEpubToKfx(ctx, epubIn, kfxOut, computeConversionTimeoutSec(sizeBytes), null);
     }
 
     public static File buildAttemptPartFile(File kfxOut, String attemptTag) {
@@ -491,13 +513,17 @@ public class ExternalEpubActivity extends Activity {
         deleteAttemptArtifacts(partNative2);
         deleteAttemptArtifacts(legacyPart);
 
-        final long deadlineNanos = computeDeadlineNanos(System.nanoTime(), timeoutSec);
+        final long convStartNanos = System.nanoTime();
+        final long inputBytes = (epubIn != null && epubIn.isFile()) ? epubIn.length() : 0L;
+        final long deadlineNanos = computeDeadlineNanos(convStartNanos, timeoutSec);
         boolean ok = false;
         boolean inProcCompleted = false;
         boolean inProcTimedOut = false;
         File winningPart = null;
+        String winnerAttempt = "none";
 
-        long inProcRemSec = Math.max(1L, (remainingTimeoutMs(System.nanoTime(), deadlineNanos) + 999L) / 1000L);
+        final long inProcStartNanos = System.nanoTime();
+        long inProcRemSec = Math.max(1L, (remainingTimeoutMs(inProcStartNanos, deadlineNanos) + 999L) / 1000L);
         final java.util.concurrent.FutureTask<Boolean> fut = new java.util.concurrent.FutureTask<>(
                 (Callable<Boolean>) () -> com.amazon.kindle.epub.EpubTranscoder.transcodeToKfx(
                         epubIn, partInproc, inProcRemSec, cancelFlag));
@@ -523,6 +549,7 @@ public class ExternalEpubActivity extends Activity {
                     if (Boolean.TRUE.equals(res) && isValidKfxPart(partInproc)) {
                         ok = true;
                         winningPart = partInproc;
+                        winnerAttempt = "inproc";
                     }
                     break;
                 } catch (java.util.concurrent.TimeoutException te) {
@@ -550,6 +577,11 @@ public class ExternalEpubActivity extends Activity {
                     Log.w(TAG, "In-process converter thread still running after 750ms join");
                 }
             }
+            long inProcElapsedMs = Math.max(0L, (System.nanoTime() - inProcStartNanos) / 1_000_000L);
+            String inProcStatus = ok ? "ok" : ((cancelFlag != null && cancelFlag.get()) ? "cancelled" : (inProcTimedOut ? "timeout" : "failed"));
+            Log.i(TAG, "attempt=inproc status=" + inProcStatus + " elapsedMs=" + inProcElapsedMs
+                    + " size=" + partInproc.length() + "B timeoutSec=" + timeoutSec
+                    + " inputBytes=" + inputBytes);
         }
 
         try {
@@ -564,6 +596,7 @@ public class ExternalEpubActivity extends Activity {
                     return false;
                 }
                 File[] attemptParts = new File[] { partNative1, partNative2 };
+                String[] attemptNames = new String[] { "native1", "native2" };
                 String[][] argVariants = new String[][] {
                     { bin.getAbsolutePath(), epubIn.getAbsolutePath(), "-o", partNative1.getAbsolutePath() },
                     { bin.getAbsolutePath(), epubIn.getAbsolutePath(), partNative2.getAbsolutePath() }
@@ -576,11 +609,17 @@ public class ExternalEpubActivity extends Activity {
                     File attemptPart = attemptParts[i];
                     deleteAttemptArtifacts(attemptPart);
                     StringBuilder outLog = new StringBuilder();
+                    long attemptStartNanos = System.nanoTime();
                     int code = runProcessWithTimeoutUntil(argVariants[i], deadlineNanos, cancelFlag, outLog);
-                    Log.i(TAG, "libkfxconv attempt=" + attemptPart.getName() + " exit=" + code + " size=" + attemptPart.length() + "B");
-                    if (code == 0 && isValidKfxPart(attemptPart)) {
+                    long attemptElapsedMs = Math.max(0L, (System.nanoTime() - attemptStartNanos) / 1_000_000L);
+                    boolean valid = code == 0 && isValidKfxPart(attemptPart);
+                    Log.i(TAG, "attempt=" + attemptNames[i] + " file=" + attemptPart.getName()
+                            + " exit=" + code + " validKfx=" + valid
+                            + " elapsedMs=" + attemptElapsedMs + " size=" + attemptPart.length() + "B");
+                    if (valid) {
                         ok = true;
                         winningPart = attemptPart;
+                        winnerAttempt = attemptNames[i];
                         break;
                     }
                     Log.w(TAG, "libkfxconv output: " + outLog);
@@ -590,6 +629,7 @@ public class ExternalEpubActivity extends Activity {
                 }
             }
 
+            long totalElapsedMs = Math.max(0L, (System.nanoTime() - convStartNanos) / 1_000_000L);
             cancelled = cancelFlag != null && cancelFlag.get();
             if (ok && winningPart != null && !cancelled) {
                 if (kfxOut.exists()) kfxOut.delete();
@@ -602,8 +642,14 @@ public class ExternalEpubActivity extends Activity {
                     if (finalCover.exists()) finalCover.delete();
                     winCover.renameTo(finalCover);
                 }
+                Log.i(TAG, "convertEpubToKfx summary: ok=true winner=" + winnerAttempt
+                        + " totalElapsedMs=" + totalElapsedMs + " outBytes=" + kfxOut.length()
+                        + " inputBytes=" + inputBytes + " timeoutSec=" + timeoutSec);
                 return true;
             }
+            Log.w(TAG, "convertEpubToKfx summary: ok=false cancelled=" + cancelled
+                    + " totalElapsedMs=" + totalElapsedMs + " inputBytes=" + inputBytes
+                    + " timeoutSec=" + timeoutSec);
             return false;
         } finally {
             deleteAttemptArtifacts(partInproc);
