@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -14,7 +15,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.StrictMode;
 import android.provider.OpenableColumns;
 import android.util.Log;
 import android.util.TypedValue;
@@ -77,6 +77,12 @@ public class ExternalEpubActivity extends Activity {
         Uri uri = extractUri(getIntent());
         if (uri == null || !isSupportedScheme(uri)) {
             Toast.makeText(this, "Unsupported or missing EPUB URI", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+        if (isBlockedPrivateFileUri(this, uri)) {
+            Log.w(TAG, "Blocked file:// URI targeting private app storage: " + uri);
+            Toast.makeText(this, "Blocked: cannot open app-private storage file", Toast.LENGTH_LONG).show();
             finish();
             return;
         }
@@ -417,7 +423,7 @@ public class ExternalEpubActivity extends Activity {
             if (!ok && (cancelFlag == null || !cancelFlag.get())) {
                 if (partOut.exists()) partOut.delete();
                 File bin = new File(ctx.getApplicationInfo().nativeLibraryDir, "libkfxconv.so");
-                if (!bin.exists()) {
+                if (!bin.exists() && isDebuggable(ctx)) {
                     bin = new File("/data/local/tmp/kfx-conv");
                 }
                 if (!bin.exists()) {
@@ -572,9 +578,6 @@ public class ExternalEpubActivity extends Activity {
         }
         kfxFile = resolved;
         com.amazon.kindle.epub.catalog.FolioTheme.markFloatingCoverActive();
-        try {
-            android.os.StrictMode.class.getMethod("disableDeathOnFileUriExposure").invoke(null);
-        } catch (Throwable ignored) {}
 
         try {
             Intent reader = new Intent(Intent.ACTION_VIEW);
@@ -723,6 +726,71 @@ public class ExternalEpubActivity extends Activity {
         return "external_book.epub";
     }
 
+    private static boolean isDebuggable(Context ctx) {
+        if (ctx == null) return false;
+        try {
+            ApplicationInfo ai = ctx.getApplicationInfo();
+            return ai != null && (ai.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    public static boolean isPathInsideOrEqual(String candidatePath, String rootPath) {
+        if (candidatePath == null || rootPath == null || rootPath.isEmpty()) return false;
+        String normRoot = (rootPath.endsWith(File.separator) && rootPath.length() > 1)
+                ? rootPath.substring(0, rootPath.length() - 1)
+                : rootPath;
+        return candidatePath.equals(normRoot) || candidatePath.startsWith(normRoot + File.separator);
+    }
+
+    public static boolean isBlockedPrivateFile(Context ctx, File src) {
+        if (ctx == null || src == null) return false;
+        try {
+            String canon = src.getCanonicalFile().getPath();
+            String abs = src.getAbsolutePath();
+            java.util.List<File> roots = new java.util.ArrayList<>();
+            try { if (ctx.getDataDir() != null) roots.add(ctx.getDataDir()); } catch (Throwable ignored) {}
+            try {
+                File f = ctx.getFilesDir();
+                if (f != null && f.getParentFile() != null) roots.add(f.getParentFile());
+            } catch (Throwable ignored) {}
+            try {
+                File c = ctx.getCacheDir();
+                if (c != null && c.getParentFile() != null) roots.add(c.getParentFile());
+            } catch (Throwable ignored) {}
+            String pkg = ctx.getPackageName();
+            if (pkg != null && !pkg.isEmpty()) {
+                roots.add(new File("/data/data/" + pkg));
+                roots.add(new File("/data/user/0/" + pkg));
+            }
+            for (File r : roots) {
+                if (r == null) continue;
+                String rAbs = r.getAbsolutePath();
+                String rCanon;
+                try {
+                    rCanon = r.getCanonicalFile().getPath();
+                } catch (Throwable t) {
+                    rCanon = rAbs;
+                }
+                if (isPathInsideOrEqual(canon, rCanon) || isPathInsideOrEqual(abs, rAbs)
+                        || isPathInsideOrEqual(canon, rAbs) || isPathInsideOrEqual(abs, rCanon)) {
+                    return true;
+                }
+            }
+        } catch (Throwable t) {
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean isBlockedPrivateFileUri(Context ctx, Uri uri) {
+        if (uri == null || !"file".equalsIgnoreCase(uri.getScheme())) return false;
+        String rawPath = uri.getPath();
+        if (rawPath == null || rawPath.isEmpty()) return true;
+        return isBlockedPrivateFile(ctx, new File(rawPath));
+    }
+
     private static void copyUriToFile(Context ctx, Uri uri, File dest) throws Exception {
         if (!isSupportedScheme(uri)) {
             throw new IllegalArgumentException("Unsupported URI scheme: " + uri.getScheme());
@@ -737,6 +805,9 @@ public class ExternalEpubActivity extends Activity {
                     throw new IllegalArgumentException("Invalid file URI path");
                 }
                 File src = new File(rawPath).getCanonicalFile();
+                if (isBlockedPrivateFile(ctx, src)) {
+                    throw new SecurityException("Access to private app storage is not permitted");
+                }
                 if (!src.isFile() || !src.canRead()) {
                     throw new IllegalStateException("File not readable: " + src.getAbsolutePath());
                 }

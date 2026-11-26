@@ -109,9 +109,11 @@ public final class EpubTranscoder {
     }
 
     public static File getKfxConvBinary() {
+        boolean isDebuggable = false;
         try {
             Application app = ActivityThread.currentApplication();
             if (app != null && app.getApplicationInfo() != null) {
+                isDebuggable = (app.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
                 String libDir = app.getApplicationInfo().nativeLibraryDir;
                 if (libDir != null) {
                     File lib = new File(libDir, "libkfxconv.so");
@@ -140,13 +142,15 @@ public final class EpubTranscoder {
                 return pkgLib;
             }
         }
-        File tmpBin = new File("/data/local/tmp/kfx-conv");
-        if (tmpBin.exists()) {
-            if (!tmpBin.canExecute()) {
-                tmpBin.setExecutable(true, false);
-            }
-            if (tmpBin.canExecute()) {
-                return tmpBin;
+        if (isDebuggable) {
+            File tmpBin = new File("/data/local/tmp/kfx-conv");
+            if (tmpBin.exists()) {
+                if (!tmpBin.canExecute()) {
+                    tmpBin.setExecutable(true, false);
+                }
+                if (tmpBin.canExecute()) {
+                    return tmpBin;
+                }
             }
         }
         return null;
