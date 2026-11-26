@@ -161,10 +161,25 @@ public final class AzathUnitTests {
                 "Brave New World", "Aldous Huxley", "",
                 "Island", "Aldous Huxley", ""));
 
-        // Unknown Author requires strict title match
-        check("Unknown Author exact title -> true", MetadataEnricher.isAcceptableMatch(
+        // Task 5: Unknown/blank author rejected single-doc without ISBN; requires ISBN OR limit=3 agreeing first author
+        check("Unknown Author without ISBN single-doc rejected", !MetadataEnricher.isAcceptableMatch(
                 "The Odyssey", "Unknown Author", "",
                 "Odyssey", "Homer", ""));
+        check("Blank Author with exact ISBN -> true", MetadataEnricher.isAcceptableMatch(
+                "The Odyssey", "", "9780140268867",
+                "Odyssey", "Homer", "978-0-14-026886-7"));
+        check("Unknown Author limit=3 all agree first author -> accepted",
+                MetadataEnricher.selectAcceptedCandidateIndex(
+                        "The Odyssey", "Unknown Author", "",
+                        Arrays.asList("Odyssey", "The Odyssey", "Odyssey"),
+                        Arrays.asList("Homer", "Homer", "Homer"),
+                        Arrays.asList("", "", "")) == 0);
+        check("Unknown Author limit=3 disagreeing authors -> rejected",
+                MetadataEnricher.selectAcceptedCandidateIndex(
+                        "The Odyssey", "Unknown Author", "",
+                        Arrays.asList("Odyssey", "2001: A Space Odyssey", "Odyssey"),
+                        Arrays.asList("Homer", "Arthur C. Clarke", "Homer"),
+                        Arrays.asList("", "", "")) == -1);
         check("Unknown Author unrelated title -> false", !MetadataEnricher.isAcceptableMatch(
                 "The Odyssey", "Unknown Author", "",
                 "Iliad", "Homer", ""));

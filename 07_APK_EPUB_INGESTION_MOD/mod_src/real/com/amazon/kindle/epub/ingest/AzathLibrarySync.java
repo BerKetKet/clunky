@@ -182,13 +182,16 @@ public final class AzathLibrarySync {
     }
 
     /**
-     * Runs once per process on app launch to keep FolioMetadataDb, kindle_library.db, and cache cleanly reconciled.
+     * Runs once per process on app launch to keep FolioMetadataDb, kindle_library.db, and cache cleanly reconciled,
+     * then sweeps unenriched books for asynchronous Open Library enrichment when enabled and online.
      */
     public static void reconcileOnLaunchAsync(final Context ctx) {
         if (ctx == null || !sLaunchReconciled.compareAndSet(false, true)) return;
         new Thread(new Runnable() {
             @Override public void run() {
-                reconcileLibrary(ctx.getApplicationContext());
+                Context appCtx = ctx.getApplicationContext();
+                reconcileLibrary(appCtx);
+                MetadataEnricher.sweepUnenrichedAsync(appCtx);
             }
         }, "azath-launch-reconcile").start();
     }
