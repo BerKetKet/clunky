@@ -80,6 +80,7 @@ public final class AzathUnitTests {
         testRound168Task1Helpers();
         testRound168Task2GenreCleanup();
         testRound168Task3TimeoutAndSubtitle();
+        testRound168Task4ReconcileSummary();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -760,5 +761,15 @@ public final class AzathUnitTests {
         checkEq("formatConversionSubtitle(159MB)",
                 "Converting 159 MB EPUB (up to ~5m)...",
                 ExternalEpubActivity.formatConversionSubtitle(159L * 1024L * 1024L, true));
+    }
+
+    private static void testRound168Task4ReconcileSummary() {
+        checkEq("formatReconcileSummary exact format",
+                "reconcileLibrary complete: activeKfx=35 db_deleted=1 backfilled=2 cache_pruned=3 part_cleaned=4 once_swept=5",
+                AzathLibrarySync.formatReconcileSummary(35, 1, 2, 3, 4, 5));
+        check("shouldBlockAutoEpubCrawl blocks raw .epub in /sdcard/kindle/",
+                AzathLibrarySync.shouldBlockAutoEpubCrawl(new File("/sdcard/kindle/Pride_and_Prejudice_1342.epub")));
+        check("shouldBlockAutoEpubCrawl allows .kfx in /sdcard/kindle/",
+                !AzathLibrarySync.shouldBlockAutoEpubCrawl(new File("/sdcard/kindle/Point_Counter_Point_FOLIO_F806A2F54FD4.kfx")));
     }
 }

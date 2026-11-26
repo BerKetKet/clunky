@@ -540,17 +540,43 @@ public final class AzathLibrarySync {
      *  3. Indexes any /sdcard/kindle/*.kfx files missing from FolioMetadataDb.
      *  4. Prunes ONLY orphan files in files/epub_cache/ that do not belong to any active Library book.
      */
+    public static boolean shouldBlockAutoEpubCrawl(File file) {
+        if (file == null) return false;
+        String name = file.getName().toLowerCase(Locale.US);
+        // Never auto-crawl or background-transcode raw .epub files into files/epub_cache/ (including
+        // leftover .epub files in /sdcard/kindle/), preventing the create->cache_pruned thrash loop.
+        return name.endsWith(".epub");
+    }
+
+    public static String formatReconcileSummary(
+            int activeKfx, int dbDeleted, int backfilled, int cachePruned, int partCleaned, int onceSwept) {
+        return "reconcileLibrary complete: activeKfx=" + activeKfx
+                + " db_deleted=" + dbDeleted
+                + " backfilled=" + backfilled
+                + " cache_pruned=" + cachePruned
+                + " part_cleaned=" + partCleaned
+                + " once_swept=" + onceSwept;
+    }
+
     public static int reconcileLibrary(Context ctx) {
         return reconcileLibrary(ctx, false);
     }
 
     public static int reconcileLibrary(Context ctx, boolean force) {
         if (ctx == null) return 0;
-        int changes = 0;
+        int dbDeleted = 0;
+        int backfilled = 0;
+        int cachePruned = 0;
+        int partCleaned = 0;
+        int onceSwept = 0;
         SYNC_LOCK.lock();
         try {
             long now = System.currentTimeMillis();
-            changes += FolioMetadataDb.cleanupLegacyDuplicateRows(ctx);
+            int legacyDupDeleted = FolioMetadataDb.cleanupLegacyDuplicateRows(ctx);
+            if (legacyDupDeleted > 0) {
+                Log.i(TAG, "Removed legacy duplicate kindle_library.db rows=" + legacyDupDeleted);
+                dbDeleted += legacyDupDeleted;
+            }
 
             Set<String> activeNames = new HashSet<>();
             Set<String> activePaths = new HashSet<>();
@@ -567,7 +593,7 @@ public final class AzathLibrarySync {
                     String lower = f.getName().toLowerCase(Locale.US);
                     int staleHandled = handleStalePartEntry(f, lower, now);
                     if (staleHandled >= 0) {
-                        changes += staleHandled;
+                        partCleaned += staleHandled;
                         continue;
                     }
                     if (f.isFile() && lower.endsWith(".kfx") && f.length() >= 128) {
@@ -592,7 +618,7 @@ public final class AzathLibrarySync {
                     String lower = f.getName().toLowerCase(Locale.US);
                     int staleHandled = handleStalePartEntry(f, lower, now);
                     if (staleHandled >= 0) {
-                        changes += staleHandled;
+                        partCleaned += staleHandled;
                         continue;
                     }
                     if (f.isFile() && lower.endsWith(".kfx") && f.length() >= 128) {
@@ -643,7 +669,7 @@ public final class AzathLibrarySync {
                         try {
                             if (db.deleteBook(delKey)) {
                                 Log.i(TAG, "Deleted stale DB row book_key=" + delKey + " reason=kfx_missing_on_disk");
-                                changes++;
+                                dbDeleted++;
                             } else {
                                 Log.w(TAG, "deleteBook returned false for book_key=" + delKey);
                             }
@@ -674,7 +700,8 @@ public final class AzathLibrarySync {
                     }
                     File cov = new File(kfx.getAbsolutePath() + ".cover.jpg");
                     db.upsertBook(key, kfx, cov.exists() ? cov : null, kfx.getName(), meta);
-                    changes++;
+                    Log.i(TAG, "Backfilled unindexed KFX into DB: " + kfx.getAbsolutePath() + " key=" + key);
+                    backfilled++;
                 }
             } finally {
                 db.close();
@@ -687,22 +714,23 @@ public final class AzathLibrarySync {
                     if (cf.exists()) {
                         deleteRecursive(cf);
                         Log.i(TAG, "Pruned orphan epub_cache entry: " + cf.getAbsolutePath() + " reason=unreferenced_by_active_kfx");
-                        changes++;
+                        cachePruned++;
                     }
                 }
             }
 
             // Sweep stale cache/epub_staging/* and cache/folio_once/* files older than 1 hour
-            changes += sweepStaleCacheDir(new File(ctx.getCacheDir(), "epub_staging"), now, "epub_staging");
-            changes += sweepStaleCacheDir(new File(ctx.getCacheDir(), "folio_once"), now, "folio_once");
+            onceSwept += sweepStaleCacheDir(new File(ctx.getCacheDir(), "epub_staging"), now, "epub_staging");
+            onceSwept += sweepStaleCacheDir(new File(ctx.getCacheDir(), "folio_once"), now, "folio_once");
 
-            Log.i(TAG, "reconcileLibrary complete: activeKfx=" + activePaths.size() + " changes=" + changes);
+            Log.i(TAG, formatReconcileSummary(
+                    activePaths.size(), dbDeleted, backfilled, cachePruned, partCleaned, onceSwept));
         } catch (Throwable t) {
             Log.w(TAG, "reconcileLibrary warning: " + t.getMessage());
         } finally {
             SYNC_LOCK.unlock();
         }
-        return changes;
+        return dbDeleted + backfilled + cachePruned + partCleaned + onceSwept;
     }
 
     private static int sweepStaleCacheDir(File dir, long nowMs, String label) {

@@ -41,14 +41,8 @@ public class g extends b {
         return Collections.unmodifiableCollection(c);
     }
 
-    private static boolean shouldBlockAutoEpubCrawl(File file) {
-        if (file == null) return false;
-        String name = file.getName().toLowerCase(Locale.US);
-        if (!name.endsWith(".epub")) return false;
-        String path = file.getAbsolutePath().toLowerCase(Locale.US);
-        // Never auto-crawl and auto-transcode unimported EPUB folders (e.g., /sdcard/en/0/, /sdcard/Download/)
-        // Users explicitly import EPUBs via Batch Importer, Web Browser, or Open With Azath into /sdcard/kindle/.
-        return !path.startsWith("/sdcard/kindle/") && !path.startsWith("/storage/emulated/0/kindle/");
+    public static boolean shouldBlockAutoEpubCrawl(File file) {
+        return com.amazon.kindle.epub.ingest.AzathLibrarySync.shouldBlockAutoEpubCrawl(file);
     }
 
     @Override
