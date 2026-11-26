@@ -405,45 +405,122 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
     }
 
     private static volatile boolean sBackedUpThisProcess = false;
+    private static final Object BACKUP_LOCK = new Object();
 
-    private static void backupKindleLibraryDbOnce(Context ctx, File dbFile) {
-        if (ctx == null || dbFile == null || !dbFile.exists() || sBackedUpThisProcess) return;
-        sBackedUpThisProcess = true;
-        try {
-            File backupDir = new File(ctx.getFilesDir(), "db_backups");
-            if (!backupDir.exists()) backupDir.mkdirs();
-            File[] existing = backupDir.listFiles((dir, name) ->
-                    name.startsWith("kindle_library_") && name.endsWith(".db"));
-            long now = System.currentTimeMillis();
-            if (existing != null && existing.length > 0) {
-                Arrays.sort(existing, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
-                if (now - existing[0].lastModified() < 5 * 60_000L) {
-                    Log.i(TAG, "Skipping kindle_library.db backup; newest backup < 5m old");
-                    return;
-                }
+    private static void copyFileAtomic(File src, File dst) throws Exception {
+        File tmp = new File(dst.getParentFile(), dst.getName() + ".part");
+        if (tmp.exists()) tmp.delete();
+        boolean ok = false;
+        try (FileInputStream fis = new FileInputStream(src);
+             FileOutputStream fos = new FileOutputStream(tmp)) {
+            byte[] buf = new byte[16384];
+            int n;
+            while ((n = fis.read(buf)) > 0) {
+                fos.write(buf, 0, n);
             }
-            File dest = new File(backupDir, "kindle_library_" + now + ".db");
-            try (FileInputStream fis = new FileInputStream(dbFile);
-                 FileOutputStream fos = new FileOutputStream(dest)) {
-                byte[] buf = new byte[16384];
-                int n;
-                while ((n = fis.read(buf)) > 0) {
-                    fos.write(buf, 0, n);
+            fos.flush();
+            ok = true;
+        } finally {
+            if (!ok && tmp.exists()) tmp.delete();
+        }
+        if (dst.exists()) dst.delete();
+        if (!tmp.renameTo(dst)) {
+            if (tmp.exists()) tmp.delete();
+            throw new java.io.IOException("Atomic rename failed: " + tmp.getAbsolutePath() + " -> " + dst.getAbsolutePath());
+        }
+    }
+
+    private static boolean backupKindleLibraryDbOnce(Context ctx, File dbFile) {
+        if (ctx == null || dbFile == null || !dbFile.isFile()) return false;
+        if (sBackedUpThisProcess) return true;
+        synchronized (BACKUP_LOCK) {
+            if (sBackedUpThisProcess) return true;
+            try {
+                File backupDir = new File(ctx.getFilesDir(), "db_backups");
+                if (!backupDir.exists()) backupDir.mkdirs();
+                if (!backupDir.isDirectory()) {
+                    Log.e(TAG, "Backup directory is invalid: " + backupDir.getAbsolutePath());
+                    return false;
                 }
-            }
-            Log.i(TAG, "Backed up kindle_library.db -> " + dest.getAbsolutePath());
-            File[] after = backupDir.listFiles((dir, name) ->
-                    name.startsWith("kindle_library_") && name.endsWith(".db"));
-            if (after != null && after.length > 3) {
-                Arrays.sort(after, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
-                for (int i = 3; i < after.length; i++) {
-                    if (after[i].delete()) {
-                        Log.i(TAG, "Pruned old backup: " + after[i].getName());
+                File[] existing = backupDir.listFiles((dir, name) ->
+                        name.startsWith("kindle_library_") && name.endsWith(".db"));
+                long now = System.currentTimeMillis();
+                if (existing != null && existing.length > 0) {
+                    Arrays.sort(existing, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                    if (now - existing[0].lastModified() < 5 * 60_000L
+                            && existing[0].isFile() && existing[0].length() > 0) {
+                        sBackedUpThisProcess = true;
+                        Log.i(TAG, "Verified recent kindle_library.db backup (< 5m): " + existing[0].getName());
+                        return true;
                     }
                 }
+
+                File dest = new File(backupDir, "kindle_library_" + now + ".db");
+                File destPart = new File(backupDir, "kindle_library_" + now + ".db.part");
+                if (destPart.exists()) destPart.delete();
+
+                boolean vacuumOk = false;
+                SQLiteDatabase srcDb = null;
+                try {
+                    srcDb = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+                    String escaped = destPart.getAbsolutePath().replace("'", "''");
+                    srcDb.execSQL("VACUUM INTO '" + escaped + "'");
+                    vacuumOk = destPart.isFile() && destPart.length() > 0;
+                } catch (Throwable vt) {
+                    Log.w(TAG, "VACUUM INTO failed (" + vt.getMessage() + "), falling back to atomic DB+WAL/SHM copy");
+                    if (destPart.exists()) destPart.delete();
+                } finally {
+                    if (srcDb != null) {
+                        try { srcDb.close(); } catch (Throwable ignored) {}
+                    }
+                }
+
+                if (vacuumOk) {
+                    if (dest.exists()) dest.delete();
+                    if (!destPart.renameTo(dest)) {
+                        if (destPart.exists()) destPart.delete();
+                        Log.e(TAG, "Failed atomic rename of VACUUM INTO backup");
+                        return false;
+                    }
+                } else {
+                    copyFileAtomic(dbFile, dest);
+                    File walSrc = new File(dbFile.getAbsolutePath() + "-wal");
+                    if (walSrc.isFile()) {
+                        copyFileAtomic(walSrc, new File(dest.getAbsolutePath() + "-wal"));
+                    }
+                    File shmSrc = new File(dbFile.getAbsolutePath() + "-shm");
+                    if (shmSrc.isFile()) {
+                        copyFileAtomic(shmSrc, new File(dest.getAbsolutePath() + "-shm"));
+                    }
+                }
+
+                if (!dest.isFile() || dest.length() <= 0) {
+                    Log.e(TAG, "Backup verification failed (missing or empty): " + dest.getAbsolutePath());
+                    return false;
+                }
+
+                sBackedUpThisProcess = true;
+                Log.i(TAG, "Backed up kindle_library.db (" + (vacuumOk ? "VACUUM INTO" : "atomic+WAL")
+                        + ", " + dest.length() + " B) -> " + dest.getAbsolutePath());
+
+                File[] after = backupDir.listFiles((dir, name) ->
+                        name.startsWith("kindle_library_") && name.endsWith(".db"));
+                if (after != null && after.length > 3) {
+                    Arrays.sort(after, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                    for (int i = 3; i < after.length; i++) {
+                        File old = after[i];
+                        new File(old.getAbsolutePath() + "-wal").delete();
+                        new File(old.getAbsolutePath() + "-shm").delete();
+                        if (old.delete()) {
+                            Log.i(TAG, "Pruned old backup: " + old.getName());
+                        }
+                    }
+                }
+                return true;
+            } catch (Throwable t) {
+                Log.e(TAG, "Failed to backup kindle_library.db", t);
+                return false;
             }
-        } catch (Throwable t) {
-            Log.w(TAG, "Failed to backup kindle_library.db", t);
         }
     }
 
@@ -468,7 +545,10 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             Log.w(TAG, "kindle_library.db not found yet at " + dbFile);
             return false;
         }
-        backupKindleLibraryDbOnce(ctx, dbFile);
+        if (!backupKindleLibraryDbOnce(ctx, dbFile)) {
+            Log.e(TAG, "Aborting registerInKindleLibraryDb: kindle_library.db backup failed");
+            return false;
+        }
 
         final int maxAttempts = 3;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -671,11 +751,15 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
      * Removes legacy synthetic AMZNID0/CR!...KFX/0/ rows written prior to Round 158
      * so books in /sdcard/kindle/ appear exactly once (indexed by Kindle's native scanner).
      */
-    public void deleteBook(String bookKey) {
-        if (bookKey == null || bookKey.isEmpty()) return;
+    public boolean deleteBook(String bookKey) {
+        if (bookKey == null || bookKey.isEmpty()) return false;
         try {
-            getWritableDatabase().delete("books_metadata", "book_key = ?", new String[]{ bookKey });
-        } catch (Throwable ignored) {}
+            int deleted = getWritableDatabase().delete("books_metadata", "book_key = ?", new String[]{ bookKey });
+            return deleted > 0;
+        } catch (Throwable t) {
+            Log.e(TAG, "deleteBook failed for book_key=" + bookKey, t);
+            return false;
+        }
     }
 
     public static int cleanupLegacyDuplicateRows(Context ctx) {

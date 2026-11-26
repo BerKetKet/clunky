@@ -68,7 +68,7 @@ public final class AzathLibrarySync {
         if (!sdKindle.exists()) {
             try { sdKindle.mkdirs(); } catch (Throwable ignored) {}
         }
-        if (sdKindle.exists() && sdKindle.canWrite()) {
+        if (sdKindle.isDirectory() && sdKindle.canWrite()) {
             return sdKindle;
         }
         File priv = new File(ctx.getFilesDir(), "folio_library");
@@ -585,9 +585,12 @@ public final class AzathLibrarySync {
                 if (!plan.skipDestructive && !plan.circuitBreakerTripped) {
                     for (String delKey : plan.dbKeysToDelete) {
                         try {
-                            db.deleteBook(delKey);
-                            Log.i(TAG, "Deleted stale DB row book_key=" + delKey + " reason=kfx_missing_on_disk");
-                            changes++;
+                            if (db.deleteBook(delKey)) {
+                                Log.i(TAG, "Deleted stale DB row book_key=" + delKey + " reason=kfx_missing_on_disk");
+                                changes++;
+                            } else {
+                                Log.w(TAG, "deleteBook returned false for book_key=" + delKey);
+                            }
                         } catch (Throwable t) {
                             Log.w(TAG, "Failed deleting DB row " + delKey, t);
                         }
