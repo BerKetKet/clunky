@@ -3,6 +3,8 @@ package com.amazon.kindle.epub.ingest;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -13,6 +15,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -45,6 +49,13 @@ public final class EpubMetadataExtractor {
         }
     }
 
+    public static final int MAX_OPF_BYTES = 2 * 1024 * 1024;
+    public static final int MAX_DESCRIPTION_CHARS = 4000;
+    private static final Pattern ISO_DATETIME_PREFIX =
+            Pattern.compile("^(\\d{4}-\\d{2}-\\d{2})(?:[T ]\\d{2}:\\d{2}.*)?$");
+    private static final Pattern YEAR_4_PATTERN =
+            Pattern.compile("(?:^|\\D)((?:1\\d|20)\\d{2})(?:\\D|$)");
+
     private EpubMetadataExtractor() {}
 
     public static BookMeta extract(File epubFile, String fallbackDisplayName) {
@@ -60,14 +71,9 @@ public final class EpubMetadataExtractor {
                         opfEntry = findEntryIgnoreCase(zip, opfPath);
                     }
                     if (opfEntry != null) {
-                        InputStream opfIs = null;
-                        try {
-                            opfIs = zip.getInputStream(opfEntry);
-                            parseOpf(opfIs, meta);
-                        } finally {
-                            if (opfIs != null) {
-                                try { opfIs.close(); } catch (Throwable ignored) {}
-                            }
+                        byte[] opfBytes = readEntryBounded(zip, opfEntry, MAX_OPF_BYTES);
+                        if (opfBytes != null) {
+                            parseOpfBytes(opfBytes, meta);
                         }
                     }
                 }
@@ -91,55 +97,100 @@ public final class EpubMetadataExtractor {
         return meta;
     }
 
+    private static byte[] readEntryBounded(ZipFile zip, ZipEntry entry, int maxBytes) {
+        if (zip == null || entry == null || entry.isDirectory()) return null;
+        long declared = entry.getSize();
+        if (declared > maxBytes) {
+            return null;
+        }
+        InputStream is = null;
+        try {
+            is = zip.getInputStream(entry);
+            if (is == null) return null;
+            int initCap = (declared > 0 && declared <= maxBytes) ? (int) declared : 4096;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream(initCap);
+            byte[] buf = new byte[8192];
+            int total = 0;
+            int n;
+            while ((n = is.read(buf)) > 0) {
+                total += n;
+                if (total > maxBytes) {
+                    return null;
+                }
+                baos.write(buf, 0, n);
+            }
+            return baos.toByteArray();
+        } catch (Throwable ignored) {
+            return null;
+        } finally {
+            if (is != null) {
+                try { is.close(); } catch (Throwable ignored) {}
+            }
+        }
+    }
+
     private static String findOpfPath(ZipFile zip) {
         ZipEntry container = zip.getEntry("META-INF/container.xml");
         if (container == null) {
             container = findEntryIgnoreCase(zip, "META-INF/container.xml");
         }
         if (container != null) {
-            InputStream is = null;
-            try {
-                is = zip.getInputStream(container);
-                XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
-                factory.setNamespaceAware(false);
-                XmlPullParser parser = factory.newPullParser();
-                parser.setInput(new InputStreamReader(is, StandardCharsets.UTF_8));
-                int event = parser.getEventType();
-                while (event != XmlPullParser.END_DOCUMENT) {
-                    if (event == XmlPullParser.START_TAG) {
-                        String name = localName(parser.getName());
-                        if ("rootfile".equalsIgnoreCase(name)) {
-                            String fullPath = parser.getAttributeValue(null, "full-path");
-                            if (isBlank(fullPath)) {
-                                for (int i = 0; i < parser.getAttributeCount(); i++) {
-                                    if ("full-path".equalsIgnoreCase(localName(parser.getAttributeName(i)))) {
-                                        fullPath = parser.getAttributeValue(i);
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!isBlank(fullPath)) {
-                                return fullPath.trim();
-                            }
-                        }
-                    }
-                    event = parser.next();
+            byte[] bytes = readEntryBounded(zip, container, MAX_OPF_BYTES);
+            if (bytes != null) {
+                String detected = parseContainerOpfPath(bytes, true);
+                if (detected == null) {
+                    detected = parseContainerOpfPath(bytes, false);
                 }
-            } catch (Throwable ignored) {
-            } finally {
-                if (is != null) {
-                    try { is.close(); } catch (Throwable ignored) {}
+                if (!isBlank(detected)) {
+                    return detected;
                 }
             }
         }
-        // Fallback: first .opf entry in ZIP
+        // Fallback: first .opf entry in ZIP within size limit
         Enumeration<? extends ZipEntry> entries = zip.entries();
         while (entries.hasMoreElements()) {
             ZipEntry e = entries.nextElement();
-            if (!e.isDirectory() && e.getName().toLowerCase(Locale.ROOT).endsWith(".opf")) {
+            if (!e.isDirectory() && e.getName().toLowerCase(Locale.ROOT).endsWith(".opf")
+                    && e.getSize() <= MAX_OPF_BYTES) {
                 return e.getName();
             }
         }
+        return null;
+    }
+
+    private static String parseContainerOpfPath(byte[] xmlBytes, boolean autoDetectEncoding) {
+        try {
+            XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+            factory.setNamespaceAware(false);
+            XmlPullParser parser = factory.newPullParser();
+            ByteArrayInputStream bais = new ByteArrayInputStream(xmlBytes);
+            if (autoDetectEncoding) {
+                parser.setInput(bais, null);
+            } else {
+                parser.setInput(new InputStreamReader(bais, StandardCharsets.UTF_8));
+            }
+            int event = parser.getEventType();
+            while (event != XmlPullParser.END_DOCUMENT) {
+                if (event == XmlPullParser.START_TAG) {
+                    String name = localName(parser.getName());
+                    if ("rootfile".equalsIgnoreCase(name)) {
+                        String fullPath = parser.getAttributeValue(null, "full-path");
+                        if (isBlank(fullPath)) {
+                            for (int i = 0; i < parser.getAttributeCount(); i++) {
+                                if ("full-path".equalsIgnoreCase(localName(parser.getAttributeName(i)))) {
+                                    fullPath = parser.getAttributeValue(i);
+                                    break;
+                                }
+                            }
+                        }
+                        if (!isBlank(fullPath)) {
+                            return fullPath.trim();
+                        }
+                    }
+                }
+                event = parser.next();
+            }
+        } catch (Throwable ignored) {}
         return null;
     }
 
@@ -155,13 +206,24 @@ public final class EpubMetadataExtractor {
         return null;
     }
 
-    private static void parseOpf(InputStream is, BookMeta meta) {
+    private static void parseOpfBytes(byte[] xmlBytes, BookMeta meta) {
+        if (!tryParseOpf(xmlBytes, meta, true)) {
+            tryParseOpf(xmlBytes, meta, false);
+        }
+    }
+
+    private static boolean tryParseOpf(byte[] xmlBytes, BookMeta meta, boolean autoDetectEncoding) {
         Set<String> genreSet = new LinkedHashSet<>();
         try {
             XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
             factory.setNamespaceAware(false);
             XmlPullParser parser = factory.newPullParser();
-            parser.setInput(new InputStreamReader(is, StandardCharsets.UTF_8));
+            ByteArrayInputStream bais = new ByteArrayInputStream(xmlBytes);
+            if (autoDetectEncoding) {
+                parser.setInput(bais, null);
+            } else {
+                parser.setInput(new InputStreamReader(bais, StandardCharsets.UTF_8));
+            }
 
             int event = parser.getEventType();
             boolean inMetadata = false;
@@ -193,13 +255,7 @@ public final class EpubMetadataExtractor {
                                 meta.title = val;
                             } else if ("creator".equals(name)) {
                                 String normAuthor = normalizeAuthor(val);
-                                if (!isBlank(normAuthor)) {
-                                    if (isBlank(meta.author)) {
-                                        meta.author = normAuthor;
-                                    } else if (!meta.author.toLowerCase(Locale.ROOT).contains(normAuthor.toLowerCase(Locale.ROOT))) {
-                                        meta.author = meta.author + "; " + normAuthor;
-                                    }
-                                }
+                                meta.author = appendDistinctAuthor(meta.author, normAuthor);
                             } else if ("publisher".equals(name) && isBlank(meta.publisher)) {
                                 meta.publisher = val;
                             } else if ("date".equals(name) && isBlank(meta.pubDate)) {
@@ -211,7 +267,7 @@ public final class EpubMetadataExtractor {
                                     genreSet.add(val);
                                 }
                             } else if ("description".equals(name) && isBlank(meta.description)) {
-                                meta.description = stripHtml(val);
+                                meta.description = truncateDescription(stripHtml(val));
                             } else if ("identifier".equals(name)) {
                                 String isbn = normalizeIsbn(val);
                                 if (!isBlank(isbn)) {
@@ -227,15 +283,15 @@ public final class EpubMetadataExtractor {
                 }
                 event = parser.next();
             }
-        } catch (Throwable ignored) {
-        } finally {
-            try { is.close(); } catch (Throwable ignored) {}
-        }
-        Set<String> seenLower = new LinkedHashSet<>();
-        for (String g : genreSet) {
-            if (seenLower.add(g.toLowerCase(Locale.ROOT))) {
-                meta.genres.add(g);
+            Set<String> seenLower = new LinkedHashSet<>();
+            for (String g : genreSet) {
+                if (seenLower.add(g.toLowerCase(Locale.ROOT))) {
+                    meta.genres.add(g);
+                }
             }
+            return true;
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 
@@ -364,6 +420,35 @@ public final class EpubMetadataExtractor {
     }
 
     /**
+     * Pure, Android-free author list deduplicator using case-insensitive exact entry equality per "; "-separated author.
+     */
+    public static String appendDistinctAuthor(String existingAuthors, String candidateAuthor) {
+        java.util.List<String> ordered = new java.util.ArrayList<>();
+        Set<String> seenLower = new LinkedHashSet<>();
+        for (String chunk : new String[] { existingAuthors, candidateAuthor }) {
+            if (chunk == null) continue;
+            for (String part : chunk.split(";")) {
+                String trimmed = cleanSpace(part);
+                if (!trimmed.isEmpty() && seenLower.add(trimmed.toLowerCase(Locale.ROOT))) {
+                    ordered.add(trimmed);
+                }
+            }
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < ordered.size(); i++) {
+            if (i > 0) sb.append("; ");
+            sb.append(ordered.get(i));
+        }
+        return sb.toString();
+    }
+
+    public static String truncateDescription(String desc) {
+        if (desc == null) return "";
+        if (desc.length() <= MAX_DESCRIPTION_CHARS) return desc;
+        return desc.substring(0, MAX_DESCRIPTION_CHARS);
+    }
+
+    /**
      * Pure, Android-free author normalizer: converts "Last, First" -> "First Last"
      * without mangling suffixes (Jr., Sr., III) or multi-author strings.
      */
@@ -373,15 +458,12 @@ public final class EpubMetadataExtractor {
         if (trimmed.isEmpty()) return "";
         if (trimmed.contains(";")) {
             String[] parts = trimmed.split(";");
-            StringBuilder sb = new StringBuilder();
+            String out = "";
             for (String p : parts) {
                 String norm = normalizeSingleAuthor(p);
-                if (!norm.isEmpty()) {
-                    if (sb.length() > 0) sb.append("; ");
-                    sb.append(norm);
-                }
+                out = appendDistinctAuthor(out, norm);
             }
-            return sb.toString();
+            return out;
         }
         return normalizeSingleAuthor(trimmed);
     }
@@ -417,20 +499,24 @@ public final class EpubMetadataExtractor {
         if (raw == null) return "";
         String s = raw.trim();
         if (s.isEmpty()) return "";
-        // Trim ISO timestamps like "2000-07-15 00:00:00+01:00" or "2014-06-06T00:00:00Z"
-        int tIdx = s.indexOf('T');
-        if (tIdx >= 4) s = s.substring(0, tIdx);
-        int spIdx = s.indexOf(' ');
-        if (spIdx >= 4) s = s.substring(0, spIdx);
-        s = s.trim();
-        if (s.length() >= 10 && s.charAt(4) == '-' && s.charAt(7) == '-') {
-            return s.substring(0, 10);
+        Matcher iso = ISO_DATETIME_PREFIX.matcher(s);
+        if (iso.matches()) {
+            String datePart = iso.group(1);
+            int yr = Integer.parseInt(datePart.substring(0, 4));
+            if (yr >= 1000 && yr <= 2099) {
+                return datePart;
+            }
+            return "";
         }
-        if (s.length() >= 4 && Character.isDigit(s.charAt(0)) && Character.isDigit(s.charAt(1))
-                && Character.isDigit(s.charAt(2)) && Character.isDigit(s.charAt(3))) {
-            return s.length() == 4 ? s : s;
+        Matcher ym = YEAR_4_PATTERN.matcher(s);
+        if (ym.find()) {
+            String yStr = ym.group(1);
+            int yr = Integer.parseInt(yStr);
+            if (yr >= 1000 && yr <= 2099) {
+                return yStr;
+            }
         }
-        return s;
+        return "";
     }
 
     public static boolean isNoiseTag(String tag) {
