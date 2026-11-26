@@ -651,12 +651,15 @@ public final class MetadataEnricher {
         if (meta.genres.isEmpty()) {
             JSONArray subjects = doc.optJSONArray("subject");
             if (subjects != null) {
-                for (int i = 0; i < subjects.length() && meta.genres.size() < 5; i++) {
+                List<String> rawSubjects = new ArrayList<>(subjects.length());
+                for (int i = 0; i < subjects.length(); i++) {
                     String s = subjects.optString(i, "").trim();
-                    if (!s.isEmpty() && s.length() <= 45 && !meta.genres.contains(s)) {
-                        meta.genres.add(s);
+                    if (!s.isEmpty()) {
+                        rawSubjects.add(s);
                     }
                 }
+                meta.genres.addAll(
+                        EpubMetadataExtractor.cleanAndRankGenres(rawSubjects, null, meta.author));
             }
         }
 

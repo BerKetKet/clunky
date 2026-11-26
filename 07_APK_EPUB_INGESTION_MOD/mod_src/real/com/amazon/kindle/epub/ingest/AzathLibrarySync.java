@@ -622,6 +622,7 @@ public final class AzathLibrarySync {
             FolioMetadataDb db = new FolioMetadataDb(ctx);
             ReconcilePlan plan;
             try {
+                db.ensureGenresMigrated();
                 List<FolioMetadataDb.BookRecord> recs = db.getAllBooks();
                 List<BookEntry> entries = new ArrayList<>(recs.size());
                 for (FolioMetadataDb.BookRecord r : recs) {

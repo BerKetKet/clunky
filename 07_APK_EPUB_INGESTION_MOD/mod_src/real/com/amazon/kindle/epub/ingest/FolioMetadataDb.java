@@ -2,6 +2,7 @@ package com.amazon.kindle.epub.ingest;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabaseLockedException;
@@ -20,10 +21,13 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
@@ -40,6 +44,25 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
     private static final String TAG = "FolioMetadataDb";
     private static final String DB_NAME = "folio_metadata.db";
     private static final int DB_VERSION = 2;
+    private static final String PREF_MIGRATIONS = "folio_db_migrations";
+    private static final String KEY_GENRES_CLEANUP_V1 = "genres_cleanup_v1_done";
+    private static volatile boolean sGenresMigratedInProcess = false;
+
+    private final Context appContext;
+
+    public static final class GenreMigrationRow {
+        public final long id;
+        public final String author;
+        public final String genres;
+        public final String genresJson;
+
+        public GenreMigrationRow(long id, String author, String genres, String genresJson) {
+            this.id = id;
+            this.author = author != null ? author : "";
+            this.genres = genres != null ? genres : "";
+            this.genresJson = genresJson != null ? genresJson : "";
+        }
+    }
 
     public static final class BookRecord {
         public long id;
@@ -62,17 +85,11 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         public long addedAt;
 
         public List<String> genreList() {
-            List<String> out = new ArrayList<>();
             if (genresJson != null && !genresJson.trim().isEmpty()) {
-                try {
-                    JSONArray arr = new JSONArray(genresJson);
-                    for (int i = 0; i < arr.length(); i++) {
-                        String g = arr.optString(i, "").trim();
-                        if (!g.isEmpty()) out.add(g);
-                    }
-                    if (!out.isEmpty()) return out;
-                } catch (Throwable ignored) {}
+                List<String> parsed = EpubMetadataExtractor.parseGenresJson(genresJson);
+                if (!parsed.isEmpty()) return parsed;
             }
+            List<String> out = new ArrayList<>();
             if (genres != null && !genres.trim().isEmpty()) {
                 for (String part : genres.split(",")) {
                     String g = part.trim();
@@ -93,7 +110,8 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
     }
 
     public FolioMetadataDb(Context context) {
-        super(context.getApplicationContext(), DB_NAME, null, DB_VERSION);
+        super(context != null ? context.getApplicationContext() : null, DB_NAME, null, DB_VERSION);
+        this.appContext = context != null ? context.getApplicationContext() : null;
     }
 
     private static final String SELECT_COLS =
@@ -166,31 +184,176 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
 
     public static String genresCsvToJson(String csv) {
         if (csv == null || csv.trim().isEmpty()) return "";
-        JSONArray arr = new JSONArray();
-        Set<String> seen = new LinkedHashSet<>();
+        List<String> raw = new ArrayList<>();
         for (String part : csv.split(",")) {
             String g = part.trim();
-            if (!g.isEmpty() && !EpubMetadataExtractor.isNoiseTag(g)
-                    && seen.add(g.toLowerCase(Locale.ROOT))) {
-                arr.put(g);
-            }
+            if (!g.isEmpty()) raw.add(g);
         }
-        return arr.length() > 0 ? arr.toString() : "";
+        return EpubMetadataExtractor.genresToJson(
+                EpubMetadataExtractor.cleanAndRankGenres(raw, null));
     }
 
     public static String dedupeGenresCsv(String csv) {
         if (csv == null || csv.trim().isEmpty()) return "";
-        StringBuilder sb = new StringBuilder();
-        Set<String> seen = new LinkedHashSet<>();
+        List<String> raw = new ArrayList<>();
         for (String part : csv.split(",")) {
             String g = part.trim();
-            if (!g.isEmpty() && !EpubMetadataExtractor.isNoiseTag(g)
-                    && seen.add(g.toLowerCase(Locale.ROOT))) {
-                if (sb.length() > 0) sb.append(", ");
-                sb.append(g);
+            if (!g.isEmpty()) raw.add(g);
+        }
+        return EpubMetadataExtractor.joinGenresForDisplay(
+                EpubMetadataExtractor.cleanAndRankGenres(raw, null));
+    }
+
+    private static List<String> repairLegacyCommaSplitFragments(List<String> tokens, String author) {
+        if (tokens == null || tokens.isEmpty()) return new ArrayList<>();
+        List<String> out = new ArrayList<>(tokens.size());
+        int n = tokens.size();
+        for (int i = 0; i < n; ) {
+            String t0 = tokens.get(i) != null ? tokens.get(i).trim() : "";
+            if (i + 2 < n) {
+                String t1 = tokens.get(i + 1) != null ? tokens.get(i + 1).trim() : "";
+                String t2 = tokens.get(i + 2) != null ? tokens.get(i + 2).trim() : "";
+                if (EpubMetadataExtractor.isPureDateOrRange(t2)) {
+                    String joined = t0 + ", " + t1 + ", " + t2;
+                    if (EpubMetadataExtractor.isPersonalNameSubject(joined)) {
+                        out.add(joined);
+                        i += 3;
+                        continue;
+                    }
+                }
+            }
+            if (i + 1 < n) {
+                String t1 = tokens.get(i + 1) != null ? tokens.get(i + 1).trim() : "";
+                if ("Authors".equalsIgnoreCase(t0) && "correspondence".equalsIgnoreCase(t1)) {
+                    out.add("Authors, correspondence");
+                    i += 2;
+                    continue;
+                }
+                if (EpubMetadataExtractor.isPersonalNameSubject(t0 + ", " + t1)) {
+                    out.add(t0 + ", " + t1);
+                    i += 2;
+                    continue;
+                }
+            }
+            out.add(t0);
+            i++;
+        }
+        return out;
+    }
+
+    /**
+     * Pure Android-free genre migration pass across all library rows:
+     * preserves comma-containing JSON entries, repairs legacy comma-split personal-name triples,
+     * drops noise/personal names/date ranges, strips parentheticals, counts global library
+     * frequencies, and caps each book at 6 genres preferring shorter and more frequent tags.
+     */
+    public static Map<Long, List<String>> computeMigratedGenres(List<GenreMigrationRow> rows) {
+        Map<Long, List<String>> out = new LinkedHashMap<>();
+        if (rows == null || rows.isEmpty()) return out;
+
+        Map<Long, List<String>> repairedByRow = new LinkedHashMap<>(rows.size());
+        Map<String, Integer> globalFreq = new HashMap<>();
+        for (GenreMigrationRow row : rows) {
+            List<String> raw;
+            if (!row.genresJson.trim().isEmpty()) {
+                raw = repairLegacyCommaSplitFragments(
+                        EpubMetadataExtractor.parseGenresJson(row.genresJson), row.author);
+            } else if (!row.genres.trim().isEmpty()) {
+                List<String> csvParts = new ArrayList<>();
+                for (String part : row.genres.split(",")) {
+                    String g = part.trim();
+                    if (!g.isEmpty()) csvParts.add(g);
+                }
+                raw = repairLegacyCommaSplitFragments(csvParts, row.author);
+            } else {
+                raw = new ArrayList<>();
+            }
+            repairedByRow.put(row.id, raw);
+            List<String> cleanedAll = EpubMetadataExtractor.cleanAndRankGenres(
+                    raw, null, row.author, Integer.MAX_VALUE);
+            for (String g : cleanedAll) {
+                String k = g.toLowerCase(Locale.ROOT);
+                globalFreq.put(k, (globalFreq.containsKey(k) ? globalFreq.get(k) : 0) + 1);
             }
         }
-        return sb.toString();
+
+        for (GenreMigrationRow row : rows) {
+            List<String> repaired = repairedByRow.get(row.id);
+            List<String> ranked = EpubMetadataExtractor.cleanAndRankGenres(
+                    repaired, globalFreq, row.author);
+            out.put(row.id, ranked);
+        }
+        return out;
+    }
+
+    /**
+     * One-time idempotent migration cleaning existing genres and genres_json rows,
+     * guarded by SharedPreferences key genres_cleanup_v1_done.
+     */
+    public void ensureGenresMigrated() {
+        if (sGenresMigratedInProcess || appContext == null) return;
+        synchronized (FolioMetadataDb.class) {
+            if (sGenresMigratedInProcess) return;
+            SharedPreferences sp = appContext.getSharedPreferences(PREF_MIGRATIONS, Context.MODE_PRIVATE);
+            if (sp.getBoolean(KEY_GENRES_CLEANUP_V1, false)) {
+                sGenresMigratedInProcess = true;
+                return;
+            }
+            SQLiteDatabase db = getWritableDatabase();
+            Cursor c = null;
+            int total = 0;
+            int updated = 0;
+            try {
+                java.util.Map<String, String> cols = tableColumns(db, "books_metadata");
+                boolean hasGenresJsonCol = cols.containsKey("GENRES_JSON");
+                String sql = hasGenresJsonCol
+                        ? "SELECT id, author, genres, genres_json FROM books_metadata"
+                        : "SELECT id, author, genres, '' FROM books_metadata";
+                c = db.rawQuery(sql, null);
+                List<GenreMigrationRow> rows = new ArrayList<>();
+                while (c.moveToNext()) {
+                    rows.add(new GenreMigrationRow(
+                            c.getLong(0),
+                            safeStr(c.getString(1)),
+                            safeStr(c.getString(2)),
+                            safeStr(c.getString(3))));
+                }
+                c.close();
+                c = null;
+                total = rows.size();
+                Map<Long, List<String>> cleaned = computeMigratedGenres(rows);
+                db.beginTransaction();
+                try {
+                    for (GenreMigrationRow row : rows) {
+                        List<String> cleanList = cleaned.get(row.id);
+                        String newCsv = EpubMetadataExtractor.joinGenresForDisplay(cleanList);
+                        String newJson = EpubMetadataExtractor.genresToJson(cleanList);
+                        boolean csvChanged = !newCsv.equals(row.genres);
+                        boolean jsonChanged = hasGenresJsonCol && !newJson.equals(row.genresJson);
+                        if (csvChanged || jsonChanged) {
+                            ContentValues cv = new ContentValues();
+                            cv.put("genres", newCsv);
+                            if (hasGenresJsonCol) {
+                                cv.put("genres_json", newJson);
+                            }
+                            db.update("books_metadata", cv, "id = ?",
+                                    new String[] { String.valueOf(row.id) });
+                            updated++;
+                        }
+                    }
+                    db.setTransactionSuccessful();
+                } finally {
+                    if (db.inTransaction()) db.endTransaction();
+                }
+                sp.edit().putBoolean(KEY_GENRES_CLEANUP_V1, true).apply();
+                sGenresMigratedInProcess = true;
+                Log.i(TAG, "Genres cleanup migration v1 complete: total=" + total + " updated=" + updated);
+            } catch (Throwable t) {
+                Log.w(TAG, "Genres cleanup migration v1 failed", t);
+            } finally {
+                if (c != null) c.close();
+            }
+        }
     }
 
     public void upsertBook(String bookKey, File kfxFile, File coverFile,
@@ -227,8 +390,14 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
 
             String incomingCover = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : "";
             String coverPath = nonBlankOrPrior(incomingCover, prior != null ? prior.coverPath : "");
-            String genres = dedupeGenresCsv(nonBlankOrPrior(meta.genresCsv(), prior != null ? prior.genres : ""));
-            String genresJson = nonBlankOrPrior(genresCsvToJson(genres), prior != null ? prior.genresJson : "");
+            String resolvedAuthor = (meta.author != null && !meta.author.trim().isEmpty())
+                    ? meta.author : (prior != null && !prior.author.isEmpty() ? prior.author : "Unknown Author");
+            List<String> rawGenres = (meta.genres != null && !meta.genres.isEmpty())
+                    ? meta.genres
+                    : (prior != null ? prior.genreList() : new ArrayList<String>());
+            List<String> cleanGenres = EpubMetadataExtractor.cleanAndRankGenres(rawGenres, null, resolvedAuthor);
+            String genres = EpubMetadataExtractor.joinGenresForDisplay(cleanGenres);
+            String genresJson = EpubMetadataExtractor.genresToJson(cleanGenres);
             String publisher = nonBlankOrPrior(meta.publisher, prior != null ? prior.publisher : "");
             String pubDate = nonBlankOrPrior(meta.pubDate, prior != null ? prior.pubDate : "");
             String isbn = nonBlankOrPrior(meta.isbn, prior != null ? prior.isbn : "");
@@ -244,8 +413,7 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
             cv.put("source_name", sourceName != null ? sourceName : kfxFile.getName());
             cv.put("title", meta.title != null && !meta.title.trim().isEmpty()
                     ? meta.title : (prior != null && !prior.title.isEmpty() ? prior.title : kfxFile.getName()));
-            cv.put("author", meta.author != null && !meta.author.trim().isEmpty()
-                    ? meta.author : (prior != null && !prior.author.isEmpty() ? prior.author : "Unknown Author"));
+            cv.put("author", resolvedAuthor);
             cv.put("publisher", publisher);
             cv.put("pub_date", pubDate);
             cv.put("genres", genres);

@@ -142,19 +142,17 @@ public final class LibraryMetadataBackfiller {
                         meta.pubDate = r.pubDate != null ? r.pubDate : "";
                         meta.publisher = r.publisher != null ? r.publisher : "";
                         meta.openLibraryKey = r.openLibraryKey != null ? r.openLibraryKey : "";
-                        if (r.genres != null && !r.genres.trim().isEmpty()) {
-                            for (String g : r.genres.split(",")) {
-                                String c = g.trim();
-                                if (!c.isEmpty() && !EpubMetadataExtractor.isNoiseTag(c)) meta.genres.add(c);
-                            }
-                        }
+                        meta.genres.addAll(r.genreList());
 
                         MetadataEnricher.enrichInPlace(meta);
 
                         ContentValues cv = new ContentValues();
                         boolean changed = false;
-                        if ((r.genres == null || r.genres.trim().isEmpty()) && !meta.genres.isEmpty()) {
-                            cv.put("genres", meta.genresCsv());
+                        if (r.genreList().isEmpty() && !meta.genres.isEmpty()) {
+                            java.util.List<String> cleanedGenres = EpubMetadataExtractor.cleanAndRankGenres(
+                                    meta.genres, null, meta.author);
+                            cv.put("genres", EpubMetadataExtractor.joinGenresForDisplay(cleanedGenres));
+                            cv.put("genres_json", EpubMetadataExtractor.genresToJson(cleanedGenres));
                             changed = true;
                         }
                         if ((r.pubDate == null || r.pubDate.trim().isEmpty()) && !EpubMetadataExtractor.isBlank(meta.pubDate)) {

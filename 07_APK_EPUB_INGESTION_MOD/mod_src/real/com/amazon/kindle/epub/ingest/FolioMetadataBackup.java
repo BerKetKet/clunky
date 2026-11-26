@@ -127,7 +127,9 @@ public final class FolioMetadataBackup {
                 obj.put("author", r.author);
                 obj.put("publisher", r.publisher);
                 obj.put("pub_date", r.pubDate);
-                obj.put("genres", r.genres);
+                List<String> gList = r.genreList();
+                obj.put("genres", EpubMetadataExtractor.joinGenresForDisplay(gList));
+                obj.put("genres_json", new JSONArray(gList));
                 obj.put("language", r.language);
                 obj.put("isbn", r.isbn);
                 obj.put("description", r.description);
@@ -248,15 +250,24 @@ public final class FolioMetadataBackup {
                 meta.isbn = normIsbn.isEmpty() ? rawIsbn : normIsbn;
                 meta.description = EpubMetadataExtractor.truncateDescription(obj.optString("description", ""));
                 meta.openLibraryKey = boundString(obj.optString("open_library_key", ""), 128);
-                String genresStr = boundString(obj.optString("genres", ""), MAX_TEXT_FIELD_LEN);
-                if (!genresStr.isEmpty()) {
-                    for (String g : genresStr.split(",")) {
-                        String c = g.trim();
-                        if (!c.isEmpty() && c.length() <= 60 && meta.genres.size() < 12) {
-                            meta.genres.add(c);
+                List<String> rawBackupGenres = new ArrayList<>();
+                JSONArray gArr = obj.optJSONArray("genres_json");
+                if (gArr != null) {
+                    for (int gi = 0; gi < gArr.length(); gi++) {
+                        String g = boundString(gArr.optString(gi, ""), 128);
+                        if (!g.isEmpty()) rawBackupGenres.add(g);
+                    }
+                } else {
+                    String genresStr = boundString(obj.optString("genres", ""), MAX_TEXT_FIELD_LEN);
+                    if (!genresStr.isEmpty()) {
+                        for (String g : genresStr.split(",")) {
+                            String c = g.trim();
+                            if (!c.isEmpty()) rawBackupGenres.add(c);
                         }
                     }
                 }
+                meta.genres.addAll(EpubMetadataExtractor.cleanAndRankGenres(
+                        rawBackupGenres, null, meta.author));
 
                 String coverPath = obj.optString("cover_path", "").trim();
                 File validCover = isValidBackupCoverPath(coverPath) ? new File(coverPath) : null;

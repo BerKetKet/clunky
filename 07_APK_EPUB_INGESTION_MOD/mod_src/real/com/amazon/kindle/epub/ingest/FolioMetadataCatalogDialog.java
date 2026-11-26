@@ -1006,6 +1006,7 @@ public final class FolioMetadataCatalogDialog {
         outGenres.clear();
         FolioMetadataDb db = new FolioMetadataDb(ctx);
         try {
+            db.ensureGenresMigrated();
             outBooks.addAll(db.getAllBooks());
         } finally {
             db.close();
@@ -1017,10 +1018,11 @@ public final class FolioMetadataCatalogDialog {
             if (gList.isEmpty()) continue;
             Set<String> seenInBook = new LinkedHashSet<>();
             for (String g : gList) {
-                String c = g.trim();
-                if (c.length() >= 3 && c.length() <= 22
+                String c = EpubMetadataExtractor.cleanSubject(g);
+                if (c.length() >= 2 && c.length() <= 26
                         && !c.contains("--")
                         && !EpubMetadataExtractor.isNoiseTag(c)
+                        && !EpubMetadataExtractor.isPersonalNameSubject(c)
                         && !isCatalogMetaTag(c)) {
                     String key = c.toLowerCase(Locale.ROOT);
                     if (seenInBook.add(key)) {
@@ -1286,7 +1288,7 @@ public final class FolioMetadataCatalogDialog {
         metaLine.setPadding(0, dp(ctx, 2), 0, dp(ctx, 4));
         col.addView(metaLine);
 
-        String displayGenres = cleanGenresForDisplay(rec.genres);
+        String displayGenres = cleanGenresForDisplay(rec);
         if (!displayGenres.isEmpty()) {
             TextView genresTv = new TextView(ctx);
             genresTv.setText(displayGenres);
@@ -1476,7 +1478,7 @@ public final class FolioMetadataCatalogDialog {
         if (!cleanDetailDate.isEmpty()) details.append("Published: ").append(cleanDetailDate).append("\n");
         if (!rec.publisher.isEmpty()) details.append("Publisher: ").append(rec.publisher).append("\n");
         if (!rec.isbn.isEmpty()) details.append("ISBN: ").append(rec.isbn).append("\n");
-        String cleanDetGenres = cleanGenresForDisplay(rec.genres);
+        String cleanDetGenres = cleanGenresForDisplay(rec);
         if (!rec.language.isEmpty() && !"und".equalsIgnoreCase(rec.language.trim())
                 && !"undetermined".equalsIgnoreCase(rec.language.trim())) {
             details.append("Language: ").append(rec.language).append("\n");
@@ -2167,7 +2169,22 @@ public final class FolioMetadataCatalogDialog {
 
         final EditText etPubDate = addField(ctx, form, "Published Date / Year", rec.pubDate);
         final EditText etPublisher = addField(ctx, form, "Publisher", rec.publisher);
-        final EditText etGenres = addField(ctx, form, "Genres (comma-separated)", rec.genres);
+        List<String> initGenreList = rec.genreList();
+        boolean anyCommaInGenre = false;
+        for (String ig : initGenreList) {
+            if (ig.indexOf(',') >= 0) {
+                anyCommaInGenre = true;
+                break;
+            }
+        }
+        StringBuilder initGenresText = new StringBuilder();
+        for (int gi = 0; gi < initGenreList.size(); gi++) {
+            if (gi > 0) initGenresText.append(anyCommaInGenre ? "; " : ", ");
+            initGenresText.append(initGenreList.get(gi));
+        }
+        final EditText etGenres = addField(ctx, form,
+                anyCommaInGenre ? "Genres (; separated)" : "Genres (comma or ; separated)",
+                initGenresText.toString());
         final EditText etIsbn = addField(ctx, form, "ISBN", rec.isbn);
         final EditText etDesc = addField(ctx, form, "Description / Synopsis", rec.description);
         etDesc.setSingleLine(false);
@@ -2180,6 +2197,19 @@ public final class FolioMetadataCatalogDialog {
                 .setPositiveButton("Save", (d, w) -> {
                     String newTitle = etTitle.getText().toString().trim();
                     String newAuthor = etAuthor.getText().toString().trim();
+                    String rawEditedGenres = etGenres.getText().toString().trim();
+                    String delim = rawEditedGenres.indexOf(';') >= 0 ? ";" : ",";
+                    List<String> parsedEditedGenres = new ArrayList<>();
+                    if (!rawEditedGenres.isEmpty()) {
+                        for (String part : rawEditedGenres.split(java.util.regex.Pattern.quote(delim))) {
+                            String trimmed = part.trim();
+                            if (!trimmed.isEmpty()) parsedEditedGenres.add(trimmed);
+                        }
+                    }
+                    List<String> cleanEditedGenres = EpubMetadataExtractor.cleanAndRankGenres(
+                            parsedEditedGenres, null, newAuthor);
+                    String cleanGenresCsv = EpubMetadataExtractor.joinGenresForDisplay(cleanEditedGenres);
+                    String cleanGenresJson = EpubMetadataExtractor.genresToJson(cleanEditedGenres);
                     FolioMetadataDb db = new FolioMetadataDb(ctx);
                     try {
                         ContentValues cv = new ContentValues();
@@ -2187,7 +2217,8 @@ public final class FolioMetadataCatalogDialog {
                         cv.put("author", newAuthor);
                         cv.put("pub_date", etPubDate.getText().toString().trim());
                         cv.put("publisher", etPublisher.getText().toString().trim());
-                        cv.put("genres", etGenres.getText().toString().trim());
+                        cv.put("genres", cleanGenresCsv);
+                        cv.put("genres_json", cleanGenresJson);
                         cv.put("isbn", etIsbn.getText().toString().trim());
                         cv.put("description", etDesc.getText().toString().trim());
                         db.getWritableDatabase().update(
@@ -2196,7 +2227,8 @@ public final class FolioMetadataCatalogDialog {
                         rec.author = newAuthor;
                         rec.pubDate = etPubDate.getText().toString().trim();
                         rec.publisher = etPublisher.getText().toString().trim();
-                        rec.genres = etGenres.getText().toString().trim();
+                        rec.genres = cleanGenresCsv;
+                        rec.genresJson = cleanGenresJson;
                         rec.isbn = etIsbn.getText().toString().trim();
                         rec.description = etDesc.getText().toString().trim();
                         syncTitleAuthorToKindleDb(ctx, rec.kfxPath, newTitle, newAuthor);
@@ -3193,25 +3225,18 @@ public final class FolioMetadataCatalogDialog {
         try {
             android.database.sqlite.SQLiteDatabase wdb = db.getWritableDatabase();
             for (FolioMetadataDb.BookRecord r : recs) {
-                java.util.LinkedHashMap<String, String> merged = new java.util.LinkedHashMap<>();
-                if (r.genres != null && !r.genres.trim().isEmpty()) {
-                    for (String ex : r.genres.split(",")) {
-                        String e = ex.trim();
-                        if (!e.isEmpty()) merged.put(e.toLowerCase(Locale.ROOT), e);
-                    }
-                }
-                for (String inc : incoming) {
-                    String k = inc.toLowerCase(Locale.ROOT);
-                    if (!merged.containsKey(k)) merged.put(k, inc);
-                }
-                StringBuilder sb = new StringBuilder();
-                for (String val : merged.values()) {
-                    if (sb.length() > 0) sb.append(", ");
-                    sb.append(val);
-                }
+                List<String> combined = new ArrayList<>(r.genreList());
+                combined.addAll(incoming);
+                List<String> cleaned = EpubMetadataExtractor.cleanAndRankGenres(
+                        combined, null, r.author);
+                String newCsv = EpubMetadataExtractor.joinGenresForDisplay(cleaned);
+                String newJson = EpubMetadataExtractor.genresToJson(cleaned);
                 ContentValues cv = new ContentValues();
-                cv.put("genres", sb.toString());
+                cv.put("genres", newCsv);
+                cv.put("genres_json", newJson);
                 wdb.update("books_metadata", cv, "id = ?", new String[] { String.valueOf(r.id) });
+                r.genres = newCsv;
+                r.genresJson = newJson;
                 count++;
             }
         } finally {
@@ -3276,11 +3301,7 @@ public final class FolioMetadataCatalogDialog {
             return !cov.exists() || cov.length() < 64;
         }
         if ("MISSING_GENRES".equalsIgnoreCase(auditKey)) {
-            if (rec.genres == null || rec.genres.trim().isEmpty()) return true;
-            for (String g : rec.genres.split(",")) {
-                if (!g.trim().isEmpty()) return false;
-            }
-            return true;
+            return rec.genreList().isEmpty();
         }
         if ("MISSING_SYNOPSIS".equalsIgnoreCase(auditKey)) {
             return rec.description == null || rec.description.trim().isEmpty();
@@ -3412,14 +3433,31 @@ public final class FolioMetadataCatalogDialog {
                 || lower.equals("general");
     }
 
+    private static String cleanGenresForDisplay(FolioMetadataDb.BookRecord rec) {
+        if (rec == null) return "";
+        return formatGenreListForDisplay(rec.genreList());
+    }
+
     private static String cleanGenresForDisplay(String raw) {
         if (raw == null || raw.trim().isEmpty()) return "";
+        List<String> parts = new ArrayList<>();
+        for (String part : raw.split(",")) {
+            String c = part.trim();
+            if (!c.isEmpty()) parts.add(c);
+        }
+        return formatGenreListForDisplay(parts);
+    }
+
+    private static String formatGenreListForDisplay(List<String> items) {
+        if (items == null || items.isEmpty()) return "";
         Set<String> seen = new LinkedHashSet<>();
         List<String> clean = new ArrayList<>();
         List<String> fallback = new ArrayList<>();
-        for (String part : raw.split(",")) {
-            String c = part.trim();
-            if (c.isEmpty() || EpubMetadataExtractor.isNoiseTag(c) || isCatalogMetaTag(c)) continue;
+        for (String rawItem : items) {
+            String c = EpubMetadataExtractor.cleanSubject(rawItem);
+            if (c.isEmpty() || EpubMetadataExtractor.isNoiseTag(c)
+                    || EpubMetadataExtractor.isPersonalNameSubject(c)
+                    || isCatalogMetaTag(c)) continue;
             String key = c.toLowerCase(Locale.ROOT);
             if (!seen.add(key)) continue;
             if (!c.contains("--")) {
@@ -3430,7 +3468,7 @@ public final class FolioMetadataCatalogDialog {
         }
         List<String> chosen = !clean.isEmpty() ? clean : fallback;
         StringBuilder sb = new StringBuilder();
-        int limit = Math.min(chosen.size(), 6);
+        int limit = Math.min(chosen.size(), EpubMetadataExtractor.MAX_GENRES_PER_BOOK);
         for (int i = 0; i < limit; i++) {
             if (i > 0) sb.append(", ");
             sb.append(chosen.get(i));

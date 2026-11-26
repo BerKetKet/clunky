@@ -2326,14 +2326,19 @@ public final class FolioMoreView {
                 }
 
                 // Up to 2 clean genre pills
-                if (rec.genres != null && !rec.genres.trim().isEmpty()) {
+                java.util.List<String> pillGenres = rec.genreList();
+                if (!pillGenres.isEmpty()) {
                     LinearLayout gRow = new LinearLayout(ctx);
                     gRow.setOrientation(LinearLayout.HORIZONTAL);
                     gRow.setPadding(0, dp(d, 6), 0, 0);
                     int gShown = 0;
-                    for (String gPart : rec.genres.split(",")) {
-                        String g = gPart.trim();
-                        if (g.isEmpty() || g.length() > 22) continue;
+                    for (String gPart : pillGenres) {
+                        String g = com.amazon.kindle.epub.ingest.EpubMetadataExtractor.cleanSubject(gPart);
+                        if (g.isEmpty() || g.length() > 26
+                                || com.amazon.kindle.epub.ingest.EpubMetadataExtractor.isNoiseTag(g)
+                                || com.amazon.kindle.epub.ingest.EpubMetadataExtractor.isPersonalNameSubject(g)) {
+                            continue;
+                        }
                         if (gShown++ >= 2) break;
                         TextView gp = new TextView(ctx);
                         gp.setText(g);
@@ -2798,7 +2803,7 @@ public final class FolioMoreView {
                     String tStr = (rec.title != null && !rec.title.isEmpty()) ? rec.title : "Untitled";
                     String aStr = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.formatAuthorForDisplay(rec.author);
                     String nStr = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.getNote(ctx, rec.kfxPath);
-                    String gStr = rec.genres != null ? rec.genres : "";
+                    String gStr = com.amazon.kindle.epub.ingest.EpubMetadataExtractor.joinGenresForDisplay(rec.genreList());
                     String iStr = rec.isbn != null ? rec.isbn : "";
 
                     boolean matchedNote = false;
@@ -4931,19 +4936,16 @@ public final class FolioMoreView {
                 if (eraFreq.containsKey(eb)) eraFreq.put(eb, eraFreq.get(eb) + 1);
             }
             if (r.description == null || r.description.trim().isEmpty()) missingDesc++;
-            boolean hasCleanG = false;
-            if (r.genres != null && !r.genres.isEmpty()) {
-                for (String gCheck : r.genres.split(",")) {
-                    if (!gCheck.trim().isEmpty()) { hasCleanG = true; break; }
-                }
-            }
-            if (!hasCleanG) missingGenre++;
-            if (r.genres != null && !r.genres.isEmpty()) {
+            java.util.List<String> gList = r.genreList();
+            if (gList.isEmpty()) {
+                missingGenre++;
+            } else {
                 java.util.Set<String> seenG = new java.util.HashSet<>();
-                for (String g : r.genres.split(",")) {
-                    String c = g.trim();
-                    if (c.length() >= 3 && c.length() <= 22 && !c.contains("--")
-                            && !com.amazon.kindle.epub.ingest.EpubMetadataExtractor.isNoiseTag(c)) {
+                for (String g : gList) {
+                    String c = com.amazon.kindle.epub.ingest.EpubMetadataExtractor.cleanSubject(g);
+                    if (c.length() >= 2 && c.length() <= 26 && !c.contains("--")
+                            && !com.amazon.kindle.epub.ingest.EpubMetadataExtractor.isNoiseTag(c)
+                            && !com.amazon.kindle.epub.ingest.EpubMetadataExtractor.isPersonalNameSubject(c)) {
                         String gk = c.toLowerCase(java.util.Locale.ROOT);
                         if (gk.startsWith("early works") || gk.startsWith("translations into")
                                 || gk.contains("textbooks for") || gk.equals("general")) continue;

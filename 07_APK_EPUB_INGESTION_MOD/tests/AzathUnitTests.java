@@ -78,6 +78,7 @@ public final class AzathUnitTests {
         testSecurityHelpers();
         testRound167Helpers();
         testRound168Task1Helpers();
+        testRound168Task2GenreCleanup();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -604,5 +605,143 @@ public final class AzathUnitTests {
                 !MetadataEnricher.shouldRunLaunchSweep(false, false));
         check("shouldRunLaunchSweep false when debugDisabled=true",
                 !MetadataEnricher.shouldRunLaunchSweep(true, true));
+    }
+
+    private static void testRound168Task2GenreCleanup() {
+        // 1. Bukowski "On Writing": personal name + dates dropped, comma subject NOT split, library noise dropped
+        List<String> onWritingRaw = Arrays.asList(
+                "Bukowski, Charles, 1921-1994",
+                "1921-1994",
+                "Authorship",
+                "Creative writing",
+                "Authors, correspondence",
+                "Accessible book",
+                "Protected DAISY",
+                "In library",
+                "OverDrive",
+                "Large type books",
+                "Open Library Staff Picks",
+                "Fiction, general",
+                "Read",
+                "Unread",
+                "Calibre"
+        );
+        List<String> onWritingClean = EpubMetadataExtractor.cleanAndRankGenres(
+                onWritingRaw, null, "Charles Bukowski");
+        check("On Writing drops Bukowski personal name & dates",
+                !onWritingClean.contains("Bukowski, Charles, 1921-1994")
+                        && !onWritingClean.contains("1921-1994")
+                        && !onWritingClean.contains("Bukowski")
+                        && !onWritingClean.contains("Charles"));
+        check("On Writing drops Fiction, general and library noise",
+                !onWritingClean.contains("Fiction, general")
+                        && !onWritingClean.contains("Accessible book")
+                        && !onWritingClean.contains("Protected DAISY")
+                        && !onWritingClean.contains("OverDrive")
+                        && !onWritingClean.contains("Open Library Staff Picks"));
+        check("On Writing keeps comma subject unsplit",
+                onWritingClean.contains("Authors, correspondence")
+                        && onWritingClean.contains("Authorship")
+                        && onWritingClean.contains("Creative writing")
+                        && !onWritingClean.contains("Authors")
+                        && !onWritingClean.contains("correspondence"));
+        checkEq("On Writing clean count", "3", String.valueOf(onWritingClean.size()));
+
+        // Round-trip genresToJson <-> parseGenresJson without splitting commas
+        String jsonRoundTrip = EpubMetadataExtractor.genresToJson(onWritingClean);
+        List<String> parsedBack = EpubMetadataExtractor.parseGenresJson(jsonRoundTrip);
+        check("genresToJson preserves comma inside single subject",
+                parsedBack.equals(onWritingClean));
+
+        // 2. "Dangling in the Tournefortia": parenthetical stripped & deduped to single "Poetry"
+        List<String> danglingRaw = Arrays.asList(
+                "Nonfiction",
+                "Poetry",
+                "American poetry",
+                "Poetry (poetic works by one author)",
+                "American literature"
+        );
+        List<String> danglingClean = EpubMetadataExtractor.cleanAndRankGenres(
+                danglingRaw, null, "Charles Bukowski");
+        checkEq("Dangling parenthetical stripped & deduped to 4 items",
+                "4", String.valueOf(danglingClean.size()));
+        checkEq("Dangling shortest subject promoted first",
+                "Poetry", danglingClean.get(0));
+
+        // 3. Huxley "Brave New World" / "Moksha": cap at 6, prefer shorter & more frequent, strip parens
+        List<String> huxleyRaw = Arrays.asList(
+                "Huxley, Aldous, 1894-1963",
+                "1900-1999",
+                "Fiction, general",
+                "Very long and overly verbose psychological sociological analysis of utopian society",
+                "Moral and ethical aspects of Science",
+                "Hallucinogenic drugs and religious experience",
+                "Psychological aspects of Hallucinogenic drugs",
+                "Science fiction (Future)",
+                "Brainwashing",
+                "Collected works",
+                "Utopias",
+                "Fiction",
+                "OverDrive",
+                "Large type books"
+        );
+        java.util.Map<String, Integer> freq = new java.util.HashMap<>();
+        freq.put("fiction", 12);
+        freq.put("science fiction", 8);
+        freq.put("utopias", 5);
+        freq.put("brainwashing", 2);
+        freq.put("collected works", 1);
+        freq.put("moral and ethical aspects of science", 1);
+        List<String> huxleyClean = EpubMetadataExtractor.cleanAndRankGenres(
+                huxleyRaw, freq, "Aldous Huxley");
+        checkEq("Huxley capped at 6 genres", "6", String.valueOf(huxleyClean.size()));
+        checkEq("Huxley top genre by freq+length is Fiction", "Fiction", huxleyClean.get(0));
+        checkEq("Huxley second genre strips paren to Science fiction", "Science fiction", huxleyClean.get(1));
+        check("Huxley verbose subject evicted by cap=6",
+                !huxleyClean.contains("Very long and overly verbose psychological sociological analysis of utopian society"));
+
+        // 4. One-time idempotent DB migration logic (FolioMetadataDb.computeMigratedGenres)
+        List<FolioMetadataDb.GenreMigrationRow> rows = Arrays.asList(
+                new FolioMetadataDb.GenreMigrationRow(
+                        1L, "Charles Bukowski",
+                        "Nonfiction, Poetry, American poetry, Poetry (poetic works by one author), American literature",
+                        "[\"Nonfiction\",\"Poetry\",\"American poetry\",\"Poetry (poetic works by one author)\",\"American literature\"]"),
+                new FolioMetadataDb.GenreMigrationRow(
+                        2L, "Charles Bukowski",
+                        "Bukowski, charles, 1921-1994, Authorship, Creative writing, Authors, correspondence",
+                        "[\"Bukowski\",\"charles\",\"1921-1994\",\"Authorship\",\"Creative writing\",\"Authors\",\"correspondence\"]"),
+                new FolioMetadataDb.GenreMigrationRow(
+                        8L, "Aldous Huxley",
+                        "Fiction, general",
+                        "[\"Fiction\",\"general\"]"),
+                new FolioMetadataDb.GenreMigrationRow(
+                        4L, "Aldous Huxley",
+                        "Utopias, Brainwashing, Moral and ethical aspects of Science, Fiction, Science and state",
+                        "[\"Utopias\",\"Brainwashing\",\"Moral and ethical aspects of Science\",\"Fiction\",\"Science and state\"]")
+        );
+        java.util.Map<Long, List<String>> migrated1 = FolioMetadataDb.computeMigratedGenres(rows);
+        check("Migration fixes Dangling duplicate Poetry",
+                migrated1.get(1L).size() == 4 && migrated1.get(1L).contains("Poetry"));
+        check("Migration removes legacy split Bukowski/charles/1921-1994 and rejoins Authors, correspondence",
+                !migrated1.get(2L).contains("Bukowski")
+                        && !migrated1.get(2L).contains("charles")
+                        && !migrated1.get(2L).contains("1921-1994")
+                        && migrated1.get(2L).contains("Authors, correspondence")
+                        && migrated1.get(2L).contains("Authorship"));
+        check("Migration drops general on Eyeless In Gaza",
+                migrated1.get(8L).equals(Collections.singletonList("Fiction")));
+
+        // Verify idempotency: running migration again over migrated output changes nothing
+        List<FolioMetadataDb.GenreMigrationRow> secondPassInput = new ArrayList<>();
+        for (FolioMetadataDb.GenreMigrationRow r : rows) {
+            List<String> g = migrated1.get(r.id);
+            secondPassInput.add(new FolioMetadataDb.GenreMigrationRow(
+                    r.id, r.author,
+                    EpubMetadataExtractor.joinGenresForDisplay(g),
+                    EpubMetadataExtractor.genresToJson(g)));
+        }
+        java.util.Map<Long, List<String>> migrated2 = FolioMetadataDb.computeMigratedGenres(secondPassInput);
+        check("Genre migration is idempotent across re-runs",
+                migrated1.equals(migrated2));
     }
 }
