@@ -204,17 +204,17 @@ public final class FolioMoreView {
         final LinearLayout[] upNextHostRef = new LinearLayout[1];
         final Runnable refreshStats = new Runnable() {
             @Override public void run() {
-                int[] s = readQuickStats(ctx);
-                if (statNums[0] != null) statNums[0].setText(String.valueOf(s[0]));
-                if (statNums[1] != null) statNums[1].setText(String.valueOf(s[1]));
-                if (statNums[2] != null) statNums[2].setText(String.valueOf(s[2]));
-                if (statNums[3] != null) statNums[3].setText(String.valueOf(s[3]));
-                updateGoalCard(ctx, s[2], goalStatusRef[0], goalFillRef[0], goalTrackRef[0]);
+                final Runnable selfRefresh = this;
+                loadQuickStatsAsync(ctx, new StatsCallback() {
+                    @Override public void onStats(int[] s) {
+                        applyQuickStatsUi(ctx, s, statNums, goalStatusRef[0], goalFillRef[0], goalTrackRef[0]);
+                    }
+                });
                 if (continueHostRef[0] != null) {
-                    populateContinueReadingStrip(ctx, d, continueHostRef[0], this);
+                    populateContinueReadingStrip(ctx, d, continueHostRef[0], selfRefresh);
                 }
                 if (upNextHostRef[0] != null) {
-                    populateUpNextStrip(ctx, d, upNextHostRef[0], this);
+                    populateUpNextStrip(ctx, d, upNextHostRef[0], selfRefresh);
                 }
             }
         };
@@ -224,7 +224,7 @@ public final class FolioMoreView {
         });
 
         com.amazon.kindle.epub.ingest.AzathLibrarySync.reconcileOnLaunchAsync(ctx);
-        int[] stats = readQuickStats(ctx);
+        int[] stats = new int[] { 0, 0, 0, 0 };
         LinearLayout statsRow = new LinearLayout(ctx);
         statsRow.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams srLp = new LinearLayout.LayoutParams(
@@ -335,6 +335,11 @@ public final class FolioMoreView {
         goalCard.addView(barTrack);
 
         updateGoalCard(ctx, stats[2], goalSubTv, barFill, barRest);
+        loadQuickStatsAsync(ctx, new StatsCallback() {
+            @Override public void onStats(int[] s) {
+                applyQuickStatsUi(ctx, s, statNums, goalStatusRef[0], goalFillRef[0], goalTrackRef[0]);
+            }
+        });
         goalCard.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 showReadingGoalDialog(ctx, refreshStats);
@@ -454,6 +459,46 @@ public final class FolioMoreView {
         return scroll;
     }
 
+    private interface StatsCallback {
+        void onStats(int[] stats);
+    }
+
+    private static final java.util.concurrent.ExecutorService STATS_EXECUTOR =
+            java.util.concurrent.Executors.newSingleThreadExecutor(new java.util.concurrent.ThreadFactory() {
+                @Override public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r, "folio-more-stats");
+                    t.setDaemon(true);
+                    return t;
+                }
+            });
+
+    private static void loadQuickStatsAsync(final Context ctx, final StatsCallback cb) {
+        final Context appCtx = (ctx != null) ? ctx.getApplicationContext() : null;
+        final Handler mainHandler = new Handler(Looper.getMainLooper());
+        STATS_EXECUTOR.execute(new Runnable() {
+            @Override public void run() {
+                final int[] s = readQuickStats(appCtx != null ? appCtx : ctx);
+                mainHandler.post(new Runnable() {
+                    @Override public void run() {
+                        if (FolioTheme.isContextDead(ctx)) return;
+                        cb.onStats(s);
+                    }
+                });
+            }
+        });
+    }
+
+    private static void applyQuickStatsUi(Context ctx, int[] s, TextView[] statNums,
+                                          TextView goalStatus, View goalFill, View goalTrack) {
+        if (s == null || s.length < 4) return;
+        if (statNums != null) {
+            for (int i = 0; i < 4 && i < statNums.length; i++) {
+                if (statNums[i] != null) statNums[i].setText(String.valueOf(s[i]));
+            }
+        }
+        updateGoalCard(ctx, s[2], goalStatus, goalFill, goalTrack);
+    }
+
     private static int[] readQuickStats(Context ctx) {
         int indexed = 0, reading = 0, finished = 0;
         try {
@@ -566,11 +611,18 @@ public final class FolioMoreView {
     }
 
     private static void showReadingGoalDialog(final Context ctx, final Runnable onSaved) {
+        loadQuickStatsAsync(ctx, new StatsCallback() {
+            @Override public void onStats(int[] qs) {
+                showReadingGoalDialogLoaded(ctx, onSaved, qs);
+            }
+        });
+    }
+
+    private static void showReadingGoalDialogLoaded(final Context ctx, final Runnable onSaved, int[] qs) {
         final float d = ctx.getResources().getDisplayMetrics().density;
         int cur = getReadingGoalTarget(ctx);
         int yrNow = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
-        int[] qs = readQuickStats(ctx);
-        int finCount = qs[2];
+        int finCount = (qs != null && qs.length >= 3) ? qs[2] : 0;
         int pct = Math.min(100, Math.round((finCount * 100f) / Math.max(1, cur)));
 
         // Gather completed books for Trophy Shelf
@@ -4924,7 +4976,6 @@ public final class FolioMoreView {
             return cmp != 0 ? cmp : a.compareTo(b);
         });
 
-        int[] qs = readQuickStats(ctx);
         LinearLayout root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(0xFF15171A);
@@ -4941,13 +4992,27 @@ public final class FolioMoreView {
         String avgStr = ratedCount > 0
                 ? String.format(java.util.Locale.US, "%.1f★ avg (%d rated)", ratingSum / (float) ratedCount, ratedCount)
                 : "No ratings yet";
-        TextView summaryTv = new TextView(ctx);
-        summaryTv.setText(all.size() + " cataloged · " + qs[1] + " reading · " + qs[2] + " finished\n"
-                + favs + " fav · " + noted + " noted · " + shelved + " shelved · " + com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.countQueue(ctx) + " queued · " + avgStr);
+        final int catalogCount = all.size();
+        final int favCount = favs;
+        final int notedCount = noted;
+        final int shelvedCount = shelved;
+        final int queuedCount = com.amazon.kindle.epub.ingest.FolioMetadataCatalogDialog.countQueue(ctx);
+        final String avgDisplay = avgStr;
+        final TextView summaryTv = new TextView(ctx);
+        summaryTv.setText(catalogCount + " cataloged · … reading · … finished\n"
+                + favCount + " fav · " + notedCount + " noted · " + shelvedCount + " shelved · " + queuedCount + " queued · " + avgDisplay);
         summaryTv.setTextColor(TEXT_MUTED);
         summaryTv.setTextSize(12);
         summaryTv.setPadding(0, 0, 0, dp(d, 14));
         root.addView(summaryTv);
+        loadQuickStatsAsync(ctx, new StatsCallback() {
+            @Override public void onStats(int[] qs) {
+                int rdg = (qs != null && qs.length >= 2) ? qs[1] : 0;
+                int fin = (qs != null && qs.length >= 3) ? qs[2] : 0;
+                summaryTv.setText(catalogCount + " cataloged · " + rdg + " reading · " + fin + " finished\n"
+                        + favCount + " fav · " + notedCount + " noted · " + shelvedCount + " shelved · " + queuedCount + " queued · " + avgDisplay);
+            }
+        });
 
         final AlertDialog[] insightDlgRef = new AlertDialog[1];
 

@@ -23,8 +23,34 @@ import java.io.File;
  */
 public final class CoverOverlayView {
     private static final String OVERLAY_TAG = "folio_fullscreen_cover_overlay";
+    public static final int MAX_COVER_EDGE_PX = 2048;
     public static volatile boolean sDismissedThisSession = false;
     private static volatile String sLastActiveBookId = null;
+
+    /** Computes a power-of-2 inSampleSize capping the longest bitmap edge at maxEdge. */
+    public static int computeSampleSize(int width, int height, int maxEdge) {
+        int inSampleSize = 1;
+        int longest = Math.max(width, height);
+        if (maxEdge > 0 && longest > maxEdge) {
+            while ((longest / inSampleSize) > maxEdge) {
+                inSampleSize <<= 1;
+            }
+        }
+        return inSampleSize;
+    }
+
+    private static Bitmap decodeBoundedCover(File coverFile, int maxEdge) {
+        String path = coverFile.getAbsolutePath();
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(path, bounds);
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+            return BitmapFactory.decodeFile(path);
+        }
+        BitmapFactory.Options opts = new BitmapFactory.Options();
+        opts.inSampleSize = computeSampleSize(bounds.outWidth, bounds.outHeight, maxEdge);
+        return BitmapFactory.decodeFile(path, opts);
+    }
 
     /**
      * Attaches a fullscreen #000000 black cover overlay onto the given Activity
@@ -42,7 +68,7 @@ public final class CoverOverlayView {
             return false;
         }
 
-        final Bitmap bmp = BitmapFactory.decodeFile(coverFile.getAbsolutePath());
+        final Bitmap bmp = decodeBoundedCover(coverFile, MAX_COVER_EDGE_PX);
         if (bmp == null) {
             android.util.Log.w("CoverOverlayView", "showIfAvailable rejected: decodeFile returned null for " + coverImagePath);
             return false;
