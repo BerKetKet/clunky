@@ -192,7 +192,7 @@ public final class AzathLibrarySync {
             @Override public void run() {
                 Context appCtx = ctx.getApplicationContext();
                 reconcileLibrary(appCtx);
-                MetadataEnricher.sweepUnenrichedAsync(appCtx);
+                MetadataEnricher.scheduleLaunchSweepAsync(appCtx);
             }
         }, "azath-launch-reconcile").start();
     }

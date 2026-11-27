@@ -83,6 +83,7 @@ public final class AzathUnitTests {
         testRound168Task4ReconcileSummary();
         testRound168Task6StandardEbooksUrlNormalization();
         testRound168Task8OrderInterpolation();
+        testRound169Task2SweepSelection();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -913,5 +914,60 @@ public final class AzathUnitTests {
             if (i > 0 && !(revAssigned.get(i) > revAssigned.get(i - 1))) revOk = false;
         }
         check("Reversed 2-row tight gap (100, 101): 5 inserts unique & strictly ordered", revOk);
+    }
+
+    private static FolioMetadataDb.BookRecord makeSweepRec(
+            String key, String genresCsv, String olKey, long attemptedAt, String status) {
+        FolioMetadataDb.BookRecord r = new FolioMetadataDb.BookRecord();
+        r.bookKey = key;
+        r.kfxPath = "/sdcard/kindle/" + key + ".kfx";
+        r.genres = genresCsv != null ? genresCsv : "";
+        r.openLibraryKey = olKey != null ? olKey : "";
+        r.enrichAttemptedAt = attemptedAt;
+        r.enrichStatus = status != null ? status : "";
+        return r;
+    }
+
+    private static void testRound169Task2SweepSelection() {
+        long dayMs = 86_400_000L;
+        long now = 1_800_000_000_000L;
+        List<FolioMetadataDb.BookRecord> pool = new ArrayList<>();
+        pool.add(makeSweepRec("K_COMPLETE", "Fiction", "/works/OL1W", 0L, ""));
+        pool.add(makeSweepRec("K_NEVER", "", "", 0L, ""));
+        pool.add(makeSweepRec("K_NOMATCH_10D", "", "", now - 10L * dayMs, MetadataEnricher.ENRICH_STATUS_NO_MATCH));
+        pool.add(makeSweepRec("K_NOMATCH_20D", "", "", now - 20L * dayMs, MetadataEnricher.ENRICH_STATUS_NO_MATCH));
+        pool.add(makeSweepRec("K_NOMATCH_31D", "", "", now - 31L * dayMs, MetadataEnricher.ENRICH_STATUS_NO_MATCH));
+        pool.add(makeSweepRec("K_ERR_5D", "", "", now - 5L * dayMs, MetadataEnricher.ENRICH_STATUS_ERROR));
+        pool.add(makeSweepRec("K_ERR_15D", "", "", now - 15L * dayMs, MetadataEnricher.ENRICH_STATUS_ERROR));
+        pool.add(makeSweepRec("K_MATCH_OLD_PARTIAL", "", "/works/OL2W", now - 15L * dayMs, MetadataEnricher.ENRICH_STATUS_MATCHED));
+        pool.add(makeSweepRec("K_EXTRA1", "", "", 0L, ""));
+        pool.add(makeSweepRec("K_EXTRA2", "", "", 0L, ""));
+        pool.add(makeSweepRec("K_EXTRA3", "", "", 0L, ""));
+        pool.add(makeSweepRec("K_EXTRA4", "", "", 0L, ""));
+
+        List<FolioMetadataDb.BookRecord> launchPicked = MetadataEnricher.selectBooksForSweep(
+                pool, now, MetadataEnricher.LAUNCH_SWEEP_MAX_BOOKS, false);
+        checkEq("Launch sweep caps at 5 books", "5", String.valueOf(launchPicked.size()));
+        Set<String> pickedKeys = new HashSet<>();
+        for (FolioMetadataDb.BookRecord r : launchPicked) pickedKeys.add(r.bookKey);
+        check("Complete book skipped", !pickedKeys.contains("K_COMPLETE"));
+        check("Never-attempted book selected", pickedKeys.contains("K_NEVER"));
+        check("no_match within 14d skipped", !pickedKeys.contains("K_NOMATCH_10D"));
+        check("no_match within 30d (20d) still skipped", !pickedKeys.contains("K_NOMATCH_20D"));
+        check("no_match >= 30d (31d) eligible", pickedKeys.contains("K_NOMATCH_31D"));
+        check("error within 14d (5d) skipped", !pickedKeys.contains("K_ERR_5D"));
+        check("error >= 14d (15d) eligible", pickedKeys.contains("K_ERR_15D"));
+        check("old partial match >= 14d eligible", pickedKeys.contains("K_MATCH_OLD_PARTIAL"));
+
+        // Enrich now bypasses age limit and returns all 11 incomplete books
+        List<FolioMetadataDb.BookRecord> enrichNowPicked = MetadataEnricher.selectBooksForSweep(
+                pool, now, Integer.MAX_VALUE, true);
+        checkEq("Enrich now (bypassAgeLimit=true) picks all 11 incomplete books",
+                "11", String.valueOf(enrichNowPicked.size()));
+
+        // Verify Constants match spec cleanly
+        checkEq("DB_VERSION bumped to 3", "3", String.valueOf(FolioMetadataDb.DB_VERSION));
+        checkEq("Launch sweep delay is 60s", "60000", String.valueOf(MetadataEnricher.LAUNCH_SWEEP_DELAY_MS));
+        checkEq("Launch sweep max books is 5", "5", String.valueOf(MetadataEnricher.LAUNCH_SWEEP_MAX_BOOKS));
     }
 }

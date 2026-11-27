@@ -44,7 +44,7 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
 
     private static final String TAG = "FolioMetadataDb";
     private static final String DB_NAME = "folio_metadata.db";
-    private static final int DB_VERSION = 2;
+    public static final int DB_VERSION = 3;
     private static final String PREF_MIGRATIONS = "folio_db_migrations";
     private static final String KEY_GENRES_CLEANUP_V1 = "genres_cleanup_v1_done";
     private static volatile boolean sGenresMigratedInProcess = false;
@@ -84,6 +84,8 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         public String contentHash = "";
         public long sourceSize;
         public long addedAt;
+        public long enrichAttemptedAt;
+        public String enrichStatus = "";
 
         public List<String> genreList() {
             if (genresJson != null && !genresJson.trim().isEmpty()) {
@@ -118,7 +120,7 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
     private static final String SELECT_COLS =
             "id, book_key, kfx_path, cover_path, source_name, title, author, "
             + "publisher, pub_date, genres, language, isbn, description, open_library_key, "
-            + "added_at, content_hash, source_size, genres_json";
+            + "added_at, content_hash, source_size, genres_json, enrich_attempted_at, enrich_status";
 
     @Override
     public void onCreate(SQLiteDatabase db) {
@@ -140,7 +142,9 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                 + "open_library_key TEXT, "
                 + "content_hash TEXT, "
                 + "source_size INTEGER, "
-                + "added_at INTEGER NOT NULL"
+                + "added_at INTEGER NOT NULL, "
+                + "enrich_attempted_at INTEGER DEFAULT 0, "
+                + "enrich_status TEXT DEFAULT ''"
                 + ")");
     }
 
@@ -179,6 +183,15 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
                 Log.w(TAG, "onUpgrade v2 genres_json migration warning", t);
             } finally {
                 if (c != null) c.close();
+            }
+        }
+        if (oldVersion < 3) {
+            java.util.Map<String, String> cols = tableColumns(db, "books_metadata");
+            if (!cols.containsKey("ENRICH_ATTEMPTED_AT")) {
+                db.execSQL("ALTER TABLE books_metadata ADD COLUMN enrich_attempted_at INTEGER DEFAULT 0");
+            }
+            if (!cols.containsKey("ENRICH_STATUS")) {
+                db.execSQL("ALTER TABLE books_metadata ADD COLUMN enrich_status TEXT DEFAULT ''");
             }
         }
     }
@@ -571,7 +584,27 @@ public final class FolioMetadataDb extends SQLiteOpenHelper {
         if (c.getColumnCount() > 15) r.contentHash = safeStr(c.getString(15));
         if (c.getColumnCount() > 16 && !c.isNull(16)) r.sourceSize = c.getLong(16);
         if (c.getColumnCount() > 17) r.genresJson = safeStr(c.getString(17));
+        if (c.getColumnCount() > 18 && !c.isNull(18)) r.enrichAttemptedAt = c.getLong(18);
+        if (c.getColumnCount() > 19) r.enrichStatus = safeStr(c.getString(19));
         return r;
+    }
+
+    /** Records the latest Open Library enrichment timestamp & outcome ("matched", "no_match", or "error"). */
+    public void recordEnrichAttempt(String bookKey, long attemptedAtMs, String status) {
+        if (bookKey == null || bookKey.isEmpty()) return;
+        try {
+            SQLiteDatabase db = getWritableDatabase();
+            java.util.Map<String, String> cols = tableColumns(db, "books_metadata");
+            if (!cols.containsKey("ENRICH_ATTEMPTED_AT") || !cols.containsKey("ENRICH_STATUS")) {
+                return;
+            }
+            ContentValues cv = new ContentValues();
+            cv.put("enrich_attempted_at", attemptedAtMs);
+            cv.put("enrich_status", status != null ? status : "");
+            db.update("books_metadata", cv, "book_key = ?", new String[]{ bookKey });
+        } catch (Throwable t) {
+            Log.w(TAG, "recordEnrichAttempt warning for " + bookKey + ": " + t.getMessage());
+        }
     }
 
     private static String safeStr(String s) {

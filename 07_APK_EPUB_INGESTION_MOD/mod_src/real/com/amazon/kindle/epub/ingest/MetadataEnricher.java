@@ -29,7 +29,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Lightweight, non-blocking metadata enricher using Open Library Search API.
@@ -53,9 +57,16 @@ public final class MetadataEnricher {
     private static final int MAX_HTTP_RETRIES = 2;
     private static final long MAX_RETRY_AFTER_MS = 30_000L;
     public static final int MAX_COVER_BYTES = 2 * 1024 * 1024;
+    public static final String ENRICH_STATUS_MATCHED = "matched";
+    public static final String ENRICH_STATUS_NO_MATCH = "no_match";
+    public static final String ENRICH_STATUS_ERROR = "error";
+    public static final long LAUNCH_SWEEP_DELAY_MS = 60_000L;
+    public static final int LAUNCH_SWEEP_MAX_BOOKS = 5;
+    public static final long ENRICH_COOLDOWN_DEFAULT_MS = 14L * 86_400_000L;
+    public static final long ENRICH_COOLDOWN_NO_MATCH_MS = 30L * 86_400_000L;
 
     private static final Object RATE_LOCK = new Object();
-    private static long sLastRequestMs = 0L;
+    private static long sNextRequestAllowedMs = 0L;
 
     public static String buildUserAgent(Context ctx) {
         String ver = "unknown";
@@ -91,17 +102,19 @@ public final class MetadataEnricher {
     }
 
     private static void throttleOpenLibraryRequest() {
+        long waitMs;
         synchronized (RATE_LOCK) {
             long now = System.currentTimeMillis();
-            long waitMs = (sLastRequestMs + MIN_REQUEST_INTERVAL_MS) - now;
-            if (waitMs > 0) {
-                try {
-                    Thread.sleep(waitMs);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                }
+            long slot = Math.max(now, sNextRequestAllowedMs);
+            waitMs = slot - now;
+            sNextRequestAllowedMs = slot + MIN_REQUEST_INTERVAL_MS;
+        }
+        if (waitMs > 0L) {
+            try {
+                Thread.sleep(waitMs);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
             }
-            sLastRequestMs = System.currentTimeMillis();
         }
     }
 
@@ -177,8 +190,76 @@ public final class MetadataEnricher {
             return t;
         }
     });
+    private static final ScheduledExecutorService SWEEP_SCHEDULER =
+            Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r, "azath-launch-sweep-timer");
+                    t.setDaemon(true);
+                    return t;
+                }
+            });
+    private static final Object SWEEP_LOCK = new Object();
+    private static ScheduledFuture<?> sPendingLaunchSweep = null;
+
+    public static final class EnrichOutcome {
+        public final boolean updated;
+        public final String status;
+
+        public EnrichOutcome(boolean updated, String status) {
+            this.updated = updated;
+            this.status = status != null ? status : ENRICH_STATUS_ERROR;
+        }
+    }
+
+    public interface BatchEnrichCallback {
+        void onComplete(int total, int matched, int noMatch, int error);
+    }
+
+    private interface SingleDoneCallback {
+        void onDone(boolean updated, String status);
+    }
 
     private MetadataEnricher() {}
+
+    /**
+     * Pure Android-free sweep candidate filter enforcing 14-day default cooldown,
+     * 30-day cooldown after "no_match", and per-launch cap unless bypassAgeLimit is true.
+     */
+    public static List<FolioMetadataDb.BookRecord> selectBooksForSweep(
+            List<FolioMetadataDb.BookRecord> records,
+            long nowMs,
+            int maxCount,
+            boolean bypassAgeLimit) {
+        List<FolioMetadataDb.BookRecord> selected = new ArrayList<>();
+        if (records == null || records.isEmpty() || maxCount <= 0) {
+            return selected;
+        }
+        for (FolioMetadataDb.BookRecord r : records) {
+            if (r == null || EpubMetadataExtractor.isBlank(r.bookKey) || EpubMetadataExtractor.isBlank(r.kfxPath)) {
+                continue;
+            }
+            boolean missingGenres = r.genreList().isEmpty();
+            boolean missingOlKey = EpubMetadataExtractor.isBlank(r.openLibraryKey);
+            if (!missingGenres && !missingOlKey) {
+                continue;
+            }
+            if (!bypassAgeLimit && r.enrichAttemptedAt > 0L) {
+                long cooldownMs = ENRICH_STATUS_NO_MATCH.equals(r.enrichStatus)
+                        ? ENRICH_COOLDOWN_NO_MATCH_MS
+                        : ENRICH_COOLDOWN_DEFAULT_MS;
+                long ageMs = nowMs - r.enrichAttemptedAt;
+                if (ageMs >= 0L && ageMs < cooldownMs) {
+                    continue;
+                }
+            }
+            selected.add(r);
+            if (selected.size() >= maxCount) {
+                break;
+            }
+        }
+        return selected;
+    }
 
     private static boolean isPrivateLibraryFile(Context ctx, File kfxFile) {
         if (kfxFile == null) return false;
@@ -196,67 +277,158 @@ public final class MetadataEnricher {
         return !path.startsWith("/sdcard/kindle");
     }
 
+    public static void cancelLaunchSweep() {
+        synchronized (SWEEP_LOCK) {
+            if (sPendingLaunchSweep != null) {
+                sPendingLaunchSweep.cancel(false);
+                sPendingLaunchSweep = null;
+            }
+        }
+    }
+
     /**
-     * Launch-time sweep: queues online enrichment for existing library books missing genres/genres_json or open_library_key.
+     * Schedules the paced launch sweep 60 seconds after startup so UI/startup threads stay quiet.
+     */
+    public static void scheduleLaunchSweepAsync(final Context ctx) {
+        if (ctx == null) return;
+        final Context appCtx = ctx.getApplicationContext();
+        if (appCtx == null) return;
+        if (isLaunchSweepDisabledDebug(appCtx)) {
+            Log.i(TAG, "Launch-time enrichment sweep disabled (debug switch)");
+            return;
+        }
+        if (!shouldRunLaunchSweep(isOnlineEnrichmentEnabled(appCtx), false)) {
+            return;
+        }
+        synchronized (SWEEP_LOCK) {
+            if (sPendingLaunchSweep != null) {
+                sPendingLaunchSweep.cancel(false);
+            }
+            sPendingLaunchSweep = SWEEP_SCHEDULER.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (Thread.currentThread().isInterrupted()) return;
+                        if (ActivityThread.currentApplication() == null) return;
+                        if (isLaunchSweepDisabledDebug(appCtx)) {
+                            Log.i(TAG, "Launch-time enrichment sweep disabled (debug switch)");
+                            return;
+                        }
+                        if (!shouldRunLaunchSweep(isOnlineEnrichmentEnabled(appCtx), false)
+                                || !isNetworkConnected(appCtx)) {
+                            return;
+                        }
+                        sweepUnenrichedAsync(appCtx, LAUNCH_SWEEP_MAX_BOOKS, false, null);
+                    } catch (Throwable t) {
+                        Log.w(TAG, "Delayed launch sweep failed: " + t.getMessage());
+                    }
+                }
+            }, LAUNCH_SWEEP_DELAY_MS, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    /**
+     * Launch-time sweep (capped at 5 books, honoring 14/30-day retry cooldowns).
      */
     public static int sweepUnenrichedAsync(final Context ctx) {
-        if (ctx == null) {
-            return 0;
-        }
         if (isLaunchSweepDisabledDebug(ctx)) {
             Log.i(TAG, "Launch-time enrichment sweep disabled (debug switch)");
             return 0;
         }
-        if (!shouldRunLaunchSweep(isOnlineEnrichmentEnabled(ctx), false) || !isNetworkConnected(ctx)) {
+        return sweepUnenrichedAsync(ctx, LAUNCH_SWEEP_MAX_BOOKS, false, null);
+    }
+
+    /**
+     * Control Center "Enrich now" action: bypasses 14/30-day cooldowns for all incomplete books,
+     * still respecting the Online Metadata Enrichment toggle and rate limiting.
+     */
+    public static int enrichAllNowAsync(final Context ctx, final BatchEnrichCallback callback) {
+        return sweepUnenrichedAsync(ctx, Integer.MAX_VALUE, true, callback);
+    }
+
+    public static int sweepUnenrichedAsync(
+            final Context ctx,
+            final int maxCount,
+            final boolean bypassAgeLimit,
+            final BatchEnrichCallback callback) {
+        if (ctx == null) {
+            if (callback != null) callback.onComplete(0, 0, 0, 0);
             return 0;
         }
-        int queued = 0;
+        if (!isOnlineEnrichmentEnabled(ctx) || !isNetworkConnected(ctx)) {
+            if (callback != null) callback.onComplete(0, 0, 0, 0);
+            return 0;
+        }
+        List<FolioMetadataDb.BookRecord> candidates = new ArrayList<>();
+        List<File> resolvedKfx = new ArrayList<>();
         FolioMetadataDb db = new FolioMetadataDb(ctx);
         try {
             List<FolioMetadataDb.BookRecord> all = db.getAllBooks();
-            for (FolioMetadataDb.BookRecord r : all) {
-                if (r.bookKey == null || r.bookKey.isEmpty() || r.kfxPath == null || r.kfxPath.isEmpty()) {
-                    continue;
-                }
-                boolean missingGenres = r.genreList().isEmpty();
-                boolean missingOlKey = EpubMetadataExtractor.isBlank(r.openLibraryKey);
-                if (!missingGenres && !missingOlKey) continue;
-
+            List<FolioMetadataDb.BookRecord> filtered =
+                    selectBooksForSweep(all, System.currentTimeMillis(), maxCount, bypassAgeLimit);
+            for (FolioMetadataDb.BookRecord r : filtered) {
                 File kfxFile = ExternalEpubActivity.resolveExistingKfxFile(ctx, new File(r.kfxPath));
                 if (kfxFile == null || !kfxFile.exists()) continue;
-
-                EpubMetadataExtractor.BookMeta meta = new EpubMetadataExtractor.BookMeta();
-                meta.title = r.title;
-                meta.author = r.author;
-                meta.publisher = r.publisher;
-                meta.pubDate = r.pubDate;
-                meta.language = r.language;
-                meta.isbn = r.isbn;
-                meta.description = r.description;
-                meta.openLibraryKey = r.openLibraryKey;
-                meta.genres.addAll(r.genreList());
-
-                File cov = (r.coverPath != null && !r.coverPath.isEmpty())
-                        ? new File(r.coverPath)
-                        : new File(kfxFile.getAbsolutePath() + ".cover.jpg");
-                enqueueAsync(ctx, r.bookKey, kfxFile, cov, r.sourceName, meta, r.contentHash, r.sourceSize);
-                queued++;
+                candidates.add(r);
+                resolvedKfx.add(kfxFile);
             }
         } catch (Throwable t) {
             Log.w(TAG, "sweepUnenrichedAsync failed: " + t.getMessage());
         } finally {
             db.close();
         }
+        final int total = candidates.size();
+        if (total == 0) {
+            if (callback != null) callback.onComplete(0, 0, 0, 0);
+            return 0;
+        }
+        final AtomicInteger remaining = new AtomicInteger(total);
+        final AtomicInteger matchedCnt = new AtomicInteger(0);
+        final AtomicInteger noMatchCnt = new AtomicInteger(0);
+        final AtomicInteger errorCnt = new AtomicInteger(0);
+        SingleDoneCallback itemCb = (callback == null) ? null : new SingleDoneCallback() {
+            @Override
+            public void onDone(boolean updated, String status) {
+                if (ENRICH_STATUS_MATCHED.equals(status)) matchedCnt.incrementAndGet();
+                else if (ENRICH_STATUS_NO_MATCH.equals(status)) noMatchCnt.incrementAndGet();
+                else errorCnt.incrementAndGet();
+                if (remaining.decrementAndGet() == 0) {
+                    callback.onComplete(total, matchedCnt.get(), noMatchCnt.get(), errorCnt.get());
+                }
+            }
+        };
+
+        int queued = 0;
+        for (int i = 0; i < total; i++) {
+            FolioMetadataDb.BookRecord r = candidates.get(i);
+            File kfxFile = resolvedKfx.get(i);
+            EpubMetadataExtractor.BookMeta meta = new EpubMetadataExtractor.BookMeta();
+            meta.title = r.title;
+            meta.author = r.author;
+            meta.publisher = r.publisher;
+            meta.pubDate = r.pubDate;
+            meta.language = r.language;
+            meta.isbn = r.isbn;
+            meta.description = r.description;
+            meta.openLibraryKey = r.openLibraryKey;
+            meta.genres.addAll(r.genreList());
+
+            File cov = (r.coverPath != null && !r.coverPath.isEmpty())
+                    ? new File(r.coverPath)
+                    : new File(kfxFile.getAbsolutePath() + ".cover.jpg");
+            enqueueAsyncInternal(ctx, r.bookKey, kfxFile, cov, r.sourceName, meta, r.contentHash, r.sourceSize, itemCb);
+            queued++;
+        }
         if (queued > 0) {
-            Log.i(TAG, "Launch-time enrichment sweep queued " + queued + " book(s)");
+            Log.i(TAG, "Enrichment sweep queued " + queued + " book(s) (bypassAgeLimit=" + bypassAgeLimit + ")");
         }
         return queued;
     }
 
     /**
      * Enqueues asynchronous Open Library enrichment onto a bounded daemon executor,
-     * deduplicated per bookKey, persisting updates non-destructively via FolioMetadataDb.upsertBook
-     * and re-registering private-dir books in kindle_library.db when enriched.
+     * deduplicated per bookKey, persisting updates non-destructively via FolioMetadataDb.upsertBook,
+     * recording enrich_attempted_at / enrich_status, and re-registering private-dir books when enriched.
      */
     public static void enqueueAsync(
             final Context ctx,
@@ -267,28 +439,52 @@ public final class MetadataEnricher {
             final EpubMetadataExtractor.BookMeta meta,
             final String contentHash,
             final long sourceSize) {
+        enqueueAsyncInternal(ctx, bookKey, kfxFile, coverFile, sourceName, meta, contentHash, sourceSize, null);
+    }
+
+    private static void enqueueAsyncInternal(
+            final Context ctx,
+            final String bookKey,
+            final File kfxFile,
+            final File coverFile,
+            final String sourceName,
+            final EpubMetadataExtractor.BookMeta meta,
+            final String contentHash,
+            final long sourceSize,
+            final SingleDoneCallback itemCallback) {
         if (ctx == null || bookKey == null || bookKey.isEmpty() || kfxFile == null || meta == null) {
+            if (itemCallback != null) itemCallback.onDone(false, ENRICH_STATUS_ERROR);
             return;
         }
         if (!isOnlineEnrichmentEnabled(ctx)) {
             Log.i(TAG, "Online enrichment disabled by user preference; skipping network lookup for " + bookKey);
+            if (itemCallback != null) itemCallback.onDone(false, ENRICH_STATUS_ERROR);
             return;
         }
         if (!isNetworkConnected(ctx)) {
             Log.i(TAG, "Offline (ConnectivityManager); skipping network lookup for " + bookKey);
+            if (itemCallback != null) itemCallback.onDone(false, ENRICH_STATUS_ERROR);
             return;
         }
         if (!IN_FLIGHT_KEYS.add(bookKey)) {
             Log.d(TAG, "Enrichment already queued for book_key=" + bookKey);
+            if (itemCallback != null) itemCallback.onDone(false, ENRICH_STATUS_NO_MATCH);
             return;
         }
         final Context appCtx = ctx.getApplicationContext();
         ENRICH_EXECUTOR.execute(() -> {
+            boolean updated = false;
+            String status = ENRICH_STATUS_ERROR;
             try {
-                boolean updated = enrichInPlace(appCtx, meta);
+                EnrichOutcome outcome = enrichInPlaceDetailed(appCtx, meta);
+                updated = outcome.updated;
+                status = outcome.status;
                 FolioMetadataDb db = new FolioMetadataDb(appCtx);
                 try {
-                    db.upsertBook(bookKey, kfxFile, coverFile, sourceName, meta, contentHash, sourceSize);
+                    if (updated) {
+                        db.upsertBook(bookKey, kfxFile, coverFile, sourceName, meta, contentHash, sourceSize);
+                    }
+                    db.recordEnrichAttempt(bookKey, System.currentTimeMillis(), status);
                 } finally {
                     db.close();
                 }
@@ -297,8 +493,19 @@ public final class MetadataEnricher {
                 }
             } catch (Throwable t) {
                 Log.w(TAG, "Async enrichment failed for " + bookKey + ": " + t.getMessage());
+                try {
+                    FolioMetadataDb db = new FolioMetadataDb(appCtx);
+                    try {
+                        db.recordEnrichAttempt(bookKey, System.currentTimeMillis(), ENRICH_STATUS_ERROR);
+                    } finally {
+                        db.close();
+                    }
+                } catch (Throwable ignored) {}
             } finally {
                 IN_FLIGHT_KEYS.remove(bookKey);
+                if (itemCallback != null) {
+                    itemCallback.onDone(updated, status);
+                }
             }
         });
     }
@@ -308,7 +515,11 @@ public final class MetadataEnricher {
     }
 
     public static boolean enrichInPlace(Context ctx, EpubMetadataExtractor.BookMeta meta) {
-        if (meta == null) return false;
+        return enrichInPlaceDetailed(ctx, meta).updated;
+    }
+
+    public static EnrichOutcome enrichInPlaceDetailed(Context ctx, EpubMetadataExtractor.BookMeta meta) {
+        if (meta == null) return new EnrichOutcome(false, ENRICH_STATUS_NO_MATCH);
         boolean needsAuthor = isUnknownAuthor(meta.author);
         boolean needsPubDate = EpubMetadataExtractor.isBlank(meta.pubDate);
         boolean needsGenres = meta.genres.isEmpty();
@@ -316,26 +527,35 @@ public final class MetadataEnricher {
         boolean needsOlKey = EpubMetadataExtractor.isBlank(meta.openLibraryKey);
 
         if (!needsAuthor && !needsPubDate && !needsGenres && !needsPublisher && !needsOlKey) {
-            return false;
+            return new EnrichOutcome(false, ENRICH_STATUS_MATCHED);
         }
         if (EpubMetadataExtractor.isBlank(meta.title) && EpubMetadataExtractor.isBlank(meta.isbn)) {
-            return false;
+            return new EnrichOutcome(false, ENRICH_STATUS_NO_MATCH);
         }
         if (!isNetworkConnected(ctx)) {
             Log.i(TAG, "Offline; skipping Open Library enrichment for '" + meta.title + "'");
-            return false;
+            return new EnrichOutcome(false, ENRICH_STATUS_ERROR);
         }
 
         boolean enriched = false;
+        boolean anyHttpOk = false;
+        boolean anyError = false;
         // Attempt 1: ISBN lookup if available (limit=3)
         if (!EpubMetadataExtractor.isBlank(meta.isbn)) {
             try {
                 String q = "isbn=" + URLEncoder.encode(meta.isbn.trim(), "UTF-8");
-                JSONArray docs = queryDocs(ctx, q, 3);
-                if (docs != null && validateAndApplyDocs(meta, docs)) {
-                    enriched = true;
+                QueryResult qr = queryDocsDetailed(ctx, q, 3);
+                if (qr.httpOk) {
+                    anyHttpOk = true;
+                    if (qr.docs != null && validateAndApplyDocs(meta, qr.docs)) {
+                        enriched = true;
+                    }
+                } else {
+                    anyError = true;
                 }
-            } catch (Throwable ignored) {}
+            } catch (Throwable t) {
+                anyError = true;
+            }
         }
 
         // Attempt 2: Fallback to title + author if genres, pubDate, or openLibraryKey still missing
@@ -352,13 +572,29 @@ public final class MetadataEnricher {
                         q.append("&author=").append(URLEncoder.encode(primaryAuthor, "UTF-8"));
                     }
                 }
-                JSONArray docs = queryDocs(ctx, q.toString(), 3);
-                if (docs != null && validateAndApplyDocs(meta, docs)) {
-                    enriched = true;
+                QueryResult qr = queryDocsDetailed(ctx, q.toString(), 3);
+                if (qr.httpOk) {
+                    anyHttpOk = true;
+                    if (qr.docs != null && validateAndApplyDocs(meta, qr.docs)) {
+                        enriched = true;
+                    }
+                } else {
+                    anyError = true;
                 }
-            } catch (Throwable ignored) {}
+            } catch (Throwable t) {
+                anyError = true;
+            }
         }
-        return enriched;
+        if (enriched) {
+            return new EnrichOutcome(true, ENRICH_STATUS_MATCHED);
+        }
+        if (anyError) {
+            return new EnrichOutcome(false, ENRICH_STATUS_ERROR);
+        }
+        if (anyHttpOk) {
+            return new EnrichOutcome(false, ENRICH_STATUS_NO_MATCH);
+        }
+        return new EnrichOutcome(false, ENRICH_STATUS_ERROR);
     }
 
     private static void logWarn(String msg) {
@@ -369,12 +605,37 @@ public final class MetadataEnricher {
         try { Log.d(TAG, msg); } catch (Throwable ignored) {}
     }
 
-    private static JSONArray queryDocs(Context ctx, String queryParams, int limit) {
-        if (!isNetworkConnected(ctx)) return null;
+    private static final class QueryResult {
+        final boolean httpOk;
+        final JSONArray docs;
+
+        QueryResult(boolean httpOk, JSONArray docs) {
+            this.httpOk = httpOk;
+            this.docs = docs;
+        }
+    }
+
+    private static QueryResult queryDocsDetailed(Context ctx, String queryParams, int limit) {
+        if (!isNetworkConnected(ctx)) return new QueryResult(false, null);
         String ua = buildUserAgent(ctx);
         String urlStr = "https://openlibrary.org/search.json?" + queryParams
                 + "&fields=key,title,author_name,first_publish_year,subject,publisher,isbn&limit=" + limit;
-        return queryDocsUrl(urlStr, ua);
+        String body = queryDocsRawJsonUrl(urlStr, ua);
+        if (body == null) {
+            return new QueryResult(false, null);
+        }
+        try {
+            JSONObject root = new JSONObject(body);
+            JSONArray docs = root.optJSONArray("docs");
+            return new QueryResult(true, (docs != null && docs.length() > 0) ? docs : null);
+        } catch (Throwable t) {
+            logDebug("Open Library JSON parse failed: " + t.getMessage());
+            return new QueryResult(false, null);
+        }
+    }
+
+    private static JSONArray queryDocs(Context ctx, String queryParams, int limit) {
+        return queryDocsDetailed(ctx, queryParams, limit).docs;
     }
 
     public static JSONArray queryDocsUrl(String urlStr, String ua) {

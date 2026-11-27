@@ -445,6 +445,12 @@ public final class FolioMoreView {
                         refreshStats.run();
                     }
                 }));
+        sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.REFRESH, "Enrich now",
+                "Bypass 14/30d cooldown & enrich all incomplete books", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        runEnrichNowFromControlCenter(ctx, refreshStats);
+                    }
+                }));
         sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.SETTINGS, "Reader & App Settings",
                 "Reading preferences, dark mode & dictionary", true, new View.OnClickListener() {
                     @Override public void onClick(View v) { openSettings(ctx); }
@@ -3880,6 +3886,52 @@ public final class FolioMoreView {
                     }
                 })
                 .show();
+    }
+
+    private static void runEnrichNowFromControlCenter(final Context ctx, final Runnable onDone) {
+        if (!com.amazon.kindle.epub.ingest.MetadataEnricher.isOnlineEnrichmentEnabled(ctx)) {
+            Toast.makeText(ctx, "Online Metadata Enrichment is OFF — enable it above first", Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (!com.amazon.kindle.epub.ingest.MetadataEnricher.isNetworkConnected(ctx)) {
+            Toast.makeText(ctx, "No internet connection — connect to enrich metadata", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Toast.makeText(ctx, "Checking library for unenriched books...", Toast.LENGTH_SHORT).show();
+        final Handler h = new Handler(Looper.getMainLooper());
+        new Thread(new Runnable() {
+            @Override public void run() {
+                final int queued = com.amazon.kindle.epub.ingest.MetadataEnricher.enrichAllNowAsync(
+                        ctx.getApplicationContext(),
+                        new com.amazon.kindle.epub.ingest.MetadataEnricher.BatchEnrichCallback() {
+                            @Override
+                            public void onComplete(final int total, final int matched, final int noMatch, final int error) {
+                                h.post(new Runnable() {
+                                    @Override public void run() {
+                                        if (FolioTheme.isContextDead(ctx)) return;
+                                        if (total > 0) {
+                                            Toast.makeText(ctx,
+                                                    "Enrich now complete: " + matched + " matched, "
+                                                            + noMatch + " no match, " + error + " error(s)",
+                                                    Toast.LENGTH_LONG).show();
+                                            if (onDone != null) onDone.run();
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                h.post(new Runnable() {
+                    @Override public void run() {
+                        if (FolioTheme.isContextDead(ctx)) return;
+                        if (queued == 0) {
+                            Toast.makeText(ctx, "All books already have genres & Open Library keys", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(ctx, "Enriching " + queued + " book(s) via Open Library...", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+            }
+        }, "azath-enrich-now-trigger").start();
     }
 
     private static void showForceReconcileDialog(final Context ctx, final Runnable onDone) {
