@@ -201,16 +201,7 @@ public final class AzathLibrarySync {
 
     public static void startThreadSnapshotDiagIfEnabled(final Context ctx) {
         if (ctx == null || sThreadDiagStarted) return;
-        boolean enabled = false;
-        try {
-            if (new File("/sdcard/kindle/.diag_threads").exists()) {
-                enabled = true;
-            } else {
-                enabled = ctx.getSharedPreferences("folio_ui_prefs", Context.MODE_PRIVATE)
-                        .getBoolean("diag_thread_snap_enabled", false);
-            }
-        } catch (Throwable ignored) {}
-        if (!enabled) return;
+        if (!MetadataEnricher.isDiagThreadsDebugEnabled(ctx)) return;
         sThreadDiagStarted = true;
         Thread diag = new Thread(new Runnable() {
             @Override public void run() {

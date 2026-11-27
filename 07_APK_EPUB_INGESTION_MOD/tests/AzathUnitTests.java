@@ -87,6 +87,7 @@ public final class AzathUnitTests {
         testRound169Task4RawKindleEpubDiscovery();
         testRound169Task5AuthorMatches();
         testRound169Task6PersonalNameAndGeographicSubjects();
+        testRound169Task7DebugSwitchMigration();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -1077,5 +1078,83 @@ public final class AzathUnitTests {
                         && cleaned.contains("Europe, Eastern")
                         && !cleaned.contains("Bukowski, Charles, 1921-1994")
                         && !cleaned.contains("Huxley, Aldous"));
+    }
+
+    private static void testRound169Task7DebugSwitchMigration() {
+        check("PREFS_UI uses folio_ui_prefs",
+                "folio_ui_prefs".equals(MetadataEnricher.PREFS_UI));
+        check("launch sweep pref key matches debug_disable_launch_sweep",
+                "debug_disable_launch_sweep".equals(MetadataEnricher.KEY_DEBUG_DISABLE_LAUNCH_SWEEP));
+        check("online enrichment pref key matches debug_disable_online_enrichment",
+                "debug_disable_online_enrichment".equals(MetadataEnricher.KEY_DEBUG_DISABLE_ONLINE_ENRICHMENT));
+        check("diag threads pref key matches debug_diag_threads",
+                "debug_diag_threads".equals(MetadataEnricher.KEY_DEBUG_DIAG_THREADS));
+
+        check("resolveDebugFlag false+false=false", !MetadataEnricher.resolveDebugFlag(false, false));
+        check("resolveDebugFlag true+false=true", MetadataEnricher.resolveDebugFlag(true, false));
+        check("resolveDebugFlag false+true=true", MetadataEnricher.resolveDebugFlag(false, true));
+        check("resolveDebugFlag true+true=true", MetadataEnricher.resolveDebugFlag(true, true));
+
+        check("resolveOnlineEnrichmentEnabled allowed when all clear",
+                MetadataEnricher.resolveOnlineEnrichmentEnabled(true, false, false));
+        check("resolveOnlineEnrichmentEnabled blocked by pref off",
+                !MetadataEnricher.resolveOnlineEnrichmentEnabled(false, false, false));
+        check("resolveOnlineEnrichmentEnabled blocked by debug pref",
+                !MetadataEnricher.resolveOnlineEnrichmentEnabled(true, true, false));
+        check("resolveOnlineEnrichmentEnabled blocked by files/debug override",
+                !MetadataEnricher.resolveOnlineEnrichmentEnabled(true, false, true));
+
+        java.io.File tmpFilesDir = null;
+        try {
+            tmpFilesDir = java.nio.file.Files.createTempDirectory("azath_r169_t7").toFile();
+            java.io.File sweepFile = MetadataEnricher.getAppPrivateDebugFile(
+                    tmpFilesDir, MetadataEnricher.DEBUG_FILE_DISABLE_LAUNCH_SWEEP);
+            java.io.File enrichFile = MetadataEnricher.getAppPrivateDebugFile(
+                    tmpFilesDir, MetadataEnricher.DEBUG_FILE_DISABLE_ONLINE_ENRICHMENT);
+            java.io.File diagFile = MetadataEnricher.getAppPrivateDebugFile(
+                    tmpFilesDir, MetadataEnricher.DEBUG_FILE_DIAG_THREADS);
+
+            check("sweep debug file resolves under debug/",
+                    sweepFile != null && sweepFile.getPath().endsWith("debug" + java.io.File.separator + "disable_launch_sweep"));
+            check("enrich debug file resolves under debug/",
+                    enrichFile != null && enrichFile.getPath().endsWith("debug" + java.io.File.separator + "disable_online_enrichment"));
+            check("diag debug file resolves under debug/",
+                    diagFile != null && diagFile.getPath().endsWith("debug" + java.io.File.separator + "diag_threads"));
+
+            check("resolveDebugSwitch initially false",
+                    !MetadataEnricher.resolveDebugSwitch(false, tmpFilesDir, MetadataEnricher.DEBUG_FILE_DISABLE_LAUNCH_SWEEP));
+            check("resolveDebugSwitch true via pref",
+                    MetadataEnricher.resolveDebugSwitch(true, tmpFilesDir, MetadataEnricher.DEBUG_FILE_DISABLE_LAUNCH_SWEEP));
+
+            java.io.File debugDir = sweepFile.getParentFile();
+            if (debugDir != null) debugDir.mkdirs();
+            sweepFile.createNewFile();
+            enrichFile.createNewFile();
+            diagFile.createNewFile();
+
+            check("resolveDebugSwitch true via files/debug/disable_launch_sweep",
+                    MetadataEnricher.resolveDebugSwitch(false, tmpFilesDir, MetadataEnricher.DEBUG_FILE_DISABLE_LAUNCH_SWEEP));
+            check("resolveOnlineEnrichmentEnabled false via files/debug/disable_online_enrichment",
+                    !MetadataEnricher.resolveOnlineEnrichmentEnabled(
+                            true, false, MetadataEnricher.isAppPrivateDebugFileActive(tmpFilesDir, MetadataEnricher.DEBUG_FILE_DISABLE_ONLINE_ENRICHMENT)));
+            check("resolveDebugSwitch true via files/debug/diag_threads",
+                    MetadataEnricher.resolveDebugSwitch(false, tmpFilesDir, MetadataEnricher.DEBUG_FILE_DIAG_THREADS));
+
+            diagFile.delete();
+            check("resolveDebugSwitch returns false after deleting files/debug/diag_threads",
+                    !MetadataEnricher.resolveDebugSwitch(false, tmpFilesDir, MetadataEnricher.DEBUG_FILE_DIAG_THREADS));
+        } catch (Exception e) {
+            check("debug dir test threw no exception: " + e.getMessage(), false);
+        } finally {
+            if (tmpFilesDir != null) {
+                java.io.File debugDir = new java.io.File(tmpFilesDir, MetadataEnricher.DEBUG_SUBDIR);
+                java.io.File[] children = debugDir.listFiles();
+                if (children != null) {
+                    for (java.io.File c : children) c.delete();
+                }
+                debugDir.delete();
+                tmpFilesDir.delete();
+            }
+        }
     }
 }

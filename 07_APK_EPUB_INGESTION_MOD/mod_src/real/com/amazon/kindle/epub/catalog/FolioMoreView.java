@@ -461,6 +461,12 @@ public final class FolioMoreView {
                         runEnrichNowFromControlCenter(ctx, refreshStats);
                     }
                 }));
+        sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.SETTINGS, "Debug & Diagnostic Switches",
+                "Launch sweep, enrichment & thread diagnostic overrides", true, new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        showDebugTogglesDialog(ctx, refreshStats);
+                    }
+                }));
         sysGroup.addView(makeKindleRow(ctx, d, FolioIcons.SETTINGS, "Reader & App Settings",
                 "Reading preferences, dark mode & dictionary", true, new View.OnClickListener() {
                     @Override public void onClick(View v) { openSettings(ctx); }
@@ -4093,6 +4099,81 @@ public final class FolioMoreView {
                 });
             }
         }, "azath-enrich-now-trigger").start();
+    }
+
+    private static void showDebugTogglesDialog(final Context ctx, final Runnable onDone) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setBackgroundColor(FolioTheme.bgSurface(ctx));
+        box.setPadding(dp(d, 20), dp(d, 18), dp(d, 20), dp(d, 12));
+
+        TextView hdr = new TextView(ctx);
+        hdr.setText("Debug & Diagnostic Switches");
+        hdr.setTextColor(FolioTheme.textPrimary(ctx));
+        hdr.setTextSize(17);
+        hdr.setTypeface(Typeface.DEFAULT_BOLD);
+        hdr.setPadding(0, 0, 0, dp(d, 6));
+        box.addView(hdr);
+
+        TextView note = new TextView(ctx);
+        java.io.File debugDir = new java.io.File(
+                ctx.getFilesDir(), com.amazon.kindle.epub.ingest.MetadataEnricher.DEBUG_SUBDIR);
+        note.setText("App-private overrides under " + debugDir.getAbsolutePath()
+                + " remain active whenever the file exists.");
+        note.setTextColor(FolioTheme.textSecondary(ctx));
+        note.setTextSize(12);
+        note.setPadding(0, 0, 0, dp(d, 10));
+        box.addView(note);
+
+        final android.widget.CheckBox cbDisableSweep = new android.widget.CheckBox(ctx);
+        boolean sweepFile = com.amazon.kindle.epub.ingest.MetadataEnricher.isAppPrivateDebugFileActive(
+                ctx.getFilesDir(), com.amazon.kindle.epub.ingest.MetadataEnricher.DEBUG_FILE_DISABLE_LAUNCH_SWEEP);
+        cbDisableSweep.setText("Disable launch enrichment sweep" + (sweepFile ? " [files/debug active]" : ""));
+        cbDisableSweep.setTextColor(FolioTheme.textPrimary(ctx));
+        cbDisableSweep.setChecked(com.amazon.kindle.epub.ingest.MetadataEnricher.readDebugPref(
+                ctx, com.amazon.kindle.epub.ingest.MetadataEnricher.KEY_DEBUG_DISABLE_LAUNCH_SWEEP));
+        box.addView(cbDisableSweep);
+
+        final android.widget.CheckBox cbDisableEnrich = new android.widget.CheckBox(ctx);
+        boolean enrichFile = com.amazon.kindle.epub.ingest.MetadataEnricher.isAppPrivateDebugFileActive(
+                ctx.getFilesDir(), com.amazon.kindle.epub.ingest.MetadataEnricher.DEBUG_FILE_DISABLE_ONLINE_ENRICHMENT);
+        cbDisableEnrich.setText("Disable online enrichment" + (enrichFile ? " [files/debug active]" : ""));
+        cbDisableEnrich.setTextColor(FolioTheme.textPrimary(ctx));
+        cbDisableEnrich.setChecked(com.amazon.kindle.epub.ingest.MetadataEnricher.isDebugDisableOnlineEnrichmentPref(ctx));
+        box.addView(cbDisableEnrich);
+
+        final android.widget.CheckBox cbDiagThreads = new android.widget.CheckBox(ctx);
+        boolean threadsFile = com.amazon.kindle.epub.ingest.MetadataEnricher.isAppPrivateDebugFileActive(
+                ctx.getFilesDir(), com.amazon.kindle.epub.ingest.MetadataEnricher.DEBUG_FILE_DIAG_THREADS);
+        cbDiagThreads.setText("Enable thread snapshot diagnostics" + (threadsFile ? " [files/debug active]" : ""));
+        cbDiagThreads.setTextColor(FolioTheme.textPrimary(ctx));
+        cbDiagThreads.setChecked(com.amazon.kindle.epub.ingest.MetadataEnricher.readDebugPref(
+                ctx, com.amazon.kindle.epub.ingest.MetadataEnricher.KEY_DEBUG_DIAG_THREADS));
+        box.addView(cbDiagThreads);
+
+        android.app.AlertDialog dlg = new android.app.AlertDialog.Builder(ctx)
+                .setView(box)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Save", new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface dialog, int which) {
+                        com.amazon.kindle.epub.ingest.MetadataEnricher.setLaunchSweepDisabledDebug(
+                                ctx, cbDisableSweep.isChecked());
+                        com.amazon.kindle.epub.ingest.MetadataEnricher.setDebugDisableOnlineEnrichmentPref(
+                                ctx, cbDisableEnrich.isChecked());
+                        boolean diagOn = cbDiagThreads.isChecked();
+                        com.amazon.kindle.epub.ingest.MetadataEnricher.setDiagThreadsDebugEnabled(ctx, diagOn);
+                        if (diagOn) {
+                            com.amazon.kindle.epub.ingest.AzathLibrarySync.startThreadSnapshotDiagIfEnabled(
+                                    ctx.getApplicationContext());
+                        }
+                        Toast.makeText(ctx, "Debug switches saved", Toast.LENGTH_SHORT).show();
+                        if (onDone != null) onDone.run();
+                    }
+                })
+                .show();
+        FolioTheme.applyToDialog(ctx, dlg);
     }
 
     private static void showForceReconcileDialog(final Context ctx, final Runnable onDone) {

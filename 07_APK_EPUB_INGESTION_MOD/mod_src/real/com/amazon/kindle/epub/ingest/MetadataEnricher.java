@@ -45,11 +45,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class MetadataEnricher {
 
     private static final String TAG = "MetadataEnricher";
-    private static final String PREFS_UI = "folio_ui_prefs";
-    private static final String KEY_ONLINE_ENRICHMENT = "online_enrichment_enabled";
-    private static final String KEY_DISABLE_LAUNCH_SWEEP_DEBUG = "disable_launch_sweep_debug";
-    private static final String DEBUG_DISABLE_ENRICH_FILE = "/sdcard/kindle/.disable_online_enrichment";
-    private static final String DEBUG_DISABLE_SWEEP_FILE = "/sdcard/kindle/.disable_launch_sweep";
+    public static final String PREFS_UI = "folio_ui_prefs";
+    public static final String KEY_ONLINE_ENRICHMENT = "online_enrichment_enabled";
+    public static final String KEY_DEBUG_DISABLE_LAUNCH_SWEEP = "debug_disable_launch_sweep";
+    public static final String KEY_DEBUG_DISABLE_ONLINE_ENRICHMENT = "debug_disable_online_enrichment";
+    public static final String KEY_DEBUG_DIAG_THREADS = "debug_diag_threads";
+    public static final String DEBUG_SUBDIR = "debug";
+    public static final String DEBUG_FILE_DISABLE_LAUNCH_SWEEP = "disable_launch_sweep";
+    public static final String DEBUG_FILE_DISABLE_ONLINE_ENRICHMENT = "disable_online_enrichment";
+    public static final String DEBUG_FILE_DIAG_THREADS = "diag_threads";
     private static final int CONNECT_TIMEOUT_MS = 8000;
     private static final int READ_TIMEOUT_MS = 10000;
     private static final int MAX_JSON_BYTES = 256 * 1024;
@@ -130,42 +134,107 @@ public final class MetadataEnricher {
         return Math.min(1000L << retryAttempt, MAX_RETRY_AFTER_MS);
     }
 
-    public static boolean isOnlineEnrichmentEnabled(Context ctx) {
-        try {
-            if (new File(DEBUG_DISABLE_ENRICH_FILE).exists()) {
-                return false;
-            }
-        } catch (Throwable ignored) {}
-        if (ctx == null) return true;
-        try {
-            SharedPreferences sp = ctx.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE);
-            return sp.getBoolean(KEY_ONLINE_ENRICHMENT, true);
-        } catch (Throwable ignored) {
-            return true;
-        }
+    public static boolean resolveDebugFlag(boolean prefEnabled, boolean appPrivateFileExists) {
+        return prefEnabled || appPrivateFileExists;
     }
 
-    public static boolean isLaunchSweepDisabledDebug(Context ctx) {
+    public static boolean resolveOnlineEnrichmentEnabled(
+            boolean prefOnlineEnabled,
+            boolean debugDisablePref,
+            boolean appPrivateDisableFileExists) {
+        return prefOnlineEnabled && !resolveDebugFlag(debugDisablePref, appPrivateDisableFileExists);
+    }
+
+    public static File getAppPrivateDebugFile(File filesDir, String fileName) {
+        if (filesDir == null || fileName == null || fileName.isEmpty()) return null;
+        return new File(new File(filesDir, DEBUG_SUBDIR), fileName);
+    }
+
+    public static boolean isAppPrivateDebugFileActive(File filesDir, String fileName) {
+        File f = getAppPrivateDebugFile(filesDir, fileName);
+        if (f == null) return false;
         try {
-            if (new File(DEBUG_DISABLE_SWEEP_FILE).exists()) {
-                return true;
-            }
-        } catch (Throwable ignored) {}
-        if (ctx == null) return false;
-        try {
-            SharedPreferences sp = ctx.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE);
-            return sp.getBoolean(KEY_DISABLE_LAUNCH_SWEEP_DEBUG, false);
+            return f.exists();
         } catch (Throwable ignored) {
             return false;
         }
     }
 
-    public static void setLaunchSweepDisabledDebug(Context ctx, boolean disabled) {
-        if (ctx == null) return;
+    public static boolean resolveDebugSwitch(boolean prefValue, File filesDir, String debugFileName) {
+        return resolveDebugFlag(prefValue, isAppPrivateDebugFileActive(filesDir, debugFileName));
+    }
+
+    private static File safeFilesDir(Context ctx) {
+        if (ctx == null) return null;
+        try {
+            return ctx.getFilesDir();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    public static boolean readDebugPref(Context ctx, String prefKey) {
+        if (ctx == null || prefKey == null || prefKey.isEmpty()) return false;
+        try {
+            SharedPreferences sp = ctx.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE);
+            return sp.getBoolean(prefKey, false);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    public static void writeDebugPref(Context ctx, String prefKey, boolean value) {
+        if (ctx == null || prefKey == null || prefKey.isEmpty()) return;
         try {
             ctx.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
-                    .edit().putBoolean(KEY_DISABLE_LAUNCH_SWEEP_DEBUG, disabled).apply();
+                    .edit().putBoolean(prefKey, value).apply();
         } catch (Throwable ignored) {}
+    }
+
+    public static boolean isOnlineEnrichmentEnabled(Context ctx) {
+        boolean appFile = isAppPrivateDebugFileActive(
+                safeFilesDir(ctx), DEBUG_FILE_DISABLE_ONLINE_ENRICHMENT);
+        if (ctx == null) {
+            return resolveOnlineEnrichmentEnabled(true, false, appFile);
+        }
+        try {
+            SharedPreferences sp = ctx.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE);
+            boolean prefOnline = sp.getBoolean(KEY_ONLINE_ENRICHMENT, true);
+            boolean debugDisable = sp.getBoolean(KEY_DEBUG_DISABLE_ONLINE_ENRICHMENT, false);
+            return resolveOnlineEnrichmentEnabled(prefOnline, debugDisable, appFile);
+        } catch (Throwable ignored) {
+            return resolveOnlineEnrichmentEnabled(true, false, appFile);
+        }
+    }
+
+    public static boolean isLaunchSweepDisabledDebug(Context ctx) {
+        return resolveDebugSwitch(
+                readDebugPref(ctx, KEY_DEBUG_DISABLE_LAUNCH_SWEEP),
+                safeFilesDir(ctx),
+                DEBUG_FILE_DISABLE_LAUNCH_SWEEP);
+    }
+
+    public static void setLaunchSweepDisabledDebug(Context ctx, boolean disabled) {
+        writeDebugPref(ctx, KEY_DEBUG_DISABLE_LAUNCH_SWEEP, disabled);
+    }
+
+    public static boolean isDiagThreadsDebugEnabled(Context ctx) {
+        return resolveDebugSwitch(
+                readDebugPref(ctx, KEY_DEBUG_DIAG_THREADS),
+                safeFilesDir(ctx),
+                DEBUG_FILE_DIAG_THREADS);
+    }
+
+    public static void setDiagThreadsDebugEnabled(Context ctx, boolean enabled) {
+        writeDebugPref(ctx, KEY_DEBUG_DIAG_THREADS, enabled);
+    }
+
+    public static boolean isDebugDisableOnlineEnrichmentPref(Context ctx) {
+        return readDebugPref(ctx, KEY_DEBUG_DISABLE_ONLINE_ENRICHMENT);
+    }
+
+    public static void setDebugDisableOnlineEnrichmentPref(Context ctx, boolean disabled) {
+        writeDebugPref(ctx, KEY_DEBUG_DISABLE_ONLINE_ENRICHMENT, disabled);
     }
 
     public static boolean shouldRunLaunchSweep(boolean onlineEnabled, boolean debugDisabled) {
@@ -175,8 +244,12 @@ public final class MetadataEnricher {
     public static void setOnlineEnrichmentEnabled(Context ctx, boolean enabled) {
         if (ctx == null) return;
         try {
-            ctx.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
-                    .edit().putBoolean(KEY_ONLINE_ENRICHMENT, enabled).apply();
+            SharedPreferences.Editor ed = ctx.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE).edit();
+            ed.putBoolean(KEY_ONLINE_ENRICHMENT, enabled);
+            if (enabled) {
+                ed.putBoolean(KEY_DEBUG_DISABLE_ONLINE_ENRICHMENT, false);
+            }
+            ed.apply();
         } catch (Throwable ignored) {}
     }
 
