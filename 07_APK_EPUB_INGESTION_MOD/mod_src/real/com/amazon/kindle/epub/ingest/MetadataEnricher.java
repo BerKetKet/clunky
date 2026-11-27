@@ -746,9 +746,23 @@ public final class MetadataEnricher {
         if (raw == null) return "";
         String norm = EpubMetadataExtractor.normalizeAuthor(raw);
         return norm.toLowerCase(Locale.ROOT)
+                .replaceAll("['\\u2019]", "")
                 .replaceAll("[^a-z0-9\\s]", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
+    }
+
+    private static String extractAuthorSurname(String rawAuthorSegment) {
+        String key = normalizeAuthorKey(rawAuthorSegment);
+        if (key.isEmpty()) return "";
+        String[] toks = key.split("\\s+");
+        int end = toks.length;
+        while (end > 1 && ("jr".equals(toks[end - 1]) || "sr".equals(toks[end - 1])
+                || "ii".equals(toks[end - 1]) || "iii".equals(toks[end - 1])
+                || "iv".equals(toks[end - 1]) || "v".equals(toks[end - 1]))) {
+            end--;
+        }
+        return end > 0 ? toks[end - 1] : "";
     }
 
     private static boolean isTitleMatch(String epubTitle, String olTitle) {
@@ -767,7 +781,7 @@ public final class MetadataEnricher {
         return jaccard >= 0.75;
     }
 
-    private static boolean authorMatches(String epubAuthor, String olAuthor) {
+    public static boolean authorMatches(String epubAuthor, String olAuthor) {
         if (isUnknownAuthor(epubAuthor)) {
             return false;
         }
@@ -776,10 +790,19 @@ public final class MetadataEnricher {
         String nb = normalizeAuthorKey(olAuthor);
         if (na.isEmpty() || nb.isEmpty()) return false;
         if (na.equals(nb)) return true;
-        Set<String> ta = tokens(na);
-        Set<String> tb = tokens(nb);
-        for (String t : ta) {
-            if (t.length() >= 3 && tb.contains(t)) return true;
+        Set<String> epubSurnames = new HashSet<>();
+        for (String seg : epubAuthor.split(";")) {
+            String surname = extractAuthorSurname(seg);
+            if (!surname.isEmpty()) {
+                epubSurnames.add(surname);
+            }
+        }
+        if (epubSurnames.isEmpty()) return false;
+        for (String seg : olAuthor.split(";")) {
+            String surname = extractAuthorSurname(seg);
+            if (!surname.isEmpty() && epubSurnames.contains(surname)) {
+                return true;
+            }
         }
         return false;
     }

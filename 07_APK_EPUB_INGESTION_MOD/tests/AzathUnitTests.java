@@ -85,6 +85,7 @@ public final class AzathUnitTests {
         testRound168Task8OrderInterpolation();
         testRound169Task2SweepSelection();
         testRound169Task4RawKindleEpubDiscovery();
+        testRound169Task5AuthorMatches();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -1020,5 +1021,22 @@ public final class AzathUnitTests {
                 tmpDir.delete();
             }
         }
+    }
+
+    private static void testRound169Task5AuthorMatches() {
+        check("authorMatches rejects John Smith vs John Doe (shared first name only)",
+                !MetadataEnricher.authorMatches("John Smith", "John Doe"));
+        check("authorMatches accepts Smith, John vs John Smith",
+                MetadataEnricher.authorMatches("Smith, John", "John Smith"));
+        check("authorMatches accepts J. R. R. Tolkien vs J.R.R. Tolkien",
+                MetadataEnricher.authorMatches("J. R. R. Tolkien", "J.R.R. Tolkien"));
+        check("authorMatches accepts Tolkien, J. R. R. vs J.R.R. Tolkien",
+                MetadataEnricher.authorMatches("Tolkien, J. R. R.", "J.R.R. Tolkien"));
+        check("authorMatches accepts generational suffix Martin Luther King, Jr. vs King, Martin Luther",
+                MetadataEnricher.authorMatches("Martin Luther King, Jr.", "King, Martin Luther"));
+        check("authorMatches rejects same-title different-surname in isAcceptableMatch",
+                !MetadataEnricher.isAcceptableMatch(
+                        "Collected Poems", "John Smith", "",
+                        "Collected Poems", "John Doe", ""));
     }
 }
