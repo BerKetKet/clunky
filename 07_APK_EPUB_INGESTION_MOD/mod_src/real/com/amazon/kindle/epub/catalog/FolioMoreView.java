@@ -202,6 +202,7 @@ public final class FolioMoreView {
         final View[] goalTrackRef = new View[1];
         final LinearLayout[] continueHostRef = new LinearLayout[1];
         final LinearLayout[] upNextHostRef = new LinearLayout[1];
+        final LinearLayout[] rawKindleEpubHostRef = new LinearLayout[1];
         final Runnable refreshStats = new Runnable() {
             @Override public void run() {
                 final Runnable selfRefresh = this;
@@ -215,6 +216,9 @@ public final class FolioMoreView {
                 }
                 if (upNextHostRef[0] != null) {
                     populateUpNextStrip(ctx, d, upNextHostRef[0], selfRefresh);
+                }
+                if (rawKindleEpubHostRef[0] != null) {
+                    populateRawKindleEpubRowAsync(ctx, d, rawKindleEpubHostRef[0], selfRefresh);
                 }
             }
         };
@@ -391,6 +395,12 @@ public final class FolioMoreView {
                 "Rescan /sdcard/epub/ & update KFX catalog", true, new View.OnClickListener() {
                     @Override public void onClick(View v) { scanLocalLibrary(ctx); }
                 }));
+        LinearLayout rawKindleHost = new LinearLayout(ctx);
+        rawKindleHost.setOrientation(LinearLayout.VERTICAL);
+        rawKindleHost.setVisibility(View.GONE);
+        rawKindleEpubHostRef[0] = rawKindleHost;
+        libGroup.addView(rawKindleHost);
+        populateRawKindleEpubRowAsync(ctx, d, rawKindleHost, refreshStats);
         container.addView(libGroup);
 
         container.addView(makeSectionLabel(ctx, d, "READING & CURATION"));
@@ -3886,6 +3896,157 @@ public final class FolioMoreView {
                     }
                 })
                 .show();
+    }
+
+    private static void populateRawKindleEpubRowAsync(
+            final Context ctx, final float d, final LinearLayout host, final Runnable onDone) {
+        if (ctx == null || host == null) return;
+        final Context appCtx = ctx.getApplicationContext();
+        final Handler h = new Handler(Looper.getMainLooper());
+        STATS_EXECUTOR.execute(new Runnable() {
+            @Override public void run() {
+                final java.util.List<File> pending =
+                        com.amazon.kindle.epub.ingest.AzathLibrarySync.findPendingRawKindleEpubs(
+                                appCtx != null ? appCtx : ctx);
+                h.post(new Runnable() {
+                    @Override public void run() {
+                        if (FolioTheme.isContextDead(ctx)) return;
+                        host.removeAllViews();
+                        if (pending == null || pending.isEmpty()) {
+                            host.setVisibility(View.GONE);
+                            return;
+                        }
+                        host.setVisibility(View.VISIBLE);
+                        String title = com.amazon.kindle.epub.ingest.AzathLibrarySync
+                                .formatRawKindleEpubRowTitle(pending.size());
+                        host.addView(makeKindleRow(
+                                ctx,
+                                d,
+                                FolioIcons.IMPORT,
+                                title,
+                                "Tap to convert to KFX via AzathLibrarySync & index",
+                                true,
+                                new View.OnClickListener() {
+                                    @Override public void onClick(View v) {
+                                        showRawKindleEpubImportDialog(ctx, pending, onDone);
+                                    }
+                                }));
+                        FolioTheme.applyToTree(ctx, host);
+                    }
+                });
+            }
+        });
+    }
+
+    private static void showRawKindleEpubImportDialog(
+            final Context ctx, final java.util.List<File> epubs, final Runnable onDone) {
+        if (ctx == null || epubs == null || epubs.isEmpty() || FolioTheme.isContextDead(ctx)) return;
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setBackgroundColor(FolioTheme.bgSurface(ctx));
+        box.setPadding(dp(d, 20), dp(d, 18), dp(d, 20), dp(d, 12));
+
+        TextView hdr = new TextView(ctx);
+        hdr.setText("Import Raw EPUBs (/sdcard/kindle)");
+        hdr.setTextColor(FolioTheme.textPrimary(ctx));
+        hdr.setTextSize(17);
+        hdr.setTypeface(FolioTheme.serif(ctx));
+        hdr.setPadding(0, 0, 0, dp(d, 6));
+        box.addView(hdr);
+
+        TextView sub = new TextView(ctx);
+        sub.setText(epubs.size() + " raw EPUB" + (epubs.size() == 1 ? "" : "s")
+                + " found in /sdcard/kindle/. Select files to convert and add to library:");
+        sub.setTextColor(FolioTheme.textMuted(ctx));
+        sub.setTextSize(12.5f);
+        sub.setPadding(0, 0, 0, dp(d, 10));
+        box.addView(sub);
+
+        ScrollView sv = new ScrollView(ctx);
+        sv.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(d, Math.min(220, 44 * epubs.size() + 12))));
+        LinearLayout listLayout = new LinearLayout(ctx);
+        listLayout.setOrientation(LinearLayout.VERTICAL);
+        final android.widget.CheckBox[] fileBoxes = new android.widget.CheckBox[epubs.size()];
+        for (int i = 0; i < epubs.size(); i++) {
+            File f = epubs.get(i);
+            android.widget.CheckBox cb = new android.widget.CheckBox(ctx);
+            long kb = Math.max(1L, f.length() / 1024L);
+            cb.setText(f.getName() + " (" + kb + " KB)");
+            cb.setTextSize(13f);
+            cb.setTextColor(FolioTheme.textPrimary(ctx));
+            cb.setChecked(true);
+            cb.setPadding(dp(d, 4), dp(d, 6), dp(d, 4), dp(d, 6));
+            fileBoxes[i] = cb;
+            listLayout.addView(cb);
+        }
+        sv.addView(listLayout);
+        box.addView(sv);
+
+        final android.widget.CheckBox deleteSourceBox = new android.widget.CheckBox(ctx);
+        deleteSourceBox.setText("Delete source EPUB after import");
+        deleteSourceBox.setTextSize(13f);
+        deleteSourceBox.setTextColor(FolioTheme.textSecondary(ctx));
+        deleteSourceBox.setChecked(false);
+        deleteSourceBox.setPadding(0, dp(d, 10), 0, dp(d, 4));
+        box.addView(deleteSourceBox);
+
+        AlertDialog dlg = new AlertDialog.Builder(ctx)
+                .setView(box)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Import", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        final java.util.List<File> chosen = new java.util.ArrayList<>();
+                        for (int i = 0; i < epubs.size(); i++) {
+                            if (fileBoxes[i].isChecked()) chosen.add(epubs.get(i));
+                        }
+                        if (chosen.isEmpty()) {
+                            Toast.makeText(ctx, "No EPUBs selected", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        final boolean deleteSource = deleteSourceBox.isChecked();
+                        Toast.makeText(ctx, "Importing " + chosen.size() + " EPUB(s)...", Toast.LENGTH_SHORT).show();
+                        final Handler h = new Handler(Looper.getMainLooper());
+                        final Context appCtx = ctx.getApplicationContext();
+                        new Thread(new Runnable() {
+                            @Override public void run() {
+                                int ok = 0;
+                                int fail = 0;
+                                File lastKfx = null;
+                                Context runCtx = appCtx != null ? appCtx : ctx;
+                                for (File epub : chosen) {
+                                    com.amazon.kindle.epub.ingest.AzathLibrarySync.IngestResult ir =
+                                            com.amazon.kindle.epub.ingest.AzathLibrarySync.ingestEpub(
+                                                    runCtx, epub, epub.getName(), deleteSource);
+                                    if (ir != null && ir.ok) {
+                                        ok++;
+                                        if (ir.kfxFile != null) lastKfx = ir.kfxFile;
+                                    } else {
+                                        fail++;
+                                    }
+                                }
+                                try { com.amazon.kindle.epub.ingest.AzathLibrarySync.reconcileLibrary(runCtx); } catch (Throwable ignored) {}
+                                if (lastKfx != null) {
+                                    try { FolioTheme.triggerLibraryRescan(runCtx, lastKfx); } catch (Throwable ignored) {}
+                                }
+                                final int finalOk = ok;
+                                final int finalFail = fail;
+                                h.post(new Runnable() {
+                                    @Override public void run() {
+                                        if (FolioTheme.isContextDead(ctx)) return;
+                                        String msg = "Imported " + finalOk + " of " + chosen.size() + " EPUB(s)"
+                                                + (finalFail > 0 ? " (" + finalFail + " failed)" : "");
+                                        Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show();
+                                        if (onDone != null) onDone.run();
+                                    }
+                                });
+                            }
+                        }, "azath-raw-kindle-import").start();
+                    }
+                })
+                .show();
+        FolioTheme.applyToDialog(ctx, dlg);
     }
 
     private static void runEnrichNowFromControlCenter(final Context ctx, final Runnable onDone) {

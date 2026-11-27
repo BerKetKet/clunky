@@ -558,6 +558,119 @@ public final class AzathLibrarySync {
                 + " once_swept=" + onceSwept;
     }
 
+    public static String formatRawKindleEpubRowTitle(int count) {
+        return count + " raw EPUB" + (count == 1 ? "" : "s") + " found in the Kindle folder — Import";
+    }
+
+    public static List<File> listRawEpubsInDir(File dir) {
+        List<File> out = new ArrayList<>();
+        if (dir == null || !dir.isDirectory() || !dir.canRead()) {
+            return out;
+        }
+        File[] files = dir.listFiles();
+        if (files == null) {
+            return out;
+        }
+        for (File f : files) {
+            if (f == null || !f.isFile()) continue;
+            String name = f.getName();
+            if (name.startsWith(".")) continue;
+            if (name.toLowerCase(Locale.US).endsWith(".epub") && f.length() >= 128L) {
+                out.add(f);
+            }
+        }
+        Collections.sort(out, new java.util.Comparator<File>() {
+            @Override
+            public int compare(File a, File b) {
+                return a.getName().compareToIgnoreCase(b.getName());
+            }
+        });
+        return out;
+    }
+
+    /**
+     * Pure Android-free filter returning raw .epub candidates that do not already have an active
+     * imported KFX record (matching sourceName + sourceSize with an existing KFX file, or matching
+     * same-base .kfx in activeKfxNamesLower).
+     */
+    public static List<File> filterUnimportedRawEpubs(
+            List<File> rawEpubs,
+            List<FolioMetadataDb.BookRecord> dbRecords,
+            Set<String> activeKfxNamesLower,
+            Set<String> existingKfxPaths) {
+        List<File> pending = new ArrayList<>();
+        if (rawEpubs == null || rawEpubs.isEmpty()) {
+            return pending;
+        }
+        Set<String> importedSizedKeys = new HashSet<>();
+        if (dbRecords != null) {
+            for (FolioMetadataDb.BookRecord r : dbRecords) {
+                if (r == null || r.sourceName == null || r.sourceName.isEmpty() || r.sourceSize <= 0L) {
+                    continue;
+                }
+                boolean kfxPresent = existingKfxPaths == null
+                        || (r.kfxPath != null && existingKfxPaths.contains(r.kfxPath));
+                if (kfxPresent) {
+                    importedSizedKeys.add(r.sourceName.toLowerCase(Locale.US) + "|" + r.sourceSize);
+                }
+            }
+        }
+        for (File epub : rawEpubs) {
+            if (epub == null) continue;
+            String lowerName = epub.getName().toLowerCase(Locale.US);
+            String sizedKey = lowerName + "|" + epub.length();
+            if (importedSizedKeys.contains(sizedKey)) {
+                continue;
+            }
+            if (activeKfxNamesLower != null && lowerName.endsWith(".epub")) {
+                String base = lowerName.substring(0, lowerName.length() - 5);
+                if (activeKfxNamesLower.contains(base + ".kfx")) {
+                    continue;
+                }
+            }
+            pending.add(epub);
+        }
+        return pending;
+    }
+
+    public static List<File> findPendingRawKindleEpubs(Context ctx) {
+        File sdDir = new File("/sdcard/kindle");
+        List<File> rawEpubs = listRawEpubsInDir(sdDir);
+        if (rawEpubs.isEmpty() || ctx == null) {
+            return rawEpubs;
+        }
+        Set<String> activeKfxNamesLower = new HashSet<>();
+        File[] sdFiles = sdDir.listFiles();
+        if (sdFiles != null) {
+            for (File f : sdFiles) {
+                if (f != null && f.isFile()) {
+                    String low = f.getName().toLowerCase(Locale.US);
+                    if (low.endsWith(".kfx") && f.length() >= 128L) {
+                        activeKfxNamesLower.add(low);
+                    }
+                }
+            }
+        }
+        List<FolioMetadataDb.BookRecord> recs = Collections.emptyList();
+        Set<String> existingPaths = new HashSet<>();
+        FolioMetadataDb db = new FolioMetadataDb(ctx);
+        try {
+            recs = db.getAllBooks();
+            for (FolioMetadataDb.BookRecord r : recs) {
+                if (r.kfxPath != null && !r.kfxPath.isEmpty()) {
+                    File resolved = ExternalEpubActivity.resolveExistingKfxFile(ctx, new File(r.kfxPath));
+                    if (resolved != null && resolved.exists() && resolved.length() >= 128L) {
+                        existingPaths.add(r.kfxPath);
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        } finally {
+            db.close();
+        }
+        return filterUnimportedRawEpubs(rawEpubs, recs, activeKfxNamesLower, existingPaths);
+    }
+
     public static int reconcileLibrary(Context ctx) {
         return reconcileLibrary(ctx, false);
     }

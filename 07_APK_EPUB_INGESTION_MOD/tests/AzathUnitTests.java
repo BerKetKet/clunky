@@ -84,6 +84,7 @@ public final class AzathUnitTests {
         testRound168Task6StandardEbooksUrlNormalization();
         testRound168Task8OrderInterpolation();
         testRound169Task2SweepSelection();
+        testRound169Task4RawKindleEpubDiscovery();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -969,5 +970,55 @@ public final class AzathUnitTests {
         checkEq("DB_VERSION bumped to 3", "3", String.valueOf(FolioMetadataDb.DB_VERSION));
         checkEq("Launch sweep delay is 60s", "60000", String.valueOf(MetadataEnricher.LAUNCH_SWEEP_DELAY_MS));
         checkEq("Launch sweep max books is 5", "5", String.valueOf(MetadataEnricher.LAUNCH_SWEEP_MAX_BOOKS));
+    }
+
+    private static void testRound169Task4RawKindleEpubDiscovery() {
+        checkEq("Single raw EPUB row label",
+                "1 raw EPUB found in the Kindle folder — Import",
+                AzathLibrarySync.formatRawKindleEpubRowTitle(1));
+        checkEq("Multiple raw EPUBs row label",
+                "3 raw EPUBs found in the Kindle folder — Import",
+                AzathLibrarySync.formatRawKindleEpubRowTitle(3));
+
+        java.io.File tmpDir = null;
+        try {
+            tmpDir = java.nio.file.Files.createTempDirectory("azath_raw_epub_test").toFile();
+            java.io.File a = new java.io.File(tmpDir, "alpha.epub");
+            java.io.File b = new java.io.File(tmpDir, "beta.epub");
+            java.io.File hidden = new java.io.File(tmpDir, ".hidden.epub");
+            java.io.File tiny = new java.io.File(tmpDir, "tiny.epub");
+            java.io.File kfx = new java.io.File(tmpDir, "already.kfx");
+            byte[] payload = new byte[512];
+            java.nio.file.Files.write(a.toPath(), payload);
+            java.nio.file.Files.write(b.toPath(), payload);
+            java.nio.file.Files.write(hidden.toPath(), payload);
+            java.nio.file.Files.write(tiny.toPath(), new byte[10]);
+            java.nio.file.Files.write(kfx.toPath(), payload);
+
+            List<java.io.File> raw = AzathLibrarySync.listRawEpubsInDir(tmpDir);
+            checkEq("listRawEpubsInDir skips hidden/tiny/kfx and returns 2", "2", String.valueOf(raw.size()));
+
+            FolioMetadataDb.BookRecord importedRec = new FolioMetadataDb.BookRecord();
+            importedRec.bookKey = "FOLIO_AAA";
+            importedRec.sourceName = "alpha.epub";
+            importedRec.sourceSize = 512L;
+            importedRec.kfxPath = "/sdcard/kindle/Alpha_FOLIO_AAA.kfx";
+
+            Set<String> activeLower = new HashSet<>(Arrays.asList("alpha_folio_aaa.kfx", "already.kfx"));
+            Set<String> existingPaths = new HashSet<>(Collections.singletonList("/sdcard/kindle/Alpha_FOLIO_AAA.kfx"));
+            List<java.io.File> pending = AzathLibrarySync.filterUnimportedRawEpubs(
+                    raw, Collections.singletonList(importedRec), activeLower, existingPaths);
+            checkEq("Already-imported alpha.epub filtered out, beta.epub stays pending",
+                    "1", String.valueOf(pending.size()));
+            checkEq("Pending file is beta.epub", "beta.epub", pending.get(0).getName());
+        } catch (Exception e) {
+            check("Task 4 raw EPUB discovery test threw: " + e, false);
+        } finally {
+            if (tmpDir != null) {
+                java.io.File[] fs = tmpDir.listFiles();
+                if (fs != null) for (java.io.File f : fs) f.delete();
+                tmpDir.delete();
+            }
+        }
     }
 }
