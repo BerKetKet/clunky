@@ -784,9 +784,19 @@ public final class MetadataEnricher {
         return null;
     }
 
-    private static String normalizeTitle(String raw) {
+    private static final java.util.regex.Pattern COMBINING_MARKS_PATTERN =
+            java.util.regex.Pattern.compile("\\p{M}+");
+
+    public static String stripDiacritics(String raw) {
         if (raw == null) return "";
-        String s = raw.toLowerCase(Locale.ROOT)
+        String decomposed = java.text.Normalizer.normalize(raw, java.text.Normalizer.Form.NFD);
+        return COMBINING_MARKS_PATTERN.matcher(decomposed).replaceAll("");
+    }
+
+    public static String normalizeTitle(String raw) {
+        if (raw == null) return "";
+        String s = stripDiacritics(raw)
+                .toLowerCase(Locale.ROOT)
                 .replaceAll("[^a-z0-9\\s]", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
@@ -815,10 +825,11 @@ public final class MetadataEnricher {
                 || "Unknown Author".equalsIgnoreCase(author.trim());
     }
 
-    private static String normalizeAuthorKey(String raw) {
+    public static String normalizeAuthorKey(String raw) {
         if (raw == null) return "";
         String norm = EpubMetadataExtractor.normalizeAuthor(raw);
-        return norm.toLowerCase(Locale.ROOT)
+        return stripDiacritics(norm)
+                .toLowerCase(Locale.ROOT)
                 .replaceAll("['\\u2019]", "")
                 .replaceAll("[^a-z0-9\\s]", " ")
                 .replaceAll("\\s+", " ")
@@ -838,7 +849,7 @@ public final class MetadataEnricher {
         return end > 0 ? toks[end - 1] : "";
     }
 
-    private static boolean isTitleMatch(String epubTitle, String olTitle) {
+    public static boolean isTitleMatch(String epubTitle, String olTitle) {
         String ntEpub = normalizeTitle(epubTitle);
         String ntOl = normalizeTitle(olTitle);
         if (ntEpub.isEmpty() || ntOl.isEmpty()) return false;

@@ -88,6 +88,7 @@ public final class AzathUnitTests {
         testRound169Task5AuthorMatches();
         testRound169Task6PersonalNameAndGeographicSubjects();
         testRound169Task7DebugSwitchMigration();
+        testRound170Task1DiacriticsAndNonLatin();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -1156,5 +1157,42 @@ public final class AzathUnitTests {
                 tmpFilesDir.delete();
             }
         }
+    }
+
+    private static void testRound170Task1DiacriticsAndNonLatin() {
+        checkEq("normalizeAuthorKey folds Gabriel García Márquez to ASCII",
+                "gabriel garcia marquez",
+                MetadataEnricher.normalizeAuthorKey("Gabriel García Márquez"));
+        checkEq("normalizeTitle folds Les Misérables to ASCII",
+                "les miserables",
+                MetadataEnricher.normalizeTitle("Les Misérables"));
+
+        check("authorMatches matches Gabriel García Márquez vs Gabriel Garcia Marquez",
+                MetadataEnricher.authorMatches("Gabriel García Márquez", "Gabriel Garcia Marquez"));
+        check("authorMatches matches inverted García Márquez, Gabriel vs Gabriel Garcia Marquez",
+                MetadataEnricher.authorMatches("García Márquez, Gabriel", "Gabriel Garcia Marquez"));
+        check("authorMatches matches Charlotte Brontë vs Charlotte Bronte",
+                MetadataEnricher.authorMatches("Charlotte Brontë", "Charlotte Bronte"));
+        check("isTitleMatch matches Les Misérables vs Les Miserables",
+                MetadataEnricher.isTitleMatch("Les Misérables", "Les Miserables"));
+        check("isAcceptableMatch accepts accented title/author against ASCII OpenLibrary metadata",
+                MetadataEnricher.isAcceptableMatch(
+                        "One Hundred Years of Solitude", "Gabriel García Márquez", "",
+                        "One Hundred Years of Solitude", "Gabriel Garcia Marquez", ""));
+
+        checkEq("non-Latin Amharic author normalizes safely to empty ASCII key",
+                "", MetadataEnricher.normalizeAuthorKey("ሐዲስ ዓለማየሁ"));
+        checkEq("non-Latin Amharic title normalizes safely to empty ASCII key",
+                "", MetadataEnricher.normalizeTitle("ፍቅር እስከ መቃብር"));
+        check("non-Latin Amharic author does not falsely match self or English",
+                !MetadataEnricher.authorMatches("ሐዲስ ዓለማየሁ", "ሐዲስ ዓለማየሁ")
+                        && !MetadataEnricher.authorMatches("ሐዲስ ዓለማየሁ", "Haddis Alemayehu"));
+        check("non-Latin Amharic title does not falsely match self or English",
+                !MetadataEnricher.isTitleMatch("ፍቅር እስከ መቃብር", "ፍቅር እስከ መቃብር")
+                        && !MetadataEnricher.isTitleMatch("ፍቅር እስከ መቃብር", "Love Until the Grave"));
+        check("isAcceptableMatch safely rejects non-Latin author/title without crashing",
+                !MetadataEnricher.isAcceptableMatch(
+                        "ፍቅር እስከ መቃብር", "ሐዲስ ዓለማየሁ", "",
+                        "ፍቅር እስከ መቃብር", "ሐዲስ ዓለማየሁ", ""));
     }
 }
