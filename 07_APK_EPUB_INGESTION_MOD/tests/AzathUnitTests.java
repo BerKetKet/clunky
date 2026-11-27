@@ -86,6 +86,7 @@ public final class AzathUnitTests {
         testRound169Task2SweepSelection();
         testRound169Task4RawKindleEpubDiscovery();
         testRound169Task5AuthorMatches();
+        testRound169Task6PersonalNameAndGeographicSubjects();
 
         System.out.println("AzathUnitTests: passed=" + passed + " failed=" + failed + " total=" + (passed + failed));
         if (failed > 0) {
@@ -1038,5 +1039,43 @@ public final class AzathUnitTests {
                 !MetadataEnricher.isAcceptableMatch(
                         "Collected Poems", "John Smith", "",
                         "Collected Poems", "John Doe", ""));
+    }
+
+    private static void testRound169Task6PersonalNameAndGeographicSubjects() {
+        String[] kept = new String[] {
+                "Africa, East",
+                "Philosophy, Modern",
+                "Fiction, American",
+                "Science fiction, American",
+                "Europe, Eastern"
+        };
+        for (String h : kept) {
+            check("isPersonalNameSubject keeps LCSH heading: " + h,
+                    !EpubMetadataExtractor.isPersonalNameSubject(h));
+        }
+
+        check("isPersonalNameSubject drops Bukowski, Charles, 1921-1994",
+                EpubMetadataExtractor.isPersonalNameSubject("Bukowski, Charles, 1921-1994"));
+        check("isPersonalNameSubject drops Huxley, Aldous",
+                EpubMetadataExtractor.isPersonalNameSubject("Huxley, Aldous"));
+
+        List<String> cleaned = EpubMetadataExtractor.cleanAndRankGenres(
+                Arrays.asList(
+                        "Africa, East",
+                        "Philosophy, Modern",
+                        "Fiction, American",
+                        "Science fiction, American",
+                        "Europe, Eastern",
+                        "Bukowski, Charles, 1921-1994",
+                        "Huxley, Aldous"
+                ), null, "Aldous Huxley");
+        check("cleanAndRankGenres retains all 5 topical/geographic LCSH headings and drops both personal names",
+                cleaned.contains("Africa, East")
+                        && cleaned.contains("Philosophy, Modern")
+                        && cleaned.contains("Fiction, American")
+                        && cleaned.contains("Science fiction, American")
+                        && cleaned.contains("Europe, Eastern")
+                        && !cleaned.contains("Bukowski, Charles, 1921-1994")
+                        && !cleaned.contains("Huxley, Aldous"));
     }
 }

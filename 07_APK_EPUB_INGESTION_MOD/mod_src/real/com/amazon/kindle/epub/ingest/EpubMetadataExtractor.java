@@ -79,17 +79,32 @@ public final class EpubMetadataExtractor {
     private static final Set<String> NON_PERSON_TOPIC_WORDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "fiction", "nonfiction", "non-fiction", "poetry", "drama", "essays", "letters",
             "literature", "history", "philosophy", "biography", "autobiography", "criticism",
-            "science", "horror", "mystery", "fantasy", "humor", "humorous", "satire",
+            "science", "science fiction", "short fiction", "fantasy fiction", "historical fiction",
+            "detective fiction", "crime fiction", "horror", "mystery", "fantasy", "humor", "humorous", "satire",
             "utopias", "dystopias", "short stories", "authors", "poets", "novelists",
             "women", "men", "children", "classic", "classics", "modern", "ancient",
             "medieval", "contemporary", "general", "correspondence", "translations",
             "translations into english", "early works", "civilization", "politics",
-            "religion", "social", "economic", "war", "world war", "world",
+            "religion", "theology", "mythology", "folklore", "linguistics", "anthropology",
+            "social", "economic", "economics", "sociology", "psychology", "education",
+            "art", "architecture", "music", "law", "medicine", "geography",
+            "mathematics", "physics", "chemistry", "biology", "astronomy", "language", "languages",
+            "war", "world war", "world", "travel", "dictionaries", "encyclopedias",
             "american", "british", "english", "french", "german", "russian",
             "japanese", "spanish", "italian", "greek", "latin", "chinese", "indian",
             "england", "london", "france", "paris", "germany", "russia", "japan",
-            "greece", "rome", "italy", "spain", "america", "united states",
-            "great britain", "europe", "new york", "california", "textbooks"
+            "greece", "rome", "italy", "spain", "america", "americas", "united states",
+            "great britain", "europe", "africa", "asia", "australia", "oceania", "antarctica",
+            "canada", "china", "india", "brazil", "mexico", "middle east", "far east", "near east",
+            "new york", "california", "textbooks"
+    )));
+    private static final Set<String> LCSH_RIGHT_SUBDIVISIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "east", "west", "north", "south", "northeast", "northwest", "southeast", "southwest",
+            "eastern", "western", "northern", "southern", "central",
+            "modern", "ancient", "medieval", "contemporary", "classical", "comparative",
+            "experimental", "theoretical", "applied", "historical", "colonial", "tropical",
+            "american", "british", "english", "french", "german", "russian",
+            "spanish", "italian", "japanese", "chinese", "indian", "african", "european", "asian"
     )));
 
     private EpubMetadataExtractor() {}
@@ -571,9 +586,19 @@ public final class EpubMetadataExtractor {
         return false;
     }
 
+    private static boolean isLcshRightSubdivision(String segment) {
+        if (segment == null) return false;
+        String s = cleanSpace(segment).toLowerCase(Locale.ROOT);
+        if (s.isEmpty() || LCSH_RIGHT_SUBDIVISIONS.contains(s)) return true;
+        for (String p : s.split("\\s+")) {
+            if (LCSH_RIGHT_SUBDIVISIONS.contains(p)) return true;
+        }
+        return false;
+    }
+
     /**
      * Detects personal-name subjects such as "Bukowski, Charles, 1921-1994" or
-     * "Bukowski, Charles" without false-positiving on topical comma headings.
+     * "Bukowski, Charles" without false-positiving on topical/geographic comma headings.
      */
     public static boolean isPersonalNameSubject(String raw) {
         if (raw == null) return false;
@@ -588,7 +613,8 @@ public final class EpubMetadataExtractor {
                         && p0.split("\\s+").length <= 3
                         && p1.split("\\s+").length <= 4
                         && !isNonPersonTopic(p0)
-                        && !isNonPersonTopic(p1)) {
+                        && !isNonPersonTopic(p1)
+                        && !isLcshRightSubdivision(p1)) {
                     return true;
                 }
             }
@@ -602,7 +628,8 @@ public final class EpubMetadataExtractor {
                 if (SURNAME_PART_PATTERN.matcher(left).matches()
                         && FORENAME_PART_PATTERN.matcher(right).matches()
                         && !isNonPersonTopic(left)
-                        && !isNonPersonTopic(right)) {
+                        && !isNonPersonTopic(right)
+                        && !isLcshRightSubdivision(right)) {
                     return true;
                 }
             }
